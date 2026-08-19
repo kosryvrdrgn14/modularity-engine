@@ -1,4 +1,4 @@
-# Vampire Survivors Type Game — Master Design Plan
+# Modularity Engine — Design Plan
 
 > **Version:** 1.0 (Prototype)
 > **Last Updated:** 2026-08-19
@@ -22,7 +22,9 @@
 
 ## Project Overview
 
-A top-down, auto-attacking survival game inspired by Vampire Survivors. The player controls a character who moves through a stage while weapons fire automatically. Waves of enemies approach; the player collects EXP and gold from defeated enemies, levels up to choose weapon upgrades, and survives as long as possible. The game ends when the player's health reaches zero.
+Modularity Engine is a top-down, auto-attacking survival game inspired by Vampire Survivors. You control a character who moves through a stage while weapons fire automatically. Waves of enemies close in; you collect EXP and gold from defeated foes, level up to choose weapon upgrades, and survive as long as possible. The game ends when your health hits zero — and with hundreds of enemies on screen, it should feel **fun and chaotic** every time you play.
+
+This is a personal project built for one person. Every design decision optimizes for your enjoyment and the ability to iterate quickly.
 
 **Core Loop:**
 ```
@@ -38,20 +40,21 @@ Move → Auto-attack → Kill enemies → Collect pickups → Level up → Choos
 - **Content** = JSON data files defining *what* exists in the game (enemies, weapons, stages, characters, pickups). The engine reads JSON at runtime.
 
 ### 2. Modularity
-- Every game entity is defined by data, not hardcoded logic.
-- Adding a new weapon, enemy, stage, or character = adding a JSON file and ensuring the engine has a compatible behavior type.
+The name says it all. Every game entity is defined by data, not hardcoded logic.
+- Adding a new weapon, enemy, stage, or character means adding a JSON file and ensuring the engine has a compatible behavior type.
 - Systems (spawning, leveling, damage) are generic and driven by data.
+- The entire project is designed to be modified and reassembled multiple times without touching engine code.
 
 ### 3. Spec-Driven Development
 - Each markdown spec file is a **self-contained reference** for one domain.
-- Specs are written so that any contributor (or AI assistant) can re-establish context by reading the relevant file.
+- Specs are written so that you can re-establish context at any time by reading the relevant file.
 - Specs include data schemas, gameplay formulas, and explicit values — no ambiguity.
 
 ---
 
 ## Version 1 Scope
 
-**Goal:** A playable prototype proving the core loop works.
+**Goal:** A playable prototype proving the core loop works. One stage, one character, three weapons, five enemy types, one boss — enough to feel the chaos.
 
 | Feature | Detail |
 |---|---|
@@ -115,7 +118,7 @@ These are the data files the engine loads. Schemas defined in `10_json_schemas.m
 ### Prompt 1 — Create `01_engine_architecture.md`
 
 ```
-Create the file 01_engine_architecture.md for a Vampire Survivors type game.
+Create the file 01_engine_architecture.md for Modularity Engine.
 
 This spec defines the core engine architecture. It must cover:
 
@@ -143,7 +146,7 @@ Include ASCII diagrams where helpful. Be specific with formulas and numbers wher
 ### Prompt 2 — Create `02_character_spec.md`
 
 ```
-Create the file 02_character_spec.md for a Vampire Survivors type game.
+Create the file 02_character_spec.md for Modularity Engine.
 
 This spec defines the single playable character for V1.
 
@@ -178,7 +181,7 @@ Must include:
 ### Prompt 3 — Create `03_weapons_spec.md`
 
 ```
-Create the file 03_weapons_spec.md for a Vampire Survivors type game.
+Create the file 03_weapons_spec.md for Modularity Engine.
 
 This spec defines 3 weapons. Each weapon auto-fires without player input.
 
@@ -230,7 +233,7 @@ Ensure all three weapons feel mechanically distinct and cover different playstyl
 ### Prompt 4 — Create `04_enemies_spec.md`
 
 ```
-Create the file 04_enemies_spec.md for a Vampire Survivors type game.
+Create the file 04_enemies_spec.md for Modularity Engine.
 
 This spec defines 5 standard enemy types and 1 boss.
 
@@ -274,7 +277,7 @@ ENEMY ROSTER (V1):
 - Enemy 5: Ranged caster (ranged, low HP, fires slow projectiles) — Disruptor
 
 BOSS:
-- Boss 1:定义 at minute 10 (or configurable). High HP, high damage, unique attack pattern. Drops large XP cache + guaranteed rare power-up.
+- Boss 1: Defined at minute 10 (or configurable). High HP, high damage, unique attack pattern. Drops large XP cache + guaranteed rare power-up.
 - Include: name, stats, attack phases (V1: 1-2 phases), visual concept, spawn announcement.
 ```
 
@@ -283,7 +286,7 @@ BOSS:
 ### Prompt 5 — Create `05_stages_spec.md`
 
 ```
-Create the file 05_stages_spec.md for a Vampire Survivors type game.
+Create the file 05_stages_spec.md for Modularity Engine.
 
 This spec defines 1 stage for V1.
 
@@ -325,7 +328,7 @@ Must include:
 ### Prompt 6 — Create `06_pickups_and_powerups_spec.md`
 
 ```
-Create the file 06_pickups_and_powerups_spec.md for a Vampire Survivors type game.
+Create the file 06_pickups_and_powerups_spec.md for Modularity Engine.
 
 This spec defines all collectible pickups and power-up drops.
 
@@ -404,7 +407,7 @@ SECTION 5: PICKUP COLLECTION RULES
 ### Prompt 7 — Create `07_leveling_system_spec.md`
 
 ```
-Create the file 07_leveling_system_spec.md for a Vampire Survivors type game.
+Create the file 07_leveling_system_spec.md for Modularity Engine.
 
 This spec defines the EXP/leveling system and level-up choice flow.
 
@@ -476,7 +479,7 @@ SECTION 4: VISUAL DESIGN
 ### Prompt 8 — Create `08_ui_hud_spec.md`
 
 ```
-Create the file 08_ui_hud_spec.md for a Vampire Survivors type game.
+Create the file 08_ui_hud_spec.md for Modularity Engine.
 
 This spec defines all UI screens and HUD elements.
 
@@ -562,14 +565,14 @@ SECTION 6: RESPONSIVE LAYOUT
 ### Prompt 9 — Create `09_audio_spec.md`
 
 ```
-Create the file 09_audio_spec.md for a Vampire Survivors type game.
+Create the file 09_audio_spec.md for Modularity Engine.
 
 This spec defines the audio design for V1.
 
 SECTION 1: AUDIO ARCHITECTURE
 - Use Web Audio API or Howler.js (confirm which in implementation)
 - Audio channels: SFX (multiple concurrent), Music (1 track), UI (1 concurrent)
-- Max simultaneous sounds: 16 (older sounds ducked/forged when exceeded)
+- Max simultaneous sounds: 16 (older sounds ducked/forced when exceeded)
 - Volume controls: Master, SFX, Music (V1: fixed defaults, no settings UI)
 
 SECTION 2: REQUIRED SOUNDS
@@ -615,7 +618,7 @@ SECTION 4: IMPLEMENTATION NOTES
 ### Prompt 10 — Create `10_json_schemas.md`
 
 ```
-Create the file 10_json_schemas.md for a Vampire Survivors type game.
+Create the file 10_json_schemas.md for Modularity Engine.
 
 This spec defines the JSON schema for every content file the engine loads. Each schema must include: field name, type, required/optional, default value, description, and a complete V1 example.
 
@@ -710,7 +713,7 @@ The following items are **not yet resolved** in V1 and should be addressed durin
 |---|---|---|
 | 1 | **Player knockback when hit** — Does the player get pushed back on damage? | Recommend: yes, small knockback away from source. Add to `02_character_spec.md` during review. |
 | 2 | **Projectile collision with walls** — V1 has no walls, but what about future stages? | Recommend: no wall collision V1. Document in `01_engine_architecture.md` as a future consideration. |
-| 3 | **Critical hit display** — How are crits visually communicated? | Recommend: yellow damage numbers + screen shake micro. Add to `08_ui_hud_spec.md`. |
+| 3 | **Critical hit display** — How are crits visually communicated? | Recommend: yellow damage numbers + micro screen shake. Add to `08_ui_hud_spec.md`. |
 | 4 | **Weapon projectile lifetime** — Do projectiles despawn after distance/time? | Recommend: yes, 3-second lifetime or 600px max distance. Add to `03_weapons_spec.md`. |
 | 5 | **Gold spending** — Is gold used for anything in V1? | Recommend: no. Gold is a score metric only in V1. Note for V2 (shop/upgrade between runs). |
 | 6 | **Item pickup magnet auto-collect** — Do pickups auto-collect or require walking over? | Recommend: both — base pickup range for walk-over, magnet extends range. Already spec'd in `06`. |
