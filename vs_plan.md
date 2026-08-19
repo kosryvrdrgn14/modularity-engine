@@ -62,6 +62,7 @@ The name says it all. Every game entity is defined by data, not hardcoded logic.
 |---|---|
 | Duration | **5 minutes** (boss spawns at minute 4) |
 | Stage | 1 stage (infinite scrolling arena with timed waves + obstacles) |
+| Input | **Click/tap-to-move** (primary) + WASD/arrow keys (secondary) |
 | Character | 1 playable character with base stats |
 | Weapons | 3 weapons with auto-attack, upgradeable to max level 7 |
 | Enemies | 5 standard enemy types + 1 boss |
@@ -176,7 +177,11 @@ Must include:
    - Level: starts at 1
    - Starting Weapon: (reference one of the 3 weapons from 03_weapons_spec.md)
 
-3. MOVEMENT — 8-directional movement using WASD or arrow keys. Diagonal normalization so diagonal speed = cardinal speed.
+3. MOVEMENT — Dual input system:
+   - **Primary: Click/Tap-to-Move** — Player clicks or taps a location on the canvas. Character pathfinds toward that point, stopping when within a small threshold (e.g., 4px). Movement stops if a new click/tap is registered. Visual indicator shows the target destination.
+   - **Secondary: WASD/Arrow Keys** — Traditional 8-directional movement. Diagonal normalization so diagonal speed = cardinal speed.
+   - Both systems can coexist. WASD overrides click-to-move if pressed during pathfinding.
+   - Touch devices use tap-to-move exclusively (no virtual joystick).
 
 4. HITBOX — Circular, radius 12px. Visual sprite is larger for readability.
 
@@ -666,7 +671,8 @@ The engine is built in TypeScript. Below is the system inventory (no spec file n
 |---|---|
 | `GameLoop` | Fixed-timestep update/render cycle |
 | `EntityManager` | Create, destroy, pool, iterate entities |
-| `InputManager` | WASD/arrow key + touch input capture |
+| `InputManager` | Click/tap-to-move (primary) + WASD/arrow keys (secondary) + mouse/touch input capture |
+| `MovementSystem` | Pathfinding to click target, collision with obstacles, movement normalization |
 | `CollisionSystem` | AABB checks, collision layers, response |
 | `Camera` | Follow player, smooth lerp, bounds |
 | `Renderer` | Canvas 2D draw calls, sprite batching, UI overlay |
@@ -759,6 +765,7 @@ The following items are **not yet resolved** in V1 and should be addressed durin
 |---|---|---|---|
 | 1 | **Player knockback when hit** — Does the player get pushed back on damage? | Recommend: yes, small knockback away from source. Add to `02_character_spec.md` during review. | Open |
 | 2 | **Projectile collision with obstacles** — V1 has obstacles now. Do projectiles collide? | Recommend: no, projectiles pass through obstacles. Only player and enemies collide. Add to `01_engine_architecture.md`. | Open |
+| 2b | **Click/tap-to-move pathfinding** — How does the character navigate around obstacles? | Recommend: simple steering — move toward target, if blocked by obstacle, slide along it. No A* needed for V1. Add to `01_engine_architecture.md`. | Open |
 | 3 | **Critical hit display** — How are crits visually communicated? | Recommend: yellow damage numbers + micro screen shake. Add to `08_ui_hud_spec.md`. | Open |
 | 4 | **Weapon projectile lifetime** — Do projectiles despawn after distance/time? | Recommend: yes, 3-second lifetime or 600px max distance. Add to `03_weapons_spec.md`. | Open |
 | 5 | **Gold spending** — Is gold used for anything in V1? | Recommend: no. Gold is a score metric only in V1. Note for V2 (shop/upgrade between runs). | Open |
