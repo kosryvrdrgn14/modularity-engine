@@ -17,10 +17,11 @@
 6. [Weapon Progression](#weapon-progression)
 7. [Level-Up Pacing](#level-up-pacing)
 8. [Power-Up Drop Schedule](#power-up-drop-schedule)
-9. [Boss Encounter](#boss-encounter)
-10. [Stage End & Victory](#stage-end--victory)
-11. [Balance Targets](#balance-targets)
-12. [Fun Factor Checklist](#fun-factor-checklist)
+9. [Sound Design Arc](#sound-design-arc)
+10. [Boss Encounter](#boss-encounter)
+11. [Stage End & Victory](#stage-end--victory)
+12. [Balance Targets](#balance-targets)
+13. [Fun Factor Checklist](#fun-factor-checklist)
 
 ---
 
@@ -501,6 +502,113 @@ Power-ups drop from specific enemy kills and provide temporary or instant advant
 
 ---
 
+## Sound Design Arc
+
+Sound design is a progression system. The audio arc mirrors the chaos curve — sparse and clear at the start, layered and intense by the end. Every sound cue reinforces the player's sense of power and the rising threat.
+
+### Music Progression
+
+| Time | Track | Transition | Feel |
+|---|---|---|---|
+| 0:00 | Stage Theme — Ambient Intro | Fade in over 2s | Quiet. Atmospheric. Gothic synth pads. |
+| 0:15 | Stage Theme — Beat Drop | Drums enter | Rhythm kicks in. Player moves. |
+| 1:00 | Stage Theme — Building Loop | Add bass layer | Bats arrive. Tension rising. |
+| 2:00 | Stage Theme — Full Intensity | Add lead synth | Skeletons and ghosts. Full chaos. |
+| 3:30 | Stage Theme — Pre-Boss Build | Strings swell, drums intensify | "Something is coming." |
+| 3:50 | Silence — 2s | Music cuts out | Dramatic pause. Screen dims. |
+| 3:52 | Boss Theme — Ominous Intro | Deep bass, low strings | "The Gravekeeper rises!" |
+| 4:00 | Boss Theme — Full Combat | Aggressive drums, distorted synths | Boss fight. Maximum intensity. |
+| 4:30 | Boss Theme — Phase 2 Escalation | Tempo +15%, added layers | Boss enters Phase 2. Desperate. |
+| Boss death | Victory Sting | 2s brass fanfare | Relief. Triumph. |
+| 5:00 (survived) | Game Over — Melancholic | Piano + strings, 5s fade | Bittersweet. Stats reveal. |
+| Player death | Death Sting — Low boom | 1s impact, then silence | Finality. Defeat. |
+
+### SFX Layering by Minute
+
+The soundscape builds as more enemies and weapons fill the screen.
+
+| Minute | Active Sounds | Density | Audio Character |
+|---|---|---|---|
+| 0:00–1:00 | W1 fire, zombie hit/kill, XP pickup, gold pickup | Sparse | Individual sounds are distinct and clear. Each hit and kill feels impactful. |
+| 1:00–2:00 | + W2 orbit hum, bat death screech, level-up chime | Moderate | Two weapons firing. Bat swarms add texture. Level-ups punctuate. |
+| 2:00–3:00 | + W3 area pulse, skeleton armor clank, ghost wail, power-up drop | Dense | Three weapons. New enemy sounds layer in. Power-up drops cut through. |
+| 3:00–4:00 | + Caster projectile, screen wipe whoosh, magnet hum | Very Dense | Cacophony. Sounds blend into a wall of chaos. Screen wipe provides relief. |
+| 4:00–5:00 | + Boss charges, boss minions, ground pound, boss death | Peak | Boss sounds dominate. Regular sounds ducked. Victory/death sting caps it. |
+
+### Key Sound Moments
+
+These are the emotional peaks in the audio experience. Each one should feel earned and satisfying.
+
+| Moment | Sound | Emotional Payoff |
+|---|---|---|
+| First level-up (0:05) | Ascending chime + card reveal | "I'm getting stronger." |
+| First weapon unlock (0:15) | Power-up jingle + weapon equip sound | "New toy!" |
+| W1 hits L4 (2:00) | Enhanced fire sound + pierce whoosh | "My weapon evolved." |
+| First screen wipe | Dramatic whoosh/boom + silence | "I survived that." Relief. |
+| First magnet | Magnetic hum + rapid pickup chimes | "Look at all that XP!" Rush. |
+| Boss warning (3:50) | Music cuts. Ominous rumble. | Dread. Anticipation. |
+| Boss spawn (4:00) | Entrance roar + ground shake | "Here it comes." Heart pounding. |
+| W1 hits L7 (3:30) | Split projectile sound + visual fanfare | "I'm unstoppable." Peak power. |
+| Boss death (4:15) | Explosion + slow-mo bass drop + victory sting | "I did it." Catharsis. |
+| Game over (5:00) | Death sting or melancholic piano | Finality. Stats reveal. "One more try." |
+
+### Sound Priority System
+
+When many sounds play simultaneously, the engine must prioritize which ones the player hears.
+
+**Priority Order (highest to lowest):**
+1. Player hurt / death
+2. Power-up collected
+3. Level-up
+4. Boss sounds (charges, ground pound, death)
+5. Screen wipe
+6. Weapon fire (player's weapons)
+7. Enemy death
+8. Weapon hit
+9. Pickup collection (XP, gold)
+10. Enemy ambient (bats, ghosts)
+
+**Ducking Rules:**
+- When a high-priority sound plays, lower volume of all lower-priority sounds by 20% for 0.3 seconds.
+- When the boss is active, duck all regular combat sounds by 30% so boss cues are audible.
+- During the level-up screen, duck all combat sounds to 10% volume (game is paused, but ambient remains).
+
+### Distance-Based Audio
+
+Sounds attenuate based on distance from the player to create spatial awareness.
+
+| Distance | Volume | Effect |
+|---|---|---| |
+| 0–100px | 100% | Full volume. Immediate. |
+| 100–200px | 70% | Noticeable but not overwhelming. |
+| 200–400px | 40% | Atmospheric. Fills the space. |
+| 400px+ | 20% | Barely audible. Background texture. |
+
+**Exceptions:** Player sounds (weapon fire, hurt, death) are always at 100% regardless of distance. Boss sounds are always at 80% minimum to maintain presence.
+
+### Audio Implementation Notes
+
+- **V1 Approach:** Synthesized sounds using Web Audio API oscillators. No external audio files required.
+- **Sound Variants:** Each hit/kill sound should have 3–5 variants to avoid repetition fatigue.
+- **Cooldown Between Identical Sounds:** The same sound should not play more than 3 times per second to prevent harsh repetition.
+- **Music Crossfade:** Track transitions use 2-second crossfades except for the pre-boss silence (instant cut) and boss death (slow-motion bass drop).
+- **Volume Defaults:** Master 80%, Music 70%, SFX 85%. No settings UI in V1.
+
+### Fun Factor Checklist (Sound-Specific)
+
+- [ ] First level-up sound feels rewarding
+- [ ] Weapon unlock sound feels like a power jump
+- [ ] Screen wipe sound creates a moment of relief
+- [ ] Magnet pickup sound creates a rush of satisfaction
+- [ ] Boss warning silence creates genuine tension
+- [ ] Boss death sound provides catharsis
+- [ ] Death sting feels final, not frustrating
+- [ ] Late-game chaos sounds intense but not painful
+- [ ] No single sound becomes annoying through repetition
+- [ ] Music builds naturally and doesn't feel jarring
+
+---
+
 ## Boss Encounter
 
 The boss fight is the climax of Stage 1. It tests whether the player has built a viable weapon loadout and survived the chaos.
@@ -647,6 +755,17 @@ These are the numerical targets the progression should hit during playtesting. A
 | Boss kill (avg player) | 10–15 seconds |
 | Boss kill (skilled player) | 6–8 seconds |
 
+### Audio Checkpoints
+| Metric | Target |
+|---|---|
+| Music beat drops | Within 15 seconds of stage start |
+| First weapon unlock sound | ~0:15 |
+| W1 power spike audio | ~2:00–2:30 |
+| Boss warning silence | 3:50 (10 seconds before spawn) |
+| Boss theme full intensity | 4:00 |
+| Victory sting | Within 2 seconds of boss death |
+| Death sting | Within 1 second of HP reaching 0 |
+
 ---
 
 ## Fun Factor Checklist
@@ -687,6 +806,19 @@ Use this checklist during playtesting to verify the progression feels right.
 - [ ] Boss loot feels earned and rewarding
 - [ ] End screen stats tell a satisfying story
 - [ ] The player wants to immediately try again
+
+### Sound & Audio
+- [ ] First level-up chime feels satisfying
+- [ ] Weapon unlock sound reinforces the power fantasy
+- [ ] Screen wipe sound creates a moment of relief
+- [ ] Magnet pickup audio creates a rush
+- [ ] Boss warning silence creates genuine dread
+- [ ] Boss fight music feels intense and distinct
+- [ ] Boss death sound provides catharsis
+- [ ] Death sting feels final, not frustrating
+- [ ] Late-game audio chaos is intense but not painful
+- [ ] Music transitions feel natural, not jarring
+- [ ] No single sound becomes annoying through repetition
 
 ---
 
