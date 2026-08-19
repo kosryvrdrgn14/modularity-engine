@@ -144,13 +144,25 @@ This spec defines the core engine architecture. It must cover:
 
 5. DATA LOADING — On stage start, engine loads the relevant JSON content files (character, weapons, enemies for stage, pickups). Validate data on load. Hot-reload support for development.
 
-6. SCENE / STATE MANAGEMENT — Scenes: Menu → Character Select (V1: skip, auto-select) → Stage → Pause → Level-Up Overlay → Game Over. State machine with clear transitions.
+6. SCENE / STATE MANAGEMENT — Scenes: Menu → Character Select (V1: skip, auto-select) → Stage → Pause → Level-Up Overlay → End Screen. The game has THREE end states:
+   - **VICTORY** — Boss killed before 5:00. Title: "VICTORY". Bonus: +100 gold, confetti effect. Bonus text: "The Gravekeeper has been vanquished!"
+   - **SURVIVED** — Timer reaches 5:00 with boss alive. Title: "SURVIVED". No bonus.
+   - **DEFEAT** — Player HP reaches 0. Title: "DEFEATED". Red tint overlay.
+   All three show end screen stats (see 08_ui_hud_spec.md). Game freezes for 1.0s, then end screen fades in over 0.5s.
 
 7. DAMAGE SYSTEM — Damage = attacker.damage - defender.defense (minimum 1). Critical hit chance as a stat. Knockback force based on damage dealt. Invincibility frames after taking damage (0.5s default).
 
-8. PERFORMANCE NOTES — Object pooling for projectiles and enemies. Spatial hashing for collision broadphase if entity count exceeds 200. Cap simultaneous projectiles and enemies.
+8. CAMERA EFFECTS — Screen shake on: boss spawn (0.5s, medium intensity), screen wipe activation (0.3s, light), boss death (1.0s, heavy), player low HP warning (<25% HP, subtle continuous shake). Duration and intensity should be parameterized per event.
 
-Include ASCII diagrams where helpful. Be specific with formulas and numbers where V1 values are known. Reference other spec files where details live (e.g., "see 03_weapons_spec.md for weapon stats").
+9. RENDERING — HiDPI support: use `devicePixelRatio` for crisp rendering on retina displays. Canvas resolution scales with device pixel ratio, logical coordinates remain the same.
+
+10. PROJECTILE LIFETIME — Projectiles despawn after 3 seconds OR 600px traveled, whichever comes first. Orbit weapons persist for their duration stat. Area weapons are instant (no projectile entity).
+
+11. OBSTACLE COLLISION RULES — Player and enemies collide with obstacles (slide along surfaces). Projectiles, pickups, and power-ups pass through obstacles. Click/tap-to-move pathfinding: simple steering toward target, slide along obstacle if blocked. No A* needed for V1.
+
+12. PERFORMANCE NOTES — Object pooling for projectiles and enemies. Spatial hashing for collision broadphase if entity count exceeds 200. Max 200 enemies + 500 projectiles + 500 pickups on screen.
+
+Include ASCII diagrams where helpful. Reference other spec files where details live (e.g., "see 03_weapons_spec.md for weapon stats", "see vs_colors.md for visual specs").
 ```
 
 ---
@@ -187,9 +199,11 @@ Must include:
 
 5. INVINCIBILITY FRAMES — After taking damage, invulnerable for 0.5 seconds. Visual: sprite flashes/blinks at 100ms intervals.
 
-6. DEATH CONDITION — When health ≤ 0. Trigger game-over screen. Display: time survived, enemies killed, gold collected, level reached.
+6. DEATH CONDITION — When health ≤ 0. Trigger DEFEAT end screen (see 01_engine_architecture.md Scene/State Management for all three end states).
 
-7. VISUAL — Describe the character's appearance concept for an artist/AI art generator. Top-down perspective, readable silhouette, distinct from enemies.
+7. OBSTACLE INTERACTION — Player collides with obstacles and slides along surfaces. Click/tap pathfinding steers toward target; if blocked by obstacle, slides along it (no A* pathfinding). WASD movement also slides along obstacles.
+
+8. VISUAL — For V1 prototype, use basic geometric shapes from vs_colors.md: Hero Gold square (24×24px, #FFD700), Hero Glow aura (#FFF4B0), Hero Accent (#FF8C00). See vs_colors.md Player Visual section for full spec.
 ```
 
 ---
@@ -199,49 +213,40 @@ Must include:
 ```
 Create the file 03_weapons_spec.md for Modularity Engine.
 
-This spec defines 3 weapons. Each weapon auto-fires without player input.
+This spec defines 3 weapons. Each weapon auto-fires without player input. USE THE EXACT VALUES from vs_prog.md Weapon Progression section — do not invent or approximate stats. The source of truth is vs_prog.md.
 
 For EACH weapon, define:
 
-1. IDENTITY — Name, description, icon concept.
+1. IDENTITY — Name, description, visual concept from vs_colors.md.
 
 2. BEHAVIOR TYPE — One of:
-   - Projectile (fires in a direction, travels until hit or timeout)
-   - Orbit (circles the player)
-   - Area (instant effect around player)
+   - Projectile (fires toward nearest enemy, travels until hit or 3s timeout or 600px distance)
+   - Orbit (circles the player, damages on contact, persists for weapon duration stat)
+   - Area (instant pulse around player, no persistent projectile entity)
 
-3. BASE STATS (Level 1):
-   - Damage
-   - Cooldown (seconds between attacks)
-   - Area / Size (hitbox radius or projectile size)
-   - Speed (projectile speed, or orbit speed)
-   - Duration (for orbit/area weapons)
-   - Knockback force
-   - Projectile count (how many projectiles per attack)
+3. UPGRADE TABLE — Copy the EXACT table from vs_prog.md for this weapon. Columns vary by weapon type:
+   - Projectile: Level | Damage | Cooldown | Projectile Count | Special
+   - Orbit: Level | Damage | Orbit Speed | Orb Count | Radius | Special
+   - Area: Level | Damage | Cooldown | Radius | Pulses | Special
+   Do NOT use placeholder scaling rules. Use the exact numbers from vs_prog.md.
 
-4. TARGETING LOGIC:
-   - Projectile: fires toward nearest enemy
-   - Orbit: always active, damages on contact
-   - Area: pulses around player on cooldown
+4. POWER SPIKE DETAILS — Copy the exact descriptions from vs_prog.md:
+   - Level 4 (Mid Spike): Exact bonus name and mechanical effect
+   - Level 7 (Max/Ultimate): Exact bonus name and mechanical effect
 
-5. UPGRADE TABLE — Full table from Level 1 to Level 7 with these columns per level:
-   | Level | Damage | Cooldown | Area | Speed | Duration | Knockback | Projectiles | Notes |
-   
-   Scaling rules:
-   - Damage: +15-25% per level
-   - Cooldown: -5-10% per level (faster)
-   - Area: +10-20% per level
-   - Projectiles: +1 at specific levels
+5. DPS TABLE — Copy the DPS progression table from vs_prog.md for this weapon.
 
-6. POWER SPIKES:
-   - Level 4 (Mid Spike): Describe the significant bonus unlocked. Example: "Pierces through 1 additional enemy" or "Attacks in a wider arc" — make each weapon's L4 spike unique.
-   - Level 7 (Max / Ultimate): Describe the ultimate bonus. Example: "Projectiles leave fire trails" or "Orbit speed doubles and leaves damaging afterimages" — make each weapon's L7 spike dramatic and visually distinct.
+6. UNLOCK CONDITION:
+   - Weapon 1 (Projectile): Available from game start
+   - Weapon 2 (Orbit): Unlocked when player reaches Level 3
+   - Weapon 3 (Area): Unlocked when player reaches Level 6
 
-7. WEAPON 1 SPEC (example: Projectile type)
-8. WEAPON 2 SPEC (example: Orbit type)  
-9. WEAPON 3 SPEC (example: Area type)
+Weapon Roster (V1):
+- Weapon 1: Projectile — single-target burst, fires toward nearest enemy
+- Weapon 2: Orbit — crowd control, orbs circle the player
+- Weapon 3: Area — burst damage, pulses around the player
 
-Ensure all three weapons feel mechanically distinct and cover different playstyles (single-target burst, crowd control, area denial).
+Ensure all three weapons feel mechanically distinct. Reference vs_colors.md for visual specs (shape, color, size of projectiles/orbs).
 ```
 
 ---
@@ -251,50 +256,52 @@ Ensure all three weapons feel mechanically distinct and cover different playstyl
 ```
 Create the file 04_enemies_spec.md for Modularity Engine.
 
-This spec defines 5 standard enemy types and 1 boss.
+This spec defines 5 standard enemy types and 1 boss. USE THE EXACT VALUES from vs_prog.md Enemy Spawn Details section — do not invent or approximate stats.
 
 For EACH enemy, define:
 
-1. IDENTITY — Name, description, visual concept (color, shape, size for readability).
+1. IDENTITY — Name, description, visual concept from vs_colors.md (color, shape, size).
 
-2. STATS TABLE:
+2. STATS TABLE — Copy the EXACT table from vs_prog.md for this enemy:
    | Stat | Value |
    |---|---|
    | HP | |
    | Damage (contact) | |
    | Speed | |
    | Size (radius) | |
-   | XP Value | (amount of XP dropped on death) |
-   | Gold Value | (amount of gold dropped on death) |
-   | Spawn Weight | (relative probability in spawn pool) |
+   | XP Value | |
+   | Gold Value | |
+   | Spawn Weight | |
+   | First Appears | (timestamp from wave timeline) |
 
 3. BEHAVIOR — Movement pattern:
-   - Chase: moves directly toward player
-   - Wander: moves in random directions, occasionally toward player
-   - Swarm: fast but low HP, spawns in groups
-   - Tank: slow, high HP, high damage
-   - Ranged: keeps distance, fires projectiles at player (V1: simple)
+   - Chase: moves directly toward player (Zombie)
+   - Swarm: fast but low HP, spawns in groups of 2–4 (Bat)
+   - Tank: slow, high HP, absorbs damage (Skeleton)
+   - Wander → Chase: drifts randomly, then locks onto player (Ghost)
+   - Ranged: maintains distance, fires slow projectiles at player (Caster). Include projectile stats: damage, speed, visual.
 
-4. DROP TABLE:
-   - Base drops: always drops XP + gold (amounts from stats)
-   - Power-up drop chance: base 0% (most enemies don't drop power-ups)
-   - Special drop enemies: Mark which enemy types CAN drop power-ups and at what chance
+4. DROP TABLE — Copy the exact drop rates from vs_prog.md Drop Economy:
+   - XP and Gold values from stats
+   - Power-up drops: only specific enemies drop specific power-ups (see vs_prog.md Drop Economy table)
 
-5. SPAWN BEHAVIOR:
-   - How they enter the stage (from edges? from spawn points?)
-   - Any formation or grouping rules
+5. SPAWN BEHAVIOR — Enemies spawn from off-screen edges at 400–600px from the player. No formations in V1.
 
-ENEMY ROSTER (V1):
+ENEMY ROSTER (V1) — Use exact stats from vs_prog.md:
 
-- Enemy 1: Basic zombie-type (chase, low HP, lowest XP) — Fodder
-- Enemy 2: Fast bat-type (swarm, very low HP, fast) — Pressure
-- Enemy 3: Armored skeleton (tank, medium HP, slow) — Obstacle
-- Enemy 4: Ghost (wander → chase, medium HP, phases through nothing special in V1) — Trick
-- Enemy 5: Ranged caster (ranged, low HP, fires slow projectiles) — Disruptor
+- Enemy 1: Zombie — HP 10, DMG 8, Speed 60, XP 1, Gold 1–2. Chase behavior. First appears 0:00.
+- Enemy 2: Bat — HP 5, DMG 5, Speed 120, XP 1, Gold 1. Swarm behavior (groups of 2–4). First appears 1:00. Drops Magnet (5%).
+- Enemy 3: Skeleton — HP 35, DMG 12, Speed 40, XP 3, Gold 2–3. Tank behavior. First appears 2:00. Drops Screen Wipe (2%).
+- Enemy 4: Ghost — HP 15, DMG 10, Speed 80, XP 2, Gold 2–3. Wander→Chase behavior. First appears 2:30. Drops Magnet (5%).
+- Enemy 5: Caster — HP 12, DMG 8, Speed 50, XP 3, Gold 3–4. Ranged behavior. Projectile: 6 DMG, 150 px/s. First appears 3:00. Drops Screen Wipe (2%).
 
-BOSS:
-- Boss 1: Defined at minute 10 (or configurable). High HP, high damage, unique attack pattern. Drops large XP cache + guaranteed rare power-up.
-- Include: name, stats, attack phases (V1: 1-2 phases), visual concept, spawn announcement.
+BOSS — The Gravekeeper (exact stats from vs_prog.md Boss Encounter section):
+- HP 1,000, Contact DMG 15, Speed 70/100 px/s, Size 28px radius, Spawn Time 4:00
+- Phase 1 (100%–50% HP): Charges + minion spawns every 3s (3 zombies)
+- Phase 2 (50%–0% HP): Faster charges every 2s + 5 zombies + ground-pound AoE (80px, 20 DMG, 0.75s telegraph)
+- Drops: 50 XP, 20–30 Gold, guaranteed Weapon Level-Up
+- Boss spawn announcement: text at 3:50 ("Something stirs in the darkness..."), camera shake + text at 3:55 ("The Gravekeeper rises!"), spawn at 4:00
+- Include boss DPS check: player needs ~17+ DPS to kill within 60s time limit. Expected player DPS at 4:00 is 80–110, giving 9–12s kill time.
 ```
 
 ---
@@ -304,39 +311,58 @@ BOSS:
 ```
 Create the file 05_stages_spec.md for Modularity Engine.
 
-This spec defines 1 stage for V1.
+This spec defines 1 stage for V1. USE THE EXACT VALUES from vs_prog.md Wave Timeline section.
 
 Must include:
 
-1. STAGE IDENTITY — Name, theme, visual description, background color/pattern.
+1. STAGE IDENTITY — Name, theme, visual description. Theme: dark gothic / cemetery. See vs_colors.md Background & Environment section for exact colors.
 
-2. DIMENSIONS — Stage size (or infinite with procedural wrapping). For V1: infinite arena with camera following player. No bounds.
+2. DIMENSIONS — Infinite arena with camera following player. No bounds. Player can move freely in any direction.
 
 3. SPAWN RULES:
-   - Enemies spawn from off-screen edges at a minimum distance from the player (e.g., 400-600 px away).
-   - Maximum simultaneous enemies on screen: 200 (cap).
-   - Spawn rate increases over time.
+   - Enemies spawn from off-screen edges at 400–600px minimum distance from the player.
+   - Maximum simultaneous enemies on screen: 200 (cap per time bracket — see wave timeline).
+   - All drops come from enemy kills. No environmental pickups.
 
-4. WAVE TIMELINE — Define enemy composition over time:
+4. WAVE TIMELINE — Copy the EXACT Master Timeline from vs_prog.md:
 
-   | Time (min:sec) | Enemy Types Active | Spawn Rate (per second) | Notes |
-   |---|---|---|---|
-   | 0:00 - 1:00 | Enemy 1 only | 0.5 | Tutorial pace |
-   | 1:00 - 3:00 | Enemy 1, 2 | 1.0 | Bats introduced |
-   | 3:00 - 5:00 | Enemy 1, 2, 3 | 1.5 | Skeletons arrive |
-   | 5:00 - 7:00 | Enemy 1, 2, 3, 4 | 2.0 | Ghosts phase in |
-   | 7:00 - 9:00 | Enemy 1, 2, 3, 4, 5 | 2.5 | Full roster |
-   | 9:00 - 10:00 | All + increasing rate | 3.0 | Pre-boss tension |
-   | 10:00 | BOSS SPAWNS | — | Boss entrance |
-   | 10:00+ | All + boss | 3.0+ | Post-boss: endless |
+   | Time | Enemy Types | Spawn Rate (/sec) | Composition | Max Enemies | Notes |
+   |---|---|---|---|---|---|
+   | 0:00–0:30 | Zombie | 0.8 | 100% Zombie | 25 | Tutorial |
+   | 0:30–1:00 | Zombie | 1.2 | 100% Zombie | 40 | Picking up |
+   | 1:00–1:30 | Zombie, Bat | 1.5 | 60% Z, 40% B | 60 | Bats arrive |
+   | 1:30–2:00 | Zombie, Bat | 1.8 | 50% Z, 50% B | 80 | Full bat swarm |
+   | 2:00–2:30 | Z, Bat, Skeleton | 2.0 | 40% Z, 35% B, 25% S | 100 | Skeletons |
+   | 2:30–3:00 | Z, B, S, Ghost | 2.2 | 30% Z, 30% B, 25% S, 15% G | 120 | Ghosts phase in |
+   | 3:00–3:30 | All 5 | 2.5 | 25% Z, 25% B, 20% S, 15% G, 15% C | 150 | Full roster |
+   | 3:30–4:00 | All 5 | 3.0 | 20% Z, 25% B, 20% S, 15% G, 20% C | 180 | Peak density |
+   | 4:00–4:30 | All + Boss | 2.0 | Reduced regulars | 150 + Boss | Boss active |
+   | 4:30–5:00 | All + Boss | 1.5 | Minimal regulars | 120 + Boss | Final push |
 
-5. DIFFICULTY SCALING — After boss defeat, enemy stats scale: +5% HP and damage per minute. Spawn rate caps at 5.0/s.
+   Include the EXACT spawn rate formula from vs_prog.md:
+   `spawn_rate(t) = base_rate × (1 + 0.4 × floor(t / 30))`
+   Capped at 3.0/second. Base rate starts at 0.8.
 
-6. PICKUP SPAWN — No pickups spawn independently; all drops come from enemy kills. (Or define if environmental pickups exist.)
+5. ENEMY COMPOSITION WEIGHTS — Copy the exact percentages from vs_prog.md for each time bracket.
 
-7. BACKGROUND/ENVIRONMENT — Simple tiled ground pattern. No obstacles in V1 (pure open arena). Visual theme: dark gothic / cemetery.
+6. DIFFICULTY SCALING — After boss defeat only (if boss dies before 5:00):
+   - HP multiplier: `1 + 0.15 × minutes_after_boss_kill`
+   - Damage multiplier: `1 + 0.10 × minutes_after_boss_kill`
+   - If boss is NOT killed by 5:00, no scaling applies — game simply ends.
 
-8. STAGE EVENT MARKERS — Define at which timestamps special events occur (boss spawn warning, difficulty spikes).
+7. XP VALUE SCALING — Enemy XP values increase over time:
+   `xp_value(t) = base_xp × (1 + 0.05 × floor(t / 60))`
+   5% increase per minute. Include this in the engine spec.
+
+8. OBSTACLES — 5 obstacle types from vs_colors.md: tombstones, grave mounds, broken walls, cracked floor. Player and enemies collide (slide along surfaces). Projectiles and pickups pass through. Obstacles are scattered around the arena to improve movement feel.
+
+9. BACKGROUND/ENVIRONMENT — Dark tiled ground with subtle grid. See vs_colors.md for exact hex values.
+
+10. STAGE EVENT MARKERS:
+   - 3:50 — Screen dims slightly. Text: "Something stirs in the darkness..."
+   - 3:55 — Camera shake. Text: "The Gravekeeper rises!"
+   - 4:00 — Boss spawns from nearest screen edge.
+   - Post-boss-kill scaling milestones — Brief text overlay: "Danger increases..." at each 30-second interval after boss death.
 ```
 
 ---
@@ -380,11 +406,12 @@ Power-ups drop from specific enemy kills. They appear as floating items with a d
    - Display: collectible item with skull/lightning icon, pulses on ground
 
 5. MAGNET (EXP & Gold):
-   - Effect: For 10 seconds, all EXP gems and gold coins within 300px radius are attracted to the player at 400 px/s. New pickups spawned during duration are also affected.
+   - Effect: For 10 seconds, all EXP gems and gold coins within 350px radius are attracted to the player at 400 px/s. New pickups spawned during duration are also affected.
+   - Instant burst: On pickup, all pickups within 150px are instantly collected (no travel time).
    - Visual: magnetic field ripple effect around player during duration
-   - Sound: magnetic hum
+   - Sound: magnetic hum (continuous sine wave: 220Hz + 330Hz)
    - Drop source: From Enemy type 2 (Fast Bat) and Enemy type 4 (Ghost)
-   - Drop chance: 5% per kill (moderate — "a little more frequently" than screen wipe)
+   - Drop chance: 5% per kill (moderate)
    - Display: horseshoe magnet icon, glows on ground
 
 6. WEAPON LEVEL-UP:
@@ -429,22 +456,28 @@ This spec defines the EXP/leveling system and level-up choice flow.
 
 SECTION 1: XP CURVE
 
-Total XP required to reach each level:
+USE THE EXACT TABLE from vs_prog.md Experience Curve section. Do NOT use placeholder values.
 
-| Level | XP Required (cumulative) | XP to Next Level |
-|---|---|---|
-| 1 → 2 | 10 | 10 |
-| 2 → 3 | 25 | 15 |
-| 3 → 4 | 50 | 25 |
-| 4 → 5 | 90 | 40 |
-| 5 → 6 | 150 | 60 |
-| 6 → 7 | 240 | 90 |
-| 7 → 8 | 370 | 130 |
-| 8 → 9 | 550 | 180 |
-| 9 → 10 | 800 | 250 |
-| 10+ | Formula: next = prev * 1.35 | — |
+| Level | XP to Next Level | Cumulative XP | Design Note |
+|---|---|---|---|
+| 1 → 2 | 5 | 5 | ~5 seconds. First upgrade. |
+| 2 → 3 | 10 | 15 | Weapon 2 choice available. |
+| 3 → 4 | 15 | 30 | ~30 seconds. Comfortable pace. |
+| 4 → 5 | 22 | 52 | ~50 seconds. Building momentum. |
+| 5 → 6 | 32 | 84 | Weapon 3 choice available. |
+| 6 → 7 | 45 | 129 | ~2 minutes. Escalation begins. |
+| 7 → 8 | 62 | 191 | ~2:30. Player should feel strong. |
+| 8 → 9 | 85 | 276 | ~3:15. Pre-boss power building. |
+| 9 → 10 | 115 | 391 | ~3:45. Tension rising. |
+| 10 → 11 | 155 | 546 | ~4:15. Boss fight in progress. |
+| 11 → 12 | 210 | 756 | ~4:45. Near game end. |
+| 12 → 13 | 280 | 1036 | Stretch goal. |
+| 13 → 14 | 375 | 1411 | Elite territory. |
+| 14+ | Formula | — | See below. |
 
-Formula for level N (N ≥ 10): `xp_to_next(N) = floor(250 * 1.35^(N-10))`
+Formula for level N (N ≥ 14): `xp_to_next(N) = floor(375 × 1.3^(N-14))`
+
+Include the Expected Level Milestones table from vs_prog.md (timestamp → expected level).
 
 SECTION 2: LEVEL-UP FLOW
 
@@ -469,19 +502,23 @@ A) WEAPON UPGRADES:
    - If player doesn't own all 3 weapons: offer "Unlock [Weapon Name]" as an option
    - Weapon unlock introduces the weapon at Level 1
 
-B) PASSIVE STAT BOOSTS (V1 minimal set):
-   - Max Health +20%
-   - Movement Speed +10%
-   - Armor +1
-   - Pickup Range +25px
-   - Crit Chance +5%
+B) PASSIVE STAT BOOSTS (V1 pool with max stacks):
+   | Boost | Effect | Max Stacks |
+   |---|---|---|
+   | Max Health +20% | Increases maximum HP | 5 |
+   | Movement Speed +10% | Faster movement | 3 |
+   | Armor +1 | Reduces incoming damage by 1 (min 1) | 3 |
+   | Pickup Range +25px | Collect pickups from further away | 4 |
+   | Crit Chance +5% | Chance for 1.5× damage | 4 |
 
 Option generation:
 1. Roll 3 options from the combined pool (weapon upgrades + passives)
 2. Weight: weapon upgrades 60%, passives 40%
 3. No duplicate options in a single level-up screen
 4. If a weapon is at max level (7), it is excluded from the pool
-5. If only passives are available (all weapons maxed), show 3 random passives
+5. If a weapon is not yet owned but its unlock level has been reached, "Unlock [Weapon]" appears as an option
+6. If only passives are available (all weapons maxed), show 3 random passives
+7. If a passive is at max stacks, it is excluded from the pool
 
 SECTION 4: VISUAL DESIGN
 - Level-up screen: 3 cards in a row, each with icon top, text middle, stat change bottom
@@ -531,37 +568,59 @@ Element specs:
 
 5. WEAPON PANEL — Bottom-left corner. Row of weapon icons, each showing weapon icon + level number. Highlights when weapon fires or upgrades. Max level weapons have a gold border.
 
-6. TIMER — Top-center. Shows elapsed time: "MM:SS". Boss spawns at 10:00.
+6. TIMER — Top-center. Shows elapsed time: "MM:SS". Boss spawns at 4:00.
+
+7. BOSS HEALTH BAR — Appears at top of screen when boss spawns. Large bar, boss name displayed. Disappears when boss dies.
 
 SECTION 2: LEVEL-UP SCREEN
 
-- Semi-transparent dark overlay
+- Semi-transparent dark overlay (game pauses fully)
 - Title: "LEVEL UP!" in large text with glow
 - 3 upgrade cards centered horizontally
 - Each card (200x280px): icon (top), weapon/upgrade name, "Lv.2 → Lv.3" text, description of change
 - Cards have subtle entrance animation (scale up from 0.8)
 - Selected card has blue glow border
 - Keyboard shortcuts: 1, 2, 3 to quick-select
+- Touch: tap a card to select it
+- On selection: confetti or particle effect, brief delay (0.3s), then game resumes
 
-SECTION 3: GAME OVER SCREEN
+SECTION 3: END SCREENS (3 states — see 01_engine_architecture.md)
 
-- Dark overlay with red tint
-- Title: "GAME OVER"
-- Stats summary:
-  - Time Survived: MM:SS
-  - Enemies Killed: #
-  - Gold Collected: #
-  - Level Reached: #
-  - Damage Dealt: #
-- Buttons: "Restart" (primary), "Main Menu" (secondary)
-- Fade in over 0.5s
+All end screens share the same layout: dark overlay, stats summary with animated counters (values tick up from 0), "Restart" button (primary), "Main Menu" button (secondary). 1.0s pause for dramatic effect before fade-in over 0.5s.
 
-SECTION 4: PAUSE MENU (press Escape)
+Stats displayed on ALL end screens:
+- Time Survived: MM:SS (or "5:00" if survived full duration)
+- Level Reached: #
+- Enemies Killed: #
+- Gold Collected: #
+- Boss Defeated: Yes / No
+- Weapon Loadout: W1 Lv.#, W2 Lv.#, W3 Lv.#
+
+3a. VICTORY SCREEN (boss killed before 5:00):
+- Title: "VICTORY" in gold text
+- Bonus: +100 gold added to total
+- Bonus text: "The Gravekeeper has been vanquished!"
+- Confetti particle effect
+- Background: dark with gold accent
+
+3b. SURVIVED SCREEN (timer reaches 5:00, boss alive):
+- Title: "SURVIVED" in white text
+- No bonus
+- Background: dark with blue accent
+
+3c. DEFEAT SCREEN (player HP reaches 0):
+- Title: "DEFEATED" in red text
+- Red tint overlay
+- No bonus
+- Same stats minus boss defeated
+
+SECTION 4: PAUSE MENU (press Escape or tap pause button)
 
 - Semi-transparent overlay
 - Title: "PAUSED"
 - Buttons: "Resume", "Restart", "Quit to Menu"
 - Game fully pauses behind overlay
+- Touch: tap outside overlay to resume (optional)
 
 SECTION 5: MINI UI ELEMENTS
 
@@ -569,11 +628,13 @@ SECTION 5: MINI UI ELEMENTS
 - Kill count: small "+1" that fades at enemy death position
 - Gold pickup: "+3g" floating text near pickup
 - Boss health bar: large bar at top of screen during boss fight, with boss name
+- Victory bonus: "+100g" floating text on boss kill
 
 SECTION 6: RESPONSIVE LAYOUT
 - HUD scales based on screen size
 - Minimum supported: 800x600
 - Touch-friendly tap targets for mobile (minimum 44x44px)
+- Level-up cards stack vertically on narrow screens
 ```
 
 ---
@@ -583,50 +644,76 @@ SECTION 6: RESPONSIVE LAYOUT
 ```
 Create the file 09_audio_spec.md for Modularity Engine.
 
-This spec defines the audio design for V1.
+This spec defines the audio design for V1. THE CANONICAL SOURCE for all audio specs is the Sound Design Arc section in vs_prog.md. This prompt defines the structure; vs_prog.md provides every number, waveform, frequency, and timing.
+
+This file MUST include the following sections, each pulling exact values from vs_prog.md:
 
 SECTION 1: AUDIO ARCHITECTURE
-- Use Web Audio API or Howler.js (confirm which in implementation)
+- Web Audio API (no external libraries, no Howler.js). Single HTML5 file, zero dependencies.
 - Audio channels: SFX (multiple concurrent), Music (1 track), UI (1 concurrent)
 - Max simultaneous sounds: 16 (older sounds ducked/forced when exceeded)
-- Volume controls: Master, SFX, Music (V1: fixed defaults, no settings UI)
+- Volume defaults: Master 80%, Music 70%, SFX 85%. No settings UI in V1.
+- All sounds are procedurally synthesized using Web Audio API oscillators.
 
-SECTION 2: REQUIRED SOUNDS
+SECTION 2: SFX LIST — Copy the full SFX table from vs_prog.md. Each entry has: ID, trigger, waveform, frequency/pattern, duration, notes.
 
-SFX CHANNEL:
-| ID | Sound Name | Trigger | Notes |
-|---|---|---|---|
-| sfx_hit | Weapon hit impact | Projectile/enemy collision | Short, punchy. 3-5 variants for variety |
-| sfx_kill | Enemy death | Enemy HP reaches 0 | Satisfying pop/crumble. 3 variants |
-| sfx_pickup_xp | EXP gem collected | Player touches EXP gem | Quick chime, pitch scales with gem size |
-| sfx_pickup_gold | Gold coin collected | Player touches gold | Clink sound. Batched if multiple collected quickly |
-| sfx_level_up | Player levels up | XP threshold reached | Ascending fanfare, 1-2 seconds |
-| sfx_powerup_collect | Power-up item collected | Player touches power-up | Bright, rewarding sound |
-| sfx_screen_wipe | Screen wipe activated | Screen wipe power-up triggered | Dramatic whoosh/boom, 2-3 seconds |
-| sfx_boss_spawn | Boss appears | Boss spawns at 10:00 | Ominous, low rumble + scream |
-| sfx_boss_death | Boss defeated | Boss HP reaches 0 | Epic, satisfying, 2-3 seconds |
-| sfx_player_hurt | Player takes damage | Player collision with enemy/projectile | Quick impact + vocal grunt |
-| sfx_player_death | Player dies | HP reaches 0 | Dramatic, slow |
-| sfx_weapon_fire | Weapon fires | Weapon cooldown completes | Per-weapon: projectile (whoosh), orbit (hum), area (pulse) |
-| sfx_ui_click | UI button clicked | Menu interaction | Short click/tap |
+Required SFX (copy exact specs from vs_prog.md):
+- Weapon hit (noise burst, 200–800Hz bandpass, 0.03s)
+- Enemy kills: per-type (Zombie pop, Bat chirp, Skeleton clank, Ghost wail, Caster fizz, Boss death)
+- Pickup sounds: XP small (3-note payout triad), XP large (4-note extended), Gold coin (brighter clink)
+- Level-up (ascending scale run C5→E5→G5→C6)
+- Power-up collect (5-note full arpeggio)
+- Screen wipe (descending sweep 2000Hz→100Hz + white noise)
+- Player hurt (square 200Hz→100Hz, 0.1s)
+- Player death (square+sine 400Hz→50Hz, 1.5s)
+- Weapon fire: per-weapon (Projectile = square blip, Orbit = triangle hum, Area = sawtooth sweep)
+- UI click (sine 800Hz, 0.02s)
+- Boss warning (sine 100Hz fade-in, 2s)
+- Boss spawn (square+noise 80Hz→40Hz, 1s)
+- Magnet hum (continuous sine 220Hz + 330Hz, duration of effect)
 
-MUSIC CHANNEL:
-| ID | Track Name | When |
-|---|---|---|
-| music_stage | Stage Theme | During gameplay. Loop. Upbeat, dark, driving rhythm |
-| music_boss | Boss Theme | During boss fight. Replaces stage theme. More intense |
-| music_menu | Menu Theme | Title/pause screens. Calmer, atmospheric |
-| music_gameover | Game Over | Short, melancholic (5-10 seconds, no loop) |
+SECTION 3: MUSIC PROGRESSION — Copy the exact Music Progression table from vs_prog.md. Each entry has: timestamp, track, transition, feel.
 
-SECTION 3: AUDIO PRIORITIES
-- When > 16 sounds playing: prioritize player sounds > weapon sounds > enemy sounds
-- Distance-based volume: sounds from enemies/pickups quieter if far from player
-- Low-pass filter on all audio when paused
+Key music moments:
+- 0:00 Stage Theme ambient intro (fade in 2s)
+- 0:15 Beat drop (drums enter)
+- 1:00 Building loop (add bass)
+- 2:00 Full intensity (add lead synth)
+- 3:30 Pre-boss build (strings swell)
+- 3:50 Silence (2s dramatic cut)
+- 3:52 Boss theme ominous intro
+- 4:00 Boss theme full combat
+- 4:30 Boss Phase 2 escalation (+15% tempo)
+- Boss death: Victory sting (2s brass fanfare)
+- 5:00 Game Over melancholic piano
+- Player death: Death sting (1s impact, silence)
 
-SECTION 4: IMPLEMENTATION NOTES
-- V1: Use royalty-free sound generators or synthesized sounds (Web Audio API oscillators)
-- No external audio assets required for V1 — generate procedurally or use simple waveforms
-- Document recommended free sound resources if procedural is insufficient
+Crossfade: 2s transitions except pre-boss silence (instant cut) and boss death (slow-mo bass drop).
+
+SECTION 4: PICKUP SOUND ENGINE — The Payout Triad. Copy the full spec from vs_prog.md:
+- Oscillator: square wave, attack 0.005s, decay 0.04s, release 0.02s
+- C Major scale C5–C6 (8 frequencies: 523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50)
+- Arpeggio: Base → ×1.5 → ×2.0 (3 notes in 0.065s)
+- Variance engine: combo stepping (advance scale index per pickup, reset after 0.6s gap), micro-tuning jitter (±15Hz), volume decoupling (gain 0.08–0.12)
+- Per-type variations: XP small (3-note), XP large (4-note), Gold (brighter pattern), Power-up (5-note), Level-up (scale run)
+
+SECTION 5: SOUND PRIORITY SYSTEM — Copy the exact priority order and ducking rules from vs_prog.md.
+
+Priority (highest to lowest):
+1. Player hurt/death
+2. Power-up collected
+3. Level-up
+4. Boss sounds
+5. Screen wipe
+6. Weapon fire
+7. Enemy death
+8. Weapon hit
+9. Pickup collection
+10. Enemy ambient
+
+Ducking: high-priority sound ducks lower sounds by 20% for 0.3s. Boss active ducks all regular combat by 30%. Level-up screen ducks combat to 10%.
+
+SECTION 6: DISTANCE-BASED AUDIO — Copy the exact attenuation table from vs_prog.md (0–100px = 100%, 100–200px = 70%, 200–400px = 40%, 400px+ = 20%). Exceptions: player sounds always 100%, boss sounds minimum 80%.
 ```
 
 ---
@@ -636,29 +723,49 @@ SECTION 4: IMPLEMENTATION NOTES
 ```
 Create the file 10_json_schemas.md for Modularity Engine.
 
-This spec defines the JSON schema for every content file the engine loads. Each schema must include: field name, type, required/optional, default value, description, and a complete V1 example.
+This spec defines the JSON schema for every content file the engine loads. USE THE EXACT VALUES from vs_prog.md, vs_colors.md, and the numbered spec files (02–09) as the source of truth for all field values.
+
+Each schema must include: field name, type (required/optional), default value, description, and a complete V1 example populated with real values from the specs.
 
 Define schemas for:
 
 1. CHARACTERS.JSON — Single character definition
-   - id, name, description, stats (maxHealth, moveSpeed, armor, pickupRange, magnetRange, critChance, critMultiplier), startingWeapon (weapon id), visual (sprite, size, color)
+   - id, name, description, stats (maxHealth: 100, moveSpeed: 200, armor: 0, pickupRange: 50, magnetRange: 0, critChance: 0, critMultiplier: 1.5), startingWeapon (weapon id), visual (shape: "square", size: 24, color: "#FFD700")
+   - Source: 02_character_spec.md + vs_colors.md
 
-2. WEAPONS.JSON — Array of weapon definitions
-   - id, name, description, type (projectile/orbit/area), targeting (nearest/random), stats per level (damage, cooldown, area, speed, duration, knockback, projectiles), powerSpikes (level 4 and 7 bonuses with description and stat modifiers)
+2. WEAPONS.JSON — Array of 3 weapon definitions
+   - id, name, description, type (projectile/orbit/area), targeting, unlockLevel (1/3/6), statsPerLevel (array of 7 level objects with exact values from vs_prog.md Weapon Progression), powerSpikes ({level4: {name, description, statModifiers}, level7: {name, description, statModifiers}}), visual (shape, color from vs_colors.md)
+   - Source: 03_weapons_spec.md + vs_prog.md Weapon Progression
 
-3. ENEMIES.JSON — Array of enemy + boss definitions
-   - id, name, type (normal/boss), stats (hp, damage, speed, size, xpValue, goldValue), behavior (pattern, additional params), drops (xpRange, goldRange, powerUpTable [{type, chance}]), spawn (weight, formations)
+3. ENEMIES.JSON — Array of 6 definitions (5 enemies + 1 boss)
+   - id, name, type (normal/boss), stats (hp, damage, speed, size, xpValue, goldValue), behavior (pattern, params), drops (powerUpTable [{type, chance}]), spawn (weight, firstAppears)
+   - Boss-specific: phases [{hpThreshold, speed, chargeInterval, minionCount, groundPound}], loot (xp, gold, guaranteedPowerUp)
+   - Source: 04_enemies_spec.md + vs_prog.md Enemy Spawn Details + Boss Encounter
 
-4. STAGES.JSON — Array of stage definitions
-   - id, name, theme, background, spawnConfig (minDistance, maxEnemies, baseSpawnRate), waves [{time, enemies [{id, weight}], spawnRate}], difficultyScaling ({hpMultiplierPerMinute, damageMultiplierPerMinute, spawnRateCap}), bossConfig ({enemyId, spawnTime})
+4. STAGES.JSON — Single stage definition
+   - id, name, theme, background, spawnConfig (minDistance: 400–600, maxEnemies: 200, baseSpawnRate: 0.8, spawnRateCap: 3.0)
+   - waves (array of 10 time brackets from vs_prog.md Master Timeline, each with: time, enemyTypes, spawnRate, compositionWeights, maxEnemies)
+   - difficultyScaling ({hpMultiplier: "1 + 0.15 × minutes_after_boss_kill", damageMultiplier: "1 + 0.10 × minutes_after_boss_kill"})
+   - xpScaling (formula: "base_xp × (1 + 0.05 × floor(t / 60))")
+   - bossConfig ({enemyId, spawnTime: 4:00, announcement: [{time: 3:50, text, type: "text"}, {time: 3:50, type: "dim"}, {time: 3:55, type: "shake", text}]})
+   - obstacles (types: 5, collisionRules: "player+enemies collide, projectiles+pickups pass through")
+   - Source: 05_stages_spec.md + vs_prog.md Wave Timeline
 
-5. PICKUPS.JSON — Array of pickup definitions
-   - id, name, type (exp_small/exp_large/gold/screen_wipe/magnet/weapon_levelup), value, visual, behavior (duration, range, radius), dropConfig (sources [{enemyId, chance}], guaranteedDropEnemies)
+5. PICKUPS.JSON — Array of 6 pickup definitions
+   - id, name, type (exp_small/exp_large/gold/screen_wipe/magnet/weapon_levelup), value, visual (shape, color from vs_colors.md)
+   - Behavior: {duration, attractRadius, attractSpeed, instantBurstRadius}
+   - Drop config: {sources [{enemyId, chance}], guaranteedDropEnemies}
+   - Magnet special: attractRadius: 350, attractSpeed: 400, instantBurstRadius: 150, duration: 10
+   - Source: 06_pickups_and_powerups_spec.md + vs_prog.md Drop Economy
 
 6. LEVELING.JSON — Leveling configuration
-   - xpCurve [{level, totalXp, xpToNext}], formula for 10+, upgradePool (weaponWeight, passiveWeight), passiveOptions [{id, name, stat, value, description}]
+   - xpCurve (array of 14 entries from vs_prog.md XP Table, each with: level, xpToNext, cumulativeXp)
+   - formula ({forLevel: 14, expression: "floor(375 × 1.3^(N-14))"})
+   - upgradePool ({weaponWeight: 0.6, passiveWeight: 0.4})
+   - passiveOptions (5 entries, each with: id, name, stat, value, description, maxStacks)
+   - Source: 07_leveling_system_spec.md + vs_prog.md Experience Curve
 
-Include type annotations (TypeScript-style) alongside the JSON examples for clarity.
+Include TypeScript type annotations alongside the JSON examples. Each file's schema should be self-contained — a developer reading only that schema should understand the full structure.
 ```
 
 ---
