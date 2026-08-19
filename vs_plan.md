@@ -770,6 +770,449 @@ Include TypeScript type annotations alongside the JSON examples. Each file's sch
 
 ---
 
+## Spec Validation Test Prompts
+
+> **Instructions:** After creating each spec file, run its matching test prompt to validate correctness. Fix any failures before moving to the next spec. The test prompt reads the spec file and checks it against the source of truth files (vs_prog.md, vs_colors.md, vs_plan.md).
+
+---
+
+### Test 1 — Validate `01_engine_architecture.md`
+
+```
+Read the file 01_engine_architecture.md and validate it against the requirements below. Report PASS or FAIL for each check.
+
+REQUIRED SECTIONS — All must exist:
+1. Game Loop — fixed-timestep, 60 FPS target, correct system order: input → movement → auto-attack → collision → entity cleanup → spawn → pickup collection → UI update → render
+2. Entity System — entity structure (id, type, position, velocity, hitbox, stats, behavior), object pooling
+3. Collision System — AABB, 3 collision layers defined (player-damageable, enemy-damageable, pickup-collectable)
+4. Rendering — Canvas 2D, camera follows player, draw order: background → entities (y-sort) → projectiles → pickups → UI overlay
+5. Data Loading — JSON content files loaded on stage start, validation on load
+6. Scene/State Management — MUST list THREE end states: Victory (boss killed), Survived (timer 5:00), Defeat (player dies). Each with distinct title.
+7. Damage System — formula: attacker.damage - defender.defense (min 1), crit chance, knockback, invincibility frames (0.5s)
+8. Camera Effects — screen shake on: boss spawn, screen wipe, boss death, low HP (<25%)
+9. HiDPI — devicePixelRatio support mentioned
+10. Projectile Lifetime — 3 seconds OR 600px, whichever first
+11. Obstacle Collision — player + enemies collide with obstacles, projectiles + pickups pass through
+12. Performance — max 200 enemies + 500 projectiles + 500 pickups
+
+CROSS-REFERENCE CHECKS:
+- [ ] Boss spawn time is 4:00 (not 10:00)
+- [ ] Game duration is 5 minutes (not 10)
+- [ ] References 03_weapons_spec.md for weapon stats
+- [ ] References 08_ui_hud_spec.md for end screen stats
+- [ ] References vs_colors.md for visual specs
+- [ ] Invincibility frames = 0.5s (matches 02_character_spec.md)
+- [ ] Damage formula uses defense/armor (matches passive stats in 07_leveling_system_spec.md)
+```
+
+---
+
+### Test 2 — Validate `02_character_spec.md`
+
+```
+Read the file 02_character_spec.md and validate it against the requirements below.
+
+REQUIRED — Stats table must contain EXACTLY these values:
+- Max Health: 100
+- Movement Speed: 200 px/s
+- Armor: 0
+- Pickup Range: 50 px
+- Magnet Range: 0
+- Crit Chance: 0%
+- Crit Multiplier: 1.5x
+- Level: starts at 1
+
+REQUIRED SECTIONS:
+1. Character Identity — name, description, lore text
+2. Base Stats Table — all values above present and correct
+3. Movement — dual input: click/tap-to-move (primary) + WASD/arrow keys (secondary)
+   - Click/tap: pathfinds to target, stops within 4px threshold, visual indicator
+   - WASD: 8-directional, diagonal normalization
+   - WASD overrides click-to-move if pressed
+   - Touch devices: tap-to-move exclusively, no virtual joystick
+4. Hitbox — circular, radius 12px
+5. Invincibility Frames — 0.5 seconds, 100ms blink intervals
+6. Death Condition — health ≤ 0, triggers DEFEAT end screen (reference 01_engine_architecture.md)
+7. Obstacle Interaction — player slides along obstacles, pathfinding steers around
+8. Visual — Hero Gold square 24×24px, color #FFD700, references vs_colors.md
+
+CROSS-REFERENCE CHECKS:
+- [ ] Starting Weapon references a weapon from 03_weapons_spec.md
+- [ ] Visual spec matches vs_colors.md Player Visual section
+- [ ] Death condition references 3 end states from 01_engine_architecture.md
+```
+
+---
+
+### Test 3 — Validate `03_weapons_spec.md`
+
+```
+Read the file 03_weapons_spec.md and validate it against vs_prog.md Weapon Progression section.
+
+FOR EACH WEAPON (Projectile, Orbit, Area), verify:
+1. Upgrade table has EXACTLY 7 levels
+2. All stat values match vs_prog.md (copy-paste check, not approximation)
+3. DPS table matches vs_prog.md DPS Progression
+4. Level 4 power spike defined with exact name and effect from vs_prog.md
+5. Level 7 power spike defined with exact name and effect from vs_prog.md
+6. Unlock condition matches: W1=start, W2=Level 3, W3=Level 6
+
+WEAPON-SPECIFIC CHECKS:
+- Projectile: Level 1 DMG=8, Cooldown=1.00s, L4=Pierce +1 enemy, L7=Projectiles split on hit
+- Orbit: Level 1 DMG=5, Orbit Speed=2.0s, L4=+50% radius +1 orb, L7=Afterimage trails
+- Area: Level 1 DMG=12, Cooldown=2.50s, L4=Double pulse, L7=Massive explosion + stun
+
+CROSS-REFERENCE CHECKS:
+- [ ] Projectile lifetime: 3s or 600px (matches 01_engine_architecture.md)
+- [ ] Visual specs reference vs_colors.md
+- [ ] Behavior types match 01_engine_architecture.md (Projectile/Orbit/Area)
+```
+
+---
+
+### Test 4 — Validate `04_enemies_spec.md`
+
+```
+Read the file 04_enemies_spec.md and validate it against vs_prog.md Enemy Spawn Details.
+
+FOR EACH ENEMY, verify stats match vs_prog.md EXACTLY:
+- Zombie: HP 10, DMG 8, Speed 60, Size 14px, XP 1, Gold 1-2, Weight 100, First Appears 0:00
+- Bat: HP 5, DMG 5, Speed 120, Size 10px, XP 1, Gold 1, Weight 80, First Appears 1:00
+- Skeleton: HP 35, DMG 12, Speed 40, Size 16px, XP 3, Gold 2-3, Weight 60, First Appears 2:00
+- Ghost: HP 15, DMG 10, Speed 80, Size 12px, XP 2, Gold 2-3, Weight 50, First Appears 2:30
+- Caster: HP 12, DMG 8, Speed 50, Size 13px, XP 3, Gold 3-4, Weight 45, First Appears 3:00, Projectile DMG 6, Projectile Speed 150 px/s
+
+DROP TABLE CHECK:
+- Bat drops Magnet 5%
+- Ghost drops Magnet 5%
+- Skeleton drops Screen Wipe 2%
+- Caster drops Screen Wipe 2%
+- Zombie: 1% Weapon Up
+- Skeleton, Ghost, Caster: 1% Weapon Up
+
+BOSS CHECK — The Gravekeeper:
+- HP 1,000, DMG 15, Speed 70/100, Size 28px, Spawn 4:00
+- Phase 1: charges + 3 minions every 3s
+- Phase 2: faster charges every 2s + 5 minions + ground pound (80px, 20 DMG, 0.75s telegraph)
+- Drops: 50 XP, 20-30 Gold, guaranteed Weapon Level-Up
+- Announcement: text at 3:50, shake at 3:55, spawn at 4:00
+- Boss DPS check mentioned: ~17+ DPS needed, expected 80-110
+
+CROSS-REFERENCE CHECKS:
+- [ ] Boss spawn = 4:00 (not 10:00)
+- [ ] Visual specs reference vs_colors.md
+- [ ] Drop table matches vs_prog.md Drop Economy table
+```
+
+---
+
+### Test 5 — Validate `05_stages_spec.md`
+
+```
+Read the file 05_stages_spec.md and validate it against vs_prog.md Wave Timeline.
+
+WAVE TIMELINE CHECK — must have EXACTLY 10 time brackets:
+1. 0:00–0:30: Zombie, 0.8/s, 25 max
+2. 0:30–1:00: Zombie, 1.2/s, 40 max
+3. 1:00–1:30: Z+B, 1.5/s, 60 max
+4. 1:30–2:00: Z+B, 1.8/s, 80 max
+5. 2:00–2:30: Z+B+S, 2.0/s, 100 max
+6. 2:30–3:00: Z+B+S+G, 2.2/s, 120 max
+7. 3:00–3:30: All 5, 2.5/s, 150 max
+8. 3:30–4:00: All 5, 3.0/s, 180 max
+9. 4:00–4:30: All+Boss, 2.0/s, 150+Boss max
+10. 4:30–5:00: All+Boss, 1.5/s, 120+Boss max
+
+SPAWN FORMULA CHECK:
+- spawn_rate(t) = base_rate × (1 + 0.4 × floor(t / 30))
+- Capped at 3.0/second
+- Base rate starts at 0.8
+
+COMPOSITION WEIGHTS — verify percentages for each bracket match vs_prog.md.
+
+DIFFICULTY SCALING CHECK:
+- Post-boss only: HP × (1 + 0.15 × minutes), Damage × (1 + 0.10 × minutes)
+- No scaling if boss not killed by 5:00
+
+OBSTACLES CHECK:
+- 5 types mentioned, collision rules defined
+- References vs_colors.md
+
+EVENT MARKERS CHECK:
+- 3:50 text announcement
+- 3:55 camera shake + text
+- 4:00 boss spawn
+- Post-boss difficulty notifications
+
+XP SCALING CHECK:
+- xp_value(t) = base_xp × (1 + 0.05 × floor(t / 60))
+
+CROSS-REFERENCE CHECKS:
+- [ ] Game duration = 5 minutes (not 10)
+- [ ] Boss spawns at 4:00 (not 10:00)
+- [ ] Difficulty scaling: +15% HP, +10% damage (not +5%)
+- [ ] Obstacles included (not excluded)
+```
+
+---
+
+### Test 6 — Validate `06_pickups_and_powerups_spec.md`
+
+```
+Read the file 06_pickups_and_powerups_spec.md and validate it.
+
+DROP RATE TABLE CHECK — must match vs_prog.md:
+| Enemy | XP | Gold | Screen Wipe | Magnet | Weapon Up |
+| Zombie | 1 | 1-2 | — | — | 1% |
+| Bat | 1 | 1 | — | 5% | — |
+| Skeleton | 3 | 2-3 | 2% | — | 1% |
+| Ghost | 2 | 2-3 | — | 5% | 1% |
+| Caster | 3 | 3-4 | 2% | — | 1% |
+| Boss | 50 | 20-30 | — | — | 100% |
+
+POWER-UP CHECKS:
+- Screen Wipe: kills all enemies, deals 50% boss HP, 2% from Skeleton/Caster
+- Magnet: 350px radius, 400 px/s, 10s duration, instant burst 150px, 5% from Bat/Ghost
+- Weapon Level-Up: levels 1-3 random weapons, 1% base, 100% boss, max level 7
+
+MAGNET RULES CHECK:
+- Base pickup range: 50px
+- Magnet extends to 350px
+- Instant burst: 150px
+- No duration stacking, reset timer on re-pickup
+
+PICKUP RULES CHECK:
+- Gold scatter: ±30px
+- Despawn limit: 500 pickups
+
+CROSS-REFERENCE CHECKS:
+- [ ] Magnet instant burst (150px) present
+- [ ] All drop rates match vs_prog.md Drop Economy
+- [ ] Sound references match vs_prog.md Sound Design Arc
+```
+
+---
+
+### Test 7 — Validate `07_leveling_system_spec.md`
+
+```
+Read the file 07_leveling_system_spec.md and validate against vs_prog.md Experience Curve.
+
+XP TABLE CHECK — must match vs_prog.md EXACTLY:
+| Level | XP to Next | Cumulative |
+| 1→2 | 5 | 5 |
+| 2→3 | 10 | 15 |
+| 3→4 | 15 | 30 |
+| 4→5 | 22 | 52 |
+| 5→6 | 32 | 84 |
+| 6→7 | 45 | 129 |
+| 7→8 | 62 | 191 |
+| 8→9 | 85 | 276 |
+| 9→10 | 115 | 391 |
+| 10→11 | 155 | 546 |
+| 11→12 | 210 | 756 |
+| 12→13 | 280 | 1036 |
+| 13→14 | 375 | 1411 |
+| 14+ | floor(375 × 1.3^(N-14)) | — |
+
+FORMULA CHECK:
+- xp_to_next(N) = floor(375 × 1.3^(N-14)) for N ≥ 14
+- NOT floor(250 × 1.35^(N-10)) — this is the OLD wrong formula
+
+PASSIVE BOOSTS CHECK — must have max stacks:
+- Max Health +20%: max 5 stacks
+- Movement Speed +10%: max 3 stacks
+- Armor +1: max 3 stacks
+- Pickup Range +25px: max 4 stacks
+- Crit Chance +5%: max 4 stacks
+
+UPGRADE POOL RULES CHECK:
+- Weapon upgrades 60%, passives 40%
+- No duplicates in single screen
+- Max level weapons excluded
+- Unlock options appear when level reached
+- Max stack passives excluded
+- All-weapons-maxed → 100% passives
+
+MILESTONES CHECK:
+- Expected Level Milestones table from vs_prog.md included
+- Level-up pacing table included
+
+CROSS-REFERENCE CHECKS:
+- [ ] Level-up screen behavior matches 01_engine_architecture.md (full pause)
+- [ ] Weapon unlocks: W2 at Level 3, W3 at Level 6 (matches 03_weapons_spec.md)
+```
+
+---
+
+### Test 8 — Validate `08_ui_hud_spec.md`
+
+```
+Read the file 08_ui_hud_spec.md and validate it.
+
+TIMER CHECK:
+- Timer shows boss spawns at 4:00 (NOT 10:00)
+
+END SCREENS CHECK — must define 3 distinct screens:
+1. Victory: title "VICTORY", gold text, +100 gold bonus, confetti, text "The Gravekeeper has been vanquished!"
+2. Survived: title "SURVIVED", white text, no bonus
+3. Defeat: title "DEFEATED", red text, red tint overlay, no bonus
+
+END SCREEN STATS CHECK — ALL 3 screens must show:
+- Time Survived
+- Level Reached
+- Enemies Killed
+- Gold Collected
+- Boss Defeated (Yes/No)
+- Weapon Loadout (W1 Lv.#, W2 Lv.#, W3 Lv.#)
+
+HUD ELEMENTS CHECK:
+- Health bar (top-left, red)
+- Level display (top-center-right)
+- Gold display (top-right)
+- EXP bar (bottom, full width, blue)
+- Weapon panel (bottom-left, gold border on max level)
+- Timer (top-center)
+- Boss health bar (appears at boss spawn)
+
+LEVEL-UP SCREEN CHECK:
+- 3 cards, keyboard 1-2-3, touch tap to select
+- Semi-transparent overlay, game pauses
+
+PAUSE MENU CHECK:
+- Escape to pause, Resume/Restart/Quit
+
+MINI UI CHECK:
+- Damage numbers (white/yellow/red color-coded)
+- Floating gold text (+Ng)
+- Victory bonus text (+100g on boss kill)
+
+CROSS-REFERENCE CHECKS:
+- [ ] Design theme matches (dark, electric blue accent #3B82F6)
+- [ ] Responsive: 800x600 minimum, touch targets 44x44px
+- [ ] Cards stack vertically on narrow screens
+```
+
+---
+
+### Test 9 — Validate `09_audio_spec.md`
+
+```
+Read the file 09_audio_spec.md and validate against vs_prog.md Sound Design Arc.
+
+ARCHITECTURE CHECK:
+- Web Audio API only (no Howler.js)
+- Volume defaults: Master 80%, Music 70%, SFX 85%
+- Max 16 simultaneous sounds
+
+SFX COUNT CHECK — must have at least 13 SFX entries:
+weapon_hit, kill_zombie, kill_bat, kill_skeleton, kill_ghost, kill_caster, kill_boss,
+pickup_xp_small, pickup_xp_large, pickup_gold, level_up, powerup_collect,
+screen_wipe, player_hurt, player_death, weapon_fire (per-weapon), ui_click,
+boss_warning, boss_spawn, magnet_hum
+
+MUSIC CHECK:
+- At least 10 music moments/timestamps
+- 3:50 silence, 3:52 boss intro, 4:00 boss full combat
+- Victory sting on boss death
+- Death sting on player death
+
+PAYOUT TRIAD CHECK:
+- Square waveform
+- C Major scale: 523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50 Hz
+- Arpeggio: Base → ×1.5 → ×2.0
+- Combo stepping: advance index, reset after 0.6s gap
+- Micro-tuning jitter: ±15 Hz
+- Volume decoupling: gain 0.08–0.12
+
+PRIORITY CHECK:
+- 10-level priority list present
+- Ducking rules: high-priority ducks by 20%, boss active ducks by 30%, level-up ducks to 10%
+
+DISTANCE AUDIO CHECK:
+- 4 tiers: 0-100px=100%, 100-200px=70%, 200-400px=40%, 400px+=20%
+- Player sounds always 100%, boss minimum 80%
+```
+
+---
+
+### Test 10 — Validate `10_json_schemas.md`
+
+```
+Read the file 10_json_schemas.md and validate it.
+
+SCHEMA COMPLETENESS CHECK — all 6 JSON files must have schemas:
+1. characters.json — id, name, stats (all 8 fields), startingWeapon, visual (shape, size, color)
+2. weapons.json — 3 weapons, each with upgradeTable (7 levels), powerSpikes (L4+L7), unlockLevel
+3. enemies.json — 6 entries (5 enemies + boss), each with stats, behavior, drops, spawn
+4. stages.json — 1 stage with 10 time brackets, spawnConfig, difficultyScaling, xpScaling, bossConfig with announcement
+5. pickups.json — 6 pickups, each with behavior, dropConfig. Magnet: attractRadius=350, instantBurstRadius=150
+6. leveling.json — xpCurve (14 entries), formula (floor(375 × 1.3^(N-14))), passiveOptions with maxStacks
+
+VALUE ACCURACY CHECK:
+- Character maxHealth=100, moveSpeed=200, pickupRange=50
+- Boss spawn=4:00, HP=1000
+- Magnet attractRadius=350, instantBurstRadius=150
+- XP formula: floor(375 × 1.3^(N-14))
+- Game duration: 5 minutes
+- Obstacles: 5 types, collision rules defined
+
+TYPE CHECK:
+- TypeScript type annotations present alongside JSON examples
+- Each schema is self-contained with field types and defaults
+
+CROSS-REFERENCE CHECKS:
+- [ ] All values match the corresponding spec files (02-09)
+- [ ] No stale boss spawn times (10:00)
+- [ ] No wrong XP formulas
+```
+
+---
+
+### Test 11 — Cross-Spec Integration Test
+
+```
+After all 10 spec files are created, read all of them and validate cross-spec consistency.
+
+UNIVERSAL VALUES CHECK — these values must be identical across all files that reference them:
+| Value | Expected | Files That Must Agree |
+|---|---|---|
+| Game duration | 5 minutes | 01, 05, 07, 08, 10 |
+| Boss spawn time | 4:00 | 01, 04, 05, 08, 10 |
+| Player max HP | 100 | 02, 04 (boss DPS check), 07, 10 |
+| Player speed | 200 px/s | 02, 10 |
+| Pickup range | 50 px | 02, 06, 10 |
+| Magnet radius | 350 px | 06, 10 |
+| Magnet instant burst | 150 px | 06, 10 |
+| XP formula | floor(375 × 1.3^(N-14)) | 07, 10 |
+| L1→2 XP | 5 | 07, 10 |
+| Difficulty scaling | +15% HP, +10% DMG | 05, 10 |
+| Projectile lifetime | 3s or 600px | 01, 03 |
+| Max enemies | 200 | 01, 05 |
+| End states | 3 (Victory/Survived/Defeat) | 01, 08 |
+| Obstacles | 5 types, included in V1 | 01, 05, 10 |
+| Timer shows | Boss at 4:00 | 08 |
+| Weapon unlocks | W2=Lv3, W3=Lv6 | 03, 07 |
+
+DROP RATE CONSISTENCY CHECK:
+- Drop rate table in 06_pickups must match drop rates in 04_enemies
+- Both must match vs_prog.md Drop Economy
+
+WAVE TIMELINE CHECK:
+- 05_stages must have 10 brackets matching vs_prog.md
+- Enemy first-appearance times in 04_enemies must align with 05_stages
+
+VISUAL CONSISTENCY CHECK:
+- All entity visuals (player, enemies, boss, pickups, obstacles) reference vs_colors.md
+- No entity specifies a color/shape that conflicts with vs_colors.md
+
+AUDIO CONSISTENCY CHECK:
+- All sound triggers in 09_audio match events defined in 01-08
+- Boss spawn announcement timing in 05_stages matches 09_audio
+```
+
+---
+
 ## Engine Core Systems
 
 The engine is built in TypeScript. Below is the system inventory (no spec file needed — built directly).
