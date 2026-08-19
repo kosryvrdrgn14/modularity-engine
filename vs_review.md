@@ -146,7 +146,7 @@
 | 4 | **XP curve canonical source** | Engine needs one curve | High |
 | 5 | **Boss respawn rules** | `vs_prog.md` doesn't define respawn | Medium |
 | 6 | **Screen shake implementation** | Referenced in `vs_prog.md` but not spec'd | Medium |
-| 7 | **Touch controls (V2)** | Noted as deferred, but no spec exists | Low |
+| 7 | ~~**Touch controls (V2)**~~ | ✅ Resolved — click/tap-to-move IS the primary touch input for V1. No virtual joystick needed. Fully spec'd in `02_character_spec.md`. | Resolved |
 
 ### Items to Add to `vs_plan.md`
 
@@ -230,7 +230,9 @@
 | Game loop runs at 60 FPS | Puppeteer | Inject FPS counter, log for 60s | Average ≥ 55 FPS |
 | Entity pool allocation | Unit test | Create 200 entities, verify no leaks | Memory stable |
 | Collision detection accuracy | Unit test | Known positions, expected results | 100% pass |
-| Input responsiveness | Puppeteer | Simulate WASD, measure response | < 16ms latency |
+| Input responsiveness (WASD) | Puppeteer | Simulate WASD, measure response | < 16ms latency |
+| Click/tap-to-move | Puppeteer | Simulate click at target pos, verify player moves | Arrives within 500ms |
+| Tap-to-move obstacle steering | Puppeteer | Tap behind obstacle, verify path slides around it | No stuck states |
 
 ### Phase 3: Game Systems
 

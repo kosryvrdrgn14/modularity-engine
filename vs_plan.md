@@ -694,6 +694,8 @@ Use this checklist to verify each spec file covers all V1 requirements.
 ### Core Gameplay
 - [ ] 1 stage defined with wave timeline and difficulty scaling (5-minute duration)
 - [ ] 1 character with base stats and movement
+- [ ] Click/tap-to-move as primary input (with WASD/arrow keys secondary)
+- [ ] Touch devices: tap-to-move exclusively, no virtual joystick
 - [ ] 3 weapons with distinct mechanics (projectile, orbit, area)
 - [ ] Each weapon has full upgrade table (Levels 1–7)
 - [ ] Power spike at Level 4 defined per weapon
@@ -781,7 +783,7 @@ The following items are **not yet resolved** in V1 and should be addressed durin
 | 10 | **Canvas resolution / scaling** — HiDPI support? | Recommend: yes, use `devicePixelRatio` for crisp rendering. Add to `01_engine_architecture.md`. | Open |
 | 11 | **Save/load state** — Any persistence in V1? | Recommend: no persistence in V1. Each run is fresh. | Resolved |
 | 12 | **Performance target** — Min FPS? Max entities? | Recommend: 60 FPS target, 30 FPS minimum acceptable. Max 200 enemies + 500 projectiles + 500 pickups. | Resolved |
-| 13 | **Touch controls** — Virtual joystick for mobile? | Recommend: defer to V2. V1 is keyboard only. Note in `02_character_spec.md`. | Resolved |
+| 13 | **Touch controls** — Virtual joystick for mobile? | **Resolved.** Click/tap-to-move IS the touch input — no virtual joystick needed. Touch devices use tap-to-move exclusively. Keyboard overrides tap if pressed mid-path. Fully spec'd in `02_character_spec.md` Prompt 2. | Resolved |
 
 ### Content Gaps
 
