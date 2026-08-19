@@ -42,118 +42,95 @@
 
 ## Red Flags
 
-### 🔴 CRITICAL: XP Curve Conflict
+> **Status:** All critical conflicts have been **RESOLVED** as of 2026-08-19. See resolutions below.
 
-**Problem:** Two different XP curves exist in the project.
+### ✅ RESOLVED: XP Curve Conflict
+
+**Problem:** Two different XP curves existed.
 
 | Source | Level 1→2 | Level 2→3 | Formula (high levels) |
 |---|---|---|---|
 | `vs_plan.md` | 10 XP | 15 XP | `floor(250 × 1.35^(N-10))` |
 | `vs_prog.md` | 5 XP | 10 XP | `floor(375 × 1.3^(N-14))` |
 
-**Impact:** The engine cannot have two XP curves. One must be canonical.
-
-**Recommendation:** Use `vs_prog.md` curve (compressed for 5 minutes). Update `vs_plan.md` to reference `vs_prog.md` as the source of truth for Stage 1.
+**Resolution:** ✅ `vs_prog.md` is now the canonical source. `vs_plan.md` updated to reference it.
 
 ---
 
-### 🔴 CRITICAL: Boss Spawn Time Conflict
+### ✅ RESOLVED: Boss Spawn Time Conflict
 
-**Problem:** Boss spawns at different times.
+**Problem:** Boss spawned at different times.
 
 | Source | Boss Spawn | Game Duration |
 |---|---|---|
 | `vs_plan.md` | Minute 10 | 10+ minutes |
 | `vs_prog.md` | Minute 4 | 5 minutes |
 
-**Impact:** Wave timeline, difficulty scaling, and progression are all affected.
-
-**Recommendation:** Use `vs_prog.md` 5-minute timeline. Update `vs_plan.md` to note that V1 is compressed to 5 minutes.
+**Resolution:** ✅ Boss spawns at minute 4. `vs_plan.md` updated with 5-minute duration note.
 
 ---
 
-### 🔴 CRITICAL: Wave Timeline Conflict
+### ✅ RESOLVED: Wave Timeline Conflict
 
-**Problem:** Two completely different wave timelines exist.
+**Problem:** Two completely different wave timelines existed.
 
 | Source | Time Brackets | Enemy Introductions |
 |---|---|---|
 | `vs_plan.md` | 8 brackets (0:00–10:00+) | Zombies at 0:00, Bats at 1:00, Skeletons at 3:00, Ghosts at 5:00, Casters at 7:00 |
 | `vs_prog.md` | 10 brackets (0:00–5:00) | Zombies at 0:00, Bats at 1:00, Skeletons at 2:00, Ghosts at 2:30, Casters at 3:00 |
 
-**Impact:** Spawn system implementation will be wrong if based on the wrong timeline.
-
-**Recommendation:** Use `vs_prog.md` timeline. Mark `vs_plan.md` wave table as "original 10-minute design, superseded by `vs_prog.md`."
+**Resolution:** ✅ `vs_prog.md` timeline is canonical. `vs_plan.md` now references it.
 
 ---
 
-### 🟡 MAJOR: Obstacles Added Without Plan Update
+### ✅ RESOLVED: Obstacles Decision
 
-**Problem:** `vs_colors.md` defines 5 obstacle types (Tombstones, Grave Mounds, Broken Walls, Cracked Floor), but `vs_plan.md` explicitly states "No obstacles in V1 (pure open arena)."
+**Problem:** `vs_colors.md` defined 5 obstacle types, but `vs_plan.md` said "No obstacles in V1."
 
-**Impact:** Obstacles affect collision system, spawn rules, pathfinding, and gameplay feel.
-
-**Decision Required:** Do we include obstacles in V1?
-
-- **Option A (Recommended):** Include obstacles. They improve movement feel significantly. Update `vs_plan.md` to reflect this.
-- **Option B:** Remove obstacles from `vs_colors.md`. Keep V1 as pure open arena.
+**Resolution:** ✅ Obstacles are INCLUDED in V1. `vs_plan.md` updated to reflect this. Obstacles improve movement feel significantly.
 
 ---
 
-### 🟡 MAJOR: Visual Spec Not in Original Plan
+### ✅ RESOLVED: Visual Spec Location
 
-**Problem:** `vs_colors.md` is a new file not listed in the 10 required spec files from `vs_plan.md`.
+**Problem:** `vs_colors.md` was not in the original plan.
 
-**Impact:** The original plan referenced `08_ui_hud_spec.md` for visual design. `vs_colors.md` covers shapes, colors, and obstacles — overlapping with and extending beyond the UI spec.
-
-**Recommendation:** 
-- Keep `vs_colors.md` as the visual spec (it's more comprehensive)
-- `08_ui_hud_spec.md` should focus on HUD layout, screens, and UI flow only
-- Update `vs_plan.md` to include `vs_colors.md` in the file inventory
+**Resolution:** ✅ `vs_colors.md` is now the canonical visual spec. `vs_plan.md` file inventory updated. `08_ui_hud_spec.md` focuses on HUD layout only.
 
 ---
 
-### 🟡 MAJOR: Sound Design Overlap
+### ✅ RESOLVED: Sound Design Overlap
 
-**Problem:** Sound design is covered in two places:
-- `vs_plan.md` references `09_audio_spec.md`
-- `vs_prog.md` has a detailed "Sound Design Arc" section with Payout Triad system
+**Problem:** Sound design covered in two places.
 
-**Impact:** Implementation could reference conflicting specs.
-
-**Recommendation:** 
-- `vs_prog.md` is the canonical source for sound design (it has the detailed specs)
-- `09_audio_spec.md` should be a summary pointing to `vs_prog.md` for details
-- Or: merge all sound specs into `09_audio_spec.md` and have `vs_prog.md` reference it
+**Resolution:** ✅ `vs_prog.md` Sound Design Arc is the canonical source. `09_audio_spec.md` will be a summary pointing to it.
 
 ---
 
-### 🟢 MINOR: Version Roadmap Timing
+### ✅ RESOLVED: Version Roadmap Timing
 
-**Problem:** `vs_plan.md` mentions boss at minute 10 in the roadmap section, but V1 is 5 minutes.
+**Problem:** `vs_plan.md` mentioned boss at minute 10.
 
-**Impact:** Low — roadmap is for future versions.
-
-**Recommendation:** Add note that V1 is compressed to 5 minutes.
+**Resolution:** ✅ `vs_plan.md` now has prominent note that V1 is 5 minutes.
 
 ---
 
 ## Conflicts Found
 
-### Conflict Matrix
+### Conflict Matrix (All Resolved)
 
 | Spec Area | `vs_plan.md` | `vs_prog.md` | `vs_colors.md` | Resolution |
 |---|---|---|---|---|
-| XP Curve (L1→2) | 10 XP | 5 XP | — | Use `vs_prog.md` |
-| XP Formula | `floor(250 × 1.35^(N-10))` | `floor(375 × 1.3^(N-14))` | — | Use `vs_prog.md` |
-| Boss Spawn | Minute 10 | Minute 4 | — | Use `vs_prog.md` |
-| Game Duration | 10+ minutes | 5 minutes | — | Use `vs_prog.md` |
-| Wave Timeline | 8 brackets | 10 brackets | — | Use `vs_prog.md` |
-| Obstacles | None | None | 5 types | Decision needed |
-| Visual Spec | `08_ui_hud_spec.md` | — | `vs_colors.md` | Use `vs_colors.md` |
-| Sound Design | `09_audio_spec.md` | Sound Design Arc | — | Merge or reference |
-| Enemy Stats | Not defined | Defined | Defined | Use `vs_prog.md` |
-| Weapon Stats | Not defined | Defined | Defined | Use `vs_prog.md` |
+| XP Curve (L1→2) | 10 XP | 5 XP | — | ✅ Use `vs_prog.md` |
+| XP Formula | `floor(250 × 1.35^(N-10))` | `floor(375 × 1.3^(N-14))` | — | ✅ Use `vs_prog.md` |
+| Boss Spawn | Minute 10 | Minute 4 | — | ✅ Use `vs_prog.md` |
+| Game Duration | 10+ minutes | 5 minutes | — | ✅ Use `vs_prog.md` |
+| Wave Timeline | 8 brackets | 10 brackets | — | ✅ Use `vs_prog.md` |
+| Obstacles | None | None | 5 types | ✅ Include in V1 |
+| Visual Spec | `08_ui_hud_spec.md` | — | `vs_colors.md` | ✅ Use `vs_colors.md` |
+| Sound Design | `09_audio_spec.md` | Sound Design Arc | — | ✅ `vs_prog.md` is canonical |
+| Enemy Stats | Not defined | Defined | Defined | ✅ Use `vs_prog.md` |
+| Weapon Stats | Not defined | Defined | Defined | ✅ Use `vs_prog.md` |
 
 ---
 
@@ -305,11 +282,11 @@
 
 ### Immediate (Before Implementation)
 
-1. **Resolve the XP curve conflict** — Choose `vs_prog.md` as canonical, update `vs_plan.md`
-2. **Resolve the boss spawn conflict** — Choose minute 4, update `vs_plan.md`
-3. **Decide on obstacles** — Include them (recommended) or remove from `vs_colors.md`
-4. **Update `vs_plan.md`** — Add `vs_colors.md` to file inventory, note V1 is 5 minutes
-5. **Create a single source of truth map** — Document which file owns each spec area
+1. ~~Resolve the XP curve conflict~~ ✅ Done
+2. ~~Resolve the boss spawn conflict~~ ✅ Done
+3. ~~Decide on obstacles~~ ✅ Done (included)
+4. ~~Update `vs_plan.md`~~ ✅ Done
+5. ~~Create a single source of truth map~~ ✅ Done (added to `vs_plan.md`)
 
 ### During Implementation
 
@@ -325,6 +302,20 @@
 2. **Playtest balance** — Compare actual gameplay to `vs_prog.md` targets
 3. **Visual QA** — Screenshot comparison against `vs_colors.md` specs
 4. **Performance benchmark** — Verify 60 FPS with 200 entities
+
+---
+
+## Resolution Summary
+
+| # | Conflict | Status | Canonical Source |
+|---|---|---|---|
+| 1 | XP Curve | ✅ Resolved | `vs_prog.md` |
+| 2 | Boss Spawn | ✅ Resolved | `vs_prog.md` (minute 4) |
+| 3 | Wave Timeline | ✅ Resolved | `vs_prog.md` (5-minute) |
+| 4 | Obstacles | ✅ Resolved | `vs_colors.md` (included in V1) |
+| 5 | Visual Spec | ✅ Resolved | `vs_colors.md` |
+| 6 | Sound Design | ✅ Resolved | `vs_prog.md` Sound Design Arc |
+| 7 | Version Roadmap | ✅ Resolved | `vs_plan.md` (noted 5-min V1) |
 
 ---
 

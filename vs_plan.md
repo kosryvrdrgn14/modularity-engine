@@ -54,11 +54,14 @@ The name says it all. Every game entity is defined by data, not hardcoded logic.
 
 ## Version 1 Scope
 
+> **Note:** V1 is compressed to a **5-minute prototype** (not the original 10-minute design). All progression, wave timing, and balance targets are defined in `vs_prog.md`. This file provides the architecture and spec structure; `vs_prog.md` provides the numbers.
+
 **Goal:** A playable prototype proving the core loop works. One stage, one character, three weapons, five enemy types, one boss — enough to feel the chaos.
 
 | Feature | Detail |
 |---|---|
-| Stage | 1 stage (infinite scrolling arena with timed waves) |
+| Duration | **5 minutes** (boss spawns at minute 4) |
+| Stage | 1 stage (infinite scrolling arena with timed waves + obstacles) |
 | Character | 1 playable character with base stats |
 | Weapons | 3 weapons with auto-attack, upgradeable to max level 7 |
 | Enemies | 5 standard enemy types + 1 boss |
@@ -69,28 +72,34 @@ The name says it all. Every game entity is defined by data, not hardcoded logic.
 | Magnet | Power-up — attracts all nearby EXP and gold (moderate drop chance) |
 | Weapon Level-Up Drop | Power-up — randomly levels up 1–3 weapons by 1 level |
 | Weapon Power Spikes | Level 4 (mid) and Level 7 (max) unlock significant bonus effects |
-| Sounds | Basic: hit, kill, pickup, level-up, boss spawn, screen wipe, UI click |
+| Sounds | Procedural Web Audio API synthesis (casino-style pickup arpeggios) |
+| Visuals | Basic geometric shapes (squares, diamonds, circles, triangles) |
+| Obstacles | Tombstones, grave mounds, broken walls, cracked floor |
 | UI / HUD | Health bar, EXP bar, level number, gold counter, weapon icons with levels, timer |
 | Polish | Clean modern UI theme, smooth animations, readable at a glance |
 
 ---
 
-## Required Markdown Spec Files
+## Required Specification Files
+
+> **Source of Truth:** `vs_prog.md` owns all progression, balance, and gameplay numbers. `vs_colors.md` owns all visual specs (shapes, colors, obstacles). This file owns architecture and spec structure.
 
 Each file below must be created **one at a time** using the prompts in [Spec File Creation Prompts](#spec-file-creation-prompts).
 
-| # | File Name | Purpose |
-|---|---|---|
-| 1 | `01_engine_architecture.md` | Game loop structure, entity-component approach, rendering pipeline, collision system, data loading flow, scene/state management |
-| 2 | `02_character_spec.md` | Playable character stats, movement, hitbox, invincibility frames, death condition |
-| 3 | `03_weapons_spec.md` | 3 weapons: name, description, base stats, behavior, upgrade table (levels 1–7), power spike bonuses at L4 and L7, targeting logic |
-| 4 | `04_enemies_spec.md` | 5 enemy types + 1 boss: name, HP, speed, damage, size, behavior pattern, spawn weight, drop table (EXP amount, gold amount, power-up chance) |
-| 5 | `05_stages_spec.md` | Stage definition: name, size, background, spawn zones, wave timeline (enemy composition over time), difficulty scaling formula |
-| 6 | `06_pickups_and_powerups_spec.md` | EXP gem tiers, gold coin values, screen wipe mechanic, magnet mechanic, weapon level-up drop logic, drop rate tables |
-| 7 | `07_leveling_system_spec.md` | XP curve formula, level-up screen behavior, upgrade pool rules (weapon new / weapon upgrade / passive), UI flow |
-| 8 | `08_ui_hud_spec.md` | HUD layout (positions, sizes), health bar design, EXP bar, gold display, weapon panel, level-up selection screen, game-over screen, pause menu |
-| 9 | `09_audio_spec.md` | Sound categories, required sound list per event, volume levels, priority/fallback rules |
-| 10 | `10_json_schemas.md` | JSON schema for every content file: characters, weapons, enemies, stages, pickups. Field names, types, defaults, examples |
+| # | File Name | Purpose | Canonical Source |
+|---|---|---|---|
+| 1 | `01_engine_architecture.md` | Game loop structure, entity-component approach, rendering pipeline, collision system, data loading flow, scene/state management | This file |
+| 2 | `02_character_spec.md` | Playable character stats, movement, hitbox, invincibility frames, death condition | This file + `vs_prog.md` |
+| 3 | `03_weapons_spec.md` | 3 weapons: name, description, base stats, behavior, upgrade table (levels 1–7), power spike bonuses at L4 and L7, targeting logic | `vs_prog.md` Weapon Progression |
+| 4 | `04_enemies_spec.md` | 5 enemy types + 1 boss: name, HP, speed, damage, size, behavior pattern, spawn weight, drop table | `vs_prog.md` Enemy Spawn Details |
+| 5 | `05_stages_spec.md` | Stage definition: name, size, background, spawn zones, wave timeline, difficulty scaling formula | `vs_prog.md` Wave Timeline |
+| 6 | `06_pickups_and_powerups_spec.md` | EXP gem tiers, gold coin values, screen wipe mechanic, magnet mechanic, weapon level-up drop logic, drop rate tables | `vs_prog.md` Drop Economy |
+| 7 | `07_leveling_system_spec.md` | XP curve formula, level-up screen behavior, upgrade pool rules, UI flow | `vs_prog.md` Experience Curve |
+| 8 | `08_ui_hud_spec.md` | HUD layout (positions, sizes), health bar design, EXP bar, gold display, weapon panel, level-up selection screen, game-over screen, pause menu | This file + `vs_colors.md` |
+| 9 | `09_audio_spec.md` | Sound categories, required sound list per event, volume levels, priority/fallback rules | `vs_prog.md` Sound Design Arc |
+| 10 | `10_json_schemas.md` | JSON schema for every content file: characters, weapons, enemies, stages, pickups. Field names, types, defaults, examples | All specs combined |
+| — | `vs_colors.md` | Visual specification: shapes, colors, sizes, obstacles, background | **Already exists** |
+| — | `vs_prog.md` | Stage 1 progression, balance, sound design | **Already exists** |
 
 ---
 
@@ -112,6 +121,8 @@ These are the data files the engine loads. Schemas defined in `10_json_schemas.m
 ## Spec File Creation Prompts
 
 > **Instructions:** Create each file one at a time in the order listed. Use the corresponding prompt below. After creating each file, review it against the [Feature Checklist](#feature-checklist) before moving to the next.
+>
+> **Important:** For specs 03–07 and 09, use the values from `vs_prog.md` as the source of truth. The prompts below define the structure; `vs_prog.md` provides the numbers.
 
 ---
 
@@ -674,21 +685,28 @@ The engine is built in TypeScript. Below is the system inventory (no spec file n
 
 Use this checklist to verify each spec file covers all V1 requirements.
 
-- [ ] 1 stage defined with wave timeline and difficulty scaling
+### Core Gameplay
+- [ ] 1 stage defined with wave timeline and difficulty scaling (5-minute duration)
 - [ ] 1 character with base stats and movement
 - [ ] 3 weapons with distinct mechanics (projectile, orbit, area)
 - [ ] Each weapon has full upgrade table (Levels 1–7)
 - [ ] Power spike at Level 4 defined per weapon
 - [ ] Power spike at Level 7 (max) defined per weapon
 - [ ] 5 enemy types with distinct behaviors
-- [ ] 1 boss with spawn time, stats, and attack pattern
+- [ ] 1 boss with spawn time (minute 4), stats, and attack pattern
+- [ ] Boss does NOT respawn in V1
+
+### Pickups & Economy
 - [ ] EXP gems (small + large) with values
 - [ ] Gold coins with value range
 - [ ] Screen wipe power-up: effect, drop source, drop chance (2%)
 - [ ] Magnet power-up: effect, duration, drop source, drop chance (5%)
 - [ ] Weapon level-up drop: effect, drop chance (1% base, 100% boss)
 - [ ] Weapon level-up drop randomly levels 1–3 weapons
-- [ ] Leveling system with XP curve
+- [ ] XP value scaling: +5% per minute
+
+### Leveling & UI
+- [ ] Leveling system with XP curve (compressed for 5 minutes)
 - [ ] Level-up screen with 3 random choices
 - [ ] Upgrade pool: weapon upgrades + passive stats
 - [ ] HUD: health bar, EXP bar, level, gold, weapon levels, timer
@@ -696,48 +714,77 @@ Use this checklist to verify each spec file covers all V1 requirements.
 - [ ] Pause menu
 - [ ] Boss health bar
 - [ ] Damage numbers (floating text)
-- [ ] Basic sounds: hit, kill, pickup, level-up, boss spawn, screen wipe, UI click
-- [ ] Music: stage theme, boss theme
+
+### Visuals (from `vs_colors.md`)
+- [ ] Player: Hero Gold square, 24×24px
+- [ ] Enemies: 5 distinct shapes/colors (square, diamond, circle, triangle)
+- [ ] Boss: Large crimson square with red glow
+- [ ] Pickups: Diamonds (XP), circles (gold), distinct colors
+- [ ] Power-ups: Green (wipe), pink (magnet), orange (weapon up)
+- [ ] Obstacles: 5 types (tombstones, grave mounds, broken walls, cracked floor)
+- [ ] Background: Dark tiled ground with subtle grid
+
+### Audio (from `vs_prog.md` Sound Design Arc)
+- [ ] Procedural Web Audio API synthesis (no external files)
+- [ ] Pickup sounds: Payout triad arpeggios (C Major scale)
+- [ ] Variance engine: combo stepping, micro-tuning jitter, volume decoupling
+- [ ] Weapon fire sounds: per-weapon distinct sounds
+- [ ] Enemy hit/kill sounds: per-type distinct sounds
+- [ ] Boss sounds: spawn, phase transition, death
+- [ ] Music: stage theme, boss theme, menu theme
+- [ ] Sound priority system and ducking rules
+
+### Data & Schemas
 - [ ] JSON schemas for all content files
 - [ ] All 6 JSON content files spec'd
+- [ ] Cross-references between files are consistent
 
 ---
 
 ## Missing Details & Recommended Actions
 
+> **Resolved Conflicts:** The following conflicts have been resolved and are now canonical:
+> - **XP Curve:** `vs_prog.md` is the source of truth (compressed for 5 minutes)
+> - **Boss Spawn:** Minute 4 (not minute 10)
+> - **Wave Timeline:** `vs_prog.md` 5-minute timeline supersedes this file's original 10-minute table
+> - **Obstacles:** Included in V1 (defined in `vs_colors.md`)
+> - **Visual Spec:** `vs_colors.md` is the canonical source for shapes, colors, and sizes
+> - **Sound Design:** `vs_prog.md` Sound Design Arc is the canonical source
+
 The following items are **not yet resolved** in V1 and should be addressed during implementation:
 
 ### Gameplay Details
 
-| # | Missing Detail | Recommendation |
-|---|---|---|
-| 1 | **Player knockback when hit** — Does the player get pushed back on damage? | Recommend: yes, small knockback away from source. Add to `02_character_spec.md` during review. |
-| 2 | **Projectile collision with walls** — V1 has no walls, but what about future stages? | Recommend: no wall collision V1. Document in `01_engine_architecture.md` as a future consideration. |
-| 3 | **Critical hit display** — How are crits visually communicated? | Recommend: yellow damage numbers + micro screen shake. Add to `08_ui_hud_spec.md`. |
-| 4 | **Weapon projectile lifetime** — Do projectiles despawn after distance/time? | Recommend: yes, 3-second lifetime or 600px max distance. Add to `03_weapons_spec.md`. |
-| 5 | **Gold spending** — Is gold used for anything in V1? | Recommend: no. Gold is a score metric only in V1. Note for V2 (shop/upgrade between runs). |
-| 6 | **Item pickup magnet auto-collect** — Do pickups auto-collect or require walking over? | Recommend: both — base pickup range for walk-over, magnet extends range. Already spec'd in `06`. |
-| 7 | **Boss respawn after defeat** — Does the boss respawn? At what interval? | Recommend: boss respawns every 5 minutes after first defeat with +25% stats each time. Add to `05_stages_spec.md`. |
-| 8 | **XP value inflation** — Should enemy XP values scale with time? | Recommend: yes, XP value +10% per minute. Add to `04_enemies_spec.md`. |
+| # | Missing Detail | Recommendation | Status |
+|---|---|---|---|
+| 1 | **Player knockback when hit** — Does the player get pushed back on damage? | Recommend: yes, small knockback away from source. Add to `02_character_spec.md` during review. | Open |
+| 2 | **Projectile collision with obstacles** — V1 has obstacles now. Do projectiles collide? | Recommend: no, projectiles pass through obstacles. Only player and enemies collide. Add to `01_engine_architecture.md`. | Open |
+| 3 | **Critical hit display** — How are crits visually communicated? | Recommend: yellow damage numbers + micro screen shake. Add to `08_ui_hud_spec.md`. | Open |
+| 4 | **Weapon projectile lifetime** — Do projectiles despawn after distance/time? | Recommend: yes, 3-second lifetime or 600px max distance. Add to `03_weapons_spec.md`. | Open |
+| 5 | **Gold spending** — Is gold used for anything in V1? | Recommend: no. Gold is a score metric only in V1. Note for V2 (shop/upgrade between runs). | Open |
+| 6 | **Item pickup magnet auto-collect** — Do pickups auto-collect or require walking over? | Recommend: both — base pickup range for walk-over, magnet extends range. Already spec'd in `06`. | Resolved |
+| 7 | **Boss respawn after defeat** — Does the boss respawn? At what interval? | Recommend: boss does NOT respawn in V1. 5-minute run ends regardless. Game over or victory at 5:00. | Resolved |
+| 8 | **XP value inflation** — Should enemy XP values scale with time? | Recommend: yes, XP value +5% per minute (as defined in `vs_prog.md`). | Resolved |
+| 9 | **Obstacle collision rules** — Which entities collide with obstacles? | Recommend: player and enemies collide. Projectiles and pickups pass through. Defined in `vs_colors.md`. | Resolved |
 
 ### Technical Details
 
-| # | Missing Detail | Recommendation |
-|---|---|---|
-| 9 | **Canvas resolution / scaling** — HiDPI support? | Recommend: yes, use `devicePixelRatio` for crisp rendering. Add to `01_engine_architecture.md`. |
-| 10 | **Save/load state** — Any persistence in V1? | Recommend: no persistence in V1. Each run is fresh. |
-| 11 | **Performance target** — Min FPS? Max entities? | Recommend: 60 FPS target, 30 FPS minimum acceptable. Max 200 enemies + 500 projectiles + 500 pickups. |
-| 12 | **Touch controls** — Virtual joystick for mobile? | Recommend: defer to V2. V1 is keyboard only. Note in `02_character_spec.md`. |
+| # | Missing Detail | Recommendation | Status |
+|---|---|---|---|
+| 10 | **Canvas resolution / scaling** — HiDPI support? | Recommend: yes, use `devicePixelRatio` for crisp rendering. Add to `01_engine_architecture.md`. | Open |
+| 11 | **Save/load state** — Any persistence in V1? | Recommend: no persistence in V1. Each run is fresh. | Resolved |
+| 12 | **Performance target** — Min FPS? Max entities? | Recommend: 60 FPS target, 30 FPS minimum acceptable. Max 200 enemies + 500 projectiles + 500 pickups. | Resolved |
+| 13 | **Touch controls** — Virtual joystick for mobile? | Recommend: defer to V2. V1 is keyboard only. Note in `02_character_spec.md`. | Resolved |
 
 ### Content Gaps
 
-| # | Missing Detail | Recommendation |
-|---|---|---|
-| 13 | **Passive stat upgrade descriptions** — Only 5 passives listed | Recommend: acceptable for V1. Expand pool in V2 with armor penetration, cooldown reduction, area increase, etc. |
-| 14 | **Weapon unlock order** — Player starts with 1 weapon, how are others unlocked? | Recommend: weapon 2 unlocked at Level 3, weapon 3 unlocked at Level 5. Alternatively, only via level-up choices. Decide and add to `07_leveling_system_spec.md`. |
-| 15 | **Boss loot** — Boss guaranteed drops weapon level-up, but does it also drop gold/XP? | Recommend: yes — 50 XP + 20-30 gold + guaranteed weapon level-up. Already spec'd in `06`. |
-| 16 | **Difficulty notification** — Should the player be warned when difficulty spikes? | Recommend: yes, brief text overlay "Danger increases..." at scaling milestones. Add to `05_stages_spec.md`. |
-| 17 | **Screen shake** — Any camera effects on big hits/events? | Recommend: yes, subtle screen shake on: boss spawn, screen wipe, boss death, player low HP warning (<25%). Add to `01_engine_architecture.md`. |
+| # | Missing Detail | Recommendation | Status |
+|---|---|---|---|
+| 14 | **Passive stat upgrade descriptions** — Only 5 passives listed | Recommend: acceptable for V1. Expand pool in V2 with armor penetration, cooldown reduction, area increase, etc. | Open |
+| 15 | **Weapon unlock order** — Player starts with 1 weapon, how are others unlocked? | Recommend: weapon 2 unlocked at Level 3, weapon 3 unlocked at Level 6 (as defined in `vs_prog.md`). | Resolved |
+| 16 | **Boss loot** — Boss guaranteed drops weapon level-up, but does it also drop gold/XP? | Recommend: yes — 50 XP + 20-30 gold + guaranteed weapon level-up. Already spec'd in `vs_prog.md`. | Resolved |
+| 17 | **Difficulty notification** — Should the player be warned when difficulty spikes? | Recommend: yes, brief text overlay "Danger increases..." at scaling milestones. Add to `05_stages_spec.md`. | Open |
+| 18 | **Screen shake** — Any camera effects on big hits/events? | Recommend: yes, subtle screen shake on: boss spawn, screen wipe, boss death, player low HP warning (<25%). Add to `01_engine_architecture.md`. | Open |
 
 ### Recommended Action Items (Post-Spec Creation)
 
@@ -746,6 +793,19 @@ The following items are **not yet resolved** in V1 and should be addressed durin
 3. **Create all 6 JSON content files** with actual V1 values after specs are finalized.
 4. **Build engine systems** in dependency order: GameLoop → EntityManager → InputManager → Camera → Renderer → CollisionSystem → DamageSystem → SpawnSystem → WeaponSystem → PickupSystem → LevelingSystem → UIManager → AudioManager → DataManager.
 5. **Playtest balance** — The numbers in specs are initial estimates. Expect tuning during development.
+
+---
+
+## Source of Truth Summary
+
+| Spec Area | Canonical File | Notes |
+|---|---|---|
+| Architecture & Engine | `vs_plan.md` (this file) | System inventory, prompts, structure |
+| Progression & Balance | `vs_prog.md` | XP curve, wave timeline, weapon stats, enemy stats, drop rates |
+| Visual Design | `vs_colors.md` | Shapes, colors, sizes, obstacles, background |
+| Sound Design | `vs_prog.md` Sound Design Arc | Payout triad, variance engine, all audio specs |
+| Testing | `available_tests.md` | Tools, commands, test types |
+| JSON Schemas | `10_json_schemas.md` (to be created) | Will reference all above files |
 
 ---
 
