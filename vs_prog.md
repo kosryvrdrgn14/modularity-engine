@@ -588,11 +588,141 @@ Sounds attenuate based on distance from the player to create spatial awareness.
 
 ### Audio Implementation Notes
 
-- **V1 Approach:** Synthesized sounds using Web Audio API oscillators. No external audio files required.
-- **Sound Variants:** Each hit/kill sound should have 3–5 variants to avoid repetition fatigue.
-- **Cooldown Between Identical Sounds:** The same sound should not play more than 3 times per second to prevent harsh repetition.
+- **V1 Approach:** Synthesized sounds using Web Audio API oscillators. No external audio files. Single HTML5 file, zero external dependencies.
 - **Music Crossfade:** Track transitions use 2-second crossfades except for the pre-boss silence (instant cut) and boss death (slow-motion bass drop).
 - **Volume Defaults:** Master 80%, Music 70%, SFX 85%. No settings UI in V1.
+
+### Pickup Sound Engine — The Payout Triad
+
+The pickup sound system is the most frequently heard audio in the game. It is modeled on the casino slot machine research that inspired Vampire Survivors: rapid ascending arpeggios locked to a consonant musical scale, with deliberate randomization to prevent repetition fatigue during high-velocity collection.
+
+#### Oscillator Configuration
+
+| Parameter | Value | Rationale |
+|---|---|---|
+| Waveform | `square` | Crunchy, retro 8-bit arcade texture. Harmonically rich — sounds full even at low volume. |
+| Attack | 0.005s | Instant on. No fade-in. Matches the percussive "clink" of a coin drop. |
+| Decay | 0.04s | Very short. Each note in the arpeggio is a blip, not a tone. |
+| Release | 0.02s | Sharp cutoff. Notes do not bleed into each other. |
+| Total Duration | ~0.065s per arpeggio | Fast enough that 10+ pickups per second still sound distinct. |
+
+#### C Major Harmonic Scale (C5–C6)
+
+All pickup tones are locked to the C Major scale in the C5–C6 octave. This ensures that rapid, overlapping pickups **harmonize** instead of creating dissonant ear fatigue.
+
+| Scale Degree | Note | Frequency (Hz) |
+|---|---|---|
+| 1 | C5 | 523.25 |
+| 2 | D5 | 587.33 |
+| 3 | E5 | 659.25 |
+| 4 | F5 | 698.46 |
+| 5 | G5 | 783.99 |
+| 6 | A5 | 880.00 |
+| 7 | B5 | 987.77 |
+| 8 | C6 | 1046.50 |
+
+#### Payout Triad Arpeggio Pattern
+
+Each individual pickup triggers a rapid, quantized 3-note arpeggio — not a smooth pitch slide. The frequency envelope **steps** through three notes in sequence:
+
+```
+Note 1 (0.00s): Base Note          → e.g., 523.25 Hz (C5)
+Note 2 (0.02s): Perfect 5th        → Base × 1.5    → e.g., 784.88 Hz
+Note 3 (0.04s): Octave             → Base × 2.0    → e.g., 1046.50 Hz
+```
+
+The Perfect 5th interval (ratio 3:2) is the most consonant interval after the octave. Combined with the octave (ratio 2:1), it forms a **major triad** — the most psychologically "rewarding" chord in Western music theory. This is the same interval structure used in casino slot machine payout sounds.
+
+**Why this works:** The ascending major triad triggers a micro-dopamine response. The brain recognizes the pattern as "ascending resolution" — the same harmonic structure used in victory fanfares, coin pickups across 40+ years of arcade games, and slot machine payout jingles.
+
+#### Variance Engine — Anti-Repetition System
+
+When the player vacuums dozens of pickups per second (especially with Magnet active), naively replaying the same arpeggio creates a harsh "machine gun" effect. The variance engine prevents this through three layered techniques:
+
+**1. Combo Stepping**
+
+An index counter advances through the C Major scale array with each pickup. The base note of each arpeggio shifts up the scale progressively.
+
+```
+Pickup 1 → Base = C5 (523.25 Hz)
+Pickup 2 → Base = D5 (587.33 Hz)
+Pickup 3 → Base = E5 (659.25 Hz)
+Pickup 4 → Base = F5 (698.46 Hz)
+Pickup 5 → Base = G5 (783.99 Hz)
+Pickup 6 → Base = A5 (880.00 Hz)
+Pickup 7 → Base = B5 (987.77 Hz)
+Pickup 8 → Base = C6 (1046.50 Hz)
+Pickup 9 → Base = C5 (reset to start)
+```
+
+**Reset condition:** If the time delta between the last pickup and the current pickup exceeds **0.6 seconds**, the combo index resets to 0. This means fast collection creates a rising melodic cascade, while isolated pickups always start from the satisfying low C5.
+
+**2. Micro-Tuning Jitter**
+
+Add a random frequency offset of **±15 Hz** to the final output frequency of each note. This ensures that even when the combo index lands on the same scale degree twice in rapid succession, the two arpeggios sound subtly different.
+
+```
+final_freq = base_freq + random(-15, +15)
+```
+
+The ±15 Hz range is carefully chosen: large enough to be perceptible (the human ear can detect ~3.6 Hz differences in this range), but small enough to stay within the C Major scale's consonant envelope.
+
+**3. Volume Decoupling**
+
+Randomize the peak gain value slightly per note trigger:
+
+```
+peak_gain = random(0.08, 0.12)
+```
+
+This prevents the auditory system from locking into a perceived "flat" volume pattern. The slight dynamic variation mimics the natural inconsistency of physical coins hitting a tray — a sound humans associate with reward.
+
+#### Pickup Sound Specifications by Type
+
+| Pickup Type | Arpeggio Pattern | Duration | Peak Gain | Notes |
+|---|---|---|---|---|
+| XP Gem (Small) | Base → ×1.5 → ×2.0 | 0.065s | 0.08–0.12 | Standard payout triad. Combo-stepped. |
+| XP Gem (Large) | Base → ×1.5 → ×2.0 → ×2.5 | 0.085s | 0.10–0.14 | Extended arpeggio (4 notes). Slightly louder. 4th note = Major 3rd above octave. |
+| Gold Coin | Base → ×1.25 → ×1.5 | 0.055s | 0.09–0.13 | Shorter, brighter. Major 2nd → Perfect 5th. Clink texture. |
+| Power-Up Collect | Base → ×1.25 → ×1.5 → ×2.0 → ×2.5 | 0.12s | 0.15–0.20 | Full 5-note arpeggio. Louder, longer. Victory feel. |
+| Level-Up | Ascending scale run: C5→E5→G5→C6 | 0.20s | 0.18–0.22 | Full octave arpeggio. Slowest pickup sound. Triumphant. |
+| Screen Wipe | Descending sweep: 2000Hz → 100Hz | 1.5s | 0.20–0.25 | White noise burst at tail. Dramatic. Not part of pickup system. |
+| Magnet Hum | Continuous sine wave: 220Hz + 330Hz | Duration of effect | 0.05–0.08 | Layered perfect 5th. Constant, low. Magnetic texture. |
+
+#### Weapon Fire Sounds
+
+| Weapon | Waveform | Pattern | Notes |
+|---|---|---|---|
+| W1 (Projectile) | Square | Single blip at base freq. Pitch scales with damage. | Short, punchy. Like a laser shot. |
+| W2 (Orbit) | Triangle | Continuous hum at 110Hz + 165Hz (perfect 5th). | Low, constant. Orbital resonance feel. |
+| W3 (Area) | Sawtooth → Low-pass filter sweep | Burst from 800Hz → 200Hz over 0.3s. | Whoosh/bass pulse. Area denial feel. |
+
+#### Enemy Hit/Kill Sounds
+
+| Event | Waveform | Frequency Range | Notes |
+|---|---|---|---|
+| Enemy Hit | Noise burst (white noise × gain envelope) | 200–800Hz (bandpass filtered) | Short, percussive. Duration: 0.03s. |
+| Zombie Kill | Square wave pitch drop: 400Hz → 100Hz | 0.15s | Satisfying "pop" downward. |
+| Bat Kill | Square wave chirp: 1200Hz → 800Hz | 0.08s | Quick, high-pitched. Matches bat's swiftness. |
+| Skeleton Kill | Square + noise layered | 300Hz + 600Hz | Heavier. Armor break feel. Duration: 0.2s. |
+| Ghost Kill | Sine wave wail: 600Hz → 200Hz | 0.3s | Ethereal fade. Ghostly dissipation. |
+| Caster Kill | Square wave burst: 500Hz → 200Hz | 0.15s | Standard. Magical fizz. |
+| Boss Death | Sine + square layered: 60Hz base + 120Hz + 240Hz | 2.0s | Deep, layered. Overtones cascade down. Slow-motion bass drop feel. |
+
+#### Player Hurt / Death
+
+| Event | Waveform | Pattern | Notes |
+|---|---|---|---|
+| Player Hurt | Square wave: 200Hz → 100Hz | 0.1s | Low, blunt impact. Immediate. |
+| Player Death | Square + sine: 400Hz → 50Hz | 1.5s | Slow descending wail. Finality. Silence after. |
+
+#### UI Sounds
+
+| Event | Waveform | Pattern | Notes |
+|---|---|---|---|
+| UI Click | Sine wave: 800Hz | 0.02s | Tiny, clean. Button feedback. |
+| Boss Warning | Sine wave: 100Hz, fading in | 2.0s | Ominous rumble. Low frequency. |
+| Boss Spawn | Square + noise: 80Hz → 40Hz | 1.0s | Ground-shaking impact. Heavy. |
 
 ### Fun Factor Checklist (Sound-Specific)
 
@@ -606,6 +736,12 @@ Sounds attenuate based on distance from the player to create spatial awareness.
 - [ ] Late-game chaos sounds intense but not painful
 - [ ] No single sound becomes annoying through repetition
 - [ ] Music builds naturally and doesn't feel jarring
+- [ ] XP pickup arpeggios harmonize during rapid collection (no dissonance)
+- [ ] Combo stepping creates melodic rise during Magnet vacuum
+- [ ] Gold coin pickup sounds distinct from XP pickup
+- [ ] Each weapon has a unique, recognizable fire sound
+- [ ] Enemy hit sounds provide satisfying feedback without overwhelming
+- [ ] Boss spawn sound creates genuine physical tension (low frequency)
 
 ---
 
