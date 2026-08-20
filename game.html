@@ -205,7 +205,7 @@ class GameState {
 
     // Valid transitions table
     this.transitions = {
-      loading: ['menu'],
+      loading: ['menu', 'playing'],
       menu: ['playing'],
       playing: ['paused', 'levelUp', 'gameOver'],
       paused: ['playing'],

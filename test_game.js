@@ -21,7 +21,7 @@ async function runTests() {
   try {
     // Step 1: Load the game
     console.log('📸 Step 1: Loading game...');
-    await page.goto('http://localhost:5173/index.html', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/game.html', { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/01_loading.png` });
     console.log('   ✅ Game loaded');
