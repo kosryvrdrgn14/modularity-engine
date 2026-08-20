@@ -124,6 +124,11 @@ interface Entity {
   // Stats (varies by type)
   stats: EntityStats;      // HP, damage, speed, armor, etc.
   
+  // Combat state
+  iFrames: number;         // Invincibility frames remaining (seconds)
+  iFrameAge: number;       // Time since i-frames started (for blink animation)
+  damageCooldowns: Map<number, number>;  // Per-entity damage cooldowns (key: attacker ID, value: time remaining). Used by orbs.
+  
   // Behavior
   behavior: BehaviorType;  // 'chase' | 'swarm' | 'tank' | 'wander' | 'ranged' | 'projectile' | 'orbit' | 'area'
   
@@ -150,6 +155,25 @@ interface EntityStats {
   goldValue: number;       // Gold dropped on death (enemies only)
   goldMin: number;         // Min gold range
   goldMax: number;         // Max gold range
+  
+  // Weapon-specific (orbs only)
+  orbitRadius: number;     // Orbit distance from player (px)
+  orbitSpeed: number;      // Seconds per full rotation
+  damageCooldown: number;  // Per-enemy damage cooldown (orbs: 0.5s)
+  
+  // Boss-specific
+  chargeSpeed: number;     // Boss charge speed (px/s)
+  chargeDuration: number;  // How long charge lasts (seconds)
+  pauseDuration: number;   // Pause after charge (seconds)
+  attackInterval: number;  // Time between attacks (seconds)
+  phase: number;           // Boss phase (1 or 2)
+  
+  // Caster-specific
+  preferredMinDist: number;  // Minimum distance from player (px)
+  preferredMaxDist: number;  // Maximum distance from player (px)
+  fireInterval: number;      // Time between shots (seconds)
+  projectileDamage: number;  // Caster projectile damage
+  projectileSpeed: number;   // Caster projectile speed (px/s)
 }
 
 type BehaviorType = 
@@ -245,6 +269,11 @@ class EventBus {
 | `screenWipe` | PickupSystem | CameraEffects (shake), AudioManager | `{ player }` |
 | `gameOver` | StateManager | UIManager, AudioManager | `{ result: 'victory' | 'survived' | 'defeat', stats }` |
 | `pause` | InputManager | All systems (stop updating) | `{ paused: boolean }` |
+| `weaponLevelUp` | PickupSystem | WeaponSystem, UIManager, AudioManager | `{ player, weaponId, newLevel }` |
+| `magnetActivate` | PickupSystem | PickupSystem (attraction), AudioManager (hum) | `{ player, duration: 10 }` |
+| `bossAnnounce` | TimerSystem | UIManager (text overlay), AudioManager (warning) | `{ step: 1|2|3, text, time }` |
+| `areaPulse` | WeaponSystem | DamageSystem, CameraEffects | `{ player, damage, radius, isL7ThirdPulse }` |
+| `obstacleHit` | MovementSystem | — (no effect, just collision response) | `{ entity, obstacle }` |
 
 ### Dispatch Rules
 
@@ -311,18 +340,26 @@ Entities are assigned to collision layers via a bitmask. Two entities collide on
 | Pair | Layers | Response |
 |---|---|---|
 | Enemy → Player | `ENEMY` ↔ `PLAYER` | Deal damage to player, apply knockback, trigger i-frames |
+| Enemy Projectile → Player | `ENEMY` ↔ `PLAYER` | Deal caster projectile damage to player, apply knockback, trigger i-frames, destroy projectile |
 | Projectile → Enemy | `PROJECTILE` ↔ `ENEMY` | Deal damage to enemy, destroy projectile (unless pierce) |
-| Player → Pickup | `PLAYER` ↔ `PICKUP` | Collect pickup, trigger pickup effect |
-| Player → Obstacle | `PLAYER` ↔ `OBSTACLE` | Push player out of obstacle (slide) |
-| Enemy → Obstacle | `ENEMY` ↔ `OBSTACLE` | Push enemy out of obstacle (slide) |
+| Orb → Enemy | `PROJECTILE` ↔ `ENEMY` | Deal orb damage to enemy (with 0.5s cooldown per enemy per orb), apply knockback |
+| Player → Pickup | `PLAYER` ↔ `PICKUP` | Collect pickup if within pickup range (50px base, 350px during magnet), trigger pickup effect |
+| Player → Obstacle | `PLAYER` ↔ `OBSTACLE` | Push player out of obstacle (slide). Ghost ignores during wander phase. |
+| Enemy → Obstacle | `ENEMY` ↔ `OBSTACLE` | Push enemy out of obstacle (slide). Boss ignores. Ghost ignores during wander phase. |
 
 ### Collision Response
 
 **Damage Application:**
 
 ```
-function applyDamage(attacker, defender):
+function applyDamage(attacker, defender, isOrb = false):
     if defender.stats.iFrames > 0: return  // Invulnerable
+    
+    // Orb damage cooldown check
+    if isOrb:
+        lastHitTime = defender.damageCooldowns?.get(attacker.id) ?? -1
+        if currentTime - lastHitTime < 0.5: return  // 0.5s cooldown per enemy per orb
+        defender.damageCooldowns?.set(attacker.id, currentTime)
     
     baseDamage = attacker.stats.damage
     isCrit = random() < attacker.stats.critChance
@@ -331,6 +368,8 @@ function applyDamage(attacker, defender):
     
     defender.stats.hp -= finalDamage
     defender.stats.iFrames = 0.5  // 500ms invincibility
+    defender.iFrames = 0.5  // Also set on entity for render blink
+    defender.iFrameAge = 0  // Reset blink timer
     
     // Knockback
     dx = defender.x - attacker.x
@@ -350,7 +389,11 @@ function applyDamage(attacker, defender):
 
 ```
 function collectPickup(player, pickup):
-    // Range check (handled by collision system)
+    // Proximity check (NOT AABB — pickups use circular range)
+    dist = distance(player, pickup)
+    range = player.stats.pickupRange  // 50px base, 350px during magnet
+    if dist > range: return
+    
     // Apply effect based on pickup type:
     //   exp_small: add 1 XP
     //   exp_large: add 5 XP
@@ -818,6 +861,7 @@ class CameraEffect {
 | Boss spawn | 0.5s | Medium (6px) | Dramatic entrance |
 | Screen wipe activation | 0.3s | Light (3px) | Satisfying feedback |
 | Boss death | 1.0s | Heavy (10px) | Triumphant moment |
+| Boss ground pound | 0.3s | Heavy (8px) | Phase 2 only, on impact |
 | Player low HP warning | Continuous | Subtle (2px) | Only while HP < 25% |
 
 **Low HP shake** is special: it runs continuously while HP is below 25% of max, using a slow sine wave modulation on top of the random offset. It stops immediately when HP rises above 25% (e.g., from a healing power-up in future versions).
@@ -1165,6 +1209,61 @@ class GameTimer {
 | 5:00 | Timer expires → SURVIVED if boss alive, or game continues if boss dead | StateManager |
 
 See `05_stages_spec.md` for the complete wave timeline.
+
+### Timer Event Mechanism
+
+The timer system uses a **scheduled event queue** to trigger time-based events at exact timestamps:
+
+```
+class TimerSystem {
+    events: TimerEvent[] = []  // Sorted by time
+    
+    schedule(time: number, callback: Function, data: any):
+        this.events.push({ time, callback, data, fired: false })
+        this.events.sort((a, b) => a.time - b.time)
+    
+    update(elapsed: number):
+        for event in this.events:
+            if !event.fired && elapsed >= event.time:
+                event.fired = true
+                event.callback(event.data)
+}
+```
+
+**Initialization:** The timer system pre-registers all time-driven events at game start:
+
+```
+timer.schedule(0, () => spawnSystem.startSpawning())
+timer.schedule(30, () => spawnSystem.setBracket(1))
+timer.schedule(60, () => spawnSystem.setBracket(2))
+// ... all 10 wave brackets
+
+timer.schedule(230, () => {  // 3:50
+    emit('bossAnnounce', { step: 1, text: 'Something stirs in the darkness...', time: 230 })
+})
+timer.schedule(235, () => {  // 3:55
+    emit('bossAnnounce', { step: 2, text: 'The Gravekeeper rises!', time: 235 })
+    emit('cameraShake', { duration: 0.5, intensity: 'medium' })
+})
+timer.schedule(240, () => {  // 4:00
+    spawnSystem.spawnBoss()
+    emit('bossSpawn', { boss })
+})
+timer.schedule(300, () => {  // 5:00
+    emit('gameOver', { result: stateManager.bossAlive ? 'survived' : 'continue' })
+})
+```
+
+**Post-boss-kill scaling milestones:**
+
+```
+// After boss death at time T:
+for i in [30, 60, 90]:  // 30s intervals
+    timer.schedule(T + i, () => {
+        spawnSystem.setScaleMultiplier(i / 60)  // minutes after boss kill
+        emit('difficultyIncrease', { minutes: i / 60 })
+    })
+```
 
 ### Boss Spawn Trigger
 

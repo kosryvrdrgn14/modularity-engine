@@ -131,6 +131,38 @@ When player XP ≥ threshold for next level:
 ### Edge Cases
 
 - **Multiple level-ups at once:** If the player gains enough XP for 2+ levels, only the first level-up is shown. The second is queued and shown after the first is resolved. **Max queue: 3.** If more than 3 level-ups queue, excess levels are applied automatically with random selections (no screen shown). This prevents infinite level-up screens during fast-kill sequences.
+
+**Multi-Level Queue Algorithm:**
+
+```
+function processXPGain(player, xpGained):
+    player.xp += xpGained
+    levelUpQueue = []
+    
+    // Check for multiple level-ups
+    while player.xp >= xpToNextLevel(player.level) and levelUpQueue.length < 3:
+        player.xp -= xpToNextLevel(player.level)
+        player.level += 1
+        levelUpQueue.push(player.level)
+    
+    // If more than 3, auto-resolve excess
+    while levelUpQueue.length > 3:
+        excessLevel = levelUpQueue.shift()
+        autoSelectUpgrade(player)  // Random selection, no screen
+    
+    // Show level-up screen for remaining levels
+    if levelUpQueue.length > 0:
+        player.pendingLevels = levelUpQueue
+        showLevelUpScreen(player)  // Shows first pending level
+    
+    // After player selects upgrade:
+    function onUpgradeSelected(player):
+        player.pendingLevels.shift()  // Remove completed level
+        if player.pendingLevels.length > 0:
+            showLevelUpScreen(player)  // Show next pending level
+        else:
+            resumeGame()
+```
 - **Level-up during boss charges:** Level-ups can trigger at any time, including mid-boss-charge. The boss freezes during the level-up pause. This is NOT considered an exploit — the player still needs to make a good choice, and the pause is brief (0.3s after selection). No special handling needed.
 - **Only 1 weapon and it's maxed:** Show 3 passive stat boost options instead.
 - **All weapons maxed and all passives maxed:** Show 3 random passives (even if at max stacks — the player can still pick them, but they have no effect. This is a degenerate case that shouldn't happen in a 5-minute run).

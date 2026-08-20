@@ -309,7 +309,7 @@ function updateMagnet(pickups, player, dt):
 ### Pickup Behavior
 
 - Pickups have a slight float animation to be visible (±2px vertical oscillation). During magnet attraction, the float animation is overridden by the attraction movement.
-- Gold coins scatter ±30px on enemy death, then become static
+- Gold coins scatter ±30px on enemy death, then become static. If magnet is active when coins drop, they scatter first (0.1s), then begin attraction.
 - EXP gems drop at enemy's death position, become static immediately
 - Pickups are collectible immediately after spawning (no delay, except power-ups which have 0.5s delay)
 - **Power-up despawn:** Power-ups persist indefinitely until collected. They do NOT despawn. This ensures the player never misses a power-up due to timing. Base pickups (XP/gold) are subject to the 500-entity cap.

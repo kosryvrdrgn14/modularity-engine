@@ -680,6 +680,14 @@ function bossCharge(boss, player, dt):
             boss.attackTimer = chargeInterval
 ```
 
+**Boss Pause Resume Behavior:**
+
+When a level-up pause triggers mid-boss-charge:
+1. Boss state is frozen (position, velocity, attackTimer all frozen)
+2. Boss does NOT attack or move during pause
+3. On resume: boss continues from exact frozen state. If mid-charge, the charge continues with remaining duration. If mid-windup, the windup completes.
+4. Boss does NOT restart its attack pattern — it resumes where it left off.
+
 ### Boss Ground Pound (Phase 2 only)
 
 ```
