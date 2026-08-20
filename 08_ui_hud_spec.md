@@ -89,7 +89,7 @@ Always visible during gameplay. Portrait-friendly, works on landscape too.
 | Position | Top-right, 16px margin from edges |
 | Icon | Coin circle: `#FFD700`, 12px diameter |
 | Text | Numeric value, 14px, white |
-| Animation | "+3g" floating text on gold pickup (see §5 Mini UI Elements) |
+| Animation | "+3g" floating text on gold pickup (see §5 Mini UI Elements). Main counter ticks up smoothly over 0.2s. |
 
 #### 4. EXP Bar
 
@@ -122,11 +122,21 @@ Always visible during gameplay. Portrait-friendly, works on landscape too.
 | Text | 16px, white, monospace |
 | Boss Warning | At 3:50, timer text flashes red every 0.5s until boss spawns |
 
-#### 7. Boss Health Bar
+#### 7. Pause Button
 
 | Property | Value |
 |---|---|
-| Position | Top of screen, centered, below timer |
+| Position | Top-right corner, above gold display |
+| Size | 32×32 px |
+| Icon | "||" (two vertical bars), 16px, white |
+| Opacity | 60% (increases to 100% on hover) |
+| Touch Target | 44×44 px (extends beyond visible icon for easy tapping) |
+
+#### 8. Boss Health Bar
+
+| Property | Value |
+|---|---|
+| Position | Top of screen, centered, 8px below timer |
 | Size | 400×20 px |
 | Background | `#1A1A2A` (dark panel) |
 | Fill | `#EF4444` (red) |
@@ -209,9 +219,15 @@ All end screens share the same layout. See `01_engine_architecture.md` §6 for e
 | Fade-in | 0.5s |
 | Content | Title → Stats → Buttons |
 
+### HUD During End Screens
+
+- HUD elements (HP bar, EXP bar, weapon panel, timer, gold display, pause button) are **hidden** during end screens
+- Only the end screen overlay (title, stats, buttons) is visible
+- This creates a clean, focused end-screen experience
+
 ### Stats Display
 
-Stats are displayed with animated counters — each stat ticks up from 0 over 0.5s, staggered by 0.2s per stat (total animation: ~1.5s).
+Stats are displayed with animated counters — each stat ticks up from 0 over 0.5s, staggered by 0.2s per stat (total animation: ~1.5s). Victory bonus text (+100g) appears **after** the stats animation completes.
 
 | Stat | Format | Example |
 |---|---|---|
@@ -286,6 +302,8 @@ From `vs_colors.md` Damage Numbers section.
 
 All damage numbers have a 1px black text shadow for readability against any background.
 
+**Damage Number Cap:** Maximum 30 simultaneous damage numbers on screen. When exceeded, oldest numbers are despawned first. This prevents unreadable overlap during dense combat.
+
 ### Kill Count
 
 | Property | Value |
@@ -355,7 +373,7 @@ All damage numbers have a 1px black text shadow for readability against any back
 
 ### Narrow Screen Adaptation
 
-- Level-up cards stack vertically on screens narrower than 600px
+- Level-up cards stack vertically on screens narrower than 600px: each card becomes full-width (200px), stacked with 12px gaps, centered vertically
 - Weapon panel wraps to 2 rows if needed
 - Timer and level display move below HP bar on very small screens
 
@@ -365,12 +383,18 @@ All damage numbers have a 1px black text shadow for readability against any back
 
 | Property | Value |
 |---|---|
-| Trigger | Escape key or tap pause button (top-right) |
+| Trigger | Escape key or tap pause button (top-right corner, 32×32 px "||" icon) |
 | Background | `#000000` at 50% opacity |
 | Title | "PAUSED" (24px, white, centered) |
 | Buttons | "Resume" (primary), "Restart" (secondary), "Quit to Menu" (secondary) |
 | Game State | Fully paused |
 | Resume | Tap outside overlay (optional) or click "Resume" |
+
+### Button Behavior
+
+- **Resume:** Unpauses game, returns to gameplay
+- **Restart:** Resets all game state (player HP, weapons, level, gold, timer, enemies) and starts a new run from 0:00. Brief fade-to-black (0.3s) before restart.
+- **Quit to Menu:** In V1, there is no main menu screen. "Quit to Menu" returns to the game's initial state (level 1, no weapons, 0 gold) with a "MODULARITY ENGINE" title screen and a "Start Game" button. This serves as the V1 main menu.
 
 ---
 
