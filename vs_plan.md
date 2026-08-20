@@ -726,45 +726,125 @@ Create the file 10_json_schemas.md for Modularity Engine.
 
 This spec defines the JSON schema for every content file the engine loads. USE THE EXACT VALUES from vs_prog.md, vs_colors.md, and the numbered spec files (02–09) as the source of truth for all field values.
 
+CRITICAL: This prompt has been updated to include fields added during gap reviews of Specs 01–09. Every field below is required. Do not omit fields marked [NEW].
+
 Each schema must include: field name, type (required/optional), default value, description, and a complete V1 example populated with real values from the specs.
 
 Define schemas for:
 
 1. CHARACTERS.JSON — Single character definition
-   - id, name, description, stats (maxHealth: 100, moveSpeed: 200, armor: 0, pickupRange: 50, magnetRange: 0, critChance: 0, critMultiplier: 1.5), startingWeapon (weapon id), visual (shape: "square", size: 24, color: "#FFD700")
-   - Source: 02_character_spec.md + vs_colors.md
+   - id, name, description
+   - stats: { maxHealth: 100, moveSpeed: 200, armor: 0, pickupRange: 50, magnetRange: 0, critChance: 0, critMultiplier: 1.5 }
+   - hitbox: { width: 20, height: 20 } [NEW — from 01_engine_architecture.md §4 collision system. Player AABB hitbox is 20×20, smaller than visual (24px) so the game feels fair.]
+   - startingWeapon (weapon id)
+   - visual: { shape: "square", size: 24, color: "#FFD700" }
+   - Source: 02_character_spec.md + vs_colors.md + 01_engine_architecture.md §4
 
 2. WEAPONS.JSON — Array of 3 weapon definitions
-   - id, name, description, type (projectile/orbit/area), targeting, unlockLevel (1/3/6), statsPerLevel (array of 7 level objects with exact values from vs_prog.md Weapon Progression), powerSpikes ({level4: {name, description, statModifiers}, level7: {name, description, statModifiers}}), visual (shape, color from vs_colors.md)
+   - id, name, description
+   - type ("projectile" | "orbit" | "area")
+   - targeting: string [NEW — from 03_weapons_spec.md. Exact values: W1="nearest", W2="self" (orbit around player), W3="player_position" (centered on player). Without this, the engine can't implement weapon behavior.]
+   - unlockLevel: number (1 / 3 / 6)
+   - statsPerLevel: array of 7 level objects with exact values from vs_prog.md Weapon Progression
+   - orbDamageCooldown: number [NEW — from 03_weapons_spec.md §6. W2 orb has 0.5s cooldown per enemy. Other weapons: 0. Without this, W2 hits every frame instead of respecting cooldown.]
+   - powerSpikes: {
+       level4: { name, description, statModifiers: { /* must include pierce count for W1, orbit count for W2, pulse radius for W3 */ } },
+       level7: { name, description, statModifiers: { /* must include split projectiles for W1, orbit speed for W2, pulse count for W3 */ } }
+     } [UPDATED — statModifiers must be fully populated per weapon, not generic]
+   - visual: { shape, color } from vs_colors.md
    - Source: 03_weapons_spec.md + vs_prog.md Weapon Progression
 
 3. ENEMIES.JSON — Array of 6 definitions (5 enemies + 1 boss)
-   - id, name, type (normal/boss), stats (hp, damage, speed, size, xpValue, goldValue), behavior (pattern, params), drops (powerUpTable [{type, chance}]), spawn (weight, firstAppears)
-   - Boss-specific: phases [{hpThreshold, speed, chargeInterval, minionCount, groundPound}], loot (xp, gold, guaranteedPowerUp)
+   - id, name, type ("normal" | "boss")
+   - stats: { hp, damage, speed, size, xpValue, goldValue }
+   - behavior: { pattern, params }
+   - drops: { powerUpTable: [{ type, chance }] }
+   - spawn: { weight, firstAppears }
+   - Boss-specific fields:
+     - phases: [{ hpThreshold, speed, chargeInterval, minionCount, groundPound }]
+     - loot: { xp, gold, guaranteedPowerUp }
+     - screenWipeResistance: 0.8 [NEW — from 04_enemies_spec.md §7 + 06_pickups_and_powerups_spec.md §4. Boss takes 20% damage (80% resistance) from screen wipe. Without this, screen wipe one-shots the boss (1000 damage vs 1000 HP).]
+     - chargeResumeBehavior: "continue_from_frozen" [NEW — from 04_enemies_spec.md §7. When level-up pauses the game mid-boss-charge, the boss resumes from its frozen state instead of restarting the attack pattern. Engine needs this value to implement boss pause interaction.]
    - Source: 04_enemies_spec.md + vs_prog.md Enemy Spawn Details + Boss Encounter
 
 4. STAGES.JSON — Single stage definition
-   - id, name, theme, background, spawnConfig (minDistance: 400–600, maxEnemies: 200, baseSpawnRate: 0.8, spawnRateCap: 3.0)
-   - waves (array of 10 time brackets from vs_prog.md Master Timeline, each with: time, enemyTypes, spawnRate, compositionWeights, maxEnemies)
-   - difficultyScaling ({hpMultiplier: "1 + 0.15 × minutes_after_boss_kill", damageMultiplier: "1 + 0.10 × minutes_after_boss_kill"})
-   - xpScaling (formula: "base_xp × (1 + 0.05 × floor(t / 60))")
-   - bossConfig ({enemyId, spawnTime: 4:00, announcement: [{time: 3:50, text, type: "text"}, {time: 3:50, type: "dim"}, {time: 3:55, type: "shake", text}]})
-   - obstacles (types: 5, collisionRules: "player+enemies collide, projectiles+pickups pass through")
+   - id, name, theme, background
+   - spawnConfig: {
+       minDistance: 400,
+       maxDistance: 600,
+       maxEnemies: 200,
+       baseSpawnRate: 0.8,
+       spawnRateCap: 3.0,
+       maxEnemyCapBehavior: "stop_spawn" [NEW — from 05_stages_spec.md §4. When cap is reached, system stops spawning. Does NOT despawn existing enemies.]
+     }
+   - waves: array of 10 time brackets from vs_prog.md Master Timeline, each with:
+     - time, enemyTypes, spawnRate
+     - compositionWeights [EXACT values from vs_prog.md, NOT formula-derived]
+     - maxEnemies [per-bracket cap, different from global maxEnemies: 25→40→60→80→100→120→150→180→150→120] [NEW — Prompt 10 previously only had the global cap of 200, but each bracket has its own cap.]
+   - difficultyScaling: {
+       hpMultiplier: "1 + 0.15 × minutes_after_boss_kill",
+       damageMultiplier: "1 + 0.10 × minutes_after_boss_kill",
+       timerStart: "boss_death_timestamp" [NEW — from 05_stages_spec.md §7. Timer starts from boss death time, not 4:00.]
+     }
+   - xpScaling: formula: "base_xp × (1 + 0.05 × floor(t / 60))"
+   - bossConfig: {
+       enemyId, spawnTime: 4:00,
+       announcement: [
+         { time: 3:50, text: "Something stirs in the darkness...", type: "text", styling: { fontSize: 24, position: "center", animation: "fadeInHoldFadeOut" } },
+         { time: 3:50, type: "dim", brightness: 0.8 },
+         { time: 3:55, type: "shake", text: "The Gravekeeper rises!", styling: { fontSize: 28, position: "center", animation: "scalePulse" } },
+         { time: 4:00, type: "boss_spawn", position: "nearest_edge_to_player" }
+       ]
+     } [UPDATED — added announcement styling details from 05_stages_spec.md §10]
+   - obstacles: {
+       types: 5,
+       collisionRules: "player+enemies collide, projectiles+pickups pass through",
+       weights: { [NEW — from 05_stages_spec.md §9. Without these, obstacle generation is random/unbalanced.]
+         small_tombstone: 0.30,
+         large_tombstone: 0.10,
+         grave_mound: 0.25,
+         broken_wall: 0.15,
+         cracked_floor: 0.20
+       },
+       seedDerivation: "hash(stageId + difficultyLevel)" [NEW — from 05_stages_spec.md §9. Ensures same obstacle layout every run for a given stage.]
+     }
    - Source: 05_stages_spec.md + vs_prog.md Wave Timeline
 
 5. PICKUPS.JSON — Array of 6 pickup definitions
-   - id, name, type (exp_small/exp_large/gold/screen_wipe/magnet/weapon_levelup), value, visual (shape, color from vs_colors.md)
-   - Behavior: {duration, attractRadius, attractSpeed, instantBurstRadius}
-   - Drop config: {sources [{enemyId, chance}], guaranteedDropEnemies}
+   - id, name, type ("exp_small" | "exp_large" | "gold" | "screen_wipe" | "magnet" | "weapon_levelup")
+   - value: number
+   - visual: { shape, color } from vs_colors.md
+   - behavior: { duration, attractRadius, attractSpeed, instantBurstRadius } [duration=null means persistent]
+   - dropConfig: {
+       sources: [{ enemyId, chance }],
+       guaranteedDropEnemies: ["boss"],
+       rollOrder: ["weaponUp", "screenWipe", "magnet", "nothing"] [NEW — from 06_pickups_and_powerups_spec.md §4. Drop order matters: weapon up is rolled first (1%), then screen wipe (2%), then magnet (5%).]
+     }
+   - Screen wipe specific:
+     - killsAllEnemies: true
+     - bossDamage: 200 [NEW — from 06_pickups_and_powerups_spec.md §4. Without this, the JSON can't specify boss-specific damage.]
+     - bossResistance: 0.8 [NEW — from 06_pickups_and_powerups_spec.md §4. 80% resistance. Must match enemies.json boss.screenWipeResistance.]
    - Magnet special: attractRadius: 350, attractSpeed: 400, instantBurstRadius: 150, duration: 10
+   - powerUpDespawnTime: null [NEW — from 06_pickups_and_powerups_spec.md §7. Power-ups persist indefinitely, never despawn.]
+   - goldValuePerCoin: 1 [NEW — from 06_pickups_and_powerups_spec.md §4. Each coin = 1 gold. Number of coins varies by enemy.]
    - Source: 06_pickups_and_powerups_spec.md + vs_prog.md Drop Economy
 
 6. LEVELING.JSON — Leveling configuration
-   - xpCurve (array of 14 entries from vs_prog.md XP Table, each with: level, xpToNext, cumulativeXp)
-   - formula ({forLevel: 14, expression: "floor(375 × 1.3^(N-14))"})
-   - upgradePool ({weaponWeight: 0.6, passiveWeight: 0.4})
-   - passiveOptions (5 entries, each with: id, name, stat, value, description, maxStacks)
+   - xpCurve: array of 14 entries from vs_prog.md XP Table, each with: { level, xpToNext, cumulativeXp }
+   - formula: { forLevel: 14, expression: "floor(375 × 1.3^(N-14))" }
+   - upgradePool: {
+       weaponWeight: 0.6,
+       passiveWeight: 0.4,
+       weaponUnlockGuaranteed: true [NEW — from 07_leveling_system_spec.md §6. Weapon unlocks appear in EVERY level-up screen until picked. Without this, a weapon unlock can be missed.]
+     }
+   - passiveOptions: 5 entries, each with: { id, name, stat, value, description, maxStacks, icon }
+   - maxLevelUpQueue: 3 [NEW — from 07_leveling_system_spec.md §5. Max 3 queued level-ups. Excess auto-resolves with random selections.]
+   - excessXPBehavior: "carry_over" [NEW — from 07_leveling_system_spec.md §4. Excess XP carries to next level.]
+   - maxHealthPassiveHealsCurrent: true [NEW — from 07_leveling_system_spec.md §7. When Max Health passive is picked, current HP also increases.]
    - Source: 07_leveling_system_spec.md + vs_prog.md Experience Curve
+
+AUDIO CONFIG NOTE:
+Audio is NOT a JSON file. Per 09_audio_spec.md §1, all audio is procedurally synthesized using Web Audio API oscillators in a single HTML5 file. The audio configuration (volume defaults, instrument bank, layer model, payout triad parameters) is hardcoded in the engine. There is no audio.json.
 
 Include TypeScript type annotations alongside the JSON examples. Each file's schema should be self-contained — a developer reading only that schema should understand the full structure.
 ```
@@ -1143,20 +1223,66 @@ DISTANCE AUDIO CHECK:
 Read the file 10_json_schemas.md and validate it.
 
 SCHEMA COMPLETENESS CHECK — all 6 JSON files must have schemas:
-1. characters.json — id, name, stats (all 8 fields), startingWeapon, visual (shape, size, color)
-2. weapons.json — 3 weapons, each with upgradeTable (7 levels), powerSpikes (L4+L7), unlockLevel
-3. enemies.json — 6 entries (5 enemies + boss), each with stats, behavior, drops, spawn
-4. stages.json — 1 stage with 10 time brackets, spawnConfig, difficultyScaling, xpScaling, bossConfig with announcement
-5. pickups.json — 6 pickups, each with behavior, dropConfig. Magnet: attractRadius=350, instantBurstRadius=150
-6. leveling.json — xpCurve (14 entries), formula (floor(375 × 1.3^(N-14))), passiveOptions with maxStacks
+1. characters.json — id, name, stats (all 8 fields), hitbox (width: 20, height: 20), startingWeapon, visual (shape, size, color)
+2. weapons.json — 3 weapons, each with:
+   - upgradeTable (7 levels), powerSpikes (L4+L7 with fully populated statModifiers)
+   - unlockLevel, targeting ("nearest" | "self" | "player_position")
+   - orbDamageCooldown (0.5 for W2, 0 for others)
+3. enemies.json — 6 entries (5 enemies + boss), each with:
+   - stats, behavior, drops, spawn
+   - Boss-specific: phases, loot, screenWipeResistance (0.8), chargeResumeBehavior ("continue_from_frozen")
+4. stages.json — 1 stage with:
+   - 10 time brackets (each with compositionWeights + per-bracket maxEnemies)
+   - spawnConfig (maxEnemyCapBehavior: "stop_spawn")
+   - difficultyScaling (timerStart: "boss_death_timestamp")
+   - bossConfig with 4 announcement entries (including styling)
+   - obstacles with weights (30/10/25/15/20) and seedDerivation
+5. pickups.json — 6 pickups, each with:
+   - behavior, dropConfig with rollOrder
+   - Screen wipe: bossDamage (200), bossResistance (0.8)
+   - Magnet: attractRadius=350, instantBurstRadius=150
+   - powerUpDespawnTime: null, goldValuePerCoin: 1
+6. leveling.json — xpCurve (14 entries), formula, upgradePool with:
+   - weaponUnlockGuaranteed: true
+   - maxLevelUpQueue: 3
+   - excessXPBehavior: "carry_over"
+   - maxHealthPassiveHealsCurrent: true
+   - passiveOptions with maxStacks and icon
+
+NEW FIELDS CHECK (from gap reviews):
+- [ ] characters.json has hitbox: { width: 20, height: 20 }
+- [ ] weapons.json has targeting with exact values (nearest/self/player_position)
+- [ ] weapons.json has orbDamageCooldown: 0.5 for W2
+- [ ] weapons.json powerSpikes.statModifiers are fully populated per weapon
+- [ ] enemies.json has boss.screenWipeResistance: 0.8
+- [ ] enemies.json has boss.chargeResumeBehavior: "continue_from_frozen"
+- [ ] stages.json has obstacle weights (5 types with percentages)
+- [ ] stages.json has obstacle seedDerivation: "hash(stageId + difficultyLevel)"
+- [ ] stages.json has per-bracket maxEnemies array (not just global 200)
+- [ ] stages.json has difficultyScaling.timerStart: "boss_death_timestamp"
+- [ ] stages.json bossConfig announcement has 4 entries with styling
+- [ ] pickups.json has screenWipe.bossDamage: 200 and bossResistance: 0.8
+- [ ] pickups.json has dropConfig.rollOrder array
+- [ ] pickups.json has powerUpDespawnTime: null
+- [ ] pickups.json has goldValuePerCoin: 1
+- [ ] leveling.json has weaponUnlockGuaranteed: true
+- [ ] leveling.json has maxLevelUpQueue: 3
+- [ ] leveling.json has excessXPBehavior: "carry_over"
+- [ ] leveling.json has maxHealthPassiveHealsCurrent: true
 
 VALUE ACCURACY CHECK:
-- Character maxHealth=100, moveSpeed=200, pickupRange=50
-- Boss spawn=4:00, HP=1000
+- Character maxHealth=100, moveSpeed=200, pickupRange=50, hitbox=20×20
+- Boss spawn=4:00, HP=1000, screenWipeResistance=0.8
 - Magnet attractRadius=350, instantBurstRadius=150
+- Screen wipe bossDamage=200, bossResistance=0.8
 - XP formula: floor(375 × 1.3^(N-14))
 - Game duration: 5 minutes
-- Obstacles: 5 types, collision rules defined
+- Obstacles: 5 types with weights (30/10/25/15/20), collision rules defined
+- Obstacle seedDerivation: hash(stageId + difficultyLevel)
+- Per-bracket maxEnemies: [25, 40, 60, 80, 100, 120, 150, 180, 150, 120]
+
+AUDIO NOTE:
+- [ ] NO audio.json schema exists (audio is hardcoded, not JSON-loaded)
 
 TYPE CHECK:
 - TypeScript type annotations present alongside JSON examples
@@ -1166,9 +1292,12 @@ CROSS-REFERENCE CHECKS:
 - [ ] All values match the corresponding spec files (02-09)
 - [ ] No stale boss spawn times (10:00)
 - [ ] No wrong XP formulas
+- [ ] boss.screenWipeResistance (0.8) matches pickups.json screenWipe.bossResistance (0.8)
+- [ ] boss.screenWipeResistance (0.8) matches 04_enemies_spec.md §7
+- [ ] Obstacle weights sum to 1.0 (0.30 + 0.10 + 0.25 + 0.15 + 0.20 = 1.00)
+- [ ] Per-bracket maxEnemies never exceeds global maxEnemies (200)
+- [ ] W2 orbDamageCooldown (0.5) matches 03_weapons_spec.md §6
 ```
-
----
 
 ### Test 11 — Cross-Spec Integration Test
 
@@ -1195,6 +1324,29 @@ UNIVERSAL VALUES CHECK — these values must be identical across all files that 
 | Timer shows | Boss at 4:00 | 08 |
 | Weapon unlocks | W2=Lv3, W3=Lv6 | 03, 07 |
 
+NEW VALUES FROM GAP REVIEWS — these values were added during spec gap fixes and must be consistent:
+| Value | Expected | Files That Must Agree |
+|---|---|---|
+| Boss screen wipe resistance | 0.8 (80%) | 04, 06, 10 |
+| Screen wipe boss damage | 200 (20% of 1000 HP) | 06, 10 |
+| Player hitbox | 20×20 | 01, 02, 10 |
+| W2 orb damage cooldown | 0.5s | 03, 10 |
+| Obstacle weights | 30/10/25/15/20 | 05, 10 |
+| Obstacle seed derivation | hash(stageId + difficultyLevel) | 05, 10 |
+| Max level-up queue | 3 | 07, 10 |
+| Weapon unlock guaranteed | true | 07, 10 |
+| Excess XP behavior | carry_over | 07, 10 |
+| Max health passive heals current | true | 07, 10 |
+| W1 targeting | nearest | 03, 10 |
+| W2 targeting | self (orbit) | 03, 10 |
+| W3 targeting | player_position | 03, 10 |
+| Boss charge resume | continue_from_frozen | 04, 10 |
+| Spawn cap behavior | stop_spawn (no despawn) | 05, 10 |
+| Difficulty scaling timer start | boss_death_timestamp | 05, 10 |
+| Power-up despawn | null (never despawn) | 06, 10 |
+| Gold value per coin | 1 | 06, 10 |
+| Drop roll order | weaponUp > screenWipe > magnet > nothing | 06, 10 |
+
 DROP RATE CONSISTENCY CHECK:
 - Drop rate table in 06_pickups must match drop rates in 04_enemies
 - Both must match vs_prog.md Drop Economy
@@ -1210,9 +1362,8 @@ VISUAL CONSISTENCY CHECK:
 AUDIO CONSISTENCY CHECK:
 - All sound triggers in 09_audio match events defined in 01-08
 - Boss spawn announcement timing in 05_stages matches 09_audio
+- No audio.json exists (audio is hardcoded per 09_audio_spec.md §1)
 ```
-
----
 
 ## Engine Core Systems
 

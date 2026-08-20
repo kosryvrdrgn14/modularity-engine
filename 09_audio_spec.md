@@ -456,7 +456,7 @@ From `vs_prog.md` Sound Design Arc. These are the sound-specific acceptance crit
 | Boss spawn sequence | `05_stages_spec.md` §10 Boss Spawn Sequence |
 | Boss sounds | `04_enemies_spec.md` §7 Boss: The Gravekeeper |
 | Level-up sound | `07_leveling_system_spec.md` §5 Level-Up Flow |
-| JSON schema | `10_json_schemas.md` (audio config) |
+| Audio config | Hardcoded in engine (no JSON file — see Prompt 10 audio note) |
 
 ---
 
