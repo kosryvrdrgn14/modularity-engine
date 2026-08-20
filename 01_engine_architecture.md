@@ -21,6 +21,13 @@
 10. [Projectile Lifetime](#10-projectile-lifetime)
 11. [Obstacle Collision Rules](#11-obstacle-collision-rules)
 12. [Performance Notes](#12-performance-notes)
+13. [Event Bus Architecture](#13-event-bus-architecture)
+14. [Game Initialization & Boot Sequence](#14-game-initialization--boot-sequence)
+15. [Game Timer System](#15-game-timer-system)
+16. [Page Visibility & Tab Handling](#16-page-visibility--tab-handling)
+17. [Boss Health Bar](#17-boss-health-bar)
+18. [Enemy Projectiles](#18-enemy-projectiles)
+19. [Additional Systems Notes](#19-additional-systems-notes)
 
 ---
 
@@ -198,7 +205,74 @@ Exactly 1 player entity exists at all times. Created on stage start, never poole
 
 ---
 
-## 3. Collision System
+## 3. Event Bus Architecture
+
+All inter-system communication happens through a central **event bus**. Systems emit events; other systems subscribe to events they care about. This decouples systems — the damage system doesn't need to know about the audio system, it just emits a `damage` event.
+
+### Event Registration
+
+```
+class EventBus {
+    listeners: Map<string, Function[]>
+    
+    on(event: string, callback: Function):
+        if !this.listeners.has(event):
+            this.listeners.set(event, [])
+        this.listeners.get(event).push(callback)
+    
+    off(event: string, callback: Function):
+        this.listeners.get(event)?.remove(callback)
+    
+    emit(event: string, data: any):
+        for callback in this.listeners.get(event) ?? []:
+            callback(data)
+    
+    clear():
+        this.listeners.clear()
+}
+```
+
+### Event Types
+
+| Event | Emitted By | Consumed By | Data |
+|---|---|---|---|
+| `damage` | DamageSystem | AudioManager, UIManager, CameraEffects | `{ attacker, defender, damage, isCrit, isPlayerDamage }` |
+| `death` | DamageSystem | SpawnSystem (drops), UIManager (floating text), AudioManager, LevelingSystem (XP) | `{ entity, killer, position }` |
+| `pickup` | PickupSystem | AudioManager, UIManager, LevelingSystem (XP/gold), WeaponSystem (weapon level-up) | `{ player, pickup }` |
+| `levelUp` | LevelingSystem | UIManager, AudioManager | `{ player, newLevel }` |
+| `bossSpawn` | SpawnSystem | CameraEffects (shake), UIManager (health bar), AudioManager (warning) | `{ boss }` |
+| `bossDeath` | DamageSystem | CameraEffects (shake), AudioManager, StateManager (victory) | `{ boss, killer }` |
+| `screenWipe` | PickupSystem | CameraEffects (shake), AudioManager | `{ player }` |
+| `gameOver` | StateManager | UIManager, AudioManager | `{ result: 'victory' | 'survived' | 'defeat', stats }` |
+| `pause` | InputManager | All systems (stop updating) | `{ paused: boolean }` |
+
+### Dispatch Rules
+
+- Events are dispatched **synchronously** within the current frame
+- Listeners are called in registration order
+- No event re-entrancy: if a listener emits another event, it is queued and processed after the current emit completes
+- Maximum 32 nested events per frame (prevent infinite loops)
+
+### System Registration
+
+Each system registers its listeners during initialization:
+
+```
+// Example: AudioManager registers listeners
+audioManager.init(eventBus):
+    eventBus.on('damage', (data) => playHitSound(data))
+    eventBus.on('death', (data) => playKillSound(data))
+    eventBus.on('pickup', (data) => playPickupSound(data))
+    eventBus.on('levelUp', (data) => playLevelUpSound(data))
+    eventBus.on('bossSpawn', (data) => playBossWarning(data))
+    eventBus.on('bossDeath', (data) => playVictorySting(data))
+    eventBus.on('screenWipe', (data) => playScreenWipeSound(data))
+    eventBus.on('gameOver', (data) => playGameOverSound(data))
+```
+
+---
+
+## 4. Collision System
 
 ### AABB Collision Detection
 
@@ -316,14 +390,14 @@ function queryNeighbors(entity):
 
 ---
 
-## 4. Rendering
+## 5. Rendering
 
 ### Canvas Setup
 
 - HTML5 Canvas element, 2D context
 - Canvas sized to fill viewport (CSS: `width: 100%; height: 100%`)
 - Logical resolution matches CSS pixel size
-- HiDPI scaling applied via `devicePixelRatio` (see Section 9)
+- HiDPI scaling applied via `devicePixelRatio` (see Section 10)
 
 ### Camera System
 
@@ -340,7 +414,7 @@ class Camera {
     update(dt):
         this.x += (this.targetX - this.x) * this.lerpFactor
         this.y += (this.targetY - this.y) * this.lerpFactor
-        // Apply screen shake offset (see Section 8)
+        // Apply screen shake offset (see Section 9)
         this.renderX = this.x + this.shakeOffsetX
         this.renderY = this.y + this.shakeOffsetY
     
@@ -447,7 +521,7 @@ All entity visuals are defined in `vs_colors.md`. The engine reads `visual` prop
 
 ---
 
-## 5. Data Loading
+## 6. Data Loading
 
 ### Content Files
 
@@ -525,7 +599,7 @@ During development, `DataManager` watches for file changes and reloads affected 
 
 ---
 
-## 6. Scene / State Management
+## 7. Scene / State Management
 
 ### Scene Graph
 
@@ -623,7 +697,7 @@ The game has **three** distinct end conditions. Each produces a different end sc
 
 ---
 
-## 7. Damage System
+## 8. Damage System
 
 ### Damage Formula
 
@@ -706,7 +780,7 @@ Death handling:
 
 ---
 
-## 8. Camera Effects
+## 9. Camera Effects
 
 ### Screen Shake
 
@@ -750,7 +824,7 @@ class CameraEffect {
 
 ---
 
-## 9. HiDPI Rendering
+## 10. HiDPI Rendering
 
 ### Device Pixel Ratio Support
 
@@ -794,7 +868,7 @@ window.addEventListener('resize', () => {
 
 ---
 
-## 10. Projectile Lifetime
+## 11. Projectile Lifetime
 
 ### Despawn Rules
 
@@ -838,7 +912,7 @@ if entity.age >= 3.0 || entity.distanceTraveled >= 600:
 
 ---
 
-## 11. Obstacle Collision Rules
+## 12. Obstacle Collision Rules
 
 ### Which Entities Collide with Obstacles
 
@@ -928,7 +1002,7 @@ Obstacles are placed once at stage start and never move.
 
 ---
 
-## 12. Performance Notes
+## 13. Performance Notes
 
 ### Targets
 
@@ -983,6 +1057,339 @@ Display as small text in top-right corner during development. Hidden in producti
 
 ---
 
+## 14. Game Initialization & Boot Sequence
+
+### Boot Flow
+
+The game initializes in this exact order on page load:
+
+```
+1. DOM Ready
+   └─ Create <canvas> element, append to document body
+   └─ Call setupCanvas() for HiDPI (see Section 10)
+   └─ Register resize listener
+
+2. Create Engine Core
+   └─ Instantiate EventBus (see Section 3)
+   └─ Instantiate all systems (GameLoop, EntityManager, InputManager, Camera, etc.)
+   └─ Register system event listeners on EventBus
+
+3. Show Loading Screen
+   └─ Dark background with "Loading..." text (see 08_ui_hud_spec.md)
+   └─ Render one frame to display loading screen
+
+4. Load Content Data
+   └─ Parallel fetch of 6 JSON files (see Section 6)
+   └─ Validate all data on load (fail-fast on errors)
+   └─ On error: show error message with details, halt initialization
+
+5. Initialize Systems
+   └─ SpawnSystem.init(stageData)
+   └─ WeaponSystem.init(weaponsData)
+   └─ LevelingSystem.init(levelingData)
+   └─ AudioManager.init(audioContext) — create Web Audio API context
+
+6. Create Player
+   └─ Acquire player entity from character data
+   └─ Position at arena origin (0, 0)
+   └─ Camera snap to player position (no lerp on first frame)
+
+7. Place Obstacles
+   └─ Generate obstacle positions per vs_colors.md placement rules
+   └─ Create obstacle entities (static, never pooled)
+
+8. Start Game Loop
+   └─ GameLoop.start() — begin fixed-timestep update/render cycle
+   └─ Timer starts at 0:00
+   └─ First enemy spawns per wave timeline
+```
+
+### Loading Error Handling
+
+- If any JSON file fails to load: show error overlay with file name and HTTP status
+- If data validation fails: show error overlay with field name and expected type
+- No retry logic in V1 — user must refresh the page
+- Audio context may require user gesture to start (see Section 19)
+
+---
+
+## 15. Game Timer System
+
+### Timer Behavior
+
+The game timer tracks elapsed time from 0:00 to 5:00 and drives all time-based events.
+
+```
+class GameTimer {
+    elapsed: number = 0      // Seconds since game start
+    running: boolean = false  // false during loading, pause, level-up
+    
+    update(dt):
+        if this.running:
+            this.elapsed += dt
+    
+    get formatted(): string:
+        minutes = floor(this.elapsed / 60)
+        seconds = floor(this.elapsed % 60)
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`
+    
+    get bossSpawnTime(): boolean:
+        return this.elapsed >= 240  // 4:00 in seconds
+    
+    get gameTimeExpired(): boolean:
+        return this.elapsed >= 300  // 5:00 in seconds
+}
+```
+
+### Timer Pause Rules
+
+| State | Timer Running? |
+|---|---|
+| PLAYING | ✅ Yes |
+| PAUSED | ❌ No |
+| LEVEL_UP | ❌ No |
+| GAME_OVER | ❌ No |
+| END_SCREEN | ❌ No |
+
+### Time-Driven Events
+
+| Time | Event | System |
+|---|---|---|
+| 0:00 | Game starts, first enemies spawn | SpawnSystem |
+| 0:30 | Wave bracket 2 begins (higher spawn rate) | SpawnSystem |
+| 1:00 | Bats arrive | SpawnSystem |
+| ... | (10 wave brackets total) | SpawnSystem |
+| 3:50 | Boss announcement text: "Something stirs..." | UIManager |
+| 3:55 | Camera shake + text: "The Gravekeeper rises!" | CameraEffects, UIManager |
+| 4:00 | Boss spawns from nearest screen edge | SpawnSystem |
+| 5:00 | Timer expires → SURVIVED if boss alive, or game continues if boss dead | StateManager |
+
+See `05_stages_spec.md` for the complete wave timeline.
+
+### Boss Spawn Trigger
+
+When `timer.elapsed >= 240` (4:00) AND boss has not yet spawned:
+1. Emit `bossSpawn` event
+2. Spawn boss entity from nearest screen edge (400-600px from player)
+3. Camera shake (0.5s, medium — see Section 9)
+4. Boss health bar appears (see Section 17)
+5. Music transitions to boss theme (see `09_audio_spec.md`)
+
+---
+
+## 16. Page Visibility & Tab Handling
+
+### Visibility Change
+
+The game auto-pauses when the browser tab loses focus or the page becomes hidden:
+
+```
+document.addEventListener('visibilitychange', () => {
+    if document.hidden && engine.state === 'PLAYING':
+        engine.pause()
+        // Show "PAUSED" overlay (same as Escape key)
+    // Do NOT auto-resume — player must manually resume
+})
+```
+
+### Rules
+
+- **Tab hidden → auto-pause.** Game enters PAUSED state.
+- **Tab visible → do NOT auto-resume.** Player must tap/click Resume or press Escape.
+- **Timer stops** during auto-pause (see Section 15).
+- **Audio mutes** during auto-pause.
+- **Works on mobile:** `visibilitychange` fires when app is backgrounded on iOS/Android.
+
+### Window Blur (Desktop)
+
+```
+window.addEventListener('blur', () => {
+    if engine.state === 'PLAYING':
+        engine.pause()
+})
+```
+
+Optional in V1. Can be enabled/disabled via config.
+
+---
+
+## 17. Boss Health Bar
+
+### Appearance
+
+The boss health bar is a large bar displayed at the top of the screen during the boss fight.
+
+| Property | Value |
+|---|---|
+| Position | Top-center of screen, below timer |
+| Width | 60% of screen width (min 300px) |
+| Height | 20px |
+| Background | Dark gray (#1A1A2E) |
+| Fill | Boss Crimson (#4A0000) transitioning to bright red (#FF0000) as HP drops |
+| Border | 2px solid #FF4444 |
+| Label | Boss name: "The Gravekeeper" centered above bar |
+| Boss HP text | "HP" + numeric value centered inside bar |
+
+### Lifecycle
+
+| Event | Action |
+|---|---|
+| Boss spawns (4:00) | Bar fades in over 0.5s |
+| Boss takes damage | Bar fill updates smoothly (lerp, 0.2s) |
+| Boss enters Phase 2 (50% HP) | Bar flashes red briefly (0.3s) |
+| Boss dies | Bar fades out over 0.5s |
+| Game ends (defeat/survived) | Bar hidden immediately |
+
+### Phase 2 Visual Cue
+
+When boss HP drops below 50%, the health bar border pulses (opacity 0.5→1.0, 0.5s cycle) to signal the phase transition to the player.
+
+---
+
+## 18. Enemy Projectiles
+
+### Overview
+
+The Caster enemy (Enemy type 5) fires projectiles at the player. These are distinct from player projectiles and have their own collision behavior.
+
+### Enemy Projectile Entity
+
+```
+interface EnemyProjectile extends Entity {
+    type: 'enemyProjectile'
+    stats: {
+        damage: 6          // From vs_prog.md Caster stats
+        speed: 150         // px/s
+        lifetime: 4.0      // seconds (longer than player projectiles)
+    }
+    hitbox: { shape: 'circle', radius: 3 }  // Small, 6×6px visual
+    collisionLayer: ENEMY  // Same layer as enemies — damages PLAYER
+    visual: { shape: 'diamond', color: '#4DD0E1', size: 6 }  // See vs_colors.md
+}
+```
+
+### Collision Layer
+
+Enemy projectiles use the `ENEMY` collision layer (bit `0b0010`). This means:
+- ✅ They collide with `PLAYER` (same as enemy contact damage)
+- ❌ They do NOT collide with other enemies
+- ❌ They do NOT collide with player projectiles
+- ❌ They do NOT collide with obstacles (same as player projectiles)
+
+### Behavior
+
+1. Caster maintains distance from player (300-400px preferred range)
+2. Caster fires projectile toward player's current position every 2.0 seconds
+3. Projectile travels in straight line at 150 px/s
+4. On hit: deal 6 damage to player, apply knockback, trigger i-frames, destroy projectile
+5. Projectile despawns after 4 seconds or when off-screen (>200px beyond edge)
+6. Maximum 10 enemy projectiles on screen simultaneously (pool cap)
+
+### Visual
+
+Small bright teal diamond (`#4DD0E1`), 6×6px. Travels in straight line. No animation. See `vs_colors.md` Enemy Projectile section.
+
+---
+
+## 19. Additional Systems Notes
+
+### Gold as Score Metric (V1)
+
+Gold is a **score-only metric** in V1. It is:
+- ✅ Collected from enemy kills
+- ✅ Displayed in the HUD gold counter
+- ✅ Shown on the end screen stats
+- ✅ Increased by +100 on Victory (boss kill bonus)
+- ❌ NOT spent on anything (no shop, no upgrades, no purchases)
+
+This is intentional for the V1 prototype. Gold spending (shop/upgrade between runs) is planned for V2. See `vs_plan.md` Version Roadmap.
+
+### XP Value Scaling
+
+Enemy XP values increase over time per `vs_prog.md`:
+
+```
+xp_value(t) = base_xp × (1 + 0.05 × floor(t / 60))
+```
+
+- 5% increase per minute
+- Applied at enemy spawn time (the XP value is set when the enemy entity is created)
+- A Zombie spawned at 3:00 gives `1 × (1 + 0.05 × 3) = 1.15 XP` (rounded to 1)
+- This scaling is applied by the SpawnSystem when creating enemy entities
+- See `05_stages_spec.md` for the XP scaling formula
+
+### Magnet Attraction Physics
+
+When the magnet power-up is active, pickups within range are attracted to the player:
+
+```
+MAGNET_RADIUS = 350      // px — pickups within this radius are attracted
+MAGNET_SPEED = 400       // px/s — attraction travel speed
+INSTANT_BURST = 150      // px — pickups within this range are collected instantly on pickup
+MAGNET_DURATION = 10     // seconds
+
+function updateMagnetPickups(player, pickups, dt):
+    for pickup in pickups:
+        if !pickup.active: continue
+        dx = player.x - pickup.x
+        dy = player.y - pickup.y
+        distance = sqrt(dx*dx + dy*dy)
+        
+        if distance < MAGNET_RADIUS:
+            // Accelerate toward player
+            dirX = dx / distance
+            dirY = dy / distance
+            pickup.x += dirX * MAGNET_SPEED * dt
+            pickup.y += dirY * MAGNET_SPEED * dt
+            
+            // Collect when within pickup range
+            if distance < player.stats.pickupRange:
+                collectPickup(player, pickup)
+```
+
+**Instant burst behavior:** When the player collects a magnet power-up, all pickups within 150px are immediately collected (no travel time). Remaining pickups within 350px begin attracted movement.
+
+**Duration stacking:** Multiple magnet pickups do NOT stack duration. Picking up another magnet resets the 10s timer.
+
+### Background Music System
+
+The AudioManager handles background music as a separate channel from SFX:
+
+- **Music channel:** Single track, crossfaded between transitions
+- **SFX channel:** Up to 16 concurrent sounds (see `09_audio_spec.md`)
+- **UI channel:** Single concurrent sound for menu interactions
+
+Music transitions are driven by the game timer (see `09_audio_spec.md` Sound Design Arc for the full timeline). Key transitions:
+- 0:00 — Stage theme ambient intro (fade in 2s)
+- 0:15 — Beat drop (drums enter)
+- 3:30 — Pre-boss build (strings swell)
+- 3:50 — Silence (2s dramatic cut)
+- 4:00 — Boss theme full combat
+- Boss death — Victory sting (2s brass fanfare)
+- 5:00 — Game Over melancholic piano
+
+See `09_audio_spec.md` for complete audio specifications.
+
+### Web Audio API Context
+
+The Web Audio API requires a user gesture (click/tap) before creating or resuming an AudioContext. The engine handles this:
+
+```
+// On first user interaction (click or tap anywhere)
+function initAudio():
+    if audioContext.state === 'suspended':
+        audioContext.resume()
+    // Now audio can play
+
+// Register on first interaction
+document.addEventListener('click', initAudio, { once: true })
+document.addEventListener('touchstart', initAudio, { once: true })
+```
+
+Until the first user gesture, all sounds are silently queued. After the AudioContext resumes, queued sounds play normally.
+
+---
+
 ## Cross-Reference Summary
 
 | Section | References |
@@ -991,12 +1398,17 @@ Display as small text in top-right corner during development. Hidden in producti
 | Entity stats | `02_character_spec.md`, `04_enemies_spec.md`, `03_weapons_spec.md` |
 | Wave timeline | `05_stages_spec.md` (drives SpawnSystem) |
 | XP/leveling | `07_leveling_system_spec.md` (drives LevelingSystem) |
+| XP scaling | `05_stages_spec.md` (XP value formula) |
 | Pickups/power-ups | `06_pickups_and_powerups_spec.md` (drives PickupSystem) |
+| Magnet physics | `06_pickups_and_powerups_spec.md` (attract rules) |
 | HUD/UI | `08_ui_hud_spec.md` (drives UIManager) |
-| Audio | `09_audio_spec.md` (drives AudioManager) |
+| Boss health bar | `08_ui_hud_spec.md` (layout) |
+| Audio/music | `09_audio_spec.md` (drives AudioManager) |
 | Data schemas | `10_json_schemas.md` (defines all JSON content files) |
 | Progression numbers | `vs_prog.md` (source of truth for all gameplay values) |
 | Obstacle placement | `vs_colors.md` Map & Obstacles section |
+| Enemy projectiles | `04_enemies_spec.md` (Caster projectile stats) |
+| Timer events | `05_stages_spec.md` (wave timeline) |
 
 ---
 
