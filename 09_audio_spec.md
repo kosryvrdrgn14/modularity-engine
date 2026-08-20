@@ -15,7 +15,8 @@
 4. [Pickup Sound Engine — The Payout Triad](#4-pickup-sound-engine--the-payout-triad)
 5. [Sound Priority System](#5-sound-priority-system)
 6. [Distance-Based Audio](#6-distance-based-audio)
-7. [Cross-Reference Summary](#7-cross-reference-summary)
+7. [QA Acceptance — Fun Factor Checklist](#7-qa-acceptance--fun-factor-checklist)
+8. [Cross-Reference Summary](#8-cross-reference-summary)
 
 ---
 
@@ -27,7 +28,7 @@
 | Output | Single HTML5 file, zero external dependencies |
 | Synthesis | All sounds procedurally generated using oscillators |
 | Channels | SFX (multiple concurrent), Music (1 track), UI (1 concurrent) |
-| Max Simultaneous Sounds | 16 (older sounds ducked/forced when exceeded) |
+| Max Simultaneous Sounds | 16 (eviction logic in §1.1 below) |
 | Volume Defaults | Master 80%, Music 70%, SFX 85% |
 | Settings UI | None in V1 |
 
@@ -35,9 +36,41 @@
 
 | Channel | Concurrent | Purpose |
 |---|---|---|
-| SFX | 16 max | Weapon fire, enemy hit/kill, pickups, power-ups, player hurt |
-| Music | 1 | Background music track (single track, crossfade transitions) |
+| SFX | 16 max (eviction per §1.2) | Weapon fire, enemy hit/kill, pickups, power-ups, player hurt |
+| Music | 1 (never evicted) | Background music track (layer-based synthesis, crossfade transitions) |
 | UI | 1 | Level-up chime, button clicks, screen transitions |
+
+### 1.1 AudioContext Initialization & Browser Unlock
+
+Modern browsers block audio playback until a user gesture (click, tap, keypress). The game must handle this explicitly.
+
+**Boot sequence:**
+1. On game load, create a suspended `AudioContext`: `new AudioContext()` → state = `suspended`.
+2. Show the title screen with a "Click to Start" / "Tap to Start" prompt.
+3. On the first user click/tap on the start button:
+   a. Call `audioContext.resume()` to unlock the audio context.
+   b. Play the `ui_click` sound as a confirmation blip (verifies audio is working).
+   c. Start the game and begin music playback.
+4. If `audioContext.resume()` fails, the game continues silently — audio is non-blocking.
+
+**Edge cases:**
+- If the user tabs away and returns, the AudioContext may re-suspend. On `visibilitychange` → `visible`, call `audioContext.resume()` if suspended.
+- On mobile, ensure the start button is a direct touch event (not a programmatic tap) to satisfy browser unlock requirements.
+
+### 1.2 Sound Pool & Eviction Logic
+
+The engine maintains a pool of 16 active sound slots. When a new sound triggers and all slots are occupied:
+
+1. **Evict lowest-priority active sound** using the priority table in §5. If multiple sounds share the same priority, evict the oldest (earliest start time).
+2. **Boss sounds cannot be evicted** — they always find a slot by evicting lower-priority sounds first.
+3. **Player hurt/death sounds cannot be evicted** — they are priority 1 and always play.
+4. **Pooled sounds** are `OscillatorNode` + `GainNode` pairs. When evicted, the oscillator is stopped and the slot is freed immediately.
+5. **SFX slots vs Music slot:** Music occupies a dedicated 1 slot separate from the 16 SFX slots. Music is never evicted.
+
+**Slot allocation:**
+- SFX pool: 16 slots shared across weapon, enemy, pickup, player, and UI sounds.
+- Music pool: 1 dedicated slot.
+- Total simultaneous: up to 17 (16 SFX + 1 music).
 
 ---
 
@@ -50,7 +83,7 @@ All values copied EXACTLY from `vs_prog.md` Sound Design Arc section.
 | ID | Trigger | Waveform | Pattern | Duration | Notes |
 |---|---|---|---|---|---|
 | `w1_fire` | W1 fires | Square | Single blip at base freq. Pitch scales with damage | 0.03s | Short, punchy. Laser shot. |
-| `w2_hum` | W2 orbs active | Triangle | Continuous hum at 110Hz + 165Hz (perfect 5th) | Continuous | Low, constant. Orbital resonance. |
+| `w2_hum` | W2 orbs active | Triangle | Continuous hum at 110Hz + 165Hz (perfect 5th) | Continuous while W2 equipped | Low, constant. Orbital resonance. Stops when W2 is unequipped, player dies, or game ends. |
 | `w3_pulse` | W3 pulses | Sawtooth → LP filter | Burst from 800Hz → 200Hz | 0.3s | Whoosh/bass pulse. Area denial. |
 | `weapon_hit` | Projectile hits enemy | Noise burst | White noise × gain envelope, 200–800Hz bandpass | 0.03s | Short, percussive. |
 
@@ -62,7 +95,10 @@ All values copied EXACTLY from `vs_prog.md` Sound Design Arc section.
 | `bat_kill` | Bat dies | Square | Chirp: 1200Hz → 800Hz | 0.08s | Quick, high-pitched. Matches swiftness. |
 | `skeleton_kill` | Skeleton dies | Square + noise | Layered: 300Hz + 600Hz | 0.2s | Heavier. Armor break feel. |
 | `ghost_kill` | Ghost dies | Sine | Wail: 600Hz → 200Hz | 0.3s | Ethereal fade. Ghostly dissipation. |
+| `caster_projectile` | Caster fires projectile | Square | Rising blip: 300Hz → 600Hz | 0.08s | Short, magical. Projectile launch cue. |
 | `caster_kill` | Caster dies | Square | Burst: 500Hz → 200Hz | 0.15s | Standard. Magical fizz. |
+| `boss_charge` | Boss begins charge | Square | Low sweep: 80Hz → 120Hz | 0.4s | Warning growl. Player should dodge. |
+| `boss_ground_pound` | Boss slams ground | Square + noise | Deep impact: 60Hz + noise burst | 0.5s | Heavy. Screen shakes. Area damage cue. |
 | `boss_death` | Boss dies | Sine + square | Layered: 60Hz + 120Hz + 240Hz | 2.0s | Deep, layered. Slow-motion bass drop. |
 
 ### Pickup Sounds
@@ -75,7 +111,7 @@ All values copied EXACTLY from `vs_prog.md` Sound Design Arc section.
 | `powerup_collect` | Power-up collected | Square | Full 5-note arpeggio | 0.12s | Louder, longer. Victory feel. |
 | `levelup` | Level-up triggered | Square | Ascending scale run: C5→E5→G5→C6 | 0.20s | Full octave. Slowest pickup sound. Triumphant. |
 | `screenwipe` | Screen wipe activated | Sweep + noise | Descending: 2000Hz → 100Hz + white noise burst | 1.5s | Dramatic. Not part of pickup system. |
-| `magnet_hum` | Magnet active | Sine | Continuous: 220Hz + 330Hz (perfect 5th) | Duration of effect | Layered. Constant, low. Magnetic texture. |
+| `magnet_hum` | Magnet active | Sine | Continuous: 220Hz + 330Hz (perfect 5th) | Duration of effect, fades out over 0.5s in last second | Layered. Constant, low. Smooth fade-out at end. |
 
 ### Player Sounds
 
@@ -152,6 +188,56 @@ From `vs_prog.md` Sound Design Arc section.
 | Pre-boss silence (3:50) | Instant cut | 0s |
 | Boss death victory sting | Slow-mo bass drop | 1.5s |
 | Game over melancholic | Fade in | 5s |
+
+### Music Synthesis Approach
+
+Since the prototype is a single HTML file with zero external assets, all music is synthesized using Web Audio API oscillators and noise generators. There are no audio files, no base64-encoded tracks, and no external music libraries.
+
+**Instrument bank (all synthesized):**
+
+| Instrument | Waveform | Technique | Used For |
+|---|---|---|---|
+| Synth Pad | Sawtooth + LP filter | Low-pass filtered sawtooth, slow LFO on filter cutoff. Cutoff sweeps 200Hz↔800Hz over 4s. | Atmospheric layers, ambient intro, pre-boss build |
+| Bass | Square | Sub-bass at 55Hz (A1) + 110Hz (A2). Simple root-note pattern, 120 BPM. | Bass layer, boss ground pound rhythm |
+| Drums (Kick) | Sine | Pitch sweep 150Hz → 40Hz over 0.08s. Gain envelope: instant attack, fast decay. | Kick drum, 4-on-the-floor pattern |
+| Drums (Hi-hat) | Noise | White noise × gain envelope, 5kHz HP filter. 0.03s decay. | Hi-hat, 8th-note pattern |
+| Drums (Snare) | Noise + Sine | Noise burst (3kHz BP) + sine body (200Hz). 0.1s decay. | Snare, beats 2 and 4 |
+| Lead Synth | Square | Simple melody line. C5–C6 range. 1/8th note steps. | Lead melody, full intensity section |
+| Strings | Sawtooth + LP filter | Multiple detuned sawtooth oscillators (±5 cents). Slow attack (0.3s), slow release (1s). | Swell builds, pre-boss tension, boss theme layers |
+| Brass | Square + Sawtooth | Square body + sawtooth overtone. Medium attack (0.1s). | Victory sting fanfare, boss hits |
+| Piano | Triangle | Triangle wave body + quick decay. Simple chords. | Game over melancholic, quiet moments |
+
+**Music layering model:**
+
+The music system uses a **layer-based approach**. Each "track" in the progression table is actually a combination of active layers:
+
+| Time | Active Layers | Layer Configuration |
+|---|---|---|
+| 0:00 | Pad only | Pad at 30% volume, 2s fade-in |
+| 0:15 | Pad + Drums | Add kick + hi-hat at 60% volume |
+| 1:00 | Pad + Drums + Bass | Add bass at 50% volume |
+| 2:00 | Pad + Drums + Bass + Lead | Add lead at 40% volume |
+| 3:30 | All + Strings | Add strings at 60%, increasing to 80% over 20s |
+| 3:50 | None (silence) | All layers fade to 0 over 0.2s |
+| 3:52 | Bass + Strings (low) | Boss intro: bass at 30%, strings at 20% |
+| 4:00 | Bass + Drums + Lead + Strings | Full combat: all layers at 70–80% |
+| 4:30 | All (tempo +15%) | Phase 2: increase tempo by 15%, add brass hits |
+| Boss death | Brass only | Victory fanfare: brass at 80%, 2s hold, 1s fade |
+| 5:00 | Piano | Melancholic: piano at 50%, simple chord progression, 5s fade |
+| Player death | None → low boom | 1s sine sweep 80Hz→40Hz, then silence |
+
+**BPM:** 120 BPM base (144 BPM during Phase 2 escalation at 4:30).
+
+### Crossfade Implementation
+
+Since all music is synthesized layers (not pre-recorded tracks), "crossfading" is implemented as layer volume transitions:
+
+- **Normal track change (2s crossfade):** Outgoing layers ramp volume to 0% over 2s. Incoming layers ramp volume to target over 2s. Both run simultaneously during transition.
+- **Pre-boss silence (instant cut):** All layer gain nodes set to 0 immediately (no ramp). Set `gain.linearRampToValueAtTime(0, currentTime)`.
+- **Boss death victory sting:** After boss death, all combat layers fade to 0 over 1.5s (slow-mo bass drop effect: simultaneously sweep bass oscillator from 80Hz→40Hz). Then brass layer fades in for 2s fanfare.
+- **Game over melancholic:** All layers at 0. Piano layer fades in from 0 to 50% over 5s.
+
+**Ducking integration:** Layer volume = base volume × ducking multiplier. When ducking triggers (§5), the engine iterates active layers and multiplies their gain by the duck factor (0.8 for high-priority duck, 0.7 for boss active, 0.1 for level-up screen).
 
 ---
 
@@ -281,6 +367,26 @@ From `vs_prog.md` Sound Priority System section.
 | Boss active | Duck all regular combat sounds by 30% | While boss alive |
 | Level-up screen | Duck all combat sounds to 10% volume | While level-up screen visible |
 
+### Ducking Implementation
+
+Each active SFX slot and the music layer system has a `GainNode`. Ducking modifies these gain nodes:
+
+**Gain chain:** `source oscillator → per-sound gain (volume decoupling) → priority gain (ducking) → channel gain (SFX/Music/UI) → master gain`
+
+**Ducking algorithm:**
+1. When a high-priority sound (priority 1–3) triggers:
+   a. For each active slot with priority > triggering sound's priority: set `priorityGain.gain.linearRampToValueAtTime(0.8, currentTime + 0.05)`.
+   b. After 0.3s, restore all ducked slots: `priorityGain.gain.linearRampToValueAtTime(1.0, currentTime + 0.1)`.
+2. When boss becomes active (boss spawns):
+   a. For all active slots with priority > 4 (below boss): set `priorityGain` to 0.7.
+   b. On boss death: restore all to 1.0 over 0.5s.
+3. When level-up screen opens:
+   a. Set ALL combat sound `priorityGain` to 0.1.
+   b. UI channel remains at 1.0 (level-up chime plays at full volume).
+   c. On level-up screen close: restore all to 1.0 over 0.2s.
+
+**Ducking stacking:** If multiple duck triggers are active simultaneously, the lowest gain value wins (not additive). Example: Boss active (0.7) + high-priority sound (0.8) → final gain = 0.7.
+
 ---
 
 ## 6. Distance-Based Audio
@@ -303,15 +409,48 @@ From `vs_prog.md` Distance-Based Audio section.
 
 ---
 
-## 7. Cross-Reference Summary
+## 7. QA Acceptance — Fun Factor Checklist
+
+From `vs_prog.md` Sound Design Arc. These are the sound-specific acceptance criteria for the prototype. Every item must be verified during playtesting.
+
+| # | Checkpoint | Verified |
+|---|---|---|
+| 1 | First level-up sound feels rewarding (ascending chime + card reveal) | ☐ |
+| 2 | Weapon unlock sound feels like a power jump (power-up jingle + equip) | ☐ |
+| 3 | Screen wipe sound creates a moment of relief (whoosh/boom + silence) | ☐ |
+| 4 | Magnet pickup sound creates a rush of satisfaction (hum + rapid chimes) | ☐ |
+| 5 | Boss warning silence creates genuine tension (music cuts, low rumble) | ☐ |
+| 6 | Boss death sound provides catharsis (explosion + slow-mo bass + sting) | ☐ |
+| 7 | Death sting feels final, not frustrating (low boom, then silence) | ☐ |
+| 8 | Late-game chaos sounds intense but not painful (ducking keeps it balanced) | ☐ |
+| 9 | No single sound becomes annoying through repetition (variance engine works) | ☐ |
+| 10 | Music builds naturally and doesn't feel jarring (smooth layer transitions) | ☐ |
+| 11 | XP pickup arpeggios harmonize during rapid collection (no dissonance) | ☐ |
+| 12 | Combo stepping creates melodic rise during Magnet vacuum | ☐ |
+| 13 | Gold coin pickup sounds distinct from XP pickup (different arpeggio pattern) | ☐ |
+| 14 | Each weapon has a unique, recognizable fire sound | ☐ |
+| 15 | Enemy hit sounds provide satisfying feedback without overwhelming | ☐ |
+| 16 | Boss spawn sound creates genuine physical tension (low frequency impact) | ☐ |
+
+**How to verify:** Play through a full 5-minute run. Check each item during the corresponding game moment. Items 1–7 are one-shot moments. Items 8–16 require sustained attention across the full run.
+
+---
+
+## 8. Cross-Reference Summary
 
 | Section | References |
 |---|---|
 | All SFX values | `vs_prog.md` Sound Design Arc (source of truth) |
 | Music progression | `vs_prog.md` Sound Design Arc — Music Progression |
+| Music synthesis | §3 Music Synthesis Approach (instrument bank, layer model) |
+| Crossfade implementation | §3 Crossfade Implementation (layer volume transitions) |
+| Audio initialization | §1.1 AudioContext Initialization & Browser Unlock |
+| Sound pool / eviction | §1.2 Sound Pool & Eviction Logic |
 | Payout triad | `vs_prog.md` Sound Design Arc — Pickup Sound Engine |
 | Sound priority | `vs_prog.md` Sound Design Arc — Sound Priority System |
+| Ducking implementation | §5 Ducking Implementation (gain chain, stacking rules) |
 | Distance audio | `vs_prog.md` Sound Design Arc — Distance-Based Audio |
+| QA checklist | §7 QA Acceptance — Fun Factor Checklist (from `vs_prog.md`) |
 | Audio architecture | `01_engine_architecture.md` §3 Event Bus (audio events) |
 | Screen shake events | `01_engine_architecture.md` §9 Camera Effects |
 | Boss spawn sequence | `05_stages_spec.md` §10 Boss Spawn Sequence |
@@ -321,4 +460,4 @@ From `vs_prog.md` Distance-Based Audio section.
 
 ---
 
-*End of 09_audio_spec.md — Version 1*
+*End of 09_audio_spec.md — Version 1.1 (gaps 1–10 fixed)*
