@@ -13,9 +13,10 @@
 2. [Weapon 1: Projectile](#2-weapon-1-projectile)
 3. [Weapon 2: Orbit](#3-weapon-2-orbit)
 4. [Weapon 3: Area](#4-weapon-3-area)
-5. [Combined DPS by Minute](#5-combined-dps-by-minute)
-6. [Weapon System Behavior](#6-weapon-system-behavior)
-7. [Cross-Reference Summary](#7-cross-reference-summary)
+5. [Weapon Independence](#weapon-independence)
+6. [Combined DPS by Minute](#5-combined-dps-by-minute)
+7. [Weapon System Behavior](#6-weapon-system-behavior)
+8. [Cross-Reference Summary](#7-cross-reference-summary)
 
 ---
 
@@ -78,9 +79,10 @@ Values copied EXACTLY from `vs_prog.md` Weapon 1 table.
 - Visual: projectile size increases from 8×8px to 10×10px
 
 **Level 7 — Split:**
-- On hit, the projectile splits into 3 smaller projectiles that fan out ±30° from the original direction
-- Split projectiles deal 50% damage (28 × 0.5 = 14 damage each)
-- Split projectiles do NOT split again (no chain splitting)
+- On hit, the projectile splits into 3 smaller projectiles that fan out ±30° from the original direction of travel
+- Split projectiles **do NOT retarget** — they continue along their fanned-out trajectory regardless of enemy positions
+- Split projectiles deal 50% damage (28 × 0.5 = 14 damage each)\- Split projectiles do NOT split again (no chain splitting)
+- Split projectiles **do NOT inherit pierce** — they disappear on first hit even if the parent had pierce
 - Visual: split projectiles are 6×6px, same color
 
 ### DPS Progression
@@ -101,10 +103,11 @@ Values copied EXACTLY from `vs_prog.md`.
 
 1. Each cooldown cycle, fire 1–3 projectiles (based on level)
 2. Each projectile targets the **nearest enemy** to the player
-3. Projectile travels in a straight line at 300 px/s toward target
+3. Projectile spawns from the **player's center position** and travels in a straight line at **300 px/s** (static — does not scale with level) toward target
 4. On hit: deal damage, destroy projectile (unless pierce at L4+)
 5. On timeout (3s) or distance (600px): destroy projectile
 6. Projectile does NOT track — if target moves out of path, projectile continues straight
+7. **Multiple projectiles vs same enemy:** Each projectile applies damage independently. If 2 projectiles hit the same enemy on the same frame, the enemy takes full damage from both. There is no damage cooldown between player projectiles (unlike orbs).
 
 ### Hitbox
 
@@ -127,6 +130,7 @@ From `vs_colors.md` Weapon 1 Visual section.
 | Size | 8×8 px (L1–3), 10×10 px (L4+), 6×6 px (L7 split) |
 | Motion | Straight line toward nearest enemy |
 | Fire sound | Square wave blip, base frequency scales with damage |
+| L4+ pierce | Projectile leaves a faint trail (2px, 40% opacity, same color) to indicate pierce is active |
 
 ---
 
@@ -179,10 +183,12 @@ Values copied EXACTLY from `vs_prog.md`.
 1. Orbs are spawned when weapon is unlocked (2 orbs at L1)
 2. Orbs circle the player at the weapon's orbit speed and radius
 3. Each orb is an entity of type `orb` with collision layer `PROJECTILE`
-4. On contact with enemy: deal damage, apply knockback
+4. On contact with enemy: deal damage, apply knockback (force = damage × 2, per `01_engine_architecture.md` §8)
 5. Orbs do NOT despawn on hit — they pass through enemies (continuous damage)
-6. Orb count increases at L4 (+1), L6 (+1)
+6. Orb count increases at L4 (+1), L6 (+1). On level-up, all orbs redistribute evenly around the orbit circle immediately (360° / orbCount)
 7. Orbs are evenly spaced around the orbit circle (360° / orbCount)
+8. Orbit direction: **clockwise** (consistent for all levels)
+9. **Orb damage cooldown per enemy:** Each orb has an independent 0.5s cooldown timer per enemy. If 3 orbs hit the same enemy, each orb's timer is tracked separately. Example: orb A hits enemy at t=0 → orb A can't hit that enemy again until t=0.5. Orb B can hit the same enemy at t=0.1 (its own timer starts fresh). This means 3 orbs can deal up to 3× damage in rapid succession against a single target, but sustained DPS per orb against a single enemy is capped by the 0.5s cooldown.
 
 ### Hitbox
 
@@ -232,6 +238,7 @@ Values copied EXACTLY from `vs_prog.md` Weapon 3 table.
 - Area attack fires twice in quick succession (0.3s apart)
 - Each pulse deals full damage
 - Visual: two rings, second ring is `#FFD700` (gold)
+- **Split projectiles at L7 also trigger double pulse** — each pulse splits independently
 
 **Level 7 — Devastation:**
 - Third pulse is a massive explosion (160px radius) that deals 2× damage (42 × 2 = 84 damage)
@@ -259,7 +266,8 @@ Values copied EXACTLY from `vs_prog.md`.
 3. No projectile entity — damage is applied in a single frame
 4. Pulses are spaced 0.3s apart (at L4+)
 5. At L7: third pulse has 2× damage + 1s stun
-6. Visual ring expands from player center to full radius over 0.15s
+6. **Damage is applied instantly on cast**, before the visual ring appears. The expanding ring (0.15s) is purely cosmetic — it does not delay damage
+7. Enemies stunned by L7 can still be damaged by subsequent pulses in the same cycle
 
 ### Hitbox
 
@@ -285,6 +293,16 @@ From `vs_colors.md` Weapon 3 Visual section.
 | L4 (Double) | Two rings, 0.3s apart. Second ring `#FFD700` |
 | L7 (Devastation) | Third pulse: 160px radius, `#FF0000` ring, 1s stun indicator |
 | Fire sound | Sawtooth sweep 800Hz → 200Hz over 0.3s |
+
+---
+
+### Weapon Independence
+
+All weapons operate independently:
+- **Area + Orbs:** When W3 pulses, W2 orbs continue orbiting and damaging independently. Both can damage the same enemy in the same frame
+- **Projectile + Area:** Projectiles fired during an Area pulse are not affected by the pulse. Both apply damage separately
+- **Multiple projectiles:** If multiple W1 projectiles hit the same enemy, each deals full damage. There is no damage cooldown between player projectiles
+- **Stun interaction:** Enemies stunned by W3 L7 can still be hit by W1 projectiles and W2 orbs. Stun only prevents movement and enemy attacks
 
 ---
 
@@ -383,9 +401,33 @@ function areaPulse(player, weapon):
 - When `cooldown <= 0`: fire weapon, reset cooldown
 - Cooldown is NOT affected by attack speed passives in V1
 
+### Per-Weapon Projectile Cap
+
+The engine caps total projectiles at 500 (see `01_engine_architecture.md` §12). Additionally:
+- **Projectile weapon (W1):** Max 30 active projectiles per weapon instance (covers L7: 3 projectiles × ~10 cycles)
+- **Orbit weapon (W2):** Max 4 orbs (matches max level orb count). Orbs are persistent, not disposable
+- **Area weapon (W3):** No projectile entities (instant damage). Not counted toward projectile cap
+- If a weapon's cap is reached, the oldest projectile from that weapon is despawned before firing a new one
+
 ### Weapon Level-Up
 
-When the player collects a weapon level-up power-up or chooses a weapon upgrade at level-up:
+There are two sources of weapon upgrades:
+
+**A) Level-Up Screen (player choice):** Player selects 1 of 3 options. If the option is a weapon upgrade, it upgrades that specific weapon by 1 level.
+
+**B) Power-Up Drop (random):** On pickup, randomly selects **min(weapon_count, 3)** weapons from the player's owned weapons and upgrades each by 1 level. Selection is uniform random without replacement. If all owned weapons are max level (7), the power-up has no effect. Logic:
+
+```
+function applyWeaponLevelUpDrop(player):
+    owned = player.weapons.filter(w => w.level < 7)
+    if owned.length === 0: return  // All maxed, no effect
+    count = min(owned.length, 3)
+    selected = shuffle(owned).slice(0, count)
+    for weapon in selected:
+        upgradeWeapon(weapon)
+```
+
+**Core upgrade function (shared by both sources):**
 
 ```
 function upgradeWeapon(weapon):
