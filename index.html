@@ -1,18 +1,1988 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Modularity Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      width: 100%; height: 100%; 
+      overflow: hidden; 
+      background: #0a0a1a;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      z-index: 100;
+    }
+    #loading-screen h1 {
+      font-size: 32px;
+      color: #FFD700;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+    #loading-bar {
+      width: 300px;
+      height: 4px;
+      background: #1a1a2e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #loading-fill {
+      width: 0%;
+      height: 100%;
+      background: #3B82F6;
+      transition: width 0.3s;
+    }
+    #loading-status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
 </head>
-
-
 <body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
+  <canvas id="game-canvas"></canvas>
+  <div id="loading-screen">
+    <h1>MODULARITY ENGINE</h1>
+    <div id="loading-bar"><div id="loading-fill"></div></div>
+    <div id="loading-status">Loading...</div>
+  </div>
 
+<script>
+// ============================================================
+// PHASE 1: CORE INFRASTRUCTURE
+// EventBus, DataManager, GameState
+// ============================================================
+
+// --- EventBus ---
+// Central event routing with re-entrancy protection
+class EventBus {
+  constructor() {
+    this.listeners = new Map();
+    this.eventQueue = [];
+    this.processing = false;
+    this.maxNesting = 32;
+    this.nestingDepth = 0;
+  }
+
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+  }
+
+  off(event, callback) {
+    const list = this.listeners.get(event);
+    if (!list) return;
+    const idx = list.indexOf(callback);
+    if (idx !== -1) list.splice(idx, 1);
+  }
+
+  emit(event, data) {
+    // If already processing, queue for later (re-entrancy protection)
+    if (this.processing) {
+      if (this.nestingDepth < this.maxNesting) {
+        this.eventQueue.push({ event, data });
+      }
+      return;
+    }
+
+    this.processing = true;
+    this.nestingDepth = 0;
+    this._dispatch(event, data);
+    
+    // Process queued events
+    while (this.eventQueue.length > 0) {
+      const queued = this.eventQueue.shift();
+      this._dispatch(queued.event, queued.data);
+    }
+    
+    this.processing = false;
+  }
+
+  _dispatch(event, data) {
+    this.nestingDepth++;
+    const list = this.listeners.get(event);
+    if (list) {
+      for (let i = 0; i < list.length; i++) {
+        list[i](data);
+      }
+    }
+    this.nestingDepth--;
+  }
+
+  clear() {
+    this.listeners.clear();
+    this.eventQueue = [];
+    this.processing = false;
+    this.nestingDepth = 0;
+  }
+}
+
+// --- DataManager ---
+// Loads and validates JSON content files
+class DataManager {
+  constructor() {
+    this.characters = null;
+    this.weapons = null;
+    this.enemies = null;
+    this.stages = null;
+    this.pickups = null;
+    this.leveling = null;
+  }
+
+  async loadAll(onProgress) {
+    const files = [
+      { key: 'characters', path: 'content/characters.json' },
+      { key: 'weapons', path: 'content/weapons.json' },
+      { key: 'enemies', path: 'content/enemies.json' },
+      { key: 'stages', path: 'content/stages.json' },
+      { key: 'pickups', path: 'content/pickups.json' },
+      { key: 'leveling', path: 'content/leveling.json' },
+    ];
+
+    const results = await Promise.all(
+      files.map(async (file, idx) => {
+        if (onProgress) onProgress(idx / files.length, `Loading ${file.key}...`);
+        try {
+          const response = await fetch(file.path);
+          if (!response.ok) throw new Error(`Failed to load ${file.path}`);
+          const data = await response.json();
+          return { key: file.key, data, error: null };
+        } catch (error) {
+          console.warn(`Could not load ${file.path}, using embedded data`);
+          return { key: file.key, data: null, error };
+        }
+      })
+    );
+
+    // Use embedded data as fallback
+    for (const result of results) {
+      if (result.data) {
+        this[result.key] = result.data;
+      } else {
+        this[result.key] = this.getEmbeddedData(result.key);
+      }
+    }
+
+    if (onProgress) onProgress(1, 'Ready');
+    return true;
+  }
+
+  getEmbeddedData(key) {
+    return EMBEDDED_DATA[key];
+  }
+}
+
+// --- GameState ---
+// State machine with validated transitions
+class GameState {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.state = 'loading';
+    this.previousState = null;
+    this.endResult = null;
+    this.endStats = null;
+
+    // Valid transitions table
+    this.transitions = {
+      loading: ['menu'],
+      menu: ['playing'],
+      playing: ['paused', 'levelUp', 'gameOver'],
+      paused: ['playing'],
+      levelUp: ['playing'],
+      gameOver: ['endScreen'],
+      endScreen: ['menu', 'playing'],
+    };
+  }
+
+  canTransition(newState) {
+    const allowed = this.transitions[this.state];
+    return allowed && allowed.includes(newState);
+  }
+
+  setState(newState, data) {
+    if (!this.canTransition(newState)) {
+      console.warn(`Invalid transition: ${this.state} → ${newState}`);
+      return false;
+    }
+    this.previousState = this.state;
+    this.state = newState;
+    this.eventBus.emit('stateChange', { from: this.previousState, to: newState, data });
+    return true;
+  }
+
+  isPlaying() { return this.state === 'playing'; }
+  isPaused() { return this.state === 'paused'; }
+  isLevelUp() { return this.state === 'levelUp'; }
+  isGameOver() { return this.state === 'gameOver'; }
+  isEndScreen() { return this.state === 'endScreen'; }
+
+  triggerGameOver(result, stats) {
+    this.endResult = result;
+    this.endStats = stats;
+    this.setState('gameOver');
+  }
+}
+
+// ============================================================
+// EMBEDDED DATA (Fallback if JSON files not found)
+// ============================================================
+const EMBEDDED_DATA = {
+  characters: {
+    id: "player_default",
+    name: "The Survivor",
+    description: "A lone hero fighting through the night.",
+    stats: {
+      maxHealth: 100,
+      moveSpeed: 200,
+      armor: 0,
+      pickupRange: 50,
+      magnetRange: 0,
+      critChance: 0,
+      critMultiplier: 1.5
+    },
+    hitbox: { width: 20, height: 20 },
+    startingWeapon: "w1_projectile",
+    visual: { shape: "square", size: 24, color: "#FFD700" }
+  },
+
+  weapons: [
+    {
+      id: "w1_projectile", name: "Projectile", type: "projectile",
+      targeting: "nearest", unlockLevel: 1, orbDamageCooldown: 0,
+      statsPerLevel: [
+        { level: 1, damage: 8, cooldown: 1.00, projectileCount: 1 },
+        { level: 2, damage: 10, cooldown: 0.95, projectileCount: 1 },
+        { level: 3, damage: 12, cooldown: 0.90, projectileCount: 1 },
+        { level: 4, damage: 15, cooldown: 0.85, projectileCount: 1 },
+        { level: 5, damage: 18, cooldown: 0.80, projectileCount: 2 },
+        { level: 6, damage: 22, cooldown: 0.75, projectileCount: 2 },
+        { level: 7, damage: 28, cooldown: 0.65, projectileCount: 3 },
+      ],
+      powerSpikes: {
+        level4: { name: "Pierce", description: "Pierces +1 enemy", statModifiers: { pierceCount: 1 } },
+        level7: { name: "Split", description: "Splits into 3", statModifiers: { splitCount: 3 } },
+      },
+      visual: { shape: "square", color: "#FFD700" }
+    },
+    {
+      id: "w2_orbit", name: "Orbit", type: "orbit",
+      targeting: "self", unlockLevel: 3, orbDamageCooldown: 0.5,
+      statsPerLevel: [
+        { level: 1, damage: 5, cooldown: 2.00, orbitCount: 2, orbitSpeed: 2.00, orbitRadius: 80 },
+        { level: 2, damage: 6, cooldown: 1.85, orbitCount: 2, orbitSpeed: 1.85, orbitRadius: 85 },
+        { level: 3, damage: 7, cooldown: 1.70, orbitCount: 2, orbitSpeed: 1.70, orbitRadius: 90 },
+        { level: 4, damage: 9, cooldown: 1.55, orbitCount: 3, orbitSpeed: 1.55, orbitRadius: 120 },
+        { level: 5, damage: 11, cooldown: 1.40, orbitCount: 3, orbitSpeed: 1.40, orbitRadius: 130 },
+        { level: 6, damage: 13, cooldown: 1.30, orbitCount: 4, orbitSpeed: 1.30, orbitRadius: 140 },
+        { level: 7, damage: 16, cooldown: 1.00, orbitCount: 4, orbitSpeed: 1.00, orbitRadius: 160 },
+      ],
+      powerSpikes: {
+        level4: { name: "Expanded Orbit", description: "+50% radius, +1 orb", statModifiers: { orbitRadiusBonus: 0.50 } },
+        level7: { name: "Afterimage", description: "Damaging trails", statModifiers: { afterimageDuration: 0.5 } },
+      },
+      visual: { shape: "circle", color: "#4FC3F7" }
+    },
+    {
+      id: "w3_area", name: "Area", type: "area",
+      targeting: "player_position", unlockLevel: 6, orbDamageCooldown: 0,
+      statsPerLevel: [
+        { level: 1, damage: 12, cooldown: 2.50, pulseRadius: 80, pulseCount: 1 },
+        { level: 2, damage: 15, cooldown: 2.35, pulseRadius: 88, pulseCount: 1 },
+        { level: 3, damage: 18, cooldown: 2.20, pulseRadius: 96, pulseCount: 1 },
+        { level: 4, damage: 22, cooldown: 2.00, pulseRadius: 110, pulseCount: 2 },
+        { level: 5, damage: 27, cooldown: 1.85, pulseRadius: 120, pulseCount: 2 },
+        { level: 6, damage: 33, cooldown: 1.70, pulseRadius: 135, pulseCount: 2 },
+        { level: 7, damage: 42, cooldown: 1.40, pulseRadius: 160, pulseCount: 3 },
+      ],
+      powerSpikes: {
+        level4: { name: "Double Pulse", description: "Fires twice", statModifiers: { pulseCountBonus: 1 } },
+        level7: { name: "Devastation", description: "Triple + stun", statModifiers: { thirdPulseStunDuration: 1.0 } },
+      },
+      visual: { shape: "circle", color: "#FF9100" }
+    },
+  ],
+
+  enemies: [
+    { id: "zombie", name: "Zombie", type: "normal",
+      stats: { hp: 10, damage: 5, speed: 40, size: 10, xpValue: 1, goldValue: 1, goldCoins: { min: 1, max: 2 } },
+      behavior: { pattern: "chase", params: { chaseSpeed: 40 } },
+      drops: { powerUpTable: [{ type: "weapon_levelup", chance: 0.01 }] },
+      spawn: { weight: 100, firstAppears: "0:00" }
+    },
+    { id: "bat", name: "Bat", type: "normal",
+      stats: { hp: 5, damage: 3, speed: 100, size: 8, xpValue: 1, goldValue: 1, goldCoins: { min: 1, max: 1 } },
+      behavior: { pattern: "swarm", params: { erraticism: 0.8 } },
+      drops: { powerUpTable: [{ type: "magnet", chance: 0.05 }] },
+      spawn: { weight: 80, firstAppears: "1:00" }
+    },
+    { id: "skeleton", name: "Skeleton", type: "normal",
+      stats: { hp: 20, damage: 8, speed: 50, size: 12, xpValue: 3, goldValue: 2, goldCoins: { min: 2, max: 3 } },
+      behavior: { pattern: "chase", params: { chaseSpeed: 50 } },
+      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "weapon_levelup", chance: 0.01 }] },
+      spawn: { weight: 60, firstAppears: "2:00" }
+    },
+    { id: "ghost", name: "Ghost", type: "normal",
+      stats: { hp: 15, damage: 10, speed: 80, size: 12, xpValue: 2, goldValue: 2, goldCoins: { min: 2, max: 3 } },
+      behavior: { pattern: "wander_chase", params: { wanderTime: 2, chaseTime: 4 } },
+      drops: { powerUpTable: [{ type: "magnet", chance: 0.05 }, { type: "weapon_levelup", chance: 0.01 }] },
+      spawn: { weight: 50, firstAppears: "2:30" }
+    },
+    { id: "caster", name: "Caster", type: "normal",
+      stats: { hp: 12, damage: 8, speed: 50, size: 13, xpValue: 3, goldValue: 3, goldCoins: { min: 3, max: 4 } },
+      behavior: { pattern: "ranged", params: { maintainDistance: 150, projectileDamage: 6, projectileSpeed: 150 } },
+      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "weapon_levelup", chance: 0.01 }] },
+      spawn: { weight: 45, firstAppears: "3:00" }
+    },
+    { id: "boss_gravekeeper", name: "The Gravekeeper", type: "boss",
+      stats: { hp: 1000, damage: 15, speed: 70, size: 28, xpValue: 50, goldValue: 1, goldCoins: { min: 20, max: 30 } },
+      behavior: { pattern: "boss_charge", params: { chargeDuration: 1.5, pauseDuration: 1.0 } },
+      drops: { powerUpTable: [{ type: "weapon_levelup", chance: 1.0 }] },
+      spawn: { weight: 0, firstAppears: "4:00" },
+      phases: [
+        { hpThreshold: 1.0, speed: 70, chargeInterval: 3.0, chargeDuration: 1.5, pauseDuration: 1.0, minionCount: 3, minionInterval: 3.0 },
+        { hpThreshold: 0.5, speed: 100, chargeInterval: 2.0, chargeDuration: 1.5, pauseDuration: 0.8, minionCount: 5, minionInterval: 2.0,
+          groundPound: { interval: 5.0, radius: 80, damage: 20, telegraphTime: 0.75 } }
+      ],
+      loot: { xp: 50, gold: { min: 20, max: 30 }, guaranteedPowerUp: "weapon_levelup" },
+      screenWipeResistance: 0.8,
+      chargeResumeBehavior: "continue_from_frozen"
+    },
+  ],
+
+  stages: {
+    id: "stage_graveyard",
+    name: "The Graveyard",
+    theme: "Gothic horror",
+    background: { baseColor: "#1A1A2E", gridColor: "#16213E", gridSize: 50 },
+    spawnConfig: { minDistance: 400, maxDistance: 600, maxEnemies: 200, baseSpawnRate: 0.8, spawnRateCap: 3.0, maxEnemyCapBehavior: "stop_spawn" },
+    waves: [
+      { time: "0:00-0:30", enemyTypes: ["zombie"], spawnRate: 0.8, compositionWeights: { zombie: 1.0 }, maxEnemies: 25 },
+      { time: "0:30-1:00", enemyTypes: ["zombie"], spawnRate: 1.2, compositionWeights: { zombie: 1.0 }, maxEnemies: 40 },
+      { time: "1:00-1:30", enemyTypes: ["zombie", "bat"], spawnRate: 1.5, compositionWeights: { zombie: 0.55, bat: 0.45 }, maxEnemies: 60 },
+      { time: "1:30-2:00", enemyTypes: ["zombie", "bat"], spawnRate: 1.8, compositionWeights: { zombie: 0.55, bat: 0.45 }, maxEnemies: 80 },
+      { time: "2:00-2:30", enemyTypes: ["zombie", "bat", "skeleton"], spawnRate: 2.0, compositionWeights: { zombie: 0.40, bat: 0.35, skeleton: 0.25 }, maxEnemies: 100 },
+      { time: "2:30-3:00", enemyTypes: ["zombie", "bat", "skeleton", "ghost"], spawnRate: 2.2, compositionWeights: { zombie: 0.30, bat: 0.30, skeleton: 0.25, ghost: 0.15 }, maxEnemies: 120 },
+      { time: "3:00-3:30", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster"], spawnRate: 2.5, compositionWeights: { zombie: 0.25, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.15 }, maxEnemies: 150 },
+      { time: "3:30-4:00", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster"], spawnRate: 3.0, compositionWeights: { zombie: 0.20, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.20 }, maxEnemies: 180 },
+      { time: "4:00-4:30", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster", "boss_gravekeeper"], spawnRate: 2.0, compositionWeights: { zombie: 0.20, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.20 }, maxEnemies: 150 },
+      { time: "4:30-5:00", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster", "boss_gravekeeper"], spawnRate: 1.5, compositionWeights: { zombie: 0.20, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.20 }, maxEnemies: 120 },
+    ],
+    difficultyScaling: { hpMultiplier: "1 + 0.15 * minutes_after_boss_kill", damageMultiplier: "1 + 0.10 * minutes_after_boss_kill", timerStart: "boss_death_timestamp" },
+    xpScaling: { formula: "base_xp * (1 + 0.05 * floor(t / 60))" },
+    bossConfig: {
+      enemyId: "boss_gravekeeper", spawnTime: "4:00",
+      announcement: [
+        { time: 230, text: "Something stirs in the darkness...", type: "text", styling: { fontSize: 24, position: "center", animation: "fadeInHoldFadeOut" } },
+        { time: 230, type: "dim", brightness: 0.8 },
+        { time: 235, text: "The Gravekeeper rises!", type: "shake", styling: { fontSize: 28, position: "center", animation: "scalePulse" } },
+        { time: 240, type: "boss_spawn", position: "nearest_edge_to_player" }
+      ]
+    },
+    obstacles: {
+      types: 5, collisionRules: "player+enemies collide, projectiles+pickups pass through",
+      weights: { small_tombstone: 0.30, large_tombstone: 0.10, grave_mound: 0.25, broken_wall: 0.15, cracked_floor: 0.20 },
+      seedDerivation: "hash(stageId + difficultyLevel)"
+    }
+  },
+
+  pickups: [
+    { id: "exp_small", name: "XP Gem (Small)", type: "exp_small", value: 1,
+      visual: { shape: "diamond", color: "#4FC3F7", size: 8 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "zombie", chance: 1.0 }, { enemyId: "bat", chance: 1.0 }, { enemyId: "skeleton", chance: 1.0 }, { enemyId: "ghost", chance: 1.0 }, { enemyId: "caster", chance: 1.0 }], guaranteedDropEnemies: [], rollOrder: 0 }
+    },
+    { id: "exp_large", name: "XP Gem (Large)", type: "exp_large", value: 5,
+      visual: { shape: "diamond", color: "#81D4FA", size: 14 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [], guaranteedDropEnemies: ["boss_gravekeeper"], rollOrder: 0 }
+    },
+    { id: "gold_coin", name: "Gold Coin", type: "gold", value: 0,
+      visual: { shape: "circle", color: "#FFD700", size: 10 },
+      behavior: { duration: 30, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "zombie", chance: 1.0 }, { enemyId: "bat", chance: 1.0 }, { enemyId: "skeleton", chance: 1.0 }, { enemyId: "ghost", chance: 1.0 }, { enemyId: "caster", chance: 1.0 }, { enemyId: "boss_gravekeeper", chance: 1.0 }], guaranteedDropEnemies: [], rollOrder: 0 },
+      goldValuePerCoin: 1
+    },
+    { id: "screen_wipe", name: "Screen Wipe", type: "screen_wipe", value: 0,
+      visual: { shape: "star", color: "#00E676", size: 16 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "skeleton", chance: 0.02 }, { enemyId: "caster", chance: 0.02 }], guaranteedDropEnemies: [], rollOrder: 2 },
+      killsAllEnemies: true, bossDamage: 200, bossResistance: 0.8, powerUpDespawnTime: null
+    },
+    { id: "magnet", name: "Magnet", type: "magnet", value: 0,
+      visual: { shape: "circle", color: "#FF4081", size: 14 },
+      behavior: { duration: 10, attractRadius: 350, attractSpeed: 400, instantBurstRadius: 150 },
+      dropConfig: { sources: [{ enemyId: "bat", chance: 0.05 }, { enemyId: "ghost", chance: 0.05 }], guaranteedDropEnemies: [], rollOrder: 3 },
+      powerUpDespawnTime: null
+    },
+    { id: "weapon_levelup", name: "Weapon Level-Up", type: "weapon_levelup", value: 0,
+      visual: { shape: "triangle", color: "#FF9100", size: 16 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "zombie", chance: 0.01 }, { enemyId: "skeleton", chance: 0.01 }, { enemyId: "ghost", chance: 0.01 }, { enemyId: "caster", chance: 0.01 }], guaranteedDropEnemies: ["boss_gravekeeper"], rollOrder: 1 },
+      powerUpDespawnTime: null
+    },
+  ],
+
+  leveling: {
+    xpCurve: [
+      { level: 1, xpToNext: 5, cumulativeXp: 0 },
+      { level: 2, xpToNext: 10, cumulativeXp: 5 },
+      { level: 3, xpToNext: 15, cumulativeXp: 15 },
+      { level: 4, xpToNext: 22, cumulativeXp: 30 },
+      { level: 5, xpToNext: 32, cumulativeXp: 52 },
+      { level: 6, xpToNext: 45, cumulativeXp: 84 },
+      { level: 7, xpToNext: 62, cumulativeXp: 129 },
+      { level: 8, xpToNext: 85, cumulativeXp: 191 },
+      { level: 9, xpToNext: 115, cumulativeXp: 276 },
+      { level: 10, xpToNext: 155, cumulativeXp: 391 },
+      { level: 11, xpToNext: 210, cumulativeXp: 546 },
+      { level: 12, xpToNext: 280, cumulativeXp: 756 },
+      { level: 13, xpToNext: 375, cumulativeXp: 1036 },
+      { level: 14, xpToNext: 375, cumulativeXp: 1411 },
+    ],
+    formula: { forLevel: 14, expression: "floor(375 * 1.3^(N-14))" },
+    upgradePool: { weaponWeight: 0.6, passiveWeight: 0.4, weaponUnlockGuaranteed: true },
+    passiveOptions: [
+      { id: "max_health", name: "Max Health +20%", stat: "maxHealth", value: 0.20, description: "Increases maximum HP by 20%", maxStacks: 5, icon: "heart" },
+      { id: "move_speed", name: "Move Speed +10%", stat: "moveSpeed", value: 0.10, description: "Increases movement speed by 10%", maxStacks: 3, icon: "speed" },
+      { id: "armor", name: "Armor +1", stat: "armor", value: 1, description: "Reduces all damage by 1", maxStacks: 3, icon: "shield" },
+      { id: "pickup_range", name: "Pickup Range +25px", stat: "pickupRange", value: 25, description: "Collect pickups from further", maxStacks: 4, icon: "magnet" },
+      { id: "crit_chance", name: "Crit Chance +5%", stat: "critChance", value: 0.05, description: "5% chance for 1.5x damage", maxStacks: 4, icon: "star" },
+    ],
+    maxLevelUpQueue: 3,
+    excessXPBehavior: "carry_over",
+    maxHealthPassiveHealsCurrent: true,
+  },
+};
+
+// ============================================================
+// PHASE 2: GAME LOOP & CAMERA
+// ============================================================
+
+// --- GameLoop ---
+// Fixed-timestep update/render at 60 FPS
+class GameLoop {
+  constructor(updateFn, renderFn) {
+    this.updateFn = updateFn;
+    this.renderFn = renderFn;
+    this.running = false;
+    this.paused = false;
+    this.frameCount = 0;
+    this.timestep = 1000 / 60; // 16.67ms
+    this.accumulator = 0;
+    this.lastTime = 0;
+    this.maxDelta = 1000 / 30; // Clamp to 33ms (max 2 frames)
+  }
+
+  start() {
+    this.running = true;
+    this.lastTime = performance.now();
+    this._loop(this.lastTime);
+  }
+
+  stop() {
+    this.running = false;
+  }
+
+  _loop(currentTime) {
+    if (!this.running) return;
+
+    let delta = currentTime - this.lastTime;
+    this.lastTime = currentTime;
+
+    // Clamp delta time (safeguard P7)
+    if (delta > this.maxDelta) delta = this.maxDelta;
+
+    this.accumulator += delta;
+
+    // Fixed-timestep updates
+    while (this.accumulator >= this.timestep) {
+      if (!this.paused) {
+        this.updateFn(this.timestep / 1000); // Pass delta in seconds
+        this.frameCount++;
+      }
+      this.accumulator -= this.timestep;
+    }
+
+    // Render
+    this.renderFn(this.accumulator / this.timestep);
+
+    requestAnimationFrame((t) => this._loop(t));
+  }
+}
+
+// --- Camera ---
+// Follows player with smooth lerp
+class Camera {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.x = 0;
+    this.y = 0;
+    this.targetX = 0;
+    this.targetY = 0;
+    this.lerp = 0.1;
+    this.shakeX = 0;
+    this.shakeY = 0;
+    this.shakeTimer = 0;
+    this.shakeIntensity = 0;
+  }
+
+  follow(target) {
+    this.targetX = target.x - this.canvas.width / 2;
+    this.targetY = target.y - this.canvas.height / 2;
+  }
+
+  shake(intensity, duration) {
+    this.shakeIntensity = intensity;
+    this.shakeTimer = duration;
+  }
+
+  update(dt) {
+    // Smooth lerp
+    this.x += (this.targetX - this.x) * this.lerp;
+    this.y += (this.targetY - this.y) * this.lerp;
+
+    // Screen shake
+    if (this.shakeTimer > 0) {
+      this.shakeTimer -= dt;
+      this.shakeX = (Math.random() - 0.5) * this.shakeIntensity * 2;
+      this.shakeY = (Math.random() - 0.5) * this.shakeIntensity * 2;
+    } else {
+      this.shakeX = 0;
+      this.shakeY = 0;
+    }
+  }
+
+  apply(ctx) {
+    ctx.translate(
+      Math.round(-this.x + this.shakeX),
+      Math.round(-this.y + this.shakeY)
+    );
+  }
+
+  screenToWorld(screenX, screenY) {
+    return { x: screenX + this.x, y: screenY + this.y };
+  }
+
+  worldToScreen(worldX, worldY) {
+    return { x: worldX - this.x, y: worldY - this.y };
+  }
+}
+
+// ============================================================
+// PHASE 3: INPUT SYSTEM
+// ============================================================
+
+// --- InputManager ---
+// Handles mouse/touch click-to-move and WASD/arrow keys
+class InputManager {
+  constructor(canvas, eventBus) {
+    this.canvas = canvas;
+    this.eventBus = eventBus;
+    
+    // Click/tap target
+    this.targetX = 0;
+    this.targetY = 0;
+    this.hasTarget = false;
+    
+    // WASD/Arrow state
+    this.keys = {};
+    
+    // Touch tracking
+    this.touchId = null;
+    
+    this._bindEvents();
+  }
+
+  _bindEvents() {
+    // Mouse
+    this.canvas.addEventListener('mousedown', (e) => this._onPointerDown(e.clientX, e.clientY));
+    this.canvas.addEventListener('mousemove', (e) => {
+      if (e.buttons & 1) this._onPointerMove(e.clientX, e.clientY);
+    });
+    
+    // Touch
+    this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.changedTouches[0];
+      this.touchId = touch.identifier;
+      this._onPointerDown(touch.clientX, touch.clientY);
+    });
+    this.canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const touch of e.changedTouches) {
+        if (touch.identifier === this.touchId) {
+          this._onPointerMove(touch.clientX, touch.clientY);
+        }
+      }
+    });
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.touchId = null;
+    });
+    
+    // Keyboard
+    window.addEventListener('keydown', (e) => {
+      this.keys[e.code] = true;
+      if (e.code === 'Escape') {
+        this.eventBus.emit('pause', { paused: true });
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      this.keys[e.code] = false;
+    });
+  }
+
+  _onPointerDown(screenX, screenY) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = (screenX - rect.left) * (this.canvas.width / rect.width);
+    const y = (screenY - rect.top) * (this.canvas.height / rect.height);
+    this.targetX = x;
+    this.targetY = y;
+    this.hasTarget = true;
+  }
+
+  _onPointerMove(screenX, screenY) {
+    const rect = this.canvas.getBoundingClientRect();
+    this.targetX = (screenX - rect.left) * (this.canvas.width / rect.width);
+    this.targetY = (screenY - rect.top) * (this.canvas.height / rect.height);
+  }
+
+  isKeyDown(code) {
+    return !!this.keys[code];
+  }
+
+  getMovement() {
+    let dx = 0, dy = 0;
+    if (this.isKeyDown('KeyW') || this.isKeyDown('ArrowUp')) dy -= 1;
+    if (this.isKeyDown('KeyS') || this.isKeyDown('ArrowDown')) dy += 1;
+    if (this.isKeyDown('KeyA') || this.isKeyDown('ArrowLeft')) dx -= 1;
+    if (this.isKeyDown('KeyD') || this.isKeyDown('ArrowRight')) dx += 1;
+    // Normalize diagonal
+    if (dx !== 0 && dy !== 0) {
+      const inv = 1 / Math.sqrt(2);
+      dx *= inv;
+      dy *= inv;
+    }
+    return { dx, dy };
+  }
+
+  clearTarget() {
+    this.hasTarget = false;
+  }
+}
+
+// ============================================================
+// PHASE 4: ENTITY MANAGEMENT
+// ============================================================
+
+// --- EntityManager ---
+// Object pooling for game entities
+class EntityManager {
+  constructor() {
+    this.entities = [];
+    this.nextId = 1;
+    this.pools = {
+      enemy: [],
+      projectile: [],
+      pickup: [],
+      orb: [],
+    };
+    this.poolLimits = {
+      enemy: 200,
+      projectile: 500,
+      pickup: 500,
+      orb: 50,
+    };
+  }
+
+  create(type, data) {
+    const entity = {
+      id: this.nextId++,
+      type,
+      active: true,
+      x: data.x || 0,
+      y: data.y || 0,
+      vx: 0,
+      vy: 0,
+      hp: data.hp || 0,
+      maxHp: data.hp || 0,
+      damage: data.damage || 0,
+      speed: data.speed || 0,
+      size: data.size || 10,
+      stats: data.stats || {},
+      behavior: data.behavior || null,
+      weaponData: data.weaponData || null,
+      pickupData: data.pickupData || null,
+      visual: data.visual || {},
+      iFrames: 0,
+      age: 0,
+      ...data
+    };
+    this.entities.push(entity);
+    return entity;
+  }
+
+  destroy(entity) {
+    entity.active = false;
+  }
+
+  clearAll() {
+    this.entities = [];
+    this.nextId = 1;
+  }
+
+  getActive(type) {
+    if (type) {
+      return this.entities.filter(e => e.active && e.type === type);
+    }
+    return this.entities.filter(e => e.active);
+  }
+
+  getCount(type) {
+    return this.entities.filter(e => e.active && e.type === type).length;
+  }
+
+  cleanup() {
+    // Remove inactive entities (safeguard P6 - separate cleanup phase)
+    this.entities = this.entities.filter(e => e.active);
+  }
+
+  getPoolCount(type) {
+    return this.pools[type] ? this.pools[type].length : 0;
+  }
+}
+
+// ============================================================
+// PHASE 5: SPAWN SYSTEM
+// ============================================================
+
+// --- SpawnSystem ---
+// Spawns enemies based on wave timeline
+class SpawnSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.spawnTimer = 0;
+    this.gameTime = 0;
+    this.currentWave = 0;
+    this.bossSpawned = false;
+  }
+
+  update(dt) {
+    this.gameTime += dt;
+    
+    const stage = this.dataManager.stages;
+    const wave = this._getCurrentWave(stage.waves);
+    
+    if (!wave) return;
+    
+    // Check spawn cap
+    const enemyCount = this.entityManager.getCount('enemy') + this.entityManager.getCount('boss');
+    if (enemyCount >= wave.maxEnemies) return;
+    
+    // Spawn rate with accumulator pattern
+    this.spawnTimer += dt;
+    const spawnInterval = 1 / wave.spawnRate;
+    
+    while (this.spawnTimer >= spawnInterval) {
+      this.spawnTimer -= spawnInterval;
+      this._spawnEnemy(wave);
+    }
+    
+    // Boss spawn at 4:00 (240 seconds)
+    if (!this.bossSpawned && this.gameTime >= 240) {
+      this._spawnBoss();
+      this.bossSpawned = true;
+    }
+  }
+
+  _getCurrentWave(waves) {
+    for (let i = waves.length - 1; i >= 0; i--) {
+      const parts = waves[i].time.split('-');
+      const start = this._parseTime(parts[0]);
+      if (this.gameTime >= start) {
+        return waves[i];
+      }
+    }
+    return waves[0];
+  }
+
+  _parseTime(str) {
+    const [min, sec] = str.split(':').map(Number);
+    return min * 60 + sec;
+  }
+
+  _spawnEnemy(wave) {
+    const enemies = this.dataManager.enemies.filter(e => e.type === 'normal');
+    const weights = wave.compositionWeights;
+    
+    // Weighted random selection
+    let totalWeight = 0;
+    for (const enemy of enemies) {
+      totalWeight += (weights[enemy.id] || 0);
+    }
+    
+    if (totalWeight <= 0) return;
+    
+    let roll = Math.random() * totalWeight;
+    let selected = enemies[0];
+    
+    for (const enemy of enemies) {
+      roll -= (weights[enemy.id] || 0);
+      if (roll <= 0) {
+        selected = enemy;
+        break;
+      }
+    }
+    
+    // Spawn at random position around player
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 400 + Math.random() * 200;
+    
+    this.entityManager.create('enemy', {
+      x: Math.cos(angle) * dist,
+      y: Math.sin(angle) * dist,
+      hp: selected.stats.hp,
+      damage: selected.stats.damage,
+      speed: selected.stats.speed,
+      size: selected.stats.size,
+      enemyData: selected,
+      visual: { shape: 'square', color: this._getEnemyColor(selected.id) },
+    });
+  }
+
+  _spawnBoss() {
+    const boss = this.dataManager.enemies.find(e => e.type === 'boss');
+    if (!boss) return;
+    
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 500;
+    
+    this.entityManager.create('enemy', {
+      x: Math.cos(angle) * dist,
+      y: Math.sin(angle) * dist,
+      hp: boss.stats.hp,
+      damage: boss.stats.damage,
+      speed: boss.stats.speed,
+      size: boss.stats.size,
+      enemyData: boss,
+      isBoss: true,
+      visual: { shape: 'square', color: '#4A0000' },
+    });
+    
+    this.eventBus.emit('bossSpawn', { boss });
+  }
+
+  _getEnemyColor(id) {
+    const colors = {
+      zombie: '#2D5A27',
+      bat: '#1A1A2E',
+      skeleton: '#8B1A1A',
+      ghost: '#4A1A6B',
+      caster: '#1A4A4A',
+    };
+    return colors[id] || '#333';
+  }
+
+  reset() {
+    this.spawnTimer = 0;
+    this.gameTime = 0;
+    this.currentWave = 0;
+    this.bossSpawned = false;
+  }
+}
+
+// ============================================================
+// PHASE 6: MOVEMENT SYSTEM
+// ============================================================
+
+// --- MovementSystem ---
+// Handles player pathfinding and enemy movement
+class MovementSystem {
+  constructor(entityManager, inputManager) {
+    this.entityManager = entityManager;
+    this.inputManager = inputManager;
+  }
+
+  update(dt) {
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    // Player movement
+    this._movePlayer(player, dt);
+    
+    // Enemy movement
+    this._moveEnemies(player, dt);
+    
+    // Projectile movement
+    this._moveProjectiles(dt);
+    
+    // Pickup floating
+    this._updatePickups(dt);
+  }
+
+  _movePlayer(player, dt) {
+    const kb = this.inputManager.getMovement();
+    
+    if (kb.dx !== 0 || kb.dy !== 0) {
+      // WASD movement
+      player.x += kb.dx * player.speed * dt;
+      player.y += kb.dy * player.speed * dt;
+      this.inputManager.clearTarget();
+    } else if (this.inputManager.hasTarget) {
+      // Click/tap movement
+      const dx = this.inputManager.targetX - player.x;
+      const dy = this.inputManager.targetY - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist > 5) {
+        const speed = Math.min(player.speed * dt, dist);
+        player.x += (dx / dist) * speed;
+        player.y += (dy / dist) * speed;
+      } else {
+        this.inputManager.clearTarget();
+      }
+    }
+  }
+
+  _moveEnemies(player, dt) {
+    const enemies = this.entityManager.getActive('enemy');
+    
+    for (const enemy of enemies) {
+      const dx = player.x - enemy.x;
+      const dy = player.y - enemy.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist > 0) {
+        enemy.x += (dx / dist) * enemy.speed * dt;
+        enemy.y += (dy / dist) * enemy.speed * dt;
+      }
+    }
+  }
+
+  _moveProjectiles(dt) {
+    const projectiles = this.entityManager.getActive('projectile');
+    
+    for (const proj of projectiles) {
+      proj.x += proj.vx * dt;
+      proj.y += proj.vy * dt;
+      proj.age = (proj.age || 0) + dt;
+      
+      // Despawn after 3 seconds or 600px
+      if (proj.age > 3 || Math.sqrt(proj.x * proj.x + proj.y * proj.y) > 600) {
+        this.entityManager.destroy(proj);
+      }
+    }
+  }
+
+  _updatePickups(dt) {
+    const pickups = this.entityManager.getActive('pickup');
+    for (const pickup of pickups) {
+      pickup.age = (pickup.age || 0) + dt;
+      // Float animation
+      pickup.floatOffset = Math.sin(pickup.age * 3) * 2;
+    }
+  }
+}
+
+// ============================================================
+// PHASE 7: COLLISION SYSTEM
+// ============================================================
+
+// --- CollisionSystem ---
+// AABB collision detection
+class CollisionSystem {
+  constructor(entityManager, eventBus) {
+    this.entityManager = entityManager;
+    this.eventBus = eventBus;
+  }
+
+  update() {
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    const enemies = this.entityManager.getActive('enemy');
+    const projectiles = this.entityManager.getActive('projectile');
+    const pickups = this.entityManager.getActive('pickup');
+
+    // Player vs Enemy (contact damage)
+    for (const enemy of enemies) {
+      if (this._checkAABB(player, enemy)) {
+        this.eventBus.emit('contactDamage', { target: player, source: enemy, damage: enemy.damage });
+      }
+    }
+
+    // Projectile vs Enemy
+    for (const proj of projectiles) {
+      for (const enemy of enemies) {
+        if (this._checkAABB(proj, enemy)) {
+          this.eventBus.emit('projectileHit', { projectile: proj, target: enemy, damage: proj.damage });
+          this.entityManager.destroy(proj);
+          break;
+        }
+      }
+    }
+
+    // Player vs Pickup (proximity collection)
+    const collectRange = (player.stats.pickupRange || 50);
+    for (const pickup of pickups) {
+      const dx = pickup.x - player.x;
+      const dy = pickup.y - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < collectRange) {
+        this.eventBus.emit('pickup', { player, pickup });
+        this.entityManager.destroy(pickup);
+      }
+    }
+  }
+
+  _checkAABB(a, b) {
+    return a.x - a.size < b.x + b.size &&
+           a.x + a.size > b.x - b.size &&
+           a.y - a.size < b.y + b.size &&
+           a.y + a.size > b.y - b.size;
+  }
+}
+
+// ============================================================
+// PHASE 8: WEAPON SYSTEM
+// ============================================================
+
+// --- WeaponSystem ---
+// Handles weapon cooldowns, targeting, and firing
+class WeaponSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.weaponLevels = {};
+    this.cooldowns = {};
+  }
+
+  init(player) {
+    // Start with W1
+    this.weaponLevels['w1_projectile'] = 1;
+    this.cooldowns['w1_projectile'] = 0;
+  }
+
+  update(dt) {
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    // Update cooldowns
+    for (const weaponId in this.cooldowns) {
+      this.cooldowns[weaponId] = Math.max(0, this.cooldowns[weaponId] - dt);
+    }
+
+    // Fire weapons
+    this._fireW1(player, dt);
+    this._fireW2(player, dt);
+    this._fireW3(player, dt);
+  }
+
+  _fireW1(player, dt) {
+    const level = this.weaponLevels['w1_projectile'];
+    if (!level) return;
+
+    this.cooldowns['w1_projectile'] -= dt;
+    if (this.cooldowns['w1_projectile'] > 0) return;
+
+    const weapon = this.dataManager.weapons[0];
+    const stats = weapon.statsPerLevel[level - 1];
+    this.cooldowns['w1_projectile'] = stats.cooldown;
+
+    // Find nearest enemy
+    const enemies = this.entityManager.getActive('enemy');
+    if (enemies.length === 0) return;
+
+    let nearest = null;
+    let minDist = Infinity;
+    for (const enemy of enemies) {
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    if (!nearest) return;
+
+    // Fire projectile
+    const dx = nearest.x - player.x;
+    const dy = nearest.y - player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const speed = 400;
+
+    this.entityManager.create('projectile', {
+      x: player.x,
+      y: player.y,
+      vx: (dx / dist) * speed,
+      vy: (dy / dist) * speed,
+      damage: stats.damage,
+      size: 4,
+      visual: { shape: 'square', color: '#FFD700' },
+    });
+  }
+
+  _fireW2(player, dt) {
+    const level = this.weaponLevels['w2_orbit'];
+    if (!level) return;
+
+    const weapon = this.dataManager.weapons[1];
+    const stats = weapon.statsPerLevel[level - 1];
+    const orbCount = stats.orbitCount;
+
+    // Maintain orbs
+    const existingOrbs = this.entityManager.getActive('orb').filter(o => o.ownerId === player.id);
+    
+    // Remove excess orbs
+    while (existingOrbs.length > orbCount) {
+      this.entityManager.destroy(existingOrbs.pop());
+    }
+
+    // Create missing orbs
+    while (existingOrbs.length < orbCount) {
+      const orb = this.entityManager.create('orb', {
+        ownerId: player.id,
+        x: player.x,
+        y: player.y,
+        damage: stats.damage,
+        size: 6,
+        orbitAngle: (existingOrbs.length / orbCount) * Math.PI * 2,
+        orbitRadius: stats.orbitRadius,
+        orbitSpeed: stats.orbitSpeed,
+        visual: { shape: 'circle', color: '#4FC3F7' },
+      });
+      existingOrbs.push(orb);
+    }
+
+    // Update orb positions
+    for (const orb of existingOrbs) {
+      orb.orbitAngle += dt * (Math.PI * 2 / orb.orbitSpeed);
+      orb.x = player.x + Math.cos(orb.orbitAngle) * orb.orbitRadius;
+      orb.y = player.y + Math.sin(orb.orbitAngle) * orb.orbitRadius;
+    }
+  }
+
+  _fireW3(player, dt) {
+    const level = this.weaponLevels['w3_area'];
+    if (!level) return;
+
+    this.cooldowns['w3_area'] = (this.cooldowns['w3_area'] || 0) - dt;
+    if (this.cooldowns['w3_area'] > 0) return;
+
+    const weapon = this.dataManager.weapons[2];
+    const stats = weapon.statsPerLevel[level - 1];
+    this.cooldowns['w3_area'] = stats.cooldown;
+
+    // Emit area pulse event
+    this.eventBus.emit('areaPulse', {
+      x: player.x,
+      y: player.y,
+      damage: stats.damage,
+      radius: stats.pulseRadius,
+      pulseCount: stats.pulseCount,
+    });
+  }
+
+  levelUp(weaponId) {
+    const current = this.weaponLevels[weaponId] || 0;
+    if (current < 7) {
+      this.weaponLevels[weaponId] = current + 1;
+      this.eventBus.emit('weaponLevelUp', { weaponId, newLevel: current + 1 });
+    }
+  }
+
+  unlockWeapon(weaponId) {
+    if (!this.weaponLevels[weaponId]) {
+      this.weaponLevels[weaponId] = 1;
+      this.cooldowns[weaponId] = 0;
+    }
+  }
+
+  getWeaponLevel(weaponId) {
+    return this.weaponLevels[weaponId] || 0;
+  }
+}
+
+// ============================================================
+// PHASE 9: DAMAGE SYSTEM
+// ============================================================
+
+// --- DamageSystem ---
+// Applies damage, crits, knockback, invincibility
+class DamageSystem {
+  constructor(entityManager, eventBus) {
+    this.entityManager = entityManager;
+    this.eventBus = eventBus;
+  }
+
+  init() {
+    this.eventBus.on('contactDamage', (data) => this._handleDamage(data.target, data.source, data.damage));
+    this.eventBus.on('projectileHit', (data) => this._handleProjectileHit(data));
+    this.eventBus.on('areaPulse', (data) => this._handleAreaPulse(data));
+  }
+
+  _handleDamage(target, source, baseDamage) {
+    if (!target || !target.active) return;
+    if (target.iFrames > 0) return;
+
+    // Apply armor
+    const armor = target.stats.armor || 0;
+    const afterArmor = Math.max(1, baseDamage - armor);
+
+    // Apply crit
+    const critChance = source.stats?.critChance || 0;
+    const critMultiplier = source.stats?.critMultiplier || 1.5;
+    const isCrit = Math.random() < critChance;
+    const finalDamage = isCrit ? Math.floor(afterArmor * critMultiplier) : afterArmor;
+
+    target.hp -= finalDamage;
+    target.iFrames = 0.5;
+
+    this.eventBus.emit('damage', {
+      target,
+      source,
+      damage: finalDamage,
+      isCrit,
+      position: { x: target.x, y: target.y },
+    });
+
+    if (target.hp <= 0) {
+      target.active = false;
+      this.eventBus.emit('death', {
+        entity: target,
+        killer: source,
+        position: { x: target.x, y: target.y },
+      });
+    }
+  }
+
+  _handleProjectileHit(data) {
+    this._handleDamage(data.target, { stats: {} }, data.projectile.damage);
+  }
+
+  _handleAreaPulse(data) {
+    const enemies = this.entityManager.getActive('enemy');
+    for (const enemy of enemies) {
+      const dx = enemy.x - data.x;
+      const dy = enemy.y - data.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < data.radius) {
+        this._handleDamage(enemy, { stats: {} }, data.damage);
+      }
+    }
+  }
+
+  update(dt) {
+    // Update iFrames
+    const all = this.entityManager.getActive();
+    for (const entity of all) {
+      if (entity.iFrames > 0) {
+        entity.iFrames = Math.max(0, entity.iFrames - dt);
+      }
+    }
+  }
+}
+
+// ============================================================
+// PHASE 10: PICKUP SYSTEM
+// ============================================================
+
+// --- PickupSystem ---
+// Handles item drops and magnet attraction
+class PickupSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.magnetActive = false;
+    this.magnetTimer = 0;
+  }
+
+  init() {
+    this.eventBus.on('death', (data) => this._onEnemyDeath(data));
+    this.eventBus.on('magnetActivate', (data) => this._onMagnetActivate(data));
+  }
+
+  _onEnemyDeath(data) {
+    const enemy = data.entity;
+    if (!enemy.enemyData) return;
+
+    // Drop XP gem
+    this.entityManager.create('pickup', {
+      x: data.position.x + (Math.random() - 0.5) * 20,
+      y: data.position.y + (Math.random() - 0.5) * 20,
+      pickupData: { id: 'exp_small', value: enemy.enemyData.stats.xpValue },
+      visual: { shape: 'diamond', color: '#4FC3F7', size: 8 },
+    });
+
+    // Drop gold coins
+    const goldCoins = enemy.enemyData.stats.goldCoins;
+    if (goldCoins) {
+      const count = goldCoins.min + Math.floor(Math.random() * (goldCoins.max - goldCoins.min + 1));
+      for (let i = 0; i < count; i++) {
+        this.entityManager.create('pickup', {
+          x: data.position.x + (Math.random() - 0.5) * 60,
+          y: data.position.y + (Math.random() - 0.5) * 60,
+          pickupData: { id: 'gold_coin', value: 1 },
+          visual: { shape: 'circle', color: '#FFD700', size: 10 },
+        });
+      }
+    }
+
+    // Drop power-ups
+    const drops = enemy.enemyData.drops.powerUpTable;
+    for (const drop of drops) {
+      if (Math.random() < drop.chance) {
+        this.entityManager.create('pickup', {
+          x: data.position.x,
+          y: data.position.y,
+          pickupData: { id: drop.type },
+          visual: this._getPowerUpVisual(drop.type),
+          isPowerUp: true,
+        });
+        break;
+      }
+    }
+  }
+
+  _getPowerUpVisual(type) {
+    const visuals = {
+      screen_wipe: { shape: 'star', color: '#00E676', size: 16 },
+      magnet: { shape: 'circle', color: '#FF4081', size: 14 },
+      weapon_levelup: { shape: 'triangle', color: '#FF9100', size: 16 },
+    };
+    return visuals[type] || { shape: 'circle', color: '#FFF', size: 12 };
+  }
+
+  _onMagnetActivate(data) {
+    this.magnetActive = true;
+    this.magnetTimer = 10; // 10 seconds
+  }
+
+  update(dt) {
+    if (!this.magnetActive) return;
+
+    this.magnetTimer -= dt;
+    if (this.magnetTimer <= 0) {
+      this.magnetActive = false;
+      return;
+    }
+
+    // Attract pickups
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    const pickups = this.entityManager.getActive('pickup');
+    for (const pickup of pickups) {
+      const dx = player.x - pickup.x;
+      const dy = player.y - pickup.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 350 && dist > 0) {
+        const speed = 400;
+        pickup.x += (dx / dist) * speed * dt;
+        pickup.y += (dy / dist) * speed * dt;
+      }
+    }
+  }
+
+  reset() {
+    this.magnetActive = false;
+    this.magnetTimer = 0;
+  }
+}
+
+// ============================================================
+// PHASE 11: LEVELING SYSTEM
+// ============================================================
+
+// --- LevelingSystem ---
+// Tracks XP and triggers level-ups
+class LevelingSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.level = 1;
+    this.xp = 0;
+    this.queue = [];
+  }
+
+  init() {
+    this.eventBus.on('pickup', (data) => this._onPickup(data));
+    this.eventBus.on('death', (data) => this._onEnemyDeath(data));
+  }
+
+  _onPickup(data) {
+    if (data.pickup.pickupData?.id === 'exp_small') {
+      this.addXP(data.pickup.pickupData.value);
+    } else if (data.pickup.pickupData?.id === 'gold_coin') {
+      // Gold is tracked separately (not implemented yet)
+    }
+  }
+
+  _onEnemyDeath(data) {
+    // XP from kills is handled via pickups
+  }
+
+  addXP(amount) {
+    this.xp += amount;
+    
+    // Check for level up
+    const xpNeeded = this._getXpToNext(this.level);
+    if (this.xp >= xpNeeded && this.queue.length < 3) {
+      this.xp -= xpNeeded;
+      this.level++;
+      this.queue.push(this.level);
+      this.eventBus.emit('levelUp', { level: this.level });
+    }
+  }
+
+  _getXpToNext(level) {
+    const curve = this.dataManager.leveling.xpCurve;
+    const entry = curve.find(e => e.level === level);
+    if (entry) return entry.xpToNext;
+    // Formula for level 14+
+    return Math.floor(375 * Math.pow(1.3, level - 14));
+  }
+
+  hasPendingLevelUp() {
+    return this.queue.length > 0;
+  }
+
+  getNextLevel() {
+    return this.queue[0];
+  }
+
+  consumeLevelUp() {
+    return this.queue.shift();
+  }
+
+  reset() {
+    this.level = 1;
+    this.xp = 0;
+    this.queue = [];
+  }
+}
+
+// ============================================================
+// PHASE 12: RENDERING
+// ============================================================
+
+// --- Renderer ---
+// Canvas 2D rendering
+class Renderer {
+  constructor(canvas, camera) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.camera = camera;
+  }
+
+  clear() {
+    this.ctx.fillStyle = '#1A1A2E';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  render(entities, player) {
+    this.clear();
+    this.ctx.save();
+    this.camera.apply(this.ctx);
+
+    // Draw grid
+    this._drawGrid();
+
+    // Draw entities (y-sorted)
+    const sorted = [...entities].sort((a, b) => a.y - b.y);
+    for (const entity of sorted) {
+      if (!entity.active) continue;
+      this._drawEntity(entity);
+    }
+
+    this.ctx.restore();
+
+    // Draw UI overlay (not affected by camera)
+    this._drawUI(player);
+  }
+
+  _drawGrid() {
+    const gridSize = 50;
+    const startX = Math.floor(this.camera.x / gridSize) * gridSize;
+    const startY = Math.floor(this.camera.y / gridSize) * gridSize;
+    
+    this.ctx.strokeStyle = '#16213E';
+    this.ctx.lineWidth = 1;
+    
+    for (let x = startX; x < this.camera.x + this.canvas.width + gridSize; x += gridSize) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, this.camera.y);
+      this.ctx.lineTo(x, this.camera.y + this.canvas.height);
+      this.ctx.stroke();
+    }
+    for (let y = startY; y < this.camera.y + this.canvas.height + gridSize; y += gridSize) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.camera.x, y);
+      this.ctx.lineTo(this.camera.x + this.canvas.width, y);
+      this.ctx.stroke();
+    }
+  }
+
+  _drawEntity(entity) {
+    const ctx = this.ctx;
+    ctx.save();
+    
+    // iFrame blink
+    if (entity.iFrames > 0 && Math.floor(entity.iFrames * 10) % 2 === 0) {
+      ctx.globalAlpha = 0.5;
+    }
+
+    const x = Math.round(entity.x);
+    const y = Math.round(entity.y);
+    const size = entity.size;
+    const color = entity.visual?.color || '#FFF';
+    const shape = entity.visual?.shape || 'square';
+
+    ctx.fillStyle = color;
+
+    if (shape === 'square') {
+      ctx.fillRect(x - size, y - size, size * 2, size * 2);
+    } else if (shape === 'circle') {
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (shape === 'diamond') {
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size, y);
+      ctx.lineTo(x, y + size);
+      ctx.lineTo(x - size, y);
+      ctx.closePath();
+      ctx.fill();
+    } else if (shape === 'triangle') {
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size, y + size);
+      ctx.lineTo(x - size, y + size);
+      ctx.closePath();
+      ctx.fill();
+    } else if (shape === 'star') {
+      this._drawStar(x, y, size, 5);
+    }
+
+    ctx.restore();
+  }
+
+  _drawStar(x, y, radius, points) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const r = i % 2 === 0 ? radius : radius * 0.5;
+      const angle = (i * Math.PI) / points - Math.PI / 2;
+      if (i === 0) ctx.moveTo(x + r * Math.cos(angle), y + r * Math.sin(angle));
+      else ctx.lineTo(x + r * Math.cos(angle), y + r * Math.sin(angle));
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  _drawUI(player) {
+    if (!player) return;
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+
+    // HP Bar
+    const hpPercent = player.hp / player.maxHp;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(10, 10, 200, 16);
+    ctx.fillStyle = hpPercent > 0.25 ? '#EF4444' : '#FF0000';
+    ctx.fillRect(10, 10, 200 * hpPercent, 16);
+    ctx.strokeStyle = '#FFF';
+    ctx.strokeRect(10, 10, 200, 16);
+
+    // Level
+    ctx.fillStyle = '#3B82F6';
+    ctx.beginPath();
+    ctx.arc(w - 30, 18, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.level || 1, w - 30, 22);
+
+    // EXP Bar
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, h - 20, w, 20);
+    ctx.fillStyle = '#4FC3F7';
+    ctx.fillRect(0, h - 20, w * (this.xpPercent || 0), 20);
+  }
+}
+
+// ============================================================
+// PHASE 13: UI SYSTEM
+// ============================================================
+
+// --- UIManager ---
+// HUD, level-up screen, end screens
+class UIManager {
+  constructor(canvas, eventBus) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.eventBus = eventBus;
+    this.levelUpOptions = null;
+    this.endScreen = null;
+  }
+
+  showLevelUp(options) {
+    this.levelUpOptions = options;
+  }
+
+  hideLevelUp() {
+    this.levelUpOptions = null;
+  }
+
+  showEndScreen(result, stats) {
+    this.endScreen = { result, stats };
+  }
+
+  hideEndScreen() {
+    this.endScreen = null;
+  }
+
+  render() {
+    if (this.levelUpOptions) this._renderLevelUp();
+    if (this.endScreen) this._renderEndScreen();
+  }
+
+  _renderLevelUp() {
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+
+    // Overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Title
+    ctx.fillStyle = '#3B82F6';
+    ctx.font = 'bold 32px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('LEVEL UP!', w / 2, h / 2 - 120);
+
+    // Cards
+    const cardWidth = 160;
+    const cardHeight = 200;
+    const spacing = 20;
+    const startX = (w - (cardWidth * 3 + spacing * 2)) / 2;
+
+    for (let i = 0; i < 3; i++) {
+      const x = startX + i * (cardWidth + spacing);
+      const y = h / 2 - 80;
+
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x, y, cardWidth, cardHeight);
+      ctx.strokeStyle = '#3B82F6';
+      ctx.strokeRect(x, y, cardWidth, cardHeight);
+
+      ctx.fillStyle = '#FFF';
+      ctx.font = '14px monospace';
+      ctx.fillText(`[${i + 1}]`, x + cardWidth / 2, y + 30);
+      ctx.fillText(this.levelUpOptions[i]?.name || 'Upgrade', x + cardWidth / 2, y + 60);
+    }
+
+    ctx.fillStyle = '#666';
+    ctx.font = '12px monospace';
+    ctx.fillText('Press 1, 2, or 3 to select', w / 2, h / 2 + 140);
+  }
+
+  _renderEndScreen() {
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+
+    // Overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Title
+    const titles = { victory: 'VICTORY', survived: 'SURVIVED', defeat: 'DEFEATED' };
+    const colors = { victory: '#FFD700', survived: '#FFF', defeat: '#EF4444' };
+    
+    ctx.fillStyle = colors[this.endScreen.result] || '#FFF';
+    ctx.font = 'bold 48px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(titles[this.endScreen.result] || 'GAME OVER', w / 2, h / 2 - 50);
+
+    // Stats
+    if (this.endScreen.stats) {
+      ctx.font = '16px monospace';
+      ctx.fillStyle = '#CCC';
+      const stats = this.endScreen.stats;
+      ctx.fillText(`Time: ${stats.time || '0:00'}`, w / 2, h / 2 + 10);
+      ctx.fillText(`Level: ${stats.level || 1}`, w / 2, h / 2 + 40);
+      ctx.fillText(`Kills: ${stats.kills || 0}`, w / 2, h / 2 + 70);
+      ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, h / 2 + 100);
+    }
+
+    ctx.fillStyle = '#666';
+    ctx.font = '14px monospace';
+    ctx.fillText('Click to restart', w / 2, h / 2 + 150);
+  }
+}
+
+// ============================================================
+// PHASE 14: AUDIO SYSTEM (Stub - will be implemented)
+// ============================================================
+
+class AudioManager {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.ctx = null;
+    this.initialized = false;
+  }
+
+  init() {
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+    } catch (e) {
+      console.warn('Web Audio not supported');
+    }
+  }
+
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  play(soundId) {
+    if (!this.ctx || !this.initialized) return;
+    // Placeholder - will implement full audio in Phase 14
+  }
+}
+
+// ============================================================
+// MAIN GAME
+// ============================================================
+
+class Game {
+  constructor() {
+    this.canvas = document.getElementById('game-canvas');
+    this.resizeCanvas();
+    window.addEventListener('resize', () => this.resizeCanvas());
+
+    // Core systems
+    this.eventBus = new EventBus();
+    this.dataManager = new DataManager();
+    this.gameState = new GameState(this.eventBus);
+
+    // Game systems
+    this.camera = new Camera(this.canvas);
+    this.inputManager = new InputManager(this.canvas, this.eventBus);
+    this.entityManager = new EntityManager();
+    this.spawnSystem = new SpawnSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.movementSystem = new MovementSystem(this.entityManager, this.inputManager);
+    this.collisionSystem = new CollisionSystem(this.entityManager, this.eventBus);
+    this.weaponSystem = new WeaponSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.damageSystem = new DamageSystem(this.entityManager, this.eventBus);
+    this.pickupSystem = new PickupSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.levelingSystem = new LevelingSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.renderer = new Renderer(this.canvas, this.camera);
+    this.uiManager = new UIManager(this.canvas, this.eventBus);
+    this.audioManager = new AudioManager(this.eventBus);
+
+    // Game loop
+    this.gameLoop = new GameLoop(
+      (dt) => this.update(dt),
+      (interp) => this.render(interp)
+    );
+
+    this.gameTime = 0;
+    this.player = null;
+  }
+
+  resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = window.innerWidth * dpr;
+    this.canvas.height = window.innerHeight * dpr;
+  }
+
+  async init() {
+    const loadingFill = document.getElementById('loading-fill');
+    const loadingStatus = document.getElementById('loading-status');
+    const loadingScreen = document.getElementById('loading-screen');
+
+    // Load data
+    await this.dataManager.loadAll((progress, status) => {
+      loadingFill.style.width = `${progress * 100}%`;
+      loadingStatus.textContent = status;
+    });
+
+    // Init systems
+    this.damageSystem.init();
+    this.pickupSystem.init();
+    this.levelingSystem.init();
+    this.audioManager.init();
+
+    // Setup event listeners
+    this._setupEvents();
+
+    // Hide loading screen
+    loadingScreen.style.display = 'none';
+
+    // Start in playing state
+    this.startGame();
+  }
+
+  _setupEvents() {
+    this.eventBus.on('pause', (data) => {
+      if (this.gameState.isPlaying()) {
+        this.gameState.setState('paused');
+        this.gameLoop.paused = true;
+      } else if (this.gameState.isPaused()) {
+        this.gameState.setState('playing');
+        this.gameLoop.paused = false;
+      }
+    });
+
+    this.eventBus.on('levelUp', (data) => {
+      this.gameState.setState('levelUp');
+      this.gameLoop.paused = true;
+      // Generate 3 random upgrade options
+      this.uiManager.showLevelUp([
+        { name: 'Damage Up' },
+        { name: 'Speed Up' },
+        { name: 'Health Up' },
+      ]);
+    });
+
+    this.eventBus.on('death', (data) => {
+      if (data.entity === this.player) {
+        this.gameState.triggerGameOver('defeat', this._getStats());
+      }
+    });
+
+    this.eventBus.on('bossSpawn', (data) => {
+      this.camera.shake(8, 0.5);
+    });
+
+    this.eventBus.on('pickup', (data) => {
+      if (data.pickup.pickupData?.id === 'magnet') {
+        this.eventBus.emit('magnetActivate', { player: data.player });
+      }
+    });
+  }
+
+  startGame() {
+    this.entityManager.clearAll();
+    this.spawnSystem.reset();
+    this.pickupSystem.reset();
+    this.levelingSystem.reset();
+    this.gameTime = 0;
+
+    // Create player
+    const charData = this.dataManager.characters;
+    this.player = this.entityManager.create('player', {
+      x: 0,
+      y: 0,
+      hp: charData.stats.maxHealth,
+      maxHp: charData.stats.maxHealth,
+      speed: charData.stats.moveSpeed,
+      stats: charData.stats,
+      size: charData.hitbox.width / 2,
+      visual: charData.visual,
+    });
+
+    this.weaponSystem.init(this.player);
+    this.gameState.setState('playing');
+    this.gameLoop.paused = false;
+    this.gameLoop.start();
+  }
+
+  update(dt) {
+    if (!this.gameState.isPlaying()) return;
+
+    this.gameTime += dt;
+
+    // Run all systems in order
+    this.movementSystem.update(dt);
+    this.weaponSystem.update(dt);
+    this.collisionSystem.update();
+    this.damageSystem.update(dt);
+    this.entityManager.cleanup();
+    this.spawnSystem.update(dt);
+    this.pickupSystem.update(dt);
+    this.levelingSystem.update(dt);
+
+    // Update camera
+    if (this.player) {
+      this.camera.follow(this.player);
+    }
+    this.camera.update(dt);
+
+    // Check game over conditions
+    if (this.gameTime >= 300) {
+      this.gameState.triggerGameOver('survived', this._getStats());
+    }
+  }
+
+  render(interp) {
+    const entities = this.entityManager.getActive();
+    this.renderer.render(entities, this.player);
+
+    // Update renderer UI data
+    if (this.player) {
+      this.renderer.level = this.levelingSystem.level;
+      this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
+    }
+
+    this.uiManager.render();
+  }
+
+  _getStats() {
+    return {
+      time: `${Math.floor(this.gameTime / 60)}:${String(Math.floor(this.gameTime % 60)).padStart(2, '0')}`,
+      level: this.levelingSystem.level,
+      kills: this.entityManager.getCount('enemy'),
+      gold: 0,
+    };
+  }
+}
+
+// ============================================================
+// START
+// ============================================================
+
+const game = new Game();
+game.init().catch(console.error);
+
+</script>
+</body>
 </html>
