@@ -96,12 +96,27 @@ The player uses a **dual-input movement system**. Click/tap-to-move is the prima
 ```
 1. Player clicks/taps at world position (targetX, targetY)
 2. Set player.movingToTarget = true
-3. Each frame:
+3. Spawn visual indicator at target position (see Visual Indicator below)
+4. Each frame:
    a. Calculate direction: dx = targetX - player.x, dy = targetY - player.y
-   b. If distance < 4px: stop, set movingToTarget = false
+   b. If distance < 4px: stop, set movingToTarget = false, fade indicator
    c. Else: normalize direction, set velocity = dir × speed
-4. Movement applies via MovementSystem (see 01_engine_architecture.md)
+5. Movement applies via MovementSystem (see 01_engine_architecture.md)
 ```
+
+**Visual Indicator:**
+
+| Property | Value |
+|---|---|
+| Shape | Ring (circle outline, no fill) |
+| Color | `#FFFFFF` (white) at 60% opacity |
+| Size | 12px diameter |
+| Border | 2px solid |
+| Spawn | Instant on click/tap |
+| Fade | Opacity 60% → 0% over 0.5s after arrival |
+| Position | Centered on target world position |
+
+The indicator gives the player feedback that their click registered and shows where the character is heading.
 
 ### Secondary: WASD / Arrow Keys
 
@@ -110,7 +125,7 @@ The player uses a **dual-input movement system**. Click/tap-to-move is the prima
 | **Trigger** | W/A/S/D or Arrow keys held down |
 | **Behavior** | 8-directional movement |
 | **Diagonal normalization** | Diagonal speed = cardinal speed (normalize vector) |
-| **No key held** | Decelerate with friction (× 0.85 per frame) |
+| **No key held** | Decelerate with friction (× 0.85 per frame at 60fps, ~0.85^60 ≈ 0.002 per second) |
 | **Overrides** | Cancels any active click-to-move pathfinding |
 
 **Key mappings:**
@@ -184,16 +199,22 @@ The hitbox is invisible. The visual sprite (24×24 gold square) is larger than t
 
 ### I-Frame Timer
 
-The player entity has an `iFrames` timer field (added to Entity interface in `01_engine_architecture.md` gap fix):
+The player entity has two fields for i-frame management:
+- `iFrames: number` — remaining invincibility time (seconds)
+- `iFrameAge: number` — time since i-frames started (used for blink timing only)
 
 ```
 // Each frame:
 if (player.iFrames > 0):
     player.iFrames -= dt
-    player.visible = (floor(player.age * 10) % 2 === 0)  // Blink at 10Hz
+    player.iFrameAge += dt
+    player.visible = (floor(player.iFrameAge * 10) % 2 === 0)  // Blink at 10Hz
 else:
     player.visible = true
+    player.iFrameAge = 0  // Reset blink timer when i-frames end
 ```
+
+**Why `iFrameAge` instead of `player.age`:** Entity age resets when acquired from the pool, which would make the blink phase depend on creation time rather than damage time. Using a dedicated timer ensures consistent blink behavior regardless of when the entity was created.
 
 ### I-Frame Application
 
@@ -203,9 +224,21 @@ When the player takes damage:
 function onPlayerDamage(damage):
     if player.iFrames > 0: return  // Still invulnerable
     player.stats.hp -= damage
-    player.iFrames = 0.5  // Start 500ms invulnerability
+    player.iFrames = 0.5    // Start 500ms invulnerability
+    player.iFrameAge = 0    // Reset blink timer
     emit('damage', { defender: player, isPlayerDamage: true })
 ```
+
+### Knockback on Hit
+
+The player receives knockback when damaged, same as all entities:
+- Direction: away from the damage source
+- Force: `damage dealt × 2` px/s impulse
+- Applied as instant velocity change (not acceleration)
+- Knockback velocity decays via the same friction (× 0.85/frame)
+- During knockback, the player can still move with WASD or click/tap (input overrides knockback velocity)
+
+This means skilled players can cancel knockback by immediately providing movement input.
 
 ### Visual Behavior
 
@@ -311,6 +344,7 @@ All values from `vs_colors.md` Player Visual section.
 | Level-Up | Brief 1.5× scale pulse | 0.3s |
 | Low HP (<25%) | Pulsing red tint overlay | 1.0s cycle |
 | Invincibility Flash | Alternate visible/invisible every 100ms | 0.5s total |
+| Low HP Warning | Red tint overlay pulses (opacity 0% ↔ 20%), 1.0s cycle. Camera shakes subtly (2px, continuous). Both active while HP < 25% of maxHp. | Continuous |
 | Death | — | Triggers DEFEAT end screen |
 
 ### Color Palette
@@ -370,13 +404,18 @@ function createPlayer(characterData: CharacterData): Entity {
     age: 0,
     ttl: null,
     distanceTraveled: 0,
-    iFrames: 0,               // Invincibility timer
+    iFrames: 0,               // Invincibility timer (seconds remaining)
+    iFrameAge: 0,             // Time since i-frames started (for blink timing)
     movingToTarget: false,
     targetX: null,
     targetY: null,
   };
 }
 ```
+
+### Starting Position
+
+The player spawns at world origin `(0, 0)`. Per `01_engine_architecture.md` obstacle placement rules, no obstacles are placed within 100px of the player start position, ensuring a clear area to begin.
 
 ### Camera Snap
 
