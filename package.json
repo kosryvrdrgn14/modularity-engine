@@ -81,10 +81,16 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "playwright": "^1.62.1",
     "prettier": "3.7.3",
     "tw-animate-css": "^1.4.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.1",
     "vite": "^7.2.6"
-  }
+  },
+  "description": "This project uses the following tech stack: - Vite - Typescript - React Router v7 (all imports from `react-router` instead of `react-router-dom`) - React 19 (for frontend components) - Tailwind v4 (for styling) - Shadcn UI (for UI components library) - Lucide Icons (for icons) - Convex (for backend & database) - Convex Auth (for authentication) - Framer Motion (for animations) - Three js (for 3d models)",
+  "main": "eslint.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
