@@ -296,13 +296,13 @@ interface PowerSpike {
     "unlockLevel": 3,
     "orbDamageCooldown": 0.5,
     "statsPerLevel": [
-      { "level": 1, "damage": 5, "cooldown": 2.00, "orbitCount": 2, "orbitRadius": 80 },
-      { "level": 2, "damage": 6, "cooldown": 1.85, "orbitCount": 2, "orbitRadius": 85 },
-      { "level": 3, "damage": 7, "cooldown": 1.70, "orbitCount": 2, "orbitRadius": 90 },
-      { "level": 4, "damage": 9, "cooldown": 1.55, "orbitCount": 3, "orbitRadius": 120 },
-      { "level": 5, "damage": 11, "cooldown": 1.40, "orbitCount": 3, "orbitRadius": 130 },
-      { "level": 6, "damage": 13, "cooldown": 1.30, "orbitCount": 4, "orbitRadius": 140 },
-      { "level": 7, "damage": 16, "cooldown": 1.00, "orbitCount": 4, "orbitRadius": 160 }
+      { "level": 1, "damage": 5, "cooldown": 2.00, "orbitCount": 2, "orbitSpeed": 2.00, "orbitRadius": 80 },
+      { "level": 2, "damage": 6, "cooldown": 1.85, "orbitCount": 2, "orbitSpeed": 1.85, "orbitRadius": 85 },
+      { "level": 3, "damage": 7, "cooldown": 1.70, "orbitCount": 2, "orbitSpeed": 1.70, "orbitRadius": 90 },
+      { "level": 4, "damage": 9, "cooldown": 1.55, "orbitCount": 3, "orbitSpeed": 1.55, "orbitRadius": 120 },
+      { "level": 5, "damage": 11, "cooldown": 1.40, "orbitCount": 3, "orbitSpeed": 1.40, "orbitRadius": 130 },
+      { "level": 6, "damage": 13, "cooldown": 1.30, "orbitCount": 4, "orbitSpeed": 1.30, "orbitRadius": 140 },
+      { "level": 7, "damage": 16, "cooldown": 1.00, "orbitCount": 4, "orbitSpeed": 1.00, "orbitRadius": 160 }
     ],
     "powerSpikes": {
       "level4": {
@@ -357,6 +357,7 @@ interface PowerSpike {
         "name": "Devastation",
         "description": "The third pulse is a massive explosion (160px radius) that deals 2× damage and stuns all enemies hit for 1.0 second.",
         "statModifiers": {
+          "pulseCountBonus": 1,
           "thirdPulseRadius": 160,
           "thirdPulseDamageMultiplier": 2.0,
           "thirdPulseStunDuration": 1.0
@@ -392,7 +393,8 @@ interface EnemySchema {
     speed: number;                    // px/s
     size: number;                     // radius in px
     xpValue: number;
-    goldValue: number;                // base gold, actual = random(min, max)
+    goldValue: number;                // base gold per coin
+    goldCoins: { min: number; max: number }; // number of coins dropped [NEW — Spec 6 §4]
   };
   behavior: {
     pattern: string;                  // Movement/AI pattern name
@@ -402,7 +404,7 @@ interface EnemySchema {
     powerUpTable: DropEntry[];        // Power-up drop chances
   };
   spawn: {
-    weight: number;                   // Spawn probability weight
+    weight: number;                   // Spawn probability weight (0 for boss — spawns via timer, not weight-based)
     firstAppears: string;             // Time when enemy first spawns ("0:00", "1:00", etc.)
   };
   // Boss-specific fields (only present when type === "boss")
@@ -460,7 +462,7 @@ interface DropEntry {
     "id": "zombie",
     "name": "Zombie",
     "type": "normal",
-    "stats": { "hp": 10, "damage": 5, "speed": 40, "size": 10, "xpValue": 1, "goldValue": 1 },
+    "stats": { "hp": 10, "damage": 5, "speed": 40, "size": 10, "xpValue": 1, "goldValue": 1, "goldCoins": { "min": 1, "max": 2 } },
     "behavior": { "pattern": "chase", "params": { "chaseSpeed": 40, "wanderRadius": 100 } },
     "drops": {
       "powerUpTable": [
@@ -473,7 +475,7 @@ interface DropEntry {
     "id": "bat",
     "name": "Bat",
     "type": "normal",
-    "stats": { "hp": 5, "damage": 3, "speed": 100, "size": 8, "xpValue": 1, "goldValue": 1 },
+    "stats": { "hp": 5, "damage": 3, "speed": 100, "size": 8, "xpValue": 1, "goldValue": 1, "goldCoins": { "min": 1, "max": 1 } },
     "behavior": { "pattern": "swarm", "params": { "swarmRadius": 150, "erraticism": 0.8 } },
     "drops": {
       "powerUpTable": [
@@ -486,7 +488,7 @@ interface DropEntry {
     "id": "skeleton",
     "name": "Skeleton",
     "type": "normal",
-    "stats": { "hp": 20, "damage": 8, "speed": 50, "size": 12, "xpValue": 3, "goldValue": 2 },
+    "stats": { "hp": 20, "damage": 8, "speed": 50, "size": 12, "xpValue": 3, "goldValue": 2, "goldCoins": { "min": 2, "max": 3 } },
     "behavior": { "pattern": "chase", "params": { "chaseSpeed": 50, "wanderRadius": 80 } },
     "drops": {
       "powerUpTable": [
@@ -500,7 +502,7 @@ interface DropEntry {
     "id": "ghost",
     "name": "Ghost",
     "type": "normal",
-    "stats": { "hp": 15, "damage": 10, "speed": 80, "size": 12, "xpValue": 2, "goldValue": 2 },
+    "stats": { "hp": 15, "damage": 10, "speed": 80, "size": 12, "xpValue": 2, "goldValue": 2, "goldCoins": { "min": 2, "max": 3 } },
     "behavior": { "pattern": "wander_chase", "params": { "wanderTime": 2, "chaseTime": 4, "phaseOpacity": 0.4 } },
     "drops": {
       "powerUpTable": [
@@ -514,7 +516,7 @@ interface DropEntry {
     "id": "caster",
     "name": "Caster",
     "type": "normal",
-    "stats": { "hp": 12, "damage": 8, "speed": 50, "size": 13, "xpValue": 3, "goldValue": 3 },
+    "stats": { "hp": 12, "damage": 8, "speed": 50, "size": 13, "xpValue": 3, "goldValue": 3, "goldCoins": { "min": 3, "max": 4 } },
     "behavior": { "pattern": "ranged", "params": { "maintainDistance": 150, "projectileDamage": 6, "projectileSpeed": 150, "fireCooldown": 2.0 } },
     "drops": {
       "powerUpTable": [
@@ -528,7 +530,7 @@ interface DropEntry {
     "id": "boss_gravekeeper",
     "name": "The Gravekeeper",
     "type": "boss",
-    "stats": { "hp": 1000, "damage": 15, "speed": 70, "size": 28, "xpValue": 50, "goldValue": 20 },
+    "stats": { "hp": 1000, "damage": 15, "speed": 70, "size": 28, "xpValue": 50, "goldValue": 1, "goldCoins": { "min": 20, "max": 30 } },
     "behavior": { "pattern": "boss_charge", "params": { "chargeDuration": 1.5, "pauseDuration": 1.0 } },
     "drops": {
       "powerUpTable": [
@@ -541,15 +543,21 @@ interface DropEntry {
         "hpThreshold": 1.0,
         "speed": 70,
         "chargeInterval": 3.0,
+        "chargeDuration": 1.5,
+        "pauseDuration": 1.0,
         "minionCount": 3,
-        "minionInterval": 3.0
+        "minionInterval": 3.0,
+        "minionSpawnRadius": 200
       },
       {
         "hpThreshold": 0.5,
         "speed": 100,
         "chargeInterval": 2.0,
+        "chargeDuration": 1.5,
+        "pauseDuration": 0.8,
         "minionCount": 5,
         "minionInterval": 2.0,
+        "minionSpawnRadius": 200,
         "groundPound": {
           "interval": 5.0,
           "radius": 80,
@@ -822,6 +830,7 @@ interface PickupSchema {
   bossResistance?: number;             // [NEW] Boss resistance multiplier (0.8)
   // Magnet specific
   magnetFadeOutDuration?: number;      // Fade-out time in seconds (0.5)
+  // Magnet Override Rule: When magnet is active, ALL pickups use magnet's attractRadius (350px) instead of their own
   // Gold specific
   goldValuePerCoin?: number;           // [NEW] Gold per coin (1)
   // Power-up specific
@@ -903,7 +912,7 @@ interface DropSource {
     "value": 0,
     "visual": { "shape": "circle", "color": "#FFD700", "size": 10 },
     "behavior": {
-      "duration": null,
+      "duration": 30,
       "attractRadius": 50,
       "attractSpeed": 0,
       "instantBurstRadius": 0
@@ -1080,7 +1089,7 @@ interface PassiveOption {
     { "level": 11, "xpToNext": 210, "cumulativeXp": 546 },
     { "level": 12, "xpToNext": 280, "cumulativeXp": 756 },
     { "level": 13, "xpToNext": 375, "cumulativeXp": 1036 },
-    { "level": 14, "xpToNext": 488, "cumulativeXp": 1411 }
+    { "level": 14, "xpToNext": 375, "cumulativeXp": 1411 }
   ],
   "formula": {
     "forLevel": 14,
