@@ -114,13 +114,13 @@ When player XP ≥ threshold for next level:
 1. Game pauses fully (V1: no slow-motion, hard pause)
 2. Level-up screen overlays game
 3. Player level increments by 1
-4. XP bar resets to 0 (excess XP is lost — not carried over)
+4. XP bar resets to 0. **Excess XP IS carried over** — if the player needs 5 XP to level and gains 8 XP, they start at 3/10 XP toward the next level (Level 2→3 requires 10 XP). This prevents XP waste during fast-kill sequences.
 
 ### Level-Up Screen
 
 1. Shows 3 random upgrade options (cards)
 2. Each card shows:
-   - Icon (weapon icon or passive icon)
+   - Icon (weapon icon: square/projectile, circle/orbit, triangle/area; passive icon: heart/speed, shield/armor, magnet/range, star/crit)
    - Name (e.g., "Projectile" or "Max Health +20%")
    - Current state → New state (e.g., "Lv.3 → Lv.4" or "Stack 2 → Stack 3")
    - Description of the change (e.g., "Pierce +1 enemy" or "+20% max HP")
@@ -130,7 +130,8 @@ When player XP ≥ threshold for next level:
 
 ### Edge Cases
 
-- **Multiple level-ups at once:** If the player gains enough XP for 2+ levels, only the first level-up is shown. The second is queued and shown after the first is resolved.
+- **Multiple level-ups at once:** If the player gains enough XP for 2+ levels, only the first level-up is shown. The second is queued and shown after the first is resolved. **Max queue: 3.** If more than 3 level-ups queue, excess levels are applied automatically with random selections (no screen shown). This prevents infinite level-up screens during fast-kill sequences.
+- **Level-up during boss charges:** Level-ups can trigger at any time, including mid-boss-charge. The boss freezes during the level-up pause. This is NOT considered an exploit — the player still needs to make a good choice, and the pause is brief (0.3s after selection). No special handling needed.
 - **Only 1 weapon and it's maxed:** Show 3 passive stat boost options instead.
 - **All weapons maxed and all passives maxed:** Show 3 random passives (even if at max stacks — the player can still pick them, but they have no effect. This is a degenerate case that shouldn't happen in a 5-minute run).
 
@@ -149,7 +150,7 @@ From `vs_prog.md` Upgrade Pool Composition section.
 
 1. **No duplicate options** in a single level-up screen.
 2. **Max level exclusion:** If a weapon is at max level (7), it is excluded from the pool.
-3. **Weapon unlock:** If a weapon is not yet owned but its unlock level has been reached, "Unlock [Weapon]" appears as an option.
+3. **Weapon unlock:** If a weapon is not yet owned but its unlock level has been reached, "Unlock [Weapon]" appears as an option. **Weapon unlocks are guaranteed to appear** in every level-up screen until picked. They have priority over other options — if the pool would otherwise show 3 passives, the weapon unlock replaces one.
 4. **All weapons maxed:** If all weapons are maxed, the pool is 100% passive boosts.
 5. **Passive stacking:** Passives can stack (e.g., picking Max Health +20% twice gives +40% total).
 6. **Max stack exclusion:** If a passive is at max stacks, it is excluded from the pool.
@@ -220,11 +221,11 @@ From `vs_prog.md` Passive Stat Boosts section.
 ### Passive Effect Calculations
 
 **Max Health +20%:**
-- Stack 1: 100 → 120 HP
-- Stack 2: 100 → 140 HP
-- Stack 3: 100 → 160 HP
-- Stack 4: 100 → 180 HP
-- Stack 5: 100 → 200 HP (max)
+- Stack 1: 100 → 120 HP. **Current HP also increases by the same amount** (e.g., if player has 80/100 HP, it becomes 100/120 HP). This ensures Max Health is always useful, even without healing.
+- Stack 2: 120 → 140 HP (+20 current)
+- Stack 3: 140 → 160 HP (+20 current)
+- Stack 4: 160 → 180 HP (+20 current)
+- Stack 5: 180 → 200 HP (+20 current, max)
 
 **Movement Speed +10%:**
 - Stack 1: 200 → 220 px/s
@@ -250,6 +251,15 @@ From `vs_prog.md` Passive Stat Boosts section.
 - Stack 3: 0% → 15% crit chance
 - Stack 4: 0% → 20% crit chance (max)
 - Note: Crit multiplier is 1.5× (from `02_character_spec.md`). Crits apply to all damage sources.
+
+### XP Gain Animation
+
+When the player collects XP gems, a floating text indicator appears:
+- **Small gem (+1 XP):** Blue text (`#4FC3F7`), 10px, floats upward 20px over 0.3s, fades to 0% opacity
+- **Large gem (+5 XP):** Blue text (`#81D4FA`), 12px, floats upward 20px over 0.3s, fades to 0% opacity
+- **Scaled XP (post-XP-scaling):** Shows the actual value (e.g., "+1.15 XP" at minute 3)
+
+See `01_engine_architecture.md` §7 for damage formula: `max(1, rawDamage - defender.armor)`. Armor passive stacks add directly to the `armor` stat.
 
 ---
 
@@ -350,7 +360,7 @@ From `vs_plan.md` Prompt 7 — Section 4: Visual Design.
 | Weapon upgrade mechanics | `03_weapons_spec.md` §6 Weapon Level-Up |
 | Player base stats | `02_character_spec.md` §2 Base Stats |
 | Level-up screen layout | `08_ui_hud_spec.md` §2 Level-Up Screen |
-| Level-up sound | `09_audio_spec.md` SFX List |
+| Level-up sound | `09_audio_spec.md` — ascending scale run C5→E5→G5→C6, 0.3s |
 | JSON schema | `10_json_schemas.md` leveling.json |
 
 ---
