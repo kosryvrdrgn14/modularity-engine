@@ -893,7 +893,37 @@ Each prompt includes:
 
 ---
 
-## Appendix: File Structure
+## Appendix A: Pitfalls Review Reference
+
+**CRITICAL:** Before implementing any phase, read `pitfalls_review.md` and apply all safeguards.
+
+### Mandatory Checks Per Phase
+
+| Phase | Key Pitfalls | Safeguard |
+|---|---|---|
+| 1 (Core) | P2 (Event re-entrancy), P10 (State transitions) | Queue events, validate transitions |
+| 2 (GameLoop) | P1 (Timer drift), P7 (Delta time clamping) | Integer frame counters, clamp to 33ms |
+| 3 (Input) | P8 (Float confusion) | Round coordinates for canvas |
+| 4 (Entities) | P3 (Pool exhaustion), P6 (Mutation during iteration) | Check pool.get(), backward iteration |
+| 5 (Spawn) | P1 (Timer drift), P3 (Pool exhaustion) | Frame counters, cap enforcement |
+| 6 (Movement) | P7 (Delta time), P9 (Tunneling) | Clamp delta, sweep collision |
+| 7 (Collision) | P9 (Tunneling), P15 (AABB formula) | Sweep for fast objects, standard AABB |
+| 8 (Weapons) | P4 (Division by zero), P3 (Pool exhaustion) | Guard divisions, projectile limits |
+| 9 (Damage) | P4 (Division by zero), P5 (Null references) | Safe division, null checks |
+| 10 (Pickups) | P6 (Mutation), P1 (Timer drift) | Separate cleanup, frame counters |
+| 11 (Leveling) | P5 (Null references), P10 (State transitions) | Null checks, valid transitions |
+| 12 (Rendering) | P14 (Context leaks), P8 (Float confusion) | Save/restore, Math.round() |
+| 13 (UI) | P10 (State transitions), P12 (Missing cleanup) | State validation, full restart |
+| 14 (Audio) | P13 (Context unlock), P11 (Magic numbers) | Resume on click, use config |
+| 15 (Integration) | All | Run full test suite |
+
+### Code Review Before Each Phase
+
+Use the checklist in `pitfalls_review.md` §6. Every phase must pass before moving to the next.
+
+---
+
+## Appendix B: File Structure
 
 ```
 index.html                    ← Single HTML file (all code inline)
