@@ -1,7 +1,7 @@
 # Modularity Engine — Design Plan
 
 > **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-19
+> **Last Updated:** 2026-08-20
 > **Status:** Planning
 
 ---
@@ -14,9 +14,10 @@
 4. [Required Markdown Spec Files](#required-markdown-spec-files)
 5. [JSON Content Files](#json-content-files)
 6. [Spec File Creation Prompts](#spec-file-creation-prompts)
-7. [Engine Core Systems](#engine-core-systems)
-8. [Feature Checklist](#feature-checklist)
-9. [Missing Details & Recommended Actions](#missing-details--recommended-actions)
+7. [Spec Validation Test Prompts](#spec-validation-test-prompts)
+8. [Engine Core Systems](#engine-core-systems)
+9. [Feature Checklist](#feature-checklist)
+10. [Missing Details & Recommended Actions](#missing-details--recommended-actions)
 
 ---
 
