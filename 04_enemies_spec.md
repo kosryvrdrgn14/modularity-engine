@@ -65,7 +65,7 @@ Values copied EXACTLY from `vs_prog.md`.
 | Size (radius) | 14px |
 | XP Value | 1 |
 | Gold Value | 1–2 (random) |
-| Spawn Weight | 100 (early), scales down over time |
+| Spawn Weight | 100 (0:00), 80 (1:00), 60 (2:00), 40 (3:00+). Linear interpolation between brackets. |
 | Behavior | Chase — moves directly toward the player |
 | First Appears | 0:00 |
 
@@ -99,6 +99,7 @@ From `vs_colors.md` Enemy Visuals — Zombie.
 | Border | 1px solid `#1A3D17` (darker green) |
 | Motion | Wobble: ±3° rotation oscillation, 0.5s cycle |
 | Death animation | Brief shrink to 0.5× over 0.15s, then disappear |
+| Death behavior | On HP ≤ 0: enemy becomes intangible immediately (collision disabled), death animation plays, then entity is released back to pool. Loot spawns on HP=0 frame, not during animation. |
 
 ---
 
@@ -126,7 +127,7 @@ Values copied EXACTLY from `vs_prog.md`.
 ### Behavior: Swarm
 
 1. Bats spawn in groups of 2–4 from the same off-screen edge point
-2. Each bat picks a slightly random offset from the group center (±30px) to avoid stacking
+2. Each bat picks a random offset from the group center within a 30px radius (circular spread, not rectangular) to avoid stacking
 3. Each bat independently chases the player using the same Chase algorithm as Zombie
 4. Bats are fast (120 px/s) but fragile — they die in 1–2 hits from most weapons
 5. Swarm behavior creates "waves" of fast-moving targets that test the player's crowd control
@@ -153,6 +154,7 @@ From `vs_colors.md` Enemy Visuals — Bat.
 | Border | 1px solid `#2A2A4E` (slightly lighter) |
 | Motion | Flutter: scale oscillation between 0.9× and 1.1×, 0.2s cycle |
 | Death animation | Quick fade out over 0.1s |
+| Death behavior | On HP ≤ 0: intangible immediately, animation plays, entity released to pool. |
 
 ---
 
@@ -207,6 +209,7 @@ From `vs_colors.md` Enemy Visuals — Skeleton.
 | Border | 3px solid `#5C1010` (darker red) |
 | Motion | None (heavy, solid, menacing) |
 | Death animation | Crumble: breaks into 4 small squares that scatter outward over 0.3s |
+| Death behavior | On HP ≤ 0: intangible immediately, animation plays, entity released to pool. |
 
 ---
 
@@ -237,7 +240,7 @@ Values copied EXACTLY from `vs_prog.md`.
 2. **Chase phase (2–4 seconds):** Ghost locks onto the player and moves directly toward them at full speed (80 px/s). The transition is signaled by a brief 0.3s pause (ghost stops moving, opacity drops to 40%).
 3. After chase phase ends, ghost returns to wander phase for 3–5 seconds.
 4. The wander/chase cycle repeats indefinitely.
-5. Ghosts can pass through obstacles during wander phase (they're ethereal). During chase phase, they collide with obstacles like other enemies.
+5. Ghosts can pass through obstacles during wander phase (they're ethereal). During chase phase, they collide with obstacles like other enemies. **Ghost is an exception to the engine's enemy-obstacle collision rule** (see `01_engine_architecture.md` §12) — during wander phase, ghost uses a separate collision layer that ignores obstacles.
 6. Ghost opacity is 70% at all times — partially transparent, harder to see in crowds.
 
 ### Hitbox
@@ -266,6 +269,7 @@ From `vs_colors.md` Enemy Visuals — Ghost.
 | Wander visual | Opacity drops to 50% during wander |
 | Chase visual | Opacity increases to 85% during chase, brief 0.3s flash at transition |
 | Death animation | Fade out over 0.3s with upward drift (+20px) |
+| Death behavior | On HP ≤ 0: intangible immediately, animation plays, entity released to pool. |
 
 ---
 
@@ -297,7 +301,7 @@ Values copied EXACTLY from `vs_prog.md`.
 1. **Preferred distance:** 200–300px from the player
 2. If player is within 200px: Caster retreats at full speed (50 px/s) away from player
 3. If player is beyond 300px: Caster advances toward player at full speed
-4. If player is 200–300px: Caster strafes perpendicular to the player (random left/right), maintaining distance
+4. If player is 200–300px: Caster strafes perpendicular to the player. Direction is chosen once when entering strafe range and persists for 1.5–2.5 seconds before randomly switching. This prevents jittering from frame-by-frame randomization.
 5. **Firing:** Every 2.0 seconds, fires a projectile toward the player's current position
 6. Projectiles are non-tracking — they travel in a straight line and despawn after 3s or 600px
 7. Caster pauses for 0.3s when firing (brief wind-up animation)
@@ -339,6 +343,7 @@ From `vs_colors.md` Enemy Visuals — Caster.
 | Motion | Pulse: scale oscillation between 0.95× and 1.05×, 0.8s cycle |
 | Cast animation | Brief 0.3s scale-up to 1.1×, then fire |
 | Death animation | Dissolve: opacity fades over 0.2s while scaling up to 1.2× |
+| Death behavior | On HP ≤ 0: intangible immediately, animation plays, entity released to pool. |
 
 ---
 
@@ -380,14 +385,14 @@ From `vs_prog.md` Boss Encounter section. Three-step announcement:
 - Charges toward the player in straight lines
 - Each charge lasts 1.5 seconds at 70 px/s
 - After charge: 1.0-second pause (boss stops, brief recovery animation)
-- Boss can clip through obstacles during charges (boss is too large to be blocked)
+- Boss can clip through obstacles during charges (boss is too large to be blocked). **Boss is an exception to the engine's enemy-obstacle collision rule** (see `01_engine_architecture.md` §12) — boss always ignores obstacles.
 - Between charges, boss slowly repositions toward the player at 30 px/s
 
 **Minion Spawns:**
-- Every 3 seconds, spawns 3 Zombies near the player (within 200px radius)
+- Every 3 seconds, spawns 3 Zombies at random positions within a 200px radius of the player. Minimum 40px distance from the player to avoid stacking on top of them
 - Minions spawn with a brief red flash (0.2s) to distinguish from regular spawns
-- Minions use standard Zombie behavior (Chase)
-- Minions count toward the 200-enemy cap
+- Minions spawned by the boss use standard Zombie behavior (Chase) and count toward the 200-enemy cap
+
 
 **Visual:**
 - Steady red glow (70% opacity), slow pulse (2s cycle)
@@ -406,7 +411,7 @@ From `vs_prog.md` Boss Encounter section. Three-step announcement:
 - Between charges: repositions at 50 px/s
 
 **Minion Spawns:**
-- Every 2 seconds, spawns 5 Zombies near the player (within 200px radius)
+- Every 2 seconds, spawns 5 Zombies at random positions within a 200px radius of the player. Minimum 40px distance from the player (same rules as Phase 1)
 - Same red flash visual as Phase 1
 
 **Ground Pound:**
@@ -476,6 +481,7 @@ On death:
 - 50 XP (collected automatically — no pickup entity)
 - 20–30 gold (scattered around boss death position, ±40px)
 - 1× Weapon Level-Up power-up (guaranteed, drops at boss position)
+- Any zombies the boss spawned that are still alive remain — they are NOT killed on boss death. They continue chasing the player with standard Zombie behavior
 - Brief slow-motion effect: 0.5s at 25% speed before loot drops
 - Screen shake: 1.0s, heavy intensity (see `01_engine_architecture.md` §9)
 - Victory check: if boss dies before 5:00 → VICTORY end screen
@@ -735,7 +741,7 @@ HP multiplier: 1 + 0.15 × minutes_after_boss_kill
 Damage multiplier: 1 + 0.10 × minutes_after_boss_kill
 ```
 
-Scaling is applied at spawn time — existing enemies are not retroactively buffed.
+Scaling is applied at spawn time — existing enemies are not retroactively buffed. This includes zombies previously spawned by the boss: they retain their original stats.
 
 ---
 
