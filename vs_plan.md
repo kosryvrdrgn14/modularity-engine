@@ -399,7 +399,7 @@ SECTION 2: POWER-UP DROPS
 Power-ups drop from specific enemy kills. They appear as floating items with a distinct glow/ring to stand out.
 
 4. SCREEN WIPE:
-   - Effect: Instantly kills ALL enemies currently on screen. Deals boss 50% max HP.
+   - Effect: Instantly kills ALL enemies currently on screen. Deals boss 20% max HP (80% resistance).
    - Visual: bright white flash expanding outward from player
    - Sound: dramatic whoosh/boom
    - Drop source: Only from Enemy type 3 (Armored Skeleton) and Enemy type 5 (Ranged Caster)
@@ -972,7 +972,7 @@ DROP RATE TABLE CHECK — must match vs_prog.md:
 | Boss | 50 | 20-30 | — | — | 100% |
 
 POWER-UP CHECKS:
-- Screen Wipe: kills all enemies, deals 50% boss HP, 2% from Skeleton/Caster
+- Screen Wipe: kills all enemies, deals 20% boss HP (80% resistance), 2% from Skeleton/Caster
 - Magnet: 350px radius, 400 px/s, 10s duration, instant burst 150px, 5% from Bat/Ghost
 - Weapon Level-Up: levels 1-3 random weapons, 1% base, 100% boss, max level 7
 

@@ -355,7 +355,7 @@ function collectPickup(player, pickup):
     //   exp_small: add 1 XP
     //   exp_large: add 5 XP
     //   gold: add random goldMin-goldMax
-    //   screen_wipe: kill all enemies, deal 50% boss HP
+    //   screen_wipe: kill all enemies, deal 20% boss HP (80% resistance)
     //   magnet: start 10s attract timer, instant burst 150px
     //   weapon_levelup: level 1-3 random weapons
     

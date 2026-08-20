@@ -367,6 +367,7 @@ Values copied EXACTLY from `vs_prog.md` Boss Encounter section.
 | Gold Value | 20–30 (random) |
 | Spawn Time | 4:00 |
 | Despawn | On death or at 5:00 (game end) |
+| Screen Wipe Resistance | 80% (takes 200 damage from screen wipe, not instant kill) |
 | Power-Up Drop | Weapon Level-Up (100% guaranteed) |
 
 ### Boss Spawn Announcement
@@ -479,7 +480,7 @@ Expected player DPS at 4:00 is 80–110 (see `03_weapons_spec.md` Combined DPS b
 
 On death:
 - 50 XP (collected automatically — no pickup entity)
-- 20–30 gold (scattered around boss death position, ±40px)
+- 20–30 gold coins (each coin = 1 gold, scattered around boss death position ±40px). Not affected by screen wipe resistance — gold always drops normally.
 - 1× Weapon Level-Up power-up (guaranteed, drops at boss position)
 - Any zombies the boss spawned that are still alive remain — they are NOT killed on boss death. They continue chasing the player with standard Zombie behavior
 - Brief slow-motion effect: 0.5s at 25% speed before loot drops

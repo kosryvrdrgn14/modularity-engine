@@ -80,7 +80,7 @@ From `vs_prog.md` Drop Economy section.
 
 | Property | Value |
 |---|---|
-| Value | 1–3 gold (random per coin) |
+| Value | 1 gold per coin. Number of coins dropped varies by enemy type (see drop rate table). |
 | Shape | Circle |
 | Color | `#FFD700` (Gold Yellow) |
 | Size | 10px diameter |
@@ -101,7 +101,7 @@ Power-ups drop from specific enemy kills. They appear as floating items with a d
 
 | Property | Value |
 |---|---|
-| Effect | Instantly kills ALL enemies currently on screen. Deals boss 50% max HP (500 damage). |
+| Effect | Instantly kills ALL enemies currently on screen. Deals boss 20% max HP (200 damage). Boss has 80% resistance to screen wipe. |
 | Duration | Instant (0.5s visual effect) |
 | Shape | Circle (pulsing) |
 | Color | `#00E676` (Power-Up Green) |
@@ -114,7 +114,7 @@ Power-ups drop from specific enemy kills. They appear as floating items with a d
 | Drop Source | Skeleton (2% chance), Caster (2% chance) |
 | Expected Frequency | 1 per 2–3 minutes (once Skeletons/Casters appear at 2:00+) |
 | Expected Per Run | 1–2 |
-| Boss Interaction | Deals 50% max HP to boss (500 damage). Does NOT one-shot boss. |
+| Boss Interaction | Deals 20% max HP to boss (200 damage). Boss has 80% resistance. Does NOT one-shot boss. 5 screen wipes needed to kill boss from full HP. |
 
 ### Magnet (EXP & Gold)
 
@@ -130,7 +130,7 @@ Power-ups drop from specific enemy kills. They appear as floating items with a d
 | Motion | Pulse: scale oscillation 0.85×–1.15×, 0.5s cycle |
 | Glow | 8px `#FF4081` drop shadow, 70% opacity |
 | Active Effect | Pulsing pink ring around player: 350px radius, 15% opacity, 0.3s cycle |
-| Sound | Magnetic hum (continuous sine 220Hz + 330Hz) during duration |
+| Sound | Magnetic hum (continuous sine 220Hz + 330Hz) during duration. Fades out over 0.5s in the last second. |
 | Drop Source | Bat (5% chance), Ghost (5% chance) |
 | Expected Frequency | 1 per 1–2 minutes (once Bats appear at 1:00+) |
 | Expected Per Run | 2–3 |
@@ -147,7 +147,7 @@ Power-ups drop from specific enemy kills. They appear as floating items with a d
 | Border | 2px solid `#E65100` (darker orange) |
 | Motion | Rotate: slow 360° rotation, 2s cycle |
 | Glow | 6px `#FF9100` drop shadow, 50% opacity |
-| Collection Effect | Orange sparkle burst: 12 small circles radiating outward from player, fading over 0.4s |
+| Collection Effect | Orange sparkle burst: 12 small circles radiating outward from player in a radial pattern (30° apart), fading over 0.4s |
 | Sound | Power-up jingle (5-note full arpeggio) |
 | Drop Source | Any enemy (1% base chance), Boss (100% guaranteed) |
 | Expected Frequency | 1 per 1–2 minutes from regular kills + 1 from boss |
@@ -308,10 +308,11 @@ function updateMagnet(pickups, player, dt):
 
 ### Pickup Behavior
 
-- Pickups have a slight float animation to be visible (±2px vertical oscillation)
+- Pickups have a slight float animation to be visible (±2px vertical oscillation). During magnet attraction, the float animation is overridden by the attraction movement.
 - Gold coins scatter ±30px on enemy death, then become static
 - EXP gems drop at enemy's death position, become static immediately
 - Pickups are collectible immediately after spawning (no delay, except power-ups which have 0.5s delay)
+- **Power-up despawn:** Power-ups persist indefinitely until collected. They do NOT despawn. This ensures the player never misses a power-up due to timing. Base pickups (XP/gold) are subject to the 500-entity cap.
 
 ### Pickup Despawn
 
