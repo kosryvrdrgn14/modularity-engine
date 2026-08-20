@@ -128,7 +128,7 @@ Where:
 | 4:00–4:30 | 8 | 4.2× | 3.36 → **capped at 2.0** (boss active, reduced) |
 | 4:30–5:00 | 9 | 4.6× | 3.68 → **capped at 1.5** (final push, minimal) |
 
-**Note:** The Master Timeline values are the canonical spawn rates. The formula is used for implementation, but the table values take precedence if they differ (due to rounding or design overrides for the boss phase).
+**Note:** The formula produces slightly different values than the table due to rounding (e.g., 1.12 vs 1.2 at 0:30–1:00). The **table values are canonical** — use them in the timeline bracket lookup. The formula is provided for any dynamic calculations outside the bracket system (e.g., post-boss scaling adjustments).
 
 ### Post-Boss Spawn Override
 
@@ -164,6 +164,16 @@ function selectEnemyType(time, compositionWeights):
 - Composition weights are sampled from the 1-minute brackets above
 - Within each bracket, weights are uniform random
 - If a rolled enemy type hasn't appeared yet (e.g., rolling Bat at 0:30), reroll
+
+### Enemy HP Weights (for spawn balancing)
+
+When the spawn system selects an enemy type, it uses the composition weights above. However, if the current enemy count exceeds 80% of the max cap, the system preferentially spawns lower-HP enemies (Zombies, Bats) to prevent HP pool overload:
+
+```
+if enemyCount > maxEnemies * 0.8:
+    // Bias toward low-HP enemies
+    applyWeightBias(compositionWeights, {zombie: 1.5, bat: 1.3, skeleton: 0.7, ghost: 0.8, caster: 0.7})
+```
 
 ---
 
@@ -274,7 +284,7 @@ From `vs_colors.md` Map & Obstacles section.
 | Color | `#2A3A2A` (dark earthy green) |
 | Size | 40×16 px |
 | Border | None |
-| Collision | **Passable.** Player walks over, enemies walk over. |
+| Collision | **Passable.** Player walks over, enemies walk over. No gameplay effect. |
 | Spawn Rate | 1 per 80px² of arena |
 | Purpose | Visual flavor. Breaks up the ground pattern. Non-blocking. |
 
@@ -298,7 +308,7 @@ From `vs_colors.md` Map & Obstacles section.
 | Color | `#1A1A2A` (very dark, barely visible) |
 | Size | 32×32 px |
 | Border | None |
-| Collision | **Passable.** |
+| Collision | **Passable.** No gameplay effect. |
 | Spawn Rate | 1 per 100px² of arena |
 | Purpose | Visual variety on ground. Subtle. |
 
@@ -332,6 +342,7 @@ From `vs_colors.md` Obstacle Placement Rules.
 
 ```
 function generateObstacles(playerStart, arenaSeed):
+    // arenaSeed = hash(stageId + difficultyLevel) — deterministic per stage
     rng = seededRandom(arenaSeed)
     obstacles = []
     
@@ -351,6 +362,19 @@ function generateObstacles(playerStart, arenaSeed):
             if roll < 0.02:  // 2% chance per tile
                 type = selectObstacleType(rng)
                 obstacles.push(createObstacle(type, x, y))
+```
+
+**Obstacle Type Selection Weights:**
+
+| Type | Weight | Probability |
+|---|---|---|
+| Tombstone (Small) | 30 | 30% |
+| Tombstone (Large) | 10 | 10% |
+| Grave Mound | 25 | 25% |
+| Broken Wall | 15 | 15% |
+| Cracked Floor | 20 | 20% |
+
+Weights are designed to produce the density ratios from vs_colors.md: Grave Mounds are most common (visual flavor), followed by Small Tombstones (chokers), then Cracked Floor (visual variety), then Broken Walls (long obstructions), then Large Tombstones (rare major obstacles).
     
     return obstacles
 ```
@@ -367,16 +391,17 @@ From `vs_prog.md` Boss Encounter section.
 
 | Time | Event | Visual | Audio |
 |---|---|---|---|
-| 3:50 | Screen dims to 80% brightness. Text: "Something stirs in the darkness..." | White text, center screen, fade in over 1s, hold 2s, fade out | Boss warning: sine 100Hz fade-in, 2s |
-| 3:55 | Camera shake (0.5s, medium). Text: "The Gravekeeper rises!" | Yellow text, center screen, shake with camera | Boss warning intensifies |
+| 3:50 | Screen dims to 80% brightness. Text: "Something stirs in the darkness..." | White text, 24px, center screen, fade in over 1s, hold 2s, fade out | Boss warning: sine 100Hz fade-in, 2s |
+| 3:55 | Camera shake (0.5s, medium). Text: "The Gravekeeper rises!" | Yellow text, 28px, center screen, shake with camera | Boss warning intensifies |
 | 4:00 | Boss spawns from nearest screen edge | Boss slides in from edge over 0.5s, red flash on arrival | Boss spawn: square+sine 80Hz→40Hz, 1s |
 
 ### Boss Spawn Position
 
-- Boss spawns from the **nearest screen edge** (the edge closest to the boss's intended approach direction)
+- Boss spawns from the **screen edge closest to the player's current position** (the edge the player is nearest to). This ensures the boss enters from a visible direction.
 - Boss slides in from off-screen over 0.5 seconds
 - Red flash on arrival (0.2s, `#FF0000` at 60% opacity)
 - Boss occupies 1 slot in the 200-enemy cap
+- **Cap enforcement:** When the enemy count reaches the cap, the spawn system stops spawning new enemies until an enemy dies. The system does NOT despawn existing enemies.
 
 ### Music Transition During Boss
 
@@ -387,7 +412,7 @@ From `vs_prog.md` Boss Encounter section.
 | 3:52 | Boss theme ominous intro |
 | 4:00 | Boss theme full combat |
 
-See `09_audio_spec.md` for full music progression.
+See `09_audio_spec.md` for full music progression. Key transitions: ambient intro (0:00), beat drop (0:15), full intensity (2:00), pre-boss build (3:30), silence (3:50), boss theme (3:52), boss Phase 2 escalation (4:30).
 
 ---
 
@@ -409,7 +434,7 @@ When the stage ends:
 1. All gameplay freezes (entities stop moving, weapons stop firing, timer stops)
 2. 1.0-second pause for dramatic effect
 3. End screen fades in over 0.5 seconds
-4. Stats are displayed with animated counters (values tick up from 0)
+4. Stats are displayed with animated counters — each stat ticks up from 0 over 0.5s, staggered by 0.2s per stat (total animation: ~1.5s)
 
 ### End Screen Stats (All Three End States)
 
@@ -439,6 +464,8 @@ If the boss is killed, brief text overlays appear at 30-second intervals after b
 | 1:30+ | (no more text — game ends soon) |
 
 Text appears center-screen, fades in over 0.5s, holds for 2s, fades out. White text, 80% opacity.
+
+**Timer:** Milestone timing starts from the boss death timestamp, not from 4:00. If the boss dies at 4:10, the first milestone appears at 4:40.
 
 ---
 
