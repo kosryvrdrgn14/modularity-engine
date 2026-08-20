@@ -718,13 +718,14 @@ class EntityManager {
 
   create(type, data) {
     const entity = {
+      ...data,
       id: this.nextId++,
       type,
       active: true,
       x: data.x || 0,
       y: data.y || 0,
-      vx: 0,
-      vy: 0,
+      vx: data.vx || 0,
+      vy: data.vy || 0,
       hp: data.hp || 0,
       maxHp: data.hp || 0,
       damage: data.damage || 0,
@@ -737,7 +738,6 @@ class EntityManager {
       visual: data.visual || {},
       iFrames: 0,
       age: 0,
-      ...data
     };
     this.entities.push(entity);
     return entity;
@@ -1107,7 +1107,6 @@ class WeaponSystem {
     const level = this.weaponLevels['w1_projectile'];
     if (!level) return;
 
-    this.cooldowns['w1_projectile'] -= dt;
     if (this.cooldowns['w1_projectile'] > 0) return;
 
     const weapon = this.dataManager.weapons[0];
@@ -1489,6 +1488,11 @@ class LevelingSystem {
     this.level = 1;
     this.xp = 0;
     this.queue = [];
+  }
+
+  update(dt) {
+    // Leveling system is event-driven, no per-frame updates needed
+    // This method exists for consistency with other systems
   }
 }
 
