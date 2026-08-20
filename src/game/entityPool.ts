@@ -31,11 +31,14 @@ export class EntityPool {
   private nextId = 1;
   private growthStep: number;
 
+  private maxSize: number;
+
   constructor(
-    private maxSize: number,
+    maxSize: number,
     initialSize: number,
     growthStep: number = 25,
   ) {
+    this.maxSize = maxSize;
     this.growthStep = growthStep;
     for (let i = 0; i < initialSize; i++) {
       this.pool.push(createInactiveEntity());

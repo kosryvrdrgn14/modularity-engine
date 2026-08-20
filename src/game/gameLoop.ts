@@ -11,11 +11,19 @@ export class GameLoop {
   private running = false;
   private rafId = 0;
 
+  private updateFn: (dt: number) => void;
+  private renderFn: (interpolation: number) => void;
+  private getState: () => GameState;
+
   constructor(
-    private updateFn: (dt: number) => void,
-    private renderFn: (interpolation: number) => void,
-    private getState: () => GameState,
-  ) {}
+    updateFn: (dt: number) => void,
+    renderFn: (interpolation: number) => void,
+    getState: () => GameState,
+  ) {
+    this.updateFn = updateFn;
+    this.renderFn = renderFn;
+    this.getState = getState;
+  }
 
   start(): void {
     this.running = true;
