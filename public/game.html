@@ -2267,7 +2267,7 @@ class AudioManager {
       const id = data.pickup?.pickupData?.id;
       if (id === 'exp_small') this._playPickupTriad(data.pickup);
       else if (id === 'gold_coin') this._playGoldArpeggio(data.pickup);
-      else if (id === 'weapon_levelup' || id === 'magnet' || id === 'health') this._playPowerUpArpeggio(data.pickup);
+      else if (id === 'weapon_levelup' || id === 'magnet' || id === 'health') this.play('powerup_collect', { sourceX: data.pickup?.x, sourceY: data.pickup?.y });
       else if (id === 'screen_wipe') this.play('screenwipe');
     });
 
