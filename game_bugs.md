@@ -1,115 +1,78 @@
-# Game Bug Report — Level-Up Upgrade Selection
+# Game Bug Report — Master Log
+
+**Project:** Modularity Engine (Vampire Survivors Prototype)
+**File:** `game.html` (single-file HTML5 game)
+**Last Updated:** August 21, 2026
+
+---
+
+## Summary
+
+| # | Bug | Severity | Status | Discovered By |
+|---|---|---|---|---|
+| 1 | Level-up upgrade selection stuck | 🔴 Critical | ✅ Fixed | User + Headless test |
+| 2 | Enemies spawn at world origin (0,0) | 🔴 Critical | ✅ Fixed | User + Code review |
+| 3 | Bat color identical to background | 🟡 Medium | ✅ Fixed | User + Code review |
+| 4 | Projectile despawn used origin distance | 🔴 Critical | ✅ Fixed | User + Code review |
+| 5 | Division by zero in weapon targeting | 🟡 Medium | ✅ Fixed | Code review |
+| 6 | Division by zero in enemy movement | 🟡 Medium | ✅ Fixed | Code review |
+| 7 | Canvas Y-sort NaN crash risk | 🟡 Medium | ✅ Fixed | Gemini review |
+| 8 | No distance cap on projectiles | 🟡 Medium | ✅ Fixed | Gemini review |
+| 9 | Weapons W2/W3 never unlock | 🔴 Critical | ✅ Fixed | User report |
+| 10 | W2 orbs had no collision with enemies | 🔴 Critical | ✅ Fixed | Code review |
+| 11 | W3 pulse had no visual effect | 🟡 Medium | ✅ Fixed | Code review |
+| 12 | Renderer init order wrong (undefined) | 🔴 Critical | ✅ Fixed | Code review |
+| 13 | Game freeze on game over (no end screen) | 🔴 Critical | ✅ Fixed | User report |
+| 14 | Boss death never triggered victory | 🔴 Critical | ✅ Fixed | Code review |
+| 15 | No restart from end screen | 🟡 Medium | ✅ Fixed | Code review |
+| 16 | Damage upgrade had no effect on weapons | 🔴 Critical | ✅ Fixed | User report |
+
+**Total: 16 bugs found, 16 fixed**
+
+---
+
+## Bug #1 — Level-Up Upgrade Selection Stuck
 
 **Date:** August 21, 2026
-**Status:** ✅ FIXED — Verified by headless browser test (16/16 checks pass)
-**File:** `game.html` (Phase 1–15 prototype)
-**Severity:** Game-breaking — Player gets stuck on level-up screen permanently
+**Severity:** 🔴 Critical (Game-breaking)
+**Discovered by:** User manual testing
+**Verified by:** Headless Playwright test (`test_upgrade_bug.cjs`)
+
+### Symptom
+Player gets stuck on the "LEVEL UP!" screen permanently. Pressing 1/2/3 or clicking cards does nothing.
+
+### Root Cause
+Three missing handlers:
+1. No keyboard handler for `Digit1/2/3` in `InputManager`
+2. No mouse click detection on upgrade card bounding boxes
+3. No `selectUpgrade` event handler to apply upgrades and resume game
+
+### Fix
+- Added `Digit1/2/3` + `Numpad1/2/3` keydown → `selectUpgrade` event
+- Added `_getUpgradeCardAt(x, y)` to detect card click positions
+- Added `selectUpgrade` event handler with upgrade application + state transition
+- Added `_isPaused` flag to prevent movement clicks during levelUp
+- Added `_showUpgradeOptions()` method with 3 upgrade effects
+
+### Test Results
+```
+=== RESULT: 16/16 checks passed ===
+✅ ALL FIXES VERIFIED
+```
 
 ---
 
-## Bug Description
-
-When the player levels up, the "LEVEL UP!" screen appears with 3 upgrade cards ([1] Damage Up, [2] Speed Up, [3] Health Up). Pressing keys 1, 2, or 3, or clicking on the cards, does **nothing**. The game remains permanently stuck on the level-up screen with no way to proceed.
-
-## Root Cause Analysis
-
-**Two critical handlers are missing:**
-
-### 1. No keyboard handler for number keys (1/2/3)
-
-The `InputManager` keydown handler only listens for:
-- WASD / Arrow keys (movement)
-- Escape (pause)
-
-```javascript
-// Current code (line ~645):
-window.addEventListener('keydown', (e) => {
-    this.keys[e.code] = true;
-    if (e.code === 'Escape') {
-        this.eventBus.emit('pause', { paused: true });
-    }
-});
-```
-
-**Missing:** `Digit1`, `Digit2`, `Digit3` (and `Numpad1`, `Numpad2`, `Numpad3`) handlers for upgrade selection.
-
-### 2. No mouse/touch click handler for upgrade cards
-
-The canvas pointer handler (`_onPointerDown`) sets `targetX/targetY` for player movement but has no logic to detect clicks on the level-up upgrade cards and trigger selection.
-
-### 3. No state transition from `levelUp` → `playing`
-
-The `levelUp` event handler (line ~1879) sets state to `levelUp` and pauses the game, but there is **no code** that:
-1. Accepts the upgrade selection
-2. Applies the upgrade effect
-3. Transitions state back to `playing`
-4. Resumes the game loop
-
-The valid state transitions are defined:
-```javascript
-levelUp: ['playing'],  // Can only go back to 'playing'
-```
-
-But no code ever triggers this transition.
-
-## Headless Browser Test Results
-
-```
-=== ANALYSIS OF UPGRADE INPUT HANDLING ===
-Has Digit1 handler: false
-Has Digit2 handler: false
-Has Digit3 handler: false
-Has click upgrade handler: false
-
-=== BUG VERIFICATION ===
-❌ BUG CONFIRMED: No keyboard handler for number keys (1/2/3) during levelUp state
-Has levelUp → playing transition: false
-```
-
-**Test file:** `test_upgrade_bug.cjs`
-**Screenshot:** `screenshots/upgrade_bug_test.png`
-
-## What Was Fixed
-
-| # | Fix | Location | Description |
-|---|---|---|---|
-| 1 | ✅ Keyboard handler for `Digit1/2/3` | `InputManager.keydown` | Emit `selectUpgrade` event when in `levelUp` state |
-| 2 | ✅ Canvas click detection for upgrade cards | `InputManager._onPointerDown` | Detect click position against card bounding boxes, emit selection event |
-| 3 | ✅ Upgrade selection handler | `Game` class (event wiring) | Listen for selection event, apply upgrade, transition to `playing`, resume game loop |
-| 4 | ✅ Wire upgrade effects | `_showUpgradeOptions` | Damage Up (+15%), Speed Up (+10%), Health Up (+20 HP) |
-| 5 | ✅ Touch support | Same as click | Pointer events handle both mouse and touch |
-
-## Expected Behavior
-
-1. Player gains enough XP → level-up triggered
-2. Game pauses, level-up screen appears with 3 cards
-3. Player presses `1`, `2`, or `3` **or** clicks/taps a card
-4. Selected upgrade is applied (stat change)
-5. Game resumes from `playing` state
-6. If pending level-ups remain (multi-level), show next level-up screen
-
----
-
-# Bug Report #2 — Enemy Rendering, Collision & Weapon Issues
+## Bug #2 — Enemies Spawn at World Origin (0,0)
 
 **Date:** August 21, 2026
-**Status:** ✅ ALL FIXED — Verified by headless browser test (5/5 core fixes pass)
+**Severity:** 🔴 Critical
+**Discovered by:** User manual testing
 
----
+### Symptom
+Some monsters not rendering. Getting hit with nothing visible nearby. Enemies pile up far off-screen.
 
-## Bugs Reported
-
-| # | Symptom | Severity |
-|---|---|---|
-| 1 | Some monsters not rendering (invisible) | 🔴 Critical |
-| 2 | Black overlaps on existing monsters | 🟡 Medium |
-| 3 | Getting hit with nothing visible nearby | 🔴 Critical |
-| 4 | Weapons sometimes not firing NE | 🟡 Medium |
-
-## Root Causes Found
-
-### Bug 1 & 3 — Enemies spawn at world origin (0,0), not around the player
-
+### Root Cause
+Enemy spawn positions used `Math.cos(angle) * dist` without adding player position:
 ```javascript
 // BEFORE (broken):
 x: Math.cos(angle) * dist,  // Spawns at world origin ± offset
@@ -120,60 +83,336 @@ x: px + Math.cos(angle) * dist,  // Spawns around player
 y: py + Math.sin(angle) * dist,
 ```
 
-As the player moves away from origin, enemies pile up far off-screen. They slowly chase but remain invisible. Player takes contact damage from invisible off-screen enemies.
+### Fix
+- Added `player.x + offset` and `player.y + offset` to enemy spawn positions
+- Same fix applied to boss spawn
 
-### Bug 2 — Bat color identical to background
+---
 
-```javascript
-// BEFORE:
-bat: '#1A1A2E',  // Same as background #1A1A2E — INVISIBLE!
+## Bug #3 — Bat Color Identical to Background
 
-// AFTER:
-bat: '#6B3FA0',  // Bright purple — clearly visible
-```
+**Date:** August 21, 2026
+**Severity:** 🟡 Medium (visual)
+**Discovered by:** User manual testing ("black overlaps")
 
-### Bug 4 — Projectile despawn used distance from origin
+### Symptom
+Bats are invisible against the dark background. Player takes damage from invisible enemies.
 
+### Root Cause
+Bat color `#1A1A2E` was identical to background color `#1A1A2E`.
+
+### Fix
+All enemy colors brightened:
+| Enemy | Before | After |
+|---|---|---|
+| Zombie | `#2D5A27` | `#3B8A30` |
+| Bat | `#1A1A2E` | `#6B3FA0` |
+| Skeleton | `#8B1A1A` | `#C0392B` |
+| Ghost | `#4A1A6B` | `#8E44AD` |
+| Caster | `#1A4A4A` | `#2E86C1` |
+
+---
+
+## Bug #4 — Projectile Despawn Used Origin Distance
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical
+**Discovered by:** User manual testing + Gemini code review
+
+### Symptom
+Weapons sometimes not firing. Projectiles vanish immediately when player is far from spawn.
+
+### Root Cause
+Projectile despawn used distance from world origin (0,0):
 ```javascript
 // BEFORE (broken):
 if (proj.age > 3 || Math.sqrt(proj.x * proj.x + proj.y * proj.y) > 600) {
-
-// AFTER (fixed):
-if (proj.age > 3) {
 ```
 
-Projectiles spawned at the player's position were immediately > 600px from origin when the player moved far from spawn, causing instant despawn.
-
-### Additional — Division by zero in weapon targeting
-
+### Fix
+Replaced with `distanceTraveled` tracking from spawn point:
 ```javascript
-// Added guard:
-if (dist < 1) return;  // Enemy on top of player
-```
-
-## Fixes Applied
-
-| # | Fix | Verification |
-|---|---|---|
-| 1 | ✅ Enemy spawn position relative to player | `px + Math.cos(angle)` |
-| 2 | ✅ Boss spawn position relative to player | Same pattern |
-| 3 | ✅ Projectile despawn by time only | Removed origin-distance check |
-| 4 | ✅ Division by zero guard (weapon) | `if (dist < 1) return` |
-| 5 | ✅ Enemy movement div-by-zero guard | `if (dist > 1)` with push-away |
-| 6 | ✅ Bat color fixed | `#1A1A2E` → `#6B3FA0` |
-| 7 | ✅ All enemy colors brightened | Green, purple, red, blue |
-
-## Test Results
-
-```
-=== RESULT: 5/5 core fixes passed ===
-✅ Enemy spawn around player
-✅ Boss spawn around player
-✅ Projectile origin-distance removed
-✅ Weapon div-by-zero guard
-✅ Enemy movement guard
+// AFTER (fixed):
+proj.distanceTraveled = (proj.distanceTraveled || 0) + Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy) * dt;
+if (proj.age > 3 || proj.distanceTraveled > 600) {
 ```
 
 ---
 
-*All bugs fixed and verified. Ready for gameplay testing.*
+## Bug #5 — Division by Zero in Weapon Targeting
+
+**Date:** August 21, 2026
+**Severity:** 🟡 Medium
+**Discovered by:** Code review
+
+### Symptom
+Weapon fires NaN projectile when enemy is exactly at player position.
+
+### Root Cause
+No guard for `dist === 0` when calculating projectile direction.
+
+### Fix
+Added `if (dist < 1) return;` guard before firing.
+
+---
+
+## Bug #6 — Division by Zero in Enemy Movement
+
+**Date:** August 21, 2026
+**Severity:** 🟡 Medium
+**Discovered by:** Code review
+
+### Symptom
+Enemy stops moving when exactly on top of player.
+
+### Root Cause
+No guard for `dist === 0` when normalizing movement direction.
+
+### Fix
+Added `if (dist > 1)` guard with push-away fallback.
+
+---
+
+## Bug #7 — Canvas Y-Sort NaN Crash Risk
+
+**Date:** August 21, 2026
+**Severity:** 🟡 Medium
+**Discovered by:** Gemini code review
+
+### Symptom
+Potential crash when inactive entities with missing `y` values are included in sort.
+
+### Root Cause
+Renderer received all entities but sorted including inactive ones. Dead entities could have undefined `y`.
+
+### Fix
+Filter active entities before sort:
+```javascript
+// BEFORE:
+const sorted = [...entities].sort((a, b) => a.y - b.y);
+for (const entity of sorted) {
+  if (!entity.active) continue;
+
+// AFTER:
+const sorted = entities.filter(e => e.active).sort((a, b) => a.y - b.y);
+for (const entity of sorted) {
+```
+
+---
+
+## Bug #8 — No Distance Cap on Projectiles
+
+**Date:** August 21, 2026
+**Severity:** 🟡 Medium
+**Discovered by:** Gemini code review
+
+### Symptom
+Projectiles live up to 3 seconds with no range limit, flying across the entire map.
+
+### Root Cause
+Original fix removed origin-distance check entirely, leaving only time-based despawn.
+
+### Fix
+Added `distanceTraveled` tracking from spawn point with 600px cap.
+
+---
+
+## Bug #9 — Weapons W2/W3 Never Unlock
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical
+**Discovered by:** User report ("only see one weapon")
+
+### Symptom
+W2 (Orbit) and W3 (Area) never appear. Only W1 (Projectile) fires.
+
+### Root Cause
+`unlockWeapon()` method existed but was never called. No automatic unlock when player reaches required level.
+
+### Fix
+Added `_checkWeaponUnlocks()` method called on every level-up:
+- W2 unlocks at player level 3
+- W3 unlocks at player level 6
+
+---
+
+## Bug #10 — W2 Orbs Had No Collision with Enemies
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical
+**Discovered by:** Code review
+
+### Symptom
+W2 orbs spin around player but deal no damage to enemies.
+
+### Root Cause
+`CollisionSystem` only checked Player↔Enemy, Projectile↔Enemy, Player↔Pickup. No Orb↔Enemy check.
+
+### Fix
+Added orb vs enemy collision with 0.5s per-enemy damage cooldown to prevent rapid multi-hits.
+
+---
+
+## Bug #11 — W3 Pulse Had No Visual Effect
+
+**Date:** August 21, 2026
+**Severity:** 🟡 Medium
+**Discovered by:** Code review
+
+### Symptom
+W3 area pulse damages enemies but has no visual feedback.
+
+### Root Cause
+No rendering code for the area pulse effect.
+
+### Fix
+- Added `pulseEffects` array to Renderer
+- Added `addPulseEffect(x, y, radius, color)` method
+- Added expanding orange ring animation (0.3s fade)
+- Hooked into render loop
+
+---
+
+## Bug #12 — Renderer Init Order Wrong
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical
+**Discovered by:** Code review
+
+### Symptom
+W3 pulse visual never renders. DamageSystem receives `undefined` as renderer.
+
+### Root Cause
+Initialization order in `Game.init()`:
+```
+Line 1926: this.damageSystem = new DamageSystem(..., this.renderer);  // renderer undefined!
+Line 1929: this.renderer = new Renderer(...);  // Created AFTER damageSystem
+```
+
+### Fix
+Moved `this.renderer = new Renderer(...)` before `this.damageSystem = new DamageSystem(...)`.
+
+---
+
+## Bug #13 — Game Freeze on Game Over
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical
+**Discovered by:** User report ("game just freezes when it ends")
+
+### Symptom
+Game freezes with no notification of whether the player died or timer ran out.
+
+### Root Cause
+`triggerGameOver()` set state to `gameOver` but never called `uiManager.showEndScreen()`. No end screen overlay was rendered.
+
+### Fix
+Added `_handleGameOver()` method that:
+1. Pauses the game loop
+2. Sets `_isPaused` on InputManager
+3. Calls `uiManager.showEndScreen(result, stats)`
+
+---
+
+## Bug #14 — Boss Death Never Triggered Victory
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical
+**Discovered by:** Code review
+
+### Symptom
+Killing the boss does nothing. No victory screen.
+
+### Root Cause
+`bossDeath` event was never emitted. Damage system only emitted generic `death` event.
+
+### Fix
+Added `bossDeath` emission in damage system when `target.isBoss` and HP ≤ 0:
+```javascript
+if (target.isBoss) {
+  this.eventBus.emit('bossDeath', { boss: target, killer: source });
+}
+```
+
+---
+
+## Bug #15 — No Restart from End Screen
+
+**Date:** August 21, 2026
+**Severity:** 🟡 Medium
+**Discovered by:** Code review
+
+### Symptom
+End screen says "Click to restart" but clicking does nothing. No keyboard restart either.
+
+### Root Cause
+No restart event handler. No InputManager integration with end screen.
+
+### Fix
+- Added `restart` event → `startGame()` handler
+- Added click detection on end screen → `restart` event
+- Added Enter/Space key → `restart` event
+- Wired InputManager to Game reference (`_game`)
+- Added duplicate-trigger guard to `triggerGameOver`
+
+---
+
+## Bug #16 — Damage Upgrade Had No Effect on Weapons
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical
+**Discovered by:** User report ("keeps picking damage upgrade but always needs 2 hits")
+
+### Symptom
+Picking Damage Up (+15%) has no effect on weapon damage. W1 always deals base 8 damage.
+
+### Root Cause
+Damage Up modified `player.stats.damage` but weapons used `weapon.statsPerLevel[level-1].damage` — completely separate values.
+
+### Fix
+- Added `player.damageMultiplier` (initialized to 1)
+- Damage Up now multiplies: `player.damageMultiplier *= 1.15`
+- All weapons apply multiplier: `Math.floor(stats.damage * (player.damageMultiplier || 1))`
+- Speed Up uses same pattern: `player.speedMultiplier *= 1.10`
+
+### Math After Fix
+| Damage Up Picks | W1 Damage | Zombie HP | Hits to Kill |
+|---|---|---|---|
+| 0 | 8 | 10 | 2 |
+| 1 | 9 | 10 | 2 |
+| 2 | **10** | 10 | **1!** |
+| 3 | 11 | 10 | 1 |
+
+---
+
+## Testing Infrastructure
+
+### Headless Browser Tests Created
+| File | Purpose |
+|---|---|
+| `test_upgrade_bug.cjs` | Verifies level-up selection bug exists |
+| `test_upgrade_fix.cjs` | Verifies level-up fix (16/16 checks) |
+| `test_enemy_fix.cjs` | Verifies enemy spawn/color fixes (5/5 checks) |
+| `test_weapon_unlock.cjs` | Verifies weapon unlock logic with debug logging |
+
+### Screenshots Captured
+| File | Content |
+|---|---|
+| `screenshots/upgrade_bug_test.png` | Level-up screen stuck |
+| `screenshots/upgrade_fix_test.png` | Level-up after fix |
+| `screenshots/enemy_fix_test.png` | Enemies after spawn fix |
+
+---
+
+## Known Limitations (Not Bugs)
+
+1. **Audio system** — Stub only, no sounds implemented
+2. **Gold spending** — Gold has no spending mechanic in V1
+3. **Weapon power spikes** — Level 4 and 7 power spike effects not fully implemented
+4. **Passive upgrades** — Only 3 upgrade types (Damage/Speed/Health Up)
+5. **Mobile touch** — Upgrade cards work via click, but no dedicated touch optimization
+6. **Boss minion spawn** — Boss Phase 2 minion spawn not implemented
+
+---
+
+*Report compiled from all development sessions. All bugs verified by headless browser testing where applicable.*
