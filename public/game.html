@@ -244,6 +244,13 @@ class GameState {
     this.endStats = stats;
     this.setState('gameOver');
   }
+
+  reset() {
+    this.state = 'menu';
+    this.previousState = null;
+    this.endResult = null;
+    this.endStats = null;
+  }
 }
 
 // ============================================================
@@ -497,6 +504,7 @@ class GameLoop {
   }
 
   start() {
+    if (this.running) return;
     this.running = true;
     this.lastTime = performance.now();
     this._loop(this.lastTime);
@@ -1030,16 +1038,116 @@ class MovementSystem {
     const enemies = this.entityManager.getActive('enemy');
     
     for (const enemy of enemies) {
+      if (enemy.isBoss) {
+        this._moveBoss(enemy, player, dt);
+        continue;
+      }
+      
+      const behavior = enemy.enemyData?.behavior?.pattern || 'chase';
       const dx = player.x - enemy.x;
       const dy = player.y - enemy.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       
-      if (dist > 1) {
-        enemy.x += (dx / dist) * enemy.speed * dt;
-        enemy.y += (dy / dist) * enemy.speed * dt;
+      if (behavior === 'swarm') {
+        // Bat: fast with erratic movement
+        if (dist > 1) {
+          const erraticX = (Math.random() - 0.5) * 60;
+          const erraticY = (Math.random() - 0.5) * 60;
+          enemy.x += ((dx + erraticX) / dist) * enemy.speed * dt;
+          enemy.y += ((dy + erraticY) / dist) * enemy.speed * dt;
+        }
+      } else if (behavior === 'wander_chase') {
+        // Ghost: wander sometimes, chase other times
+        if (!enemy._wanderTimer) enemy._wanderTimer = 0;
+        if (!enemy._isChasing) enemy._isChasing = false;
+        enemy._wanderTimer -= dt;
+        if (enemy._wanderTimer <= 0) {
+          enemy._isChasing = !enemy._isChasing;
+          enemy._wanderTimer = enemy._isChasing ? 4 : 2;
+        }
+        if (enemy._isChasing && dist > 1) {
+          enemy.x += (dx / dist) * enemy.speed * dt;
+          enemy.y += (dy / dist) * enemy.speed * dt;
+        } else {
+          // Wander
+          if (!enemy._wanderDx) {
+            enemy._wanderDx = (Math.random() - 0.5) * 2;
+            enemy._wanderDy = (Math.random() - 0.5) * 2;
+          }
+          enemy.x += enemy._wanderDx * enemy.speed * 0.5 * dt;
+          enemy.y += enemy._wanderDy * enemy.speed * 0.5 * dt;
+        }
+      } else if (behavior === 'ranged') {
+        // Caster: maintain distance
+        const preferredDist = 150;
+        if (dist < preferredDist - 30 && dist > 1) {
+          // Too close, back away
+          enemy.x -= (dx / dist) * enemy.speed * dt;
+          enemy.y -= (dy / dist) * enemy.speed * dt;
+        } else if (dist > preferredDist + 30 && dist > 1) {
+          // Too far, approach
+          enemy.x += (dx / dist) * enemy.speed * dt;
+          enemy.y += (dy / dist) * enemy.speed * dt;
+        }
+        // Stand still if in range (ranged attackers don't chase)
       } else {
-        // Enemy is on top of player — push away slightly
-        enemy.x -= dt * 10;
+        // Default chase (zombie, skeleton)
+        if (dist > 1) {
+          enemy.x += (dx / dist) * enemy.speed * dt;
+          enemy.y += (dy / dist) * enemy.speed * dt;
+        } else {
+          enemy.x -= dt * 10;
+        }
+      }
+    }
+  }
+
+  _moveBoss(boss, player, dt) {
+    // Boss charge behavior
+    if (!boss._bossState) {
+      boss._bossState = 'chase';
+      boss._stateTimer = 3;
+      boss._chargeDir = { x: 0, y: 0 };
+    }
+    
+    boss._stateTimer -= dt;
+    const dx = player.x - boss.x;
+    const dy = player.y - boss.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (boss._bossState === 'chase') {
+      // Move toward player
+      if (dist > 1) {
+        boss.x += (dx / dist) * boss.speed * dt;
+        boss.y += (dy / dist) * boss.speed * dt;
+      }
+      if (boss._stateTimer <= 0) {
+        // Start charge windup
+        boss._bossState = 'windup';
+        boss._stateTimer = 0.5;
+        if (dist > 1) {
+          boss._chargeDir = { x: dx / dist, y: dy / dist };
+        }
+      }
+    } else if (boss._bossState === 'windup') {
+      // Telegraph (slight pause)
+      if (boss._stateTimer <= 0) {
+        boss._bossState = 'charge';
+        boss._stateTimer = 1.5;
+      }
+    } else if (boss._bossState === 'charge') {
+      // Rush toward player's position at high speed
+      boss.x += boss._chargeDir.x * boss.speed * 3 * dt;
+      boss.y += boss._chargeDir.y * boss.speed * 3 * dt;
+      if (boss._stateTimer <= 0) {
+        boss._bossState = 'pause';
+        boss._stateTimer = 1.0;
+      }
+    } else if (boss._bossState === 'pause') {
+      // Pause after charge
+      if (boss._stateTimer <= 0) {
+        boss._bossState = 'chase';
+        boss._stateTimer = 3;
       }
     }
   }
@@ -1224,15 +1332,21 @@ class WeaponSystem {
     const speed = 400;
 
     const finalDamage = Math.floor(stats.damage * (player.damageMultiplier || 1));
-    this.entityManager.create('projectile', {
-      x: player.x,
-      y: player.y,
-      vx: (dx / dist) * speed,
-      vy: (dy / dist) * speed,
-      damage: finalDamage,
-      size: 4,
-      visual: { shape: 'square', color: '#FFD700' },
-    });
+    const projCount = stats.projectileCount || 1;
+    const baseAngle = Math.atan2(dy, dx);
+    const spreadAngle = 0.25;
+    for (let i = 0; i < projCount; i++) {
+      const angle = projCount === 1 ? baseAngle : baseAngle + (i - (projCount - 1) / 2) * spreadAngle;
+      this.entityManager.create('projectile', {
+        x: player.x,
+        y: player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        damage: finalDamage,
+        size: 4,
+        visual: { shape: 'square', color: '#FFD700' },
+      });
+    }
   }
 
   _fireW2(player, dt) {
@@ -1296,15 +1410,20 @@ class WeaponSystem {
     }
     this.cooldowns['w3_area'] = stats.cooldown;
 
-    // Emit area pulse event
+    // Emit area pulse event(s)
     const pulseDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
-    this.eventBus.emit('areaPulse', {
-      x: player.x,
-      y: player.y,
-      damage: pulseDmg,
-      radius: stats.pulseRadius,
-      pulseCount: stats.pulseCount,
-    });
+    const pulseCount = stats.pulseCount || 1;
+    for (let i = 0; i < pulseCount; i++) {
+      setTimeout(() => {
+        this.eventBus.emit('areaPulse', {
+          x: player.x,
+          y: player.y,
+          damage: pulseDmg,
+          radius: stats.pulseRadius,
+          pulseCount: pulseCount,
+        });
+      }, i * 250);
+    }
   }
 
   levelUp(weaponId) {
@@ -1324,6 +1443,11 @@ class WeaponSystem {
 
   getWeaponLevel(weaponId) {
     return this.weaponLevels[weaponId] || 0;
+  }
+
+  reset() {
+    this.weaponLevels = {};
+    this.cooldowns = {};
   }
 }
 
@@ -1386,17 +1510,19 @@ class DamageSystem {
   }
 
   _handleProjectileHit(data) {
-    this._handleDamage(data.target, { stats: {} }, data.projectile.damage);
+    const player = this.entityManager.getActive('player')[0];
+    this._handleDamage(data.target, { stats: player?.stats || {} }, data.projectile.damage);
   }
 
   _handleAreaPulse(data) {
     const enemies = this.entityManager.getActive('enemy');
+    const player = this.entityManager.getActive('player')[0];
     for (const enemy of enemies) {
       const dx = enemy.x - data.x;
       const dy = enemy.y - data.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < data.radius) {
-        this._handleDamage(enemy, { stats: {} }, data.damage);
+        this._handleDamage(enemy, { stats: player?.stats || {} }, data.damage);
       }
     }
     // Visual pulse effect
@@ -1615,6 +1741,7 @@ class Renderer {
     this.ctx = canvas.getContext('2d');
     this.camera = camera;
     this.pulseEffects = [];
+    this.bossEntity = null;
   }
 
   addPulseEffect(x, y, radius, color) {
@@ -1776,11 +1903,97 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.fillText(this.level || 1, w - 30, 22);
 
+    // Boss Health Bar (if boss is alive)
+    if (this.bossEntity && this.bossEntity.active) {
+      const bossHp = this.bossEntity.hp / this.bossEntity.maxHp;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(w/2 - 120, 40, 240, 14);
+      ctx.fillStyle = bossHp > 0.25 ? '#C0392B' : '#FF0000';
+      ctx.fillRect(w/2 - 120, 40, 240 * bossHp, 14);
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(w/2 - 120, 40, 240, 14);
+      ctx.fillStyle = '#FFF';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('THE GRAVEKEEPER', w/2, 51);
+    }
+
     // EXP Bar
     ctx.fillStyle = '#333';
     ctx.fillRect(0, h - 20, w, 20);
     ctx.fillStyle = '#4FC3F7';
     ctx.fillRect(0, h - 20, w * (this.xpPercent || 0), 20);
+  }
+}
+
+// ============================================================
+// PHASE 12b: FLOATING TEXT SYSTEM
+// ============================================================
+
+class FloatingTextSystem {
+  constructor(eventBus) {
+    this.texts = [];
+    eventBus.on('damage', (data) => this._onDamage(data));
+    eventBus.on('pickup', (data) => this._onPickup(data));
+  }
+
+  _onDamage(data) {
+    if (!data.position) return;
+    const isCrit = data.isCrit;
+    this.texts.push({
+      x: data.position.x + (Math.random() - 0.5) * 10,
+      y: data.position.y - 10,
+      text: isCrit ? `${data.damage}!` : `${data.damage}`,
+      color: isCrit ? '#FFD700' : '#FFF',
+      fontSize: isCrit ? 16 : 12,
+      age: 0,
+      maxAge: 0.8,
+      vy: -40,
+    });
+  }
+
+  _onPickup(data) {
+    if (!data.pickup?.pickupData) return;
+    const pd = data.pickup.pickupData;
+    let text = '', color = '#FFF';
+    if (pd.id === 'exp_small') { text = `+${pd.value} XP`; color = '#4FC3F7'; }
+    else if (pd.id === 'gold_coin') { text = `+${pd.value} G`; color = '#FFD700'; }
+    else if (pd.id === 'weapon_levelup') { text = 'WEAPON UP!'; color = '#FF9100'; }
+    else if (pd.id === 'screen_wipe') { text = 'SCREEN WIPE!'; color = '#00E676'; }
+    else if (pd.id === 'magnet') { text = 'MAGNET!'; color = '#FF4081'; }
+    if (text) {
+      this.texts.push({
+        x: data.player.x + (Math.random() - 0.5) * 20,
+        y: data.player.y - 20,
+        text, color,
+        fontSize: pd.id.includes('wipe') || pd.id === 'magnet' ? 14 : 10,
+        age: 0, maxAge: 1.0, vy: -30,
+      });
+    }
+  }
+
+  update(dt) {
+    for (let i = this.texts.length - 1; i >= 0; i--) {
+      const t = this.texts[i];
+      t.age += dt;
+      t.y += t.vy * dt;
+      if (t.age >= t.maxAge) {
+        this.texts.splice(i, 1);
+      }
+    }
+  }
+
+  draw(ctx) {
+    for (const t of this.texts) {
+      const alpha = Math.max(0, 1 - t.age / t.maxAge);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = t.color;
+      ctx.font = `bold ${t.fontSize}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(t.text, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -1958,6 +2171,7 @@ class Game {
     this.levelingSystem = new LevelingSystem(this.entityManager, this.dataManager, this.eventBus);
     this.uiManager = new UIManager(this.canvas, this.eventBus);
     this.audioManager = new AudioManager(this.eventBus);
+    this.floatingTextSystem = new FloatingTextSystem(this.eventBus);
 
     // Game loop
     this.gameLoop = new GameLoop(
@@ -2053,6 +2267,7 @@ class Game {
 
     this.eventBus.on('bossSpawn', (data) => {
       this.camera.shake(8, 0.5);
+      this.renderer.bossEntity = data.boss;
     });
 
     this.eventBus.on('bossDeath', (data) => {
@@ -2072,10 +2287,13 @@ class Game {
   }
 
   startGame() {
+    this.gameState.reset();
+    this.renderer.bossEntity = null;
     this.entityManager.clearAll();
     this.spawnSystem.reset();
     this.pickupSystem.reset();
     this.levelingSystem.reset();
+    this.weaponSystem.reset();
     this.gameTime = 0;
 
     // Create player
@@ -2148,6 +2366,14 @@ class Game {
       this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
     }
 
+    // Floating damage/pickup text
+    this.floatingTextSystem.update(1/60);
+    const ctx = this.renderer.ctx;
+    ctx.save();
+    this.camera.apply(ctx);
+    this.floatingTextSystem.draw(ctx);
+    ctx.restore();
+
     // Always render UI (includes end screen overlay when game over)
     this.uiManager.render();
   }
@@ -2191,7 +2417,7 @@ class Game {
           if (game.player) {
             if (!game.player.speedMultiplier) game.player.speedMultiplier = 1;
             game.player.speedMultiplier *= 1.10;
-            game.player.speed = (game.player.stats?.speed || 200) * game.player.speedMultiplier;
+            game.player.speed = (game.player.stats?.moveSpeed || 200) * game.player.speedMultiplier;
           }
         },
       },
