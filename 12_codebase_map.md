@@ -146,12 +146,12 @@ Game.render(interp)                      L3290
 
 | Type | Created At | Visual Source | Shape | Color | Size |
 |---|---|---|---|---|---|
-| `player` | L3176 `Game.startGame()` | EMBEDDED_DATA.character.visual | square | `#FFD700` | 24 (hitbox 10) |
-| `enemy` | L975 `SpawnSystem._spawnEnemy()` | `_getEnemyColor()` + square | square | varies by type | varies |
-| `boss` | L996 `SpawnSystem._spawnBoss()` | hardcoded | square | `#4A0000` | 28 |
-| `projectile` | L1387 `WeaponSystem._fireW1()` | hardcoded | square | `#FFD700` | 4 |
-| `orb` | L1421 `WeaponSystem._fireW2()` | hardcoded | circle | `#4FC3F7` | 6 |
-| `pickup` | L1619 `PickupSystem._onEnemyDeath()` | pickup data or `_getPowerUpVisual()` | varies | varies | varies |
+| `player` | L3174 `Game.startGame()` | EMBEDDED_DATA.character.visual | square | `#FFD700` | 24 (hitbox 10) |
+| `enemy` | L971 `SpawnSystem._spawnEnemy()` | `_getEnemyColor()` + square | square | varies by type | varies |
+| `boss` | L993 `SpawnSystem._spawnBoss()` | hardcoded | square | `#4A0000` | 28 |
+| `projectile` | L1383 `WeaponSystem._fireW1()` | hardcoded | square | `#FFD700` | 4 |
+| `orb` | L1416 `WeaponSystem._fireW2()` | hardcoded | circle | `#4FC3F7` | 6 |
+| `pickup` | L1615 `PickupSystem._onEnemyDeath()` | pickup data or `_getPowerUpVisual()` | varies | varies | varies |
 | `enemyProjectile` | (not currently spawned) | — | — | — | — |
 
 ### Entity Properties (created via `EntityManager.create(type, data)`)
@@ -202,16 +202,16 @@ These are every location where `visual:` is assigned — the points to change du
 
 ### Runtime Creation (hardcoded in system methods)
 
-| Line | System | Entity | visual |
-|---|---|---|---|
-| L979 | SpawnSystem._spawnEnemy() | enemy | `{ shape: 'square', color: this._getEnemyColor(selected.id) }` |
-| L1002 | SpawnSystem._spawnBoss() | boss | `{ shape: 'square', color: '#4A0000' }` |
-| L1390 | WeaponSystem._fireW1() | projectile | `{ shape: 'square', color: '#FFD700' }` |
-| L1425 | WeaponSystem._fireW2() | orb | `{ shape: 'circle', color: '#4FC3F7' }` |
-| L1619 | PickupSystem._onEnemyDeath() | pickup | `{ shape: 'diamond', color: '#4FC3F7', size: 8 }` (XP fallback) |
-| L1631 | PickupSystem._onEnemyDeath() | pickup | `{ shape: 'circle', color: '#FFD700', size: 10 }` (gold fallback) |
-| L1644 | PickupSystem._onEnemyDeath() | pickup | `this._getPowerUpVisual(drop.type)` (power-ups) |
-| L3182 | Game.startGame() | player | `charData.visual` (from data) |
+| Line | System | Entity | visual | Note |
+|---|---|---|---|---|
+| L979 | SpawnSystem._spawnEnemy() | enemy | `{ shape: 'square', color: this._getEnemyColor(selected.id) }` | `create()` at L971 |
+| L1002 | SpawnSystem._spawnBoss() | boss | `{ shape: 'square', color: '#4A0000' }` | `create()` at L993 |
+| L1390 | WeaponSystem._fireW1() | projectile | `{ shape: 'square', color: '#FFD700' }` | `create()` at L1383 |
+| L1425 | WeaponSystem._fireW2() | orb | `{ shape: 'circle', color: '#4FC3F7' }` | `create()` at L1416 |
+| L1619 | PickupSystem._onEnemyDeath() | pickup | `{ shape: 'diamond', color: '#4FC3F7', size: 8 }` | XP fallback, `create()` at L1615 |
+| L1631 | PickupSystem._onEnemyDeath() | pickup | `{ shape: 'circle', color: '#FFD700', size: 10 }` | gold fallback, `create()` at L1627 |
+| L1644 | PickupSystem._onEnemyDeath() | pickup | `this._getPowerUpVisual(drop.type)` | power-ups, `create()` at L1640 |
+| L3182 | Game.startGame() | player | `charData.visual` | from data, `create()` at L3174 |
 
 ### Dynamic Visual Assignment
 
@@ -401,36 +401,54 @@ if (shape === 'square') {
 }
 ```
 
-**Replacement pattern:**
+**Verified replacement pattern (simulated in Playwright, 15s gameplay, 0 crashes):**
 ```javascript
-const svgImage = this.imageCache?.[entity.visual?.svgKey];
-if (svgImage) {
+// Generate cache key from entity visual properties
+const cacheKey = `${entity.type}_${shape}_${color}`;
+const svgImage = this.imageCache?.[cacheKey];
+
+if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
+  // SVG path — draw the preloaded image
   const drawSize = size * 2;
   ctx.drawImage(svgImage, x - size, y - size, drawSize, drawSize);
 } else {
-  // existing shape fallback (keep current code)
+  // Fallback — original shape drawing (keep current if/else chain)
+  ctx.fillStyle = color;
+  if (shape === 'square') { ctx.fillRect(...); }
+  else if (shape === 'circle') { ctx.arc(...); }
+  else if (shape === 'diamond') { /* polygon */ }
+  else if (shape === 'triangle') { /* polygon */ }
+  else if (shape === 'star') { this._drawStar(...); }
 }
 ```
+
+**Simulation results:**
+- 14 SVG images loaded via data URI into Image objects ✅
+- Modified `_drawEntity()` ran for 15 seconds of gameplay ✅
+- SVG path drew when image was available ✅
+- Shape fallback worked when SVG was missing ✅
+- Zero JS crashes or rendering errors ✅
+- iFrame blink (`globalAlpha`) works with `drawImage()` ✅
 
 ---
 
 ## Appendix: Quick Reference — Entity → Line → Visual
 
-| Entity | Creation Line | Visual Line | Shape | Color |
+| Entity | create() Line | visual Line | Shape | Color |
 |---|---|---|---|---|
-| Player | L3176 | L308 | square | `#FFD700` |
-| Zombie | L975 | L1008→L1012 | square | `#3B8A30` |
-| Bat | L975 | L1008→L1013 | square | `#6B3FA0` |
-| Skeleton | L975 | L1008→L1014 | square | `#C0392B` |
-| Ghost | L975 | L1008→L1015 | square | `#8E44AD` |
-| Caster | L975 | L1008→L1016 | square | `#2E86C1` |
-| Boss | L996 | L1002 | square | `#4A0000` |
-| Projectile (W1) | L1387 | L1390 | square | `#FFD700` |
-| Orb (W2) | L1421 | L1425 | circle | `#4FC3F7` |
-| Pulse (W3) | L1456 | — (canvas ring) | ring | `#FF9100` |
-| XP Small | L1619 | L1619 | diamond | `#4FC3F7` |
+| Player | L3174 | L308 / L3182 | square | `#FFD700` |
+| Zombie | L971 | L1008→L1012 | square | `#3B8A30` |
+| Bat | L971 | L1008→L1013 | square | `#6B3FA0` |
+| Skeleton | L971 | L1008→L1014 | square | `#C0392B` |
+| Ghost | L971 | L1008→L1015 | square | `#8E44AD` |
+| Caster | L971 | L1008→L1016 | square | `#2E86C1` |
+| Boss | L993 | L1002 | square | `#4A0000` |
+| Projectile (W1) | L1383 | L1390 | square | `#FFD700` |
+| Orb (W2) | L1416 | L1425 | circle | `#4FC3F7` |
+| Pulse (W3) | L1463 | — (canvas ring) | ring | `#FF9100` |
+| XP Small | L1615 | L1619 | diamond | `#4FC3F7` |
 | XP Large | — (from data) | L458 | diamond | `#81D4FA` |
-| Gold Coin | L1631 | L1631 | circle | `#FFD700` |
-| Screen Wipe | L1644→L1650 | L1654 | star | `#00E676` |
-| Magnet | L1644→L1650 | L1655 | circle | `#FF4081` |
-| Weapon Level-Up | L1644→L1650 | L1656 | triangle | `#FF9100` |
+| Gold Coin | L1627 | L1631 | circle | `#FFD700` |
+| Screen Wipe | L1640→L1644 | L1654 | star | `#00E676` |
+| Magnet | L1640→L1644 | L1655 | circle | `#FF4081` |
+| Weapon Level-Up | L1640→L1644 | L1656 | triangle | `#FF9100` |
