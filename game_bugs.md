@@ -39,8 +39,9 @@
 | 27 | WeaponSystem not reset on restart | 🟡 Medium | ✅ Fixed | System audit |
 | 28 | Double power-ups per level (addXP while loop + key repeat) | 🔴 Critical | ✅ Fixed | User report |
 | 29 | Upgrade key repeat: holding 1/2/3 applies upgrade multiple times | 🔴 Critical | ✅ Fixed | Console trace |
+| 30 | Upgrade lock resets before key release (pending level-up race) | 🔴 Critical | ✅ Fixed | Gemini review |
 
-**Total: 29 bugs found, 29 fixed**
+**Total: 30 bugs found, 30 fixed**
 
 ---
 
@@ -178,6 +179,41 @@ User's console log showed clean single emits:
 [levelUp event] Fired at level 4   ← 1 event (correct)
 ```
 No double emits — issue was key repeat, not event duplication.
+
+---
+
+## Bug #30 — Upgrade Lock Resets Before Key Release
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical (game balance)
+**Discovered by:** Gemini code review
+
+### Symptom
+With pending level-ups in queue, holding 1/2/3 applies the upgrade multiple times across sequential level-up screens.
+
+### Root Cause
+Lock was reset at the end of `selectUpgrade` handler. When there's a pending level-up, `_showUpgradeOptions()` shows the next screen while the key is still held. Lock is already false, so key repeat fires again.
+
+```
+keydown '1' → lock=true → selectUpgrade → apply → hideLevelUp →
+hasPending=true → _showUpgradeOptions (new screen!) →
+lock=false → key still held → keydown '1' → SELECTS AGAIN!
+```
+
+### Fix
+- Removed lock reset from `selectUpgrade` handler
+- Reset lock on `keyup` (when key is actually released)
+- Reset lock on any `pointerdown` (cross-input cleanup)
+
+```javascript
+// keyup handler now resets lock:
+window.addEventListener('keyup', (e) => {
+  this.keys[e.code] = false;
+  if (e.code.startsWith('Digit') || e.code.startsWith('Numpad')) {
+    this._upgradeKeyLock = false;
+  }
+});
+```
 
 ---
 

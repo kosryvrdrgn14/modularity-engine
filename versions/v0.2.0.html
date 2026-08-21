@@ -677,10 +677,19 @@ class InputManager {
     });
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
+      // Reset upgrade lock when ANY number key is released
+      if (e.code === 'Digit1' || e.code === 'Numpad1' ||
+          e.code === 'Digit2' || e.code === 'Numpad2' ||
+          e.code === 'Digit3' || e.code === 'Numpad3') {
+        this._upgradeKeyLock = false;
+      }
     });
   }
 
   _onPointerDown(screenX, screenY) {
+    // Reset keyboard lock on any click (cross-input cleanup)
+    this._upgradeKeyLock = false;
+    
     const rect = this.canvas.getBoundingClientRect();
     const x = (screenX - rect.left) * (this.canvas.width / rect.width);
     const y = (screenY - rect.top) * (this.canvas.height / rect.height);
@@ -2256,7 +2265,6 @@ class Game {
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
       }
-      this.inputManager._upgradeKeyLock = false;
     });
 
     this.eventBus.on('death', (data) => {
