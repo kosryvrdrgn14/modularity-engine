@@ -16,6 +16,7 @@
 - Boss death double-fire guard added
 - Full audio implementation map created (`10_audio_implementation_map.md`)
 - Audio spec updated to v1.3 with game event→sound mapping
+- **Full AudioManager implemented** — 19 sounds, 16 event wires, payout triad engine, ducking, distance audio
 
 ### Core Systems
 - Game loop at 60 FPS with fixed timestep

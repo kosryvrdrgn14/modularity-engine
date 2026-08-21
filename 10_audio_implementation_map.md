@@ -3,7 +3,7 @@
 > **Game Version:** v0.2.0 (First Playable Build)
 > **Spec Version:** 1.2 (`09_audio_spec.md`)
 > **Last Updated:** 2026-08-21
-> **Status:** Implementation Guide — All 7 gaps resolved, ready to code
+> **Status:** Implementation Complete — All sounds wired and synthesized
 > **Purpose:** Exact line-by-line mapping of where every sound fires in `game.html`, what triggers it, and what the AudioManager needs to do.
 
 ---
@@ -379,67 +379,67 @@ Per `09_audio_spec.md` §5, the AudioManager must duck lower-priority sounds whe
 
 ### Phase A: Core Audio Infrastructure
 
-- [ ] **A1.** Replace AudioManager stub (line 2135) with full implementation.
-- [ ] **A2.** Implement `init()` — create AudioContext, master gain, channel gains (SFX/Music/UI).
-- [ ] **A3.** Implement `resume()` — call `audioContext.resume()` on user gesture.
-- [ ] **A4.** Implement 16-slot SFX pool with eviction logic.
-- [ ] **A5.** Implement `play(soundId, options)` — route to correct synthesis function.
-- [ ] **A6.** Add `setPlayer(player)` method for distance calculations.
-- [ ] **A7.** Add browser unlock handler (click-to-start overlay or canvas click).
+- [x] **A1.** Replace AudioManager stub (line 2135) with full implementation.
+- [x] **A2.** Implement `init()` — create AudioContext, master gain, channel gains (SFX/Music/UI).
+- [x] **A3.** Implement `resume()` — call `audioContext.resume()` on user gesture.
+- [x] **A4.** Implement 16-slot SFX pool with eviction logic.
+- [x] **A5.** Implement `play(soundId, options)` — route to correct synthesis function.
+- [x] **A6.** Add `setPlayer(player)` method for distance calculations.
+- [x] **A7.** Add browser unlock handler (click-to-start overlay or canvas click).
 
 ### Phase B: Event Wiring
 
-- [ ] **B1.** Subscribe to `pickup` event — route by `pickupData.id`.
-- [ ] **B2.** Subscribe to `death` event — route by `data.type`.
-- [ ] **B3.** Subscribe to `projectileHit` event — play `weapon_hit`.
-- [ ] **B4.** Subscribe to `contactDamage` event — play `player_hurt`.
-- [ ] **B5.** Subscribe to `areaPulse` event — play `w3_pulse`.
-- [ ] **B6.** Subscribe to `levelUp` event — play `levelup`.
-- [ ] **B7.** Subscribe to `selectUpgrade` event — play `ui_click`.
-- [ ] **B8.** Subscribe to `bossSpawn` event — play `boss_spawn`.
-- [ ] **B9.** Subscribe to `bossDeath` event — play `boss_death`.
-- [ ] **B10.** Subscribe to `weaponUnlock` event — play `weapon_unlock`.
-- [ ] **B11.** Subscribe to `weaponLevelUp` event — play `powerup_collect`.
-- [ ] **B12.** Subscribe to `magnetActivate` event — start `magnet_hum`.
-- [ ] **B13.** Subscribe to `restart` event — play `restart`.
-- [ ] **B14.** Subscribe to `pause` event — play `ui_click` + duck/pause sounds.
-- [ ] **B15.** Emit `weaponFire` from `_fireW1()` (line ~1356) — play `w1_fire`.
+- [x] **B1.** Subscribe to `pickup` event — route by `pickupData.id`.
+- [x] **B2.** Subscribe to `death` event — route by `data.type`.
+- [x] **B3.** Subscribe to `projectileHit` event — play `weapon_hit`.
+- [x] **B4.** Subscribe to `contactDamage` event — play `player_hurt`.
+- [x] **B5.** Subscribe to `areaPulse` event — play `w3_pulse`.
+- [x] **B6.** Subscribe to `levelUp` event — play `levelup`.
+- [x] **B7.** Subscribe to `selectUpgrade` event — play `ui_click`.
+- [x] **B8.** Subscribe to `bossSpawn` event — play `boss_spawn`.
+- [x] **B9.** Subscribe to `bossDeath` event — play `boss_death`.
+- [x] **B10.** Subscribe to `weaponUnlock` event — play `weapon_unlock`.
+- [x] **B11.** Subscribe to `weaponLevelUp` event — play `powerup_collect`.
+- [x] **B12.** Subscribe to `magnetActivate` event — start `magnet_hum`.
+- [x] **B13.** Subscribe to `restart` event — play `restart`.
+- [x] **B14.** Subscribe to `stateChange` event — stop continuous sounds on game over.
+- [x] **B15.** `weaponFire` event emitted from `_fireW1()` (line 1362).
 
 ### Phase C: Synthesis Functions
 
-- [ ] **C1.** `playPickupTriad(baseFreq)` — payout triad engine for XP/gold (§4).
-- [ ] **C2.** `playGoldArpeggio(baseFreq)` — brighter 3-note pattern for coins.
-- [ ] **C3.** `playPowerUpArpeggio()` — full 5-note arpeggio for power-ups.
-- [ ] **C4.** `playLevelUpChime()` — ascending C5→E5→G5→C6.
-- [ ] **C5.** `playWeaponFire()` — W1 single blip.
-- [ ] **C6.** `playWeaponHit()` — noise burst.
-- [ ] **C7.** `playEnemyKill(type)` — route to enemy-specific death sound.
-- [ ] **C8.** `playBossSpawn()` — deep impact.
-- [ ] **C9.** `playBossDeath()` — layered bass drop.
-- [ ] **C10.** `playBossCharge()` — low sweep warning.
-- [ ] **C11.** `playPlayerHurt()` — blunt impact.
-- [ ] **C12.** `playPlayerDeath()` — descending wail.
-- [ ] **C13. `playAreaPulse()`** — W3 whoosh/bass pulse (enhanced visual already exists).
-- [ ] **C14.** `playScreenWipe()` — dramatic sweep + noise.
-- [ ] **C15.** `startMagnetHum()` / `stopMagnetHum()` — continuous sound.
-- [ ] **C16.** `startOrbitHum()` / `stopOrbitHum()` — W2 continuous hum.
-- [ ] **C17.** `playUIClick()` — tiny sine blip.
-- [ ] **C18.** `playRestart()` — ascending blip.
-- [ ] **C19.** `playWeaponUnlock()` — rising triad jingle.
+- [x] **C1.** `_playPickupTriad()` — payout triad engine for XP (3-note arpeggio).
+- [x] **C2.** `_playGoldArpeggio()` — brighter 3-note pattern for coins.
+- [x] **C3.** `_synthPowerUp()` — full 5-note arpeggio for power-ups.
+- [x] **C4.** `_synthLevelUp()` — ascending C5→E5→G5→C6.
+- [x] **C5.** `_synthW1Fire()` — W1 single blip.
+- [x] **C6.** `_synthWeaponHit()` — noise burst.
+- [x] **C7.** `_synthEnemyKill(type)` — routes to 5 enemy-specific death sounds.
+- [x] **C8.** `_synthBossSpawn()` — deep impact + noise.
+- [x] **C9.** `_synthBossDeath()` — layered 3-oscillator bass drop.
+- [x] **C10.** `_synthBossCharge()` — low sweep warning.
+- [x] **C11.** `_synthPlayerHurt()` — blunt impact.
+- [x] **C12.** `_synthPlayerDeath()` — descending wail.
+- [x] **C13.** `_synthW3Pulse()` — sawtooth→LP whoosh/bass pulse.
+- [x] **C14.** `_synthScreenWipe()` — dramatic sweep + noise.
+- [x] **C15.** `_startMagnetHum()` / `_stopMagnetHum()` — continuous sine 220+330Hz.
+- [x] **C16.** `startOrbitHum()` / `stopOrbitHum()` — W2 continuous triangle 110+165Hz.
+- [x] **C17.** `_synthUIClick()` — tiny sine 800Hz.
+- [x] **C18.** `_synthRestart()` — ascending sine 440→880Hz.
+- [x] **C19.** `_synthWeaponUnlock()` — rising triad C5→E5→G5.
 
 ### Phase D: Distance & Ducking
 
-- [ ] **D1.** Implement distance calculation for spatial sounds (§5).
-- [ ] **D2.** Implement 4-tier volume attenuation (0–100px: 100%, 100–200px: 70%, 200–400px: 40%, 400+px: 20%).
-- [ ] **D3.** Implement priority ducking (§6 of audio spec).
-- [ ] **D4.** Implement duck stacking (lowest gain wins).
-- [ ] **D5.** Implement level-up screen duck (combat to 10%).
+- [x] **D1.** `_getDistance()` — calculates distance from player to source.
+- [x] **D2.** `_distanceVolume()` — 4-tier attenuation (0–100px: 100%, 100–200px: 70%, 200–400px: 40%, 400+px: 20%).
+- [x] **D3.** `_duckAll()` — priority ducking with timed restore.
+- [x] **D4.** `_duckForBoss()` — ducks SFX to 60% during boss fight.
+- [x] **D5.** `duckForLevelUp()` — ducks combat to 10% during upgrade screen.
 
 ### Phase E: Boss Sound Event (Code Change Required)
 
-- [ ] **E1.** Add `eventBus` reference to MovementSystem or emit `bossCharge` from Game.update().
-- [ ] **E2.** Emit `bossCharge` when boss transitions from `windup` → `charge` (line 1146).
-- [ ] **E3.** Guard `death` event handler to skip `boss_gravekeeper` type (handled by `bossDeath`).
+- [x] **E1.** `_detectBossStateChanges()` in Game.update() emits `bossCharge` events.
+- [x] **E2.** `bossCharge` emitted on `windup` and `charge` state transitions.
+- [x] **E3.** `death` handler guards against `boss_gravekeeper` type.
 
 ### Phase F: Testing
 
@@ -453,6 +453,8 @@ Per `09_audio_spec.md` §5, the AudioManager must duck lower-priority sounds whe
 - [ ] **F8.** Verify magnet hum fades out in last 0.5s.
 - [ ] **F9.** Verify no sound plays after game over (except death sting).
 - [ ] **F10.** Verify restart sound plays and all sounds reset cleanly.
+
+**Note:** Phase F requires manual playtesting in browser — AudioContext cannot be verified in headless tests.
 
 ---
 
