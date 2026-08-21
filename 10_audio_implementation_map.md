@@ -3,7 +3,7 @@
 > **Game Version:** v0.2.0 (First Playable Build)
 > **Spec Version:** 1.2 (`09_audio_spec.md`)
 > **Last Updated:** 2026-08-21
-> **Status:** Implementation Guide — Ready to Code
+> **Status:** Implementation Guide — All 7 gaps resolved, ready to code
 > **Purpose:** Exact line-by-line mapping of where every sound fires in `game.html`, what triggers it, and what the AudioManager needs to do.
 
 ---
@@ -456,17 +456,23 @@ Per `09_audio_spec.md` §5, the AudioManager must duck lower-priority sounds whe
 
 ---
 
-## Appendix: Known Gaps Requiring Code Changes
+## Appendix: Resolved Gaps
 
-| # | Gap | Location | Fix Required |
+All 7 gaps were fixed on 2026-08-21. Listed here for reference.
+
+| # | Gap | Fix Applied | Line |
 |---|---|---|---|
-| 1 | No `weaponFire` event for W1 | `_fireW1()` line ~1356 | Add `eventBus.emit('weaponFire', { weaponId: 'w1_projectile' })` |
-| 2 | No `bossCharge` event | `_moveBoss()` line 1146 | Add `eventBus.emit('bossCharge', { boss })` on state transition |
-| 3 | MovementSystem has no `eventBus` ref | Constructor line ~1085 | Pass `eventBus` to MovementSystem constructor, OR emit from Game.update() |
-| 4 | AudioManager has no `player` ref | AudioManager constructor | Add `setPlayer()` method, called from `Game.startGame()` |
-| 5 | Boss death fires both `death` AND `bossDeath` | Lines 1511 + 1518 | AudioManager skips `death` when `type === 'boss_gravekeeper'` |
-| 6 | No browser unlock handler | Game.init() line 2226 | Add click-to-start overlay or canvas click handler before `audioManager.resume()` |
-| 7 | W2 hum is not continuous | N/A | AudioManager must track W2 active state and maintain oscillator |
+| 1 | No `weaponFire` event for W1 | `eventBus.emit('weaponFire', { weaponId: 'w1_projectile' })` in `_fireW1()` | 1362 |
+| 2+3 | No `bossCharge` event / MovementSystem has no eventBus | `_detectBossStateChanges()` in Game.update() — tracks `boss._prevAudioState` transitions | 2431 |
+| 4 | AudioManager has no `player` ref | `setPlayer(player)` method + called from `startGame()` | 2165, 2374 |
+| 5 | Boss death fires both `death` AND `bossDeath` | Guard: `if (data.type === 'boss_gravekeeper') return` in `death` handler | 2315 |
+| 6 | No browser unlock handler | `unlockAudio` click/touchstart listener with `{ once: true }` in `init()` | 2254 |
+| 7 | W2 hum not tracked as continuous | `startOrbitHum()` / `stopOrbitHum()` stubs with `_orbitHumRunning` flag | 2171 |
+
+**New events now available for AudioManager:**
+- `weaponFire` — fires when W1 creates projectiles
+- `bossCharge` — fires on boss state transitions (windup, charge)
+- `setPlayer()` — provides player position for distance calculations
 
 ---
 

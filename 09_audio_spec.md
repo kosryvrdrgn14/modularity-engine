@@ -513,4 +513,4 @@ From `vs_prog.md` Sound Design Arc. These are the sound-specific acceptance crit
 
 ---
 
-*End of 09_audio_spec.md — Version 1.2 (updated for v0.2.0 game state, added event→sound mapping, marked 5 future sounds, added 2 new sounds)*
+*End of 09_audio_spec.md — Version 1.3 (all 7 implementation gaps resolved in game.html v0.2.0, see 10_audio_implementation_map.md)*

@@ -1358,6 +1358,8 @@ class WeaponSystem {
         visual: { shape: 'square', color: '#FFD700' },
       });
     }
+    // GAP 1 FIX: Emit weaponFire so AudioManager can play w1_fire
+    this.eventBus.emit('weaponFire', { weaponId: 'w1_projectile' });
   }
 
   _fireW2(player, dt) {
@@ -2158,6 +2160,23 @@ class AudioManager {
     if (!this.ctx || !this.initialized) return;
     // Placeholder - will implement full audio in Phase 14
   }
+
+  // GAP 4 FIX: Store player reference for distance-based audio
+  setPlayer(player) {
+    this.player = player;
+  }
+
+  // GAP 7 FIX: Track W2 continuous hum state
+  startOrbitHum() {
+    if (this._orbitHumRunning) return;
+    this._orbitHumRunning = true;
+    // Will be implemented with full synthesis in Phase 14
+  }
+
+  stopOrbitHum() {
+    this._orbitHumRunning = false;
+    // Will be implemented with full synthesis in Phase 14
+  }
 }
 
 // ============================================================
@@ -2231,6 +2250,15 @@ class Game {
     // Hide loading screen
     loadingScreen.style.display = 'none';
 
+    // GAP 6 FIX: Browser audio unlock — resume AudioContext on first click
+    const unlockAudio = () => {
+      this.audioManager.resume();
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+
     // Start in playing state
     this.startGame();
   }
@@ -2283,6 +2311,8 @@ class Game {
     });
 
     this.eventBus.on('death', (data) => {
+      // GAP 5 FIX: Skip boss deaths here — handled by bossDeath event
+      if (data.type === 'boss_gravekeeper') return;
       if (data.entity === this.player) {
         this.gameState.triggerGameOver('defeat', this._getStats());
         this._handleGameOver();
@@ -2340,6 +2370,8 @@ class Game {
     });
 
     this.weaponSystem.init(this.player);
+    // GAP 4 FIX: Pass player reference to AudioManager for distance calculations
+    this.audioManager.setPlayer(this.player);
     this.gameState.setState('playing');
     this.gameLoop.paused = false;
     this.gameLoop.start();
@@ -2361,6 +2393,9 @@ class Game {
     this.spawnSystem.update(dt);
     this.pickupSystem.update(dt);
     this.levelingSystem.update(dt);
+
+    // GAP 2+3 FIX: Detect boss state transitions for audio events
+    this._detectBossStateChanges();
 
     // Update camera
     if (this.player) {
@@ -2389,6 +2424,29 @@ class Game {
     }
     if (bestWeapon) {
       this.weaponSystem.levelUp(bestWeapon);
+    }
+  }
+
+  // GAP 2+3 FIX: Detect boss state transitions and emit events for AudioManager
+  _detectBossStateChanges() {
+    if (!this.renderer.bossEntity) return;
+    const boss = this.renderer.bossEntity;
+    if (!boss || boss.hp <= 0) return;
+    
+    const prevState = boss._prevAudioState || '';
+    const currState = boss._bossState || '';
+    
+    if (prevState !== currState) {
+      boss._prevAudioState = currState;
+      
+      // Windup = telegraph before charge — play warning growl
+      if (currState === 'windup') {
+        this.eventBus.emit('bossCharge', { boss, phase: 'windup' });
+      }
+      // Charge = actual rush — play impact sound
+      if (currState === 'charge') {
+        this.eventBus.emit('bossCharge', { boss, phase: 'charge' });
+      }
     }
   }
 

@@ -4,7 +4,18 @@
 
 ## v0.2.0 — First Playable Build
 **Date:** August 21, 2026
-**Status:** Playable prototype (29 bugs fixed)
+**Status:** Playable prototype (30 bugs fixed, audio gaps resolved)
+
+### Audio Preparation (v0.2.0+)
+- 7 implementation gaps resolved in game.html for audio system
+- `weaponFire` event added to W1 projectile creation
+- `bossCharge` event detection via state transition tracking
+- AudioManager gains `setPlayer()` for distance-based audio
+- Browser audio unlock handler (click/touchstart)
+- W2 continuous hum tracking stubs
+- Boss death double-fire guard added
+- Full audio implementation map created (`10_audio_implementation_map.md`)
+- Audio spec updated to v1.3 with game event→sound mapping
 
 ### Core Systems
 - Game loop at 60 FPS with fixed timestep
