@@ -1039,9 +1039,10 @@ class MovementSystem {
       proj.x += proj.vx * dt;
       proj.y += proj.vy * dt;
       proj.age = (proj.age || 0) + dt;
+      proj.distanceTraveled = (proj.distanceTraveled || 0) + Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy) * dt;
       
-      // Despawn after 3 seconds or 600px from player
-      if (proj.age > 3) {
+      // Despawn after 3 seconds or 600px traveled
+      if (proj.age > 3 || proj.distanceTraveled > 600) {
         this.entityManager.destroy(proj);
       }
     }
@@ -1573,10 +1574,9 @@ class Renderer {
     // Draw grid
     this._drawGrid();
 
-    // Draw entities (y-sorted)
-    const sorted = [...entities].sort((a, b) => a.y - b.y);
+    // Draw entities (y-sorted, filter active first to avoid NaN from dead entities)
+    const sorted = entities.filter(e => e.active).sort((a, b) => a.y - b.y);
     for (const entity of sorted) {
-      if (!entity.active) continue;
       this._drawEntity(entity);
     }
 
