@@ -37,9 +37,10 @@
 | 25 | W3 pulse count per level ignored | 🟡 Medium | ✅ Fixed | System audit |
 | 26 | Speed Up uses wrong stat key | 🟢 Low | ✅ Fixed | System audit |
 | 27 | WeaponSystem not reset on restart | 🟡 Medium | ✅ Fixed | System audit |
-| 28 | Double power-ups per level (addXP only triggers 1 level-up per call) | 🔴 Critical | ✅ Fixed | User report |
+| 28 | Double power-ups per level (addXP while loop + key repeat) | 🔴 Critical | ✅ Fixed | User report |
+| 29 | Upgrade key repeat: holding 1/2/3 applies upgrade multiple times | 🔴 Critical | ✅ Fixed | Console trace |
 
-**Total: 28 bugs found, 28 fixed**
+**Total: 29 bugs found, 29 fixed**
 
 ---
 
@@ -144,6 +145,39 @@ if (this.xp >= xpNeeded && this.queue.length < 3) { ... }
 while (this.xp >= xpNeeded && this.queue.length < 3) { ... }
 ```
 Also added guard to `_showUpgradeOptions` to prevent duplicate screens during race conditions.
+
+---
+
+## Bug #29 — Upgrade Key Repeat Applies Upgrade Multiple Times
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical (game balance)
+**Discovered by:** Console trace analysis
+
+### Symptom
+Player picks 1 upgrade but it applies twice, making the game too easy.
+
+### Root Cause
+`keydown` event fires repeatedly when a key is held (browser key repeat). Flow:
+1. User presses 1 → `selectUpgrade(index=0)` → upgrade applied, next level-up screen shown
+2. Key repeat fires `keydown` within milliseconds → `selectUpgrade(index=0)` fires again
+3. Guard checks: `isLevelUp() = true`, `levelUpOptions = exists` → both pass
+4. Upgrade applied a **second time**
+
+### Fix
+Added `_upgradeKeyLock` debounce flag to InputManager:
+- Set `true` on first keydown/click for upgrade selection
+- Blocks subsequent keydown events while locked
+- Reset `false` after upgrade is consumed
+
+### Console Evidence
+User's console log showed clean single emits:
+```
+[levelUp event] Fired at level 2   ← 1 event (correct)
+[levelUp event] Fired at level 3   ← 1 event (correct)
+[levelUp event] Fired at level 4   ← 1 event (correct)
+```
+No double emits — issue was key repeat, not event duplication.
 
 ---
 

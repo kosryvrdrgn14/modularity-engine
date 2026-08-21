@@ -623,6 +623,7 @@ class InputManager {
     
     // Pause state (prevents movement clicks during levelUp/pause)
     this._isPaused = false;
+    this._upgradeKeyLock = false;
     
     this._bindEvents();
   }
@@ -660,13 +661,13 @@ class InputManager {
       if (e.code === 'Escape') {
         this.eventBus.emit('pause', { paused: true });
       }
-      // Upgrade selection during levelUp state
+      // Upgrade selection during levelUp state (debounced to prevent key repeat)
       if (e.code === 'Digit1' || e.code === 'Numpad1') {
-        this.eventBus.emit('selectUpgrade', { index: 0 });
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 0 }); }
       } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
-        this.eventBus.emit('selectUpgrade', { index: 1 });
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 1 }); }
       } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
-        this.eventBus.emit('selectUpgrade', { index: 2 });
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 2 }); }
       }
       // Restart on end screen
       if (e.code === 'Enter' || e.code === 'Space') {
@@ -683,10 +684,10 @@ class InputManager {
     const x = (screenX - rect.left) * (this.canvas.width / rect.width);
     const y = (screenY - rect.top) * (this.canvas.height / rect.height);
     
-    // Check if clicking on upgrade cards during levelUp state
+    // Check if clicking on upgrade cards during levelUp state (debounced)
     const cardIndex = this._getUpgradeCardAt(x, y);
     if (cardIndex >= 0) {
-      this.eventBus.emit('selectUpgrade', { index: cardIndex });
+      if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: cardIndex }); }
       return;
     }
     
@@ -1687,8 +1688,6 @@ class LevelingSystem {
   addXP(amount) {
     this.xp += amount;
     
-    // Trigger ALL pending level-ups in one call (while loop, not if)
-    // This prevents double levelUp events when multiple pickups collected in same frame
     while (this.xp >= this._getXpToNext(this.level) && this.queue.length < 3) {
       const xpNeeded = this._getXpToNext(this.level);
       this.xp -= xpNeeded;
@@ -2231,14 +2230,13 @@ class Game {
     });
 
     this.eventBus.on('levelUp', (data) => {
-      console.log('[levelUp event] Fired at level', data.level);
-      // Auto-unlock weapons at required player levels
       this._checkWeaponUnlocks();
       
       this.gameState.setState('levelUp');
       this.gameLoop.paused = true;
       this.inputManager._isPaused = true;
       this._showUpgradeOptions();
+      console.log('[levelUp event] After show, options=' + (this.uiManager.levelUpOptions ? 'shown' : 'null'));
     });
 
     this.eventBus.on('selectUpgrade', (data) => {
@@ -2257,6 +2255,7 @@ class Game {
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
       }
+      this.inputManager._upgradeKeyLock = false;
     });
 
     this.eventBus.on('death', (data) => {
@@ -2400,7 +2399,6 @@ class Game {
   }
 
   _showUpgradeOptions() {
-    // Prevent duplicate upgrade screens
     if (this.gameState.isLevelUp() && this.uiManager.levelUpOptions) return;
   
     const upgrades = [
