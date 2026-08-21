@@ -1687,14 +1687,14 @@ class LevelingSystem {
   addXP(amount) {
     this.xp += amount;
     
-    // Trigger ALL pending level-ups in one call (while loop, not if)
-    // This prevents double levelUp events when multiple pickups collected in same frame
     while (this.xp >= this._getXpToNext(this.level) && this.queue.length < 3) {
       const xpNeeded = this._getXpToNext(this.level);
       this.xp -= xpNeeded;
       this.level++;
       this.queue.push(this.level);
+      console.log('[addXP] Level up! level=' + this.level + ' queue=' + this.queue.length + ' xp=' + this.xp);
       this.eventBus.emit('levelUp', { level: this.level });
+      console.log('[addXP] After emit, queue=' + this.queue.length);
     }
   }
 
@@ -2231,17 +2231,18 @@ class Game {
     });
 
     this.eventBus.on('levelUp', (data) => {
-      console.log('[levelUp event] Fired at level', data.level);
-      // Auto-unlock weapons at required player levels
+      console.log('[levelUp event] Fired at level ' + data.level + ' state=' + this.gameState.state + ' queue=' + this.levelingSystem.queue.length);
       this._checkWeaponUnlocks();
       
       this.gameState.setState('levelUp');
       this.gameLoop.paused = true;
       this.inputManager._isPaused = true;
       this._showUpgradeOptions();
+      console.log('[levelUp event] After show, options=' + (this.uiManager.levelUpOptions ? 'shown' : 'null'));
     });
 
     this.eventBus.on('selectUpgrade', (data) => {
+      console.log('[selectUpgrade] index=' + data.index + ' state=' + this.gameState.state);
       if (!this.gameState.isLevelUp()) return;
       if (!this.uiManager.levelUpOptions) return;
       const index = data.index;
@@ -2400,8 +2401,11 @@ class Game {
   }
 
   _showUpgradeOptions() {
-    // Prevent duplicate upgrade screens
-    if (this.gameState.isLevelUp() && this.uiManager.levelUpOptions) return;
+    if (this.gameState.isLevelUp() && this.uiManager.levelUpOptions) {
+      console.log('[showUpgrade] BLOCKED - already showing');
+      return;
+    }
+    console.log('[showUpgrade] Showing upgrade options');
   
     const upgrades = [
       {
