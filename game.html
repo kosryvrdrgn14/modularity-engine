@@ -1096,6 +1096,28 @@ class CollisionSystem {
       }
     }
 
+    // Orb vs Enemy
+    const orbs = this.entityManager.getActive('orb');
+    for (const orb of orbs) {
+      for (const enemy of enemies) {
+        if (this._checkAABB(orb, enemy)) {
+          // Check damage cooldown per enemy for this orb
+          if (!orb._hitEnemies) orb._hitEnemies = {};
+          const hitKey = enemy.id;
+          if (!orb._hitEnemies[hitKey] || orb._hitEnemies[hitKey] <= 0) {
+            this.eventBus.emit('projectileHit', { projectile: orb, target: enemy, damage: orb.damage });
+            orb._hitEnemies[hitKey] = 0.5; // 0.5s cooldown per enemy
+          }
+        }
+      }
+      // Decay hit cooldowns
+      if (orb._hitEnemies) {
+        for (const key in orb._hitEnemies) {
+          orb._hitEnemies[key] = Math.max(0, orb._hitEnemies[key] - 1/60);
+        }
+      }
+    }
+
     // Player vs Pickup (proximity collection)
     const collectRange = (player.stats.pickupRange || 50);
     for (const pickup of pickups) {
@@ -1288,9 +1310,10 @@ class WeaponSystem {
 // --- DamageSystem ---
 // Applies damage, crits, knockback, invincibility
 class DamageSystem {
-  constructor(entityManager, eventBus) {
+  constructor(entityManager, eventBus, renderer) {
     this.entityManager = entityManager;
     this.eventBus = eventBus;
+    this.renderer = renderer;
   }
 
   init() {
@@ -1347,6 +1370,10 @@ class DamageSystem {
       if (dist < data.radius) {
         this._handleDamage(enemy, { stats: {} }, data.damage);
       }
+    }
+    // Visual pulse effect
+    if (this.renderer) {
+      this.renderer.addPulseEffect(data.x, data.y, data.radius, '#FF9100');
     }
   }
 
@@ -1559,6 +1586,33 @@ class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.camera = camera;
+    this.pulseEffects = [];
+  }
+
+  addPulseEffect(x, y, radius, color) {
+    this.pulseEffects.push({ x, y, radius, color, age: 0, maxAge: 0.3 });
+  }
+
+  _updateAndDrawPulses(dt) {
+    for (let i = this.pulseEffects.length - 1; i >= 0; i--) {
+      const p = this.pulseEffects[i];
+      p.age += dt || 1/60;
+      if (p.age >= p.maxAge) {
+        this.pulseEffects.splice(i, 1);
+        continue;
+      }
+      const progress = p.age / p.maxAge;
+      const currentRadius = p.radius * progress;
+      const alpha = 0.4 * (1 - progress);
+      const ctx = this.ctx;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = p.color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
   }
 
   clear() {
@@ -1579,6 +1633,9 @@ class Renderer {
     for (const entity of sorted) {
       this._drawEntity(entity);
     }
+
+    // Draw pulse effects (after entities, before camera restore)
+    this._updateAndDrawPulses(1/60);
 
     this.ctx.restore();
 
@@ -1866,7 +1923,7 @@ class Game {
     this.movementSystem = new MovementSystem(this.entityManager, this.inputManager);
     this.collisionSystem = new CollisionSystem(this.entityManager, this.eventBus);
     this.weaponSystem = new WeaponSystem(this.entityManager, this.dataManager, this.eventBus);
-    this.damageSystem = new DamageSystem(this.entityManager, this.eventBus);
+    this.damageSystem = new DamageSystem(this.entityManager, this.eventBus, this.renderer);
     this.pickupSystem = new PickupSystem(this.entityManager, this.dataManager, this.eventBus);
     this.levelingSystem = new LevelingSystem(this.entityManager, this.dataManager, this.eventBus);
     this.renderer = new Renderer(this.canvas, this.camera);
@@ -1930,6 +1987,9 @@ class Game {
     });
 
     this.eventBus.on('levelUp', (data) => {
+      // Auto-unlock weapons at required player levels
+      this._checkWeaponUnlocks();
+      
       this.gameState.setState('levelUp');
       this.gameLoop.paused = true;
       this.inputManager._isPaused = true;
@@ -2035,6 +2095,19 @@ class Game {
     }
 
     this.uiManager.render();
+  }
+
+  _checkWeaponUnlocks() {
+    const level = this.levelingSystem.level;
+    const weapons = this.dataManager.weapons;
+    for (const weapon of weapons) {
+      if (weapon.unlockLevel && level >= weapon.unlockLevel) {
+        if (!this.weaponSystem.weaponLevels[weapon.id]) {
+          this.weaponSystem.unlockWeapon(weapon.id);
+          this.eventBus.emit('weaponUnlock', { weaponId: weapon.id, name: weapon.name });
+        }
+      }
+    }
   }
 
   _showUpgradeOptions() {
