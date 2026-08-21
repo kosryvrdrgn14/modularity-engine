@@ -1687,9 +1687,10 @@ class LevelingSystem {
   addXP(amount) {
     this.xp += amount;
     
-    // Check for level up
-    const xpNeeded = this._getXpToNext(this.level);
-    if (this.xp >= xpNeeded && this.queue.length < 3) {
+    // Trigger ALL pending level-ups in one call (while loop, not if)
+    // This prevents double levelUp events when multiple pickups collected in same frame
+    while (this.xp >= this._getXpToNext(this.level) && this.queue.length < 3) {
+      const xpNeeded = this._getXpToNext(this.level);
       this.xp -= xpNeeded;
       this.level++;
       this.queue.push(this.level);
@@ -2399,6 +2400,9 @@ class Game {
   }
 
   _showUpgradeOptions() {
+    // Prevent duplicate upgrade screens
+    if (this.gameState.isLevelUp() && this.uiManager.levelUpOptions) return;
+  
     const upgrades = [
       {
         name: 'Damage Up',

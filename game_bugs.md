@@ -37,8 +37,9 @@
 | 25 | W3 pulse count per level ignored | 🟡 Medium | ✅ Fixed | System audit |
 | 26 | Speed Up uses wrong stat key | 🟢 Low | ✅ Fixed | System audit |
 | 27 | WeaponSystem not reset on restart | 🟡 Medium | ✅ Fixed | System audit |
+| 28 | Double power-ups per level (addXP only triggers 1 level-up per call) | 🔴 Critical | ✅ Fixed | User report |
 
-**Total: 27 bugs found, 27 fixed**
+**Total: 28 bugs found, 28 fixed**
 
 ---
 
@@ -118,6 +119,31 @@
 - **Enemy behavior patterns** — Swarm (bat), wander_chase (ghost), ranged (caster)
 - **W1 projectile count** — Fires `projectileCount` projectiles with angle spread
 - **W3 pulse count** — Fires `pulseCount` pulses with 250ms delay
+
+---
+
+## Bug #28 — Double Power-Ups Per Level
+
+**Date:** August 21, 2026
+**Severity:** 🔴 Critical (game balance)
+**Discovered by:** User manual testing
+
+### Symptom
+Player gets 2 upgrade selections when they should get 1. Makes the game too easy.
+
+### Root Cause
+`addXP` used `if` (single level-up per call) instead of `while` (all pending level-ups). When multiple XP gems are collected in one frame, each `addXP` call triggers a separate `levelUp` event. Both events queue up, creating 2 upgrade screens.
+
+### Fix
+Changed `addXP` to use `while` loop:
+```javascript
+// BEFORE (broken):
+if (this.xp >= xpNeeded && this.queue.length < 3) { ... }
+
+// AFTER (fixed):
+while (this.xp >= xpNeeded && this.queue.length < 3) { ... }
+```
+Also added guard to `_showUpgradeOptions` to prevent duplicate screens during race conditions.
 
 ---
 
