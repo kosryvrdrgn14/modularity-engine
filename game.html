@@ -3024,17 +3024,21 @@ class Game {
     // Hide loading screen
     loadingScreen.style.display = 'none';
 
-    // GAP 6 FIX: Browser audio unlock — resume AudioContext on first click
-    const unlockAudio = () => {
-      this.audioManager.resume();
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
-    };
-    document.addEventListener('click', unlockAudio, { once: true });
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-
-    // Start in playing state
-    this.startGame();
+    // Show "Click to Start" overlay — required for browser audio unlock
+    const startOverlay = document.getElementById('start-overlay');
+    if (startOverlay) {
+      startOverlay.style.display = 'flex';
+      const startGame = () => {
+        startOverlay.style.display = 'none';
+        this.audioManager.resume();
+        this.startGame();
+      };
+      startOverlay.addEventListener('click', startGame, { once: true });
+      startOverlay.addEventListener('touchstart', startGame, { once: true });
+    } else {
+      // Fallback: no overlay element, start immediately
+      this.startGame();
+    }
   }
 
   _setupEvents() {
