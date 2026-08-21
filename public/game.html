@@ -1755,7 +1755,7 @@ class Renderer {
   }
 
   addPulseEffect(x, y, radius, color) {
-    this.pulseEffects.push({ x, y, radius, color, age: 0, maxAge: 0.3 });
+    this.pulseEffects.push({ x, y, radius, color, age: 0, maxAge: 0.5 });
   }
 
   _updateAndDrawPulses(dt) {
@@ -1768,14 +1768,23 @@ class Renderer {
       }
       const progress = p.age / p.maxAge;
       const currentRadius = p.radius * progress;
-      const alpha = 0.4 * (1 - progress);
       const ctx = this.ctx;
+      
+      // Semi-transparent fill (shockwave body)
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = 0.25 * (1 - progress);
+      ctx.fill();
+      
+      // Bright stroke (shockwave edge)
       ctx.beginPath();
       ctx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
       ctx.strokeStyle = p.color;
-      ctx.globalAlpha = alpha;
-      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.7 * (1 - progress);
+      ctx.lineWidth = 5;
       ctx.stroke();
+      
       ctx.globalAlpha = 1;
     }
   }
@@ -2294,6 +2303,11 @@ class Game {
       if (data.pickup.pickupData?.id === 'magnet') {
         this.eventBus.emit('magnetActivate', { player: data.player });
       }
+      
+      // Weapon Level-Up pickup: upgrade lowest-level active weapon
+      if (data.pickup.pickupData?.id === 'weapon_levelup') {
+        this._applyWeaponLevelUp();
+      }
     });
 
     this.eventBus.on('restart', () => {
@@ -2361,6 +2375,23 @@ class Game {
     }
   }
 
+  _applyWeaponLevelUp() {
+    const weaponIds = ['w1_projectile', 'w2_orbit', 'w3_area'];
+    // Find the lowest-level active weapon (prioritize upgrading what's unlocked)
+    let bestWeapon = null;
+    let bestLevel = Infinity;
+    for (const wid of weaponIds) {
+      const level = this.weaponSystem.weaponLevels[wid] || 0;
+      if (level > 0 && level < bestLevel) {
+        bestLevel = level;
+        bestWeapon = wid;
+      }
+    }
+    if (bestWeapon) {
+      this.weaponSystem.levelUp(bestWeapon);
+    }
+  }
+
   _handleGameOver() {
     // Pause the game loop
     this.gameLoop.paused = true;
@@ -2416,6 +2447,7 @@ class Game {
   _showUpgradeOptions() {
     if (this.gameState.isLevelUp() && this.uiManager.levelUpOptions) return;
   
+    // Build upgrade pool: stat upgrades + weapon upgrades for active weapons
     const upgrades = [
       {
         name: 'Damage Up',
@@ -2449,6 +2481,26 @@ class Game {
         },
       },
     ];
+
+    // Add weapon upgrades for each unlocked weapon (max level 7)
+    const weaponIds = ['w1_projectile', 'w2_orbit', 'w3_area'];
+    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', w3_area: 'Area' };
+    for (const wid of weaponIds) {
+      const wLevel = game.weaponSystem.weaponLevels[wid] || 0;
+      if (wLevel > 0 && wLevel < 7) {
+        const wData = game.dataManager.weapons.find(w => w.id === wid);
+        const nextStats = wData?.statsPerLevel?.[wLevel]; // next level's stats
+        const desc = nextStats ? `Lv ${wLevel} → ${wLevel + 1}` : `Upgrade ${weaponNames[wid]}`;
+        upgrades.push({
+          name: `${weaponNames[wid]} Up`,
+          desc: desc,
+          apply: (game) => {
+            game.weaponSystem.levelUp(wid);
+          },
+        });
+      }
+    }
+
     // Shuffle and pick 3
     for (let i = upgrades.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
