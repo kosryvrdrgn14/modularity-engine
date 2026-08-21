@@ -43,8 +43,9 @@
 | 30b | Double power-up: queue entry not consumed in levelUp handler | 🔴 Critical | ✅ Fixed | Claude review |
 
 | 31 | No audio plays — missing #start-overlay element (AudioContext never unlocked) | 🔴 Critical | ✅ Fixed | Audio audit |
+| 32 | Audio dies after first power-up selection — duckForLevelUp(true) called on levelUp but duckForLevelUp(false) never called in selectUpgrade handler | 🔴 Critical | ✅ Fixed | User report |
 
-**Total: 31 bugs found, 31 fixed** (30b is root cause fix replacing #30's workaround)
+**Total: 32 bugs found, 32 fixed** (30b is root cause fix replacing #30's workaround)
 
 ---
 

@@ -3119,6 +3119,7 @@ class Game {
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
+        this.audioManager.duckForLevelUp(false);
       }
     });
 
