@@ -22,50 +22,42 @@
 
 ## 1. AudioManager Integration Point
 
-The `AudioManager` is currently a stub at **line 2135** of `game.html`.
+The `AudioManager` is a **full implementation** at **line 2137** of `game.html`.
 
-### Current Stub
+### Current Implementation
 
 ```
-Line 2135: class AudioManager {
-Line 2136:   constructor(eventBus) { ... }
-Line 2142:   init() { this.ctx = new AudioContext() ... }
-Line 2151:   resume() { ... }
-Line 2157:   play(soundId) { /* EMPTY — placeholder */ }
-Line 2161: }
+Line 2137: class AudioManager {
+Line 2138:   constructor(eventBus) { ... }  // Sets up state, pools, combo engine
+Line 2172:   init() { ... }              // Creates AudioContext, gains, SFX pool, wires events
+Line 2194:   resume() { ... }            // Resumes suspended AudioContext
+Line 2198:   setPlayer(player) { ... }   // For distance-based volume
+Line 2212:   _wireEvents() { ... }       // Subscribes to all game events
+Line 2370:   play(soundId, opts) { ... }  // Main entry point — routes to synthesis functions
 ```
-
-### What Needs to Happen
-
-The AudioManager must:
-
-1. **Subscribe to game events** during `init()` — listen on the EventBus for all events listed in §2.
-2. **Map events to sound IDs** — each event carries data (entity type, pickup type, etc.) that determines which sound plays.
-3. **Synthesize sounds using Web Audio API** — oscillators, gain envelopes, filters per `09_audio_spec.md`.
-4. **Manage the 16-slot sound pool** with eviction logic per §1.2 of the audio spec.
 
 ### Where AudioManager Is Instantiated
 
 ```
-Line 2192: this.audioManager = new AudioManager(this.eventBus);
+Line 2985: this.audioManager = new AudioManager(this.eventBus);
 ```
 
 ### Where AudioManager.init() Is Called
 
 ```
-Line 2226: this.audioManager.init();
+Line 3019: this.audioManager.init();
 ```
 
-**Implementation note:** `init()` must happen BEFORE `_setupEvents()` (line 2229) so that the AudioManager's event listeners are registered before any game events fire. Alternatively, have AudioManager subscribe to events inside `init()`.
+### Where AudioManager.resume() Is Called
 
-### Where AudioManager.resume() Should Be Called
+Inside the `#start-overlay` click/touch handler at **line 3033**:
+```
+Line 3033: this.audioManager.resume();
+```
 
-On the **first user click/tap** to start the game. Currently there is no title screen — the game auto-starts. Two options:
+**Bug #31 Fix (2026-08-21):** The `#start-overlay` HTML element was missing from the document. Without it, the fallback path called `this.startGame()` immediately without ever calling `resume()`. Browser AudioContext requires a user gesture to resume from `suspended` state, so all sounds were silently blocked.
 
-1. Add a "Click to Start" overlay and call `audioManager.resume()` in its click handler.
-2. Call `audioManager.resume()` inside `startGame()` at line 2318 — but this may not satisfy browser autoplay policy on some browsers.
-
-**Recommended:** Add a one-time click handler on the canvas or a start overlay that calls `resume()` before `startGame()`.
+**Fix:** Added `<div id="start-overlay">` with click/touch handlers that call `audioManager.resume()` before `startGame()`, ensuring the AudioContext is unlocked via a genuine user gesture.
 
 ---
 

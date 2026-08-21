@@ -42,7 +42,9 @@
 | 30 | Upgrade lock resets before key release (pending level-up race) | 🔴 Critical | ✅ Fixed | Gemini review |
 | 30b | Double power-up: queue entry not consumed in levelUp handler | 🔴 Critical | ✅ Fixed | Claude review |
 
-**Total: 30 bugs found, 30 fixed** (30b is root cause fix replacing #30's workaround)
+| 31 | No audio plays — missing #start-overlay element (AudioContext never unlocked) | 🔴 Critical | ✅ Fixed | Audio audit |
+
+**Total: 31 bugs found, 31 fixed** (30b is root cause fix replacing #30's workaround)
 
 ---
 
