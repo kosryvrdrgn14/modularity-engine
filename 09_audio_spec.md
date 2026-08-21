@@ -1,8 +1,8 @@
 # Modularity Engine — Audio Specification
 
-> **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-20
-> **Status:** Spec
+> **Version:** 1.1 (Prototype)
+> **Last Updated:** 2026-08-21
+> **Status:** Spec — Updated for v0.2.0 game state
 > **Canonical Sources:** `vs_prog.md` Sound Design Arc (ALL audio values), `01_engine_architecture.md` (audio systems)
 
 ---
@@ -95,10 +95,10 @@ All values copied EXACTLY from `vs_prog.md` Sound Design Arc section.
 | `bat_kill` | Bat dies | Square | Chirp: 1200Hz → 800Hz | 0.08s | Quick, high-pitched. Matches swiftness. |
 | `skeleton_kill` | Skeleton dies | Square + noise | Layered: 300Hz + 600Hz | 0.2s | Heavier. Armor break feel. |
 | `ghost_kill` | Ghost dies | Sine | Wail: 600Hz → 200Hz | 0.3s | Ethereal fade. Ghostly dissipation. |
-| `caster_projectile` | Caster fires projectile | Square | Rising blip: 300Hz → 600Hz | 0.08s | Short, magical. Projectile launch cue. |
+| `caster_projectile` | Caster fires projectile | Square | Rising blip: 300Hz → 600Hz | 0.08s | Short, magical. Projectile launch cue. **[FUTURE — Caster ranged attack not yet implemented]** |
 | `caster_kill` | Caster dies | Square | Burst: 500Hz → 200Hz | 0.15s | Standard. Magical fizz. |
 | `boss_charge` | Boss begins charge | Square | Low sweep: 80Hz → 120Hz | 0.4s | Warning growl. Player should dodge. |
-| `boss_ground_pound` | Boss slams ground | Square + noise | Deep impact: 60Hz + noise burst | 0.5s | Heavy. Screen shakes. Area damage cue. |
+| `boss_ground_pound` | Boss slams ground | Square + noise | Deep impact: 60Hz + noise burst | 0.5s | Heavy. Screen shakes. Area damage cue. **[FUTURE — Boss Phase 2 not yet implemented]** |
 | `boss_death` | Boss dies | Sine + square | Layered: 60Hz + 120Hz + 240Hz | 2.0s | Deep, layered. Slow-motion bass drop. |
 
 ### Pickup Sounds
@@ -106,7 +106,7 @@ All values copied EXACTLY from `vs_prog.md` Sound Design Arc section.
 | ID | Trigger | Waveform | Pattern | Duration | Notes |
 |---|---|---|---|---|---|
 | `xp_small` | Small XP gem collected | Square | Payout triad (3-note) | 0.065s | See §4 for full spec. |
-| `xp_large` | Large XP gem collected | Square | Extended arpeggio (4-note) | 0.085s | Slightly louder. 4th note = Major 3rd above octave. |
+| `xp_large` | Large XP gem collected | Square | Extended arpeggio (4-note) | 0.085s | Slightly louder. 4th note = Major 3rd above octave. **[FUTURE — Only small gems drop in v0.2.0]** |
 | `gold_coin` | Gold coin collected | Square | Brighter pattern: Base → ×1.25 → ×1.5 | 0.055s | Shorter, brighter. Clink texture. |
 | `powerup_collect` | Power-up collected | Square | Full 5-note arpeggio | 0.12s | Louder, longer. Victory feel. |
 | `levelup` | Level-up triggered | Square | Ascending scale run: C5→E5→G5→C6 | 0.20s | Full octave. Slowest pickup sound. Triumphant. |
@@ -125,8 +125,60 @@ All values copied EXACTLY from `vs_prog.md` Sound Design Arc section.
 | ID | Trigger | Waveform | Pattern | Duration | Notes |
 |---|---|---|---|---|---|
 | `ui_click` | Button press | Sine | 800Hz | 0.02s | Tiny, clean. Button feedback. |
-| `boss_warning` | 3:50 announcement | Sine | 100Hz, fading in | 2.0s | Ominous rumble. Low frequency. |
+| `boss_warning` | 3:50 announcement | Sine | 100Hz, fading in | 2.0s | Ominous rumble. Low frequency. **[FUTURE — No announcement system yet]** |
 | `boss_spawn` | 4:00 boss appears | Square + noise | 80Hz → 40Hz | 1.0s | Ground-shaking impact. Heavy. |
+| `weapon_unlock` | New weapon unlocked | Square | Rising triad: C5→E5→G5 | 0.15s | Triumphant jingle. "New toy!" feel. **[NEW — v0.2.0]** |
+| `restart` | Game restarted after death | Sine | 440Hz → 880Hz | 0.1s | Quick ascending blip. Fresh start. **[NEW — v0.2.0]** |
+
+### Sounds Not Yet Implemented (Marked [FUTURE])
+
+These sounds reference game features that are not yet built. Implement them when the corresponding feature ships.
+
+| Sound ID | Feature Required | Priority |
+|---|---|---|
+| `caster_projectile` | Caster ranged attack behavior | Medium |
+| `boss_ground_pound` | Boss Phase 2 attack | High |
+| `boss_warning` | 3:50 announcement system | High |
+| `xp_large` | Large XP gem drop | Low |
+| `w2_hum` | W2 continuous orbital hum (W2 exists but no continuous sound) | Medium |
+
+---
+
+## 2.1 Event-to-Sound Mapping
+
+This table maps game engine events (from the EventBus) to sound IDs. The AudioManager listens for these events and triggers the corresponding sound.
+
+| Game Event | Event Data | Sound ID | Notes |
+|---|---|---|---|
+| `pickup` | `{ type: 'exp_small' }` | `xp_small` | Payout triad engine (§4) |
+| `pickup` | `{ type: 'exp_large' }` | `xp_large` | **[FUTURE]** Extended arpeggio |
+| `pickup` | `{ type: 'gold_coin' }` | `gold_coin` | Brighter arpeggio pattern |
+| `pickup` | `{ type: 'screen_wipe' }` | `screenwipe` | Dramatic sweep + noise |
+| `pickup` | `{ type: 'magnet' }` | `magnet_hum` | Continuous hum, fades on pickup end |
+| `pickup` | `{ type: 'weapon_levelup' }` | `powerup_collect` | Full 5-note arpeggio |
+| `pickup` | `{ type: 'health' }` | `powerup_collect` | Reuse power-up sound |
+| `levelUp` | `{ level }` | `levelup` | Ascending scale run |
+| `selectUpgrade` | `{ index }` | `ui_click` | Button feedback |
+| `projectileHit` | `{ entity, damage }` | `weapon_hit` | Short noise burst |
+| `projectileFire` | `{ weaponId }` | `w1_fire` | Single blip |
+| `orbHit` | `{ entity, damage }` | `weapon_hit` | Short noise burst |
+| `areaPulse` | `{ radius }` | `w3_pulse` | Whoosh/bass pulse |
+| `death` | `{ entity, type }` | `{type}_kill` | Enemy-specific death sound |
+| `death` | `{ entity, type: 'player' }` | `player_death` | Slow descending wail |
+| `contactDamage` | `{ entity, damage }` | `player_hurt` | Low blunt impact |
+| `bossSpawn` | `{ entity }` | `boss_spawn` | Ground-shaking impact |
+| `bossCharge` | `{ entity }` | `boss_charge` | Warning growl |
+| `bossDeath` | `{ entity }` | `boss_death` | Slow-motion bass drop |
+| `weaponUnlock` | `{ weaponId }` | `weapon_unlock` | **[NEW]** Rising triad jingle |
+| `restart` | `{}` | `restart` | **[NEW]** Quick ascending blip |
+| `magnetActivate` | `{}` | `magnet_hum` | Continuous magnetic hum |
+
+### Implementation Notes
+
+- The AudioManager should subscribe to these events via the EventBus during `AudioManager.init()`.
+- For events with subtypes (e.g., `pickup` with `type`), the AudioManager checks `eventData.type` to select the correct sound.
+- Distance-based attenuation (§6) applies to spatial sounds (enemy deaths, weapon hits, pickups). Player sounds and UI sounds bypass distance checks.
+- The `w2_hum` continuous sound is triggered by `weaponUnlock` with `weaponId: 'w2_orbit'` and stopped when the weapon is no longer active.
 
 ---
 
@@ -141,10 +193,10 @@ Values copied EXACTLY from `vs_prog.md` Music Progression section.
 | 1:00 | Stage Theme — Building Loop | Add bass layer | Bats arrive. Tension rising. |
 | 2:00 | Stage Theme — Full Intensity | Add lead synth | Skeletons and ghosts. Full chaos. |
 | 3:30 | Stage Theme — Pre-Boss Build | Strings swell, drums intensify | "Something is coming." |
-| 3:50 | Silence — 2s | Music cuts out | Dramatic pause. Screen dims. |
+| 3:50 | Silence — 2s | Music cuts out | Dramatic pause. Screen dims. **[FUTURE — No announcement system]** |
 | 3:52 | Boss Theme — Ominous Intro | Deep bass, low strings | "The Gravekeeper rises!" |
 | 4:00 | Boss Theme — Full Combat | Aggressive drums, distorted synths | Boss fight. Maximum intensity. |
-| 4:30 | Boss Theme — Phase 2 Escalation | Tempo +15%, added layers | Boss enters Phase 2. Desperate. |
+| 4:30 | Boss Theme — Phase 2 Escalation | Tempo +15%, added layers | Boss enters Phase 2. Desperate. **[FUTURE — Phase 2 not implemented]** |
 | Boss death | Victory Sting | 2s brass fanfare | Relief. Triumph. |
 | 5:00 (survived) | Game Over — Melancholic | Piano + strings, 5s fade | Bittersweet. Stats reveal. |
 | Player death | Death Sting — Low boom | 1s impact, then silence | Finality. Defeat. |
@@ -441,6 +493,7 @@ From `vs_prog.md` Sound Design Arc. These are the sound-specific acceptance crit
 | Section | References |
 |---|---|
 | All SFX values | `vs_prog.md` Sound Design Arc (source of truth) |
+| Event→Sound mapping | §2.1 Event-to-Sound Mapping (game events → sound IDs) |
 | Music progression | `vs_prog.md` Sound Design Arc — Music Progression |
 | Music synthesis | §3 Music Synthesis Approach (instrument bank, layer model) |
 | Crossfade implementation | §3 Crossfade Implementation (layer volume transitions) |
@@ -460,4 +513,4 @@ From `vs_prog.md` Sound Design Arc. These are the sound-specific acceptance crit
 
 ---
 
-*End of 09_audio_spec.md — Version 1.1 (gaps 1–10 fixed)*
+*End of 09_audio_spec.md — Version 1.2 (updated for v0.2.0 game state, added event→sound mapping, marked 5 future sounds, added 2 new sounds)*
