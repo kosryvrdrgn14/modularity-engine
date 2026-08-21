@@ -55,7 +55,7 @@
 ### Audio
 - Stub only (Web Audio API initialized, no sounds)
 
-### Bug Fixes (29 total)
+### Bug Fixes (30 total)
 - Level-up upgrade selection stuck
 - Enemies spawning at world origin
 - Bat invisible (color matched background)
@@ -82,6 +82,7 @@
 - WeaponSystem not reset on restart
 - Double power-ups per level (addXP while loop)
 - Upgrade key repeat applying upgrades multiple times
+- Double power-up: queue entry not consumed in levelUp handler (root cause fix from Claude review)
 
 ### Known Limitations
 - Audio not implemented
