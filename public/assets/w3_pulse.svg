@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <defs>
+    <!-- Radial gradient for shockwave body -->
+    <radialGradient id="pulseFill" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF9100" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#FF9100" stop-opacity="0.1"/>
+      <stop offset="85%" stop-color="#FF9100" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FF9100" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Ring gradient for shockwave edge -->
+    <radialGradient id="pulseRing" cx="50%" cy="50%" r="50%">
+      <stop offset="80%" stop-color="#FF9100" stop-opacity="0"/>
+      <stop offset="92%" stop-color="#FF9100" stop-opacity="0.7"/>
+      <stop offset="96%" stop-color="#FFAB40" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FF9100" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Shockwave fill body -->
+  <circle cx="160" cy="160" r="150" fill="url(#pulseFill)"/>
+  <!-- Shockwave ring edge -->
+  <circle cx="160" cy="160" r="150" fill="url(#pulseRing)"/>
+  <!-- Inner ring highlight -->
+  <circle cx="160" cy="160" r="120" fill="none" stroke="#FFAB40" stroke-width="2" opacity="0.3"/>
+  <!-- Center flash -->
+  <circle cx="160" cy="160" r="8" fill="#FFAB40" opacity="0.4"/>
+  <circle cx="160" cy="160" r="4" fill="#FFE0B2" opacity="0.3"/>
+</svg>

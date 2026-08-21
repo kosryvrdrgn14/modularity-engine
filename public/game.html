@@ -1779,6 +1779,42 @@ class LevelingSystem {
 
 // --- Renderer ---
 // Canvas 2D rendering
+// ─── ASSET MANAGER ─── Preloads SVGs as Image objects
+const ASSET_MAP = {
+  'player_square_#FFD700': 'assets/player.svg',
+  'enemy_square_#3B8A30': 'assets/zombie.svg',
+  'enemy_square_#6B3FA0': 'assets/bat.svg',
+  'enemy_square_#C0392B': 'assets/skeleton.svg',
+  'enemy_square_#8E44AD': 'assets/ghost.svg',
+  'enemy_square_#2E86C1': 'assets/caster.svg',
+  'enemy_square_#4A0000': 'assets/boss.svg',
+  'projectile_square_#FFD700': 'assets/w1_projectile.svg',
+  'orb_circle_#4FC3F7': 'assets/w2_orbit.svg',
+  'pickup_diamond_#4FC3F7': 'assets/xp_gem_small.svg',
+  'pickup_circle_#FFD700': 'assets/gold_coin.svg',
+  'pickup_star_#00E676': 'assets/screen_wipe.svg',
+  'pickup_circle_#FF4081': 'assets/magnet.svg',
+  'pickup_triangle_#FF9100': 'assets/weapon_levelup.svg',
+};
+
+async function preloadAssets(onProgress) {
+  const cache = {};
+  const entries = Object.entries(ASSET_MAP);
+  let loaded = 0;
+  for (const [key, path] of entries) {
+    const img = new Image();
+    img.src = path;
+    cache[key] = img;
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+    loaded++;
+    if (onProgress) onProgress(loaded / entries.length);
+  }
+  return cache;
+}
+
 class Renderer {
   constructor(canvas, camera) {
     this.canvas = canvas;
@@ -1786,6 +1822,7 @@ class Renderer {
     this.camera = camera;
     this.pulseEffects = [];
     this.bossEntity = null;
+    this.imageCache = null;
   }
 
   addPulseEffect(x, y, radius, color) {
@@ -1888,31 +1925,38 @@ class Renderer {
     const color = entity.visual?.color || '#FFF';
     const shape = entity.visual?.shape || 'square';
 
-    ctx.fillStyle = color;
-
-    if (shape === 'square') {
-      ctx.fillRect(x - size, y - size, size * 2, size * 2);
-    } else if (shape === 'circle') {
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (shape === 'diamond') {
-      ctx.beginPath();
-      ctx.moveTo(x, y - size);
-      ctx.lineTo(x + size, y);
-      ctx.lineTo(x, y + size);
-      ctx.lineTo(x - size, y);
-      ctx.closePath();
-      ctx.fill();
-    } else if (shape === 'triangle') {
-      ctx.beginPath();
-      ctx.moveTo(x, y - size);
-      ctx.lineTo(x + size, y + size);
-      ctx.lineTo(x - size, y + size);
-      ctx.closePath();
-      ctx.fill();
-    } else if (shape === 'star') {
-      this._drawStar(x, y, size, 5);
+    // SVG REPLACEMENT: check image cache first, fall back to shapes
+    const cacheKey = (entity.type || 'unknown') + '_' + shape + '_' + color;
+    const svgImage = this.imageCache && this.imageCache[cacheKey];
+    if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
+      const drawSize = size * 2;
+      ctx.drawImage(svgImage, x - size, y - size, drawSize, drawSize);
+    } else {
+      ctx.fillStyle = color;
+      if (shape === 'square') {
+        ctx.fillRect(x - size, y - size, size * 2, size * 2);
+      } else if (shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (shape === 'diamond') {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size, y);
+        ctx.closePath();
+        ctx.fill();
+      } else if (shape === 'triangle') {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y + size);
+        ctx.lineTo(x - size, y + size);
+        ctx.closePath();
+        ctx.fill();
+      } else if (shape === 'star') {
+        this._drawStar(x, y, size, 5);
+      }
     }
 
     ctx.restore();
@@ -3042,6 +3086,12 @@ class Game {
     await this.dataManager.loadAll((progress, status) => {
       loadingFill.style.width = `${progress * 100}%`;
       loadingStatus.textContent = status;
+    });
+
+    // Preload SVG assets
+    this.renderer.imageCache = await preloadAssets((p) => {
+      loadingFill.style.width = `${p * 100}%`;
+      loadingStatus.textContent = `Loading assets... ${Math.round(p * 100)}%`;
     });
 
     // Init systems

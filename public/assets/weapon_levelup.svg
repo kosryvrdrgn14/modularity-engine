@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Outer glow -->
+  <circle cx="16" cy="16" r="14" fill="#FFAB40" opacity="0.15"/>
+  <!-- Upward chevron / arrow -->
+  <polygon points="16,3 28,18 22,18 16,10 10,18 4,18" fill="#FF9100"/>
+  <!-- Inner chevron highlight -->
+  <polygon points="16,7 24,17 20,17 16,11 12,17 8,17" fill="#FFAB40" opacity="0.6"/>
+  <!-- Center glow -->
+  <circle cx="16" cy="16" r="3" fill="#FFE0B2" opacity="0.5"/>
+  <!-- Weapon icon hint (small sword silhouette) -->
+  <rect x="15" y="18" width="2" height="8" rx="0.5" fill="#E65100" opacity="0.7"/>
+  <rect x="13" y="18" width="6" height="1.5" rx="0.5" fill="#E65100" opacity="0.7"/>
+  <!-- Energy sparks -->
+  <circle cx="16" cy="3" r="1" fill="#FFAB40" opacity="0.6"/>
+  <circle cx="10" cy="8" r="0.6" fill="#FFAB40" opacity="0.4"/>
+  <circle cx="22" cy="8" r="0.6" fill="#FFAB40" opacity="0.4"/>
+</svg>
