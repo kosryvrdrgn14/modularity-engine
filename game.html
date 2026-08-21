@@ -1265,12 +1265,21 @@ class WeaponSystem {
   _fireW3(player, dt) {
     const level = this.weaponLevels['w3_area'];
     if (!level) return;
+    // W3 is active — this line only prints once per fire cycle after cooldown
 
     this.cooldowns['w3_area'] = (this.cooldowns['w3_area'] || 0) - dt;
     if (this.cooldowns['w3_area'] > 0) return;
 
     const weapon = this.dataManager.weapons[2];
+    if (!weapon || !weapon.statsPerLevel) {
+      console.error('[W3] Weapon data missing!', weapon);
+      return;
+    }
     const stats = weapon.statsPerLevel[level - 1];
+    if (!stats) {
+      console.error('[W3] Stats missing for level', level);
+      return;
+    }
     this.cooldowns['w3_area'] = stats.cooldown;
 
     // Emit area pulse event
@@ -1923,10 +1932,10 @@ class Game {
     this.movementSystem = new MovementSystem(this.entityManager, this.inputManager);
     this.collisionSystem = new CollisionSystem(this.entityManager, this.eventBus);
     this.weaponSystem = new WeaponSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.renderer = new Renderer(this.canvas, this.camera);
     this.damageSystem = new DamageSystem(this.entityManager, this.eventBus, this.renderer);
     this.pickupSystem = new PickupSystem(this.entityManager, this.dataManager, this.eventBus);
     this.levelingSystem = new LevelingSystem(this.entityManager, this.dataManager, this.eventBus);
-    this.renderer = new Renderer(this.canvas, this.camera);
     this.uiManager = new UIManager(this.canvas, this.eventBus);
     this.audioManager = new AudioManager(this.eventBus);
 
@@ -1987,6 +1996,7 @@ class Game {
     });
 
     this.eventBus.on('levelUp', (data) => {
+      console.log('[levelUp event] Fired at level', data.level);
       // Auto-unlock weapons at required player levels
       this._checkWeaponUnlocks();
       
@@ -2100,9 +2110,16 @@ class Game {
   _checkWeaponUnlocks() {
     const level = this.levelingSystem.level;
     const weapons = this.dataManager.weapons;
+    console.log(`[WeaponUnlock] Checking at level ${level}, weapons count: ${weapons ? weapons.length : 'null'}`);
+    if (!weapons || !Array.isArray(weapons)) {
+      console.error('[WeaponUnlock] weapons is not an array:', weapons);
+      return;
+    }
     for (const weapon of weapons) {
+      console.log(`[WeaponUnlock] ${weapon.id}: unlockLevel=${weapon.unlockLevel}, currentLevel=${this.weaponSystem.weaponLevels[weapon.id] || 0}`);
       if (weapon.unlockLevel && level >= weapon.unlockLevel) {
         if (!this.weaponSystem.weaponLevels[weapon.id]) {
+          console.log(`[WeaponUnlock] UNLOCKING ${weapon.id}!`);
           this.weaponSystem.unlockWeapon(weapon.id);
           this.eventBus.emit('weaponUnlock', { weaponId: weapon.id, name: weapon.name });
         }
