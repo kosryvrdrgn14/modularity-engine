@@ -238,6 +238,8 @@ class GameState {
   isEndScreen() { return this.state === 'endScreen'; }
 
   triggerGameOver(result, stats) {
+    // Prevent multiple triggers
+    if (this.state === 'gameOver' || this.state === 'endScreen') return;
     this.endResult = result;
     this.endStats = stats;
     this.setState('gameOver');
@@ -658,6 +660,10 @@ class InputManager {
       } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
         this.eventBus.emit('selectUpgrade', { index: 2 });
       }
+      // Restart on end screen
+      if (e.code === 'Enter' || e.code === 'Space') {
+        this.eventBus.emit('restart');
+      }
     });
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
@@ -673,6 +679,12 @@ class InputManager {
     const cardIndex = this._getUpgradeCardAt(x, y);
     if (cardIndex >= 0) {
       this.eventBus.emit('selectUpgrade', { index: cardIndex });
+      return;
+    }
+    
+    // Check if clicking to restart on end screen
+    if (this._game && (this._game.gameState.isGameOver() || this._game.gameState.isEndScreen())) {
+      this.eventBus.emit('restart');
       return;
     }
     
@@ -1363,6 +1375,10 @@ class DamageSystem {
         killer: source,
         position: { x: target.x, y: target.y },
       });
+      // Boss death triggers victory
+      if (target.isBoss) {
+        this.eventBus.emit('bossDeath', { boss: target, killer: source });
+      }
     }
   }
 
@@ -1927,6 +1943,7 @@ class Game {
     // Game systems
     this.camera = new Camera(this.canvas);
     this.inputManager = new InputManager(this.canvas, this.eventBus);
+    this.inputManager._game = this;
     this.entityManager = new EntityManager();
     this.spawnSystem = new SpawnSystem(this.entityManager, this.dataManager, this.eventBus);
     this.movementSystem = new MovementSystem(this.entityManager, this.inputManager);
@@ -2027,6 +2044,7 @@ class Game {
     this.eventBus.on('death', (data) => {
       if (data.entity === this.player) {
         this.gameState.triggerGameOver('defeat', this._getStats());
+        this._handleGameOver();
       }
     });
 
@@ -2034,10 +2052,19 @@ class Game {
       this.camera.shake(8, 0.5);
     });
 
+    this.eventBus.on('bossDeath', (data) => {
+      this.gameState.triggerGameOver('victory', this._getStats());
+      this._handleGameOver();
+    });
+
     this.eventBus.on('pickup', (data) => {
       if (data.pickup.pickupData?.id === 'magnet') {
         this.eventBus.emit('magnetActivate', { player: data.player });
       }
+    });
+
+    this.eventBus.on('restart', () => {
+      this.startGame();
     });
   }
 
@@ -2069,6 +2096,8 @@ class Game {
 
   update(dt) {
     if (!this.gameState.isPlaying()) return;
+    // Guard: prevent updates after game over
+    if (this.gameState.isGameOver()) return;
 
     this.gameTime += dt;
 
@@ -2091,7 +2120,18 @@ class Game {
     // Check game over conditions
     if (this.gameTime >= 300) {
       this.gameState.triggerGameOver('survived', this._getStats());
+      this._handleGameOver();
     }
+  }
+
+  _handleGameOver() {
+    // Pause the game loop
+    this.gameLoop.paused = true;
+    this.inputManager._isPaused = true;
+    // Show end screen with result and stats
+    const result = this.gameState.endResult || 'defeat';
+    const stats = this.gameState.endStats || this._getStats();
+    this.uiManager.showEndScreen(result, stats);
   }
 
   render(interp) {
@@ -2104,6 +2144,7 @@ class Game {
       this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
     }
 
+    // Always render UI (includes end screen overlay when game over)
     this.uiManager.render();
   }
 
