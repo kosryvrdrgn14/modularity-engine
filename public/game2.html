@@ -1167,13 +1167,23 @@ class MovementSystem {
       if (boss._stateTimer <= 0) {
         // Start charge windup
         boss._bossState = 'windup';
-        boss._stateTimer = 0.5;
+        boss._stateTimer = 1.2;
         if (dist > 1) {
           boss._chargeDir = { x: dx / dist, y: dy / dist };
         }
+        // Store charge path for warning zone rendering
+        boss._chargePath = {
+          startX: boss.x,
+          startY: boss.y,
+          dirX: boss._chargeDir.x,
+          dirY: boss._chargeDir.y,
+          length: 600,
+          width: boss.size * 4,
+        };
+
       }
     } else if (boss._bossState === 'windup') {
-      // Telegraph (slight pause)
+      // Telegraph — orange warning zone shown to player
       if (boss._stateTimer <= 0) {
         boss._bossState = 'charge';
         boss._stateTimer = 1.5;
@@ -1873,6 +1883,9 @@ class Renderer {
     // Draw grid
     this._drawGrid();
 
+    // Draw boss charge warning zone (under entities)
+    this._drawBossWarningZone(entities);
+
     // Draw entities (y-sorted, filter active first to avoid NaN from dead entities)
     const sorted = entities.filter(e => e.active).sort((a, b) => a.y - b.y);
     for (const entity of sorted) {
@@ -1908,6 +1921,52 @@ class Renderer {
       this.ctx.lineTo(this.camera.x + this.canvas.width, y);
       this.ctx.stroke();
     }
+  }
+
+  _drawBossWarningZone(entities) {
+    // Find boss entity in windup state
+    const boss = entities.find(e => e.type === 'enemy' && e.isBoss && e._bossState === 'windup');
+    if (!boss || !boss._chargePath) return;
+
+    const ctx = this.ctx;
+    const cp = boss._chargePath;
+    const w = cp.width;
+    const l = cp.length;
+    const cx = cp.startX + cp.dirX * l * 0.5;
+    const cy = cp.startY + cp.dirY * l * 0.5;
+
+    ctx.save();
+
+    // Calculate rotation angle from direction
+    const angle = Math.atan2(cp.dirY, cp.dirX);
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+
+    // Flickering orange warning fill
+    const flicker = 0.25 + Math.sin(Date.now() * 0.012) * 0.12;
+    ctx.fillStyle = `rgba(255, 145, 0, ${flicker})`;
+    ctx.fillRect(-l * 0.5, -w * 0.5, l, w);
+
+    // Brighter edge strokes
+    ctx.strokeStyle = `rgba(255, 145, 0, 0.55)`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-l * 0.5, -w * 0.5, l, w);
+
+    // Warning chevrons along the path
+    const chevronCount = 5;
+    const chevronSpacing = l / (chevronCount + 1);
+    ctx.strokeStyle = `rgba(255, 200, 0, ${flicker + 0.15})`;
+    ctx.lineWidth = 2.5;
+    for (let i = 1; i <= chevronCount; i++) {
+      const cx2 = -l * 0.5 + i * chevronSpacing;
+      ctx.beginPath();
+      ctx.moveTo(cx2 - 6, -w * 0.3);
+      ctx.lineTo(cx2, 0);
+      ctx.lineTo(cx2 - 6, w * 0.3);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   _drawEntity(entity) {
