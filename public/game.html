@@ -1223,12 +1223,13 @@ class WeaponSystem {
     if (dist < 1) return;  // Guard: enemy on top of player
     const speed = 400;
 
+    const finalDamage = Math.floor(stats.damage * (player.damageMultiplier || 1));
     this.entityManager.create('projectile', {
       x: player.x,
       y: player.y,
       vx: (dx / dist) * speed,
       vy: (dy / dist) * speed,
-      damage: stats.damage,
+      damage: finalDamage,
       size: 4,
       visual: { shape: 'square', color: '#FFD700' },
     });
@@ -1252,11 +1253,12 @@ class WeaponSystem {
 
     // Create missing orbs
     while (existingOrbs.length < orbCount) {
+      const orbDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
       const orb = this.entityManager.create('orb', {
         ownerId: player.id,
         x: player.x,
         y: player.y,
-        damage: stats.damage,
+        damage: orbDmg,
         size: 6,
         orbitAngle: (existingOrbs.length / orbCount) * Math.PI * 2,
         orbitRadius: stats.orbitRadius,
@@ -1295,10 +1297,11 @@ class WeaponSystem {
     this.cooldowns['w3_area'] = stats.cooldown;
 
     // Emit area pulse event
+    const pulseDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
     this.eventBus.emit('areaPulse', {
       x: player.x,
       y: player.y,
-      damage: stats.damage,
+      damage: pulseDmg,
       radius: stats.pulseRadius,
       pulseCount: stats.pulseCount,
     });
@@ -2086,6 +2089,7 @@ class Game {
       stats: charData.stats,
       size: charData.hitbox.width / 2,
       visual: charData.visual,
+      damageMultiplier: 1,
     });
 
     this.weaponSystem.init(this.player);
@@ -2174,8 +2178,9 @@ class Game {
         name: 'Damage Up',
         desc: '+15% base damage',
         apply: (game) => {
-          if (game.player && game.player.stats) {
-            game.player.stats.damage = Math.floor(game.player.stats.damage * 1.15);
+          if (game.player) {
+            if (!game.player.damageMultiplier) game.player.damageMultiplier = 1;
+            game.player.damageMultiplier *= 1.15;
           }
         },
       },
@@ -2183,8 +2188,10 @@ class Game {
         name: 'Speed Up',
         desc: '+10% move speed',
         apply: (game) => {
-          if (game.player && game.player.stats) {
-            game.player.speed *= 1.10;
+          if (game.player) {
+            if (!game.player.speedMultiplier) game.player.speedMultiplier = 1;
+            game.player.speedMultiplier *= 1.10;
+            game.player.speed = (game.player.stats?.speed || 200) * game.player.speedMultiplier;
           }
         },
       },
