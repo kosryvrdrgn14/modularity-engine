@@ -662,22 +662,13 @@ class InputManager {
       if (e.code === 'Escape') {
         this.eventBus.emit('pause', { paused: true });
       }
-      // Upgrade selection during levelUp state (double-locked)
+      // Upgrade selection during levelUp state (debounced)
       if (e.code === 'Digit1' || e.code === 'Numpad1') {
-        if (!this._upgradeKeyLock && !(this._game && this._game._isSelectingUpgrade)) {
-          this._upgradeKeyLock = true;
-          this.eventBus.emit('selectUpgrade', { index: 0 });
-        }
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 0 }); }
       } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
-        if (!this._upgradeKeyLock && !(this._game && this._game._isSelectingUpgrade)) {
-          this._upgradeKeyLock = true;
-          this.eventBus.emit('selectUpgrade', { index: 1 });
-        }
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 1 }); }
       } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
-        if (!this._upgradeKeyLock && !(this._game && this._game._isSelectingUpgrade)) {
-          this._upgradeKeyLock = true;
-          this.eventBus.emit('selectUpgrade', { index: 2 });
-        }
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 2 }); }
       }
       // Restart on end screen
       if (e.code === 'Enter' || e.code === 'Space') {
@@ -703,13 +694,10 @@ class InputManager {
     const x = (screenX - rect.left) * (this.canvas.width / rect.width);
     const y = (screenY - rect.top) * (this.canvas.height / rect.height);
     
-    // Check if clicking on upgrade cards during levelUp state (double-locked)
+    // Check if clicking on upgrade cards during levelUp state (debounced)
     const cardIndex = this._getUpgradeCardAt(x, y);
     if (cardIndex >= 0) {
-      if (!this._upgradeKeyLock && !(this._game && this._game._isSelectingUpgrade)) {
-        this._upgradeKeyLock = true;
-        this.eventBus.emit('selectUpgrade', { index: cardIndex });
-      }
+      if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: cardIndex }); }
       return;
     }
     
@@ -1710,19 +1698,11 @@ class LevelingSystem {
   addXP(amount) {
     this.xp += amount;
     
-    // Process all pending level-ups, but only emit ONE event for the batch
-    let leveledUp = false;
     while (this.xp >= this._getXpToNext(this.level) && this.queue.length < 3) {
       const xpNeeded = this._getXpToNext(this.level);
       this.xp -= xpNeeded;
       this.level++;
       this.queue.push(this.level);
-      leveledUp = true;
-    }
-    
-    // Emit once for the entire batch — not per level
-    if (leveledUp && !this._isProcessingLevelUp) {
-      this._isProcessingLevelUp = true;
       this.eventBus.emit('levelUp', { level: this.level });
     }
   }
@@ -2262,42 +2242,34 @@ class Game {
     this.eventBus.on('levelUp', (data) => {
       this._checkWeaponUnlocks();
       
+      // Consume the queue entry that triggered this event. Without this,
+      // the entry stays in the queue and selectUpgrade() sees it as a
+      // still-pending level-up, opening a second upgrade screen.
+      if (this.levelingSystem.hasPendingLevelUp()) {
+        this.levelingSystem.consumeLevelUp();
+      }
+      
       this.gameState.setState('levelUp');
       this.gameLoop.paused = true;
       this.inputManager._isPaused = true;
       this._showUpgradeOptions();
-      console.log('[levelUp event] After show, options=' + (this.uiManager.levelUpOptions ? 'shown' : 'null'));
     });
-
-    this._isSelectingUpgrade = false;
 
     this.eventBus.on('selectUpgrade', (data) => {
       if (!this.gameState.isLevelUp()) return;
-      if (this._isSelectingUpgrade) return;  // Atomic lock — prevents double-fire
       if (!this.uiManager.levelUpOptions) return;
-      
-      this._isSelectingUpgrade = true;
       const index = data.index;
-      if (index < 0 || index >= this.uiManager.levelUpOptions.length) {
-        this._isSelectingUpgrade = false;
-        return;
-      }
-      
+      if (index < 0 || index >= this.uiManager.levelUpOptions.length) return;
       const option = this.uiManager.levelUpOptions[index];
       if (option && option.apply) option.apply(this);
-      
       this.uiManager.hideLevelUp();
-      this.levelingSystem.consumeLevelUp();
-
       if (this.levelingSystem.hasPendingLevelUp()) {
+        this.levelingSystem.consumeLevelUp();
         this._showUpgradeOptions();
-        this._isSelectingUpgrade = false;
       } else {
-        this.levelingSystem._isProcessingLevelUp = false;
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
-        this._isSelectingUpgrade = false;
       }
     });
 

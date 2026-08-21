@@ -40,8 +40,9 @@
 | 28 | Double power-ups per level (addXP while loop + key repeat) | 🔴 Critical | ✅ Fixed | User report |
 | 29 | Upgrade key repeat: holding 1/2/3 applies upgrade multiple times | 🔴 Critical | ✅ Fixed | Console trace |
 | 30 | Upgrade lock resets before key release (pending level-up race) | 🔴 Critical | ✅ Fixed | Gemini review |
+| 30b | Double power-up: queue entry not consumed in levelUp handler | 🔴 Critical | ✅ Fixed | Claude review |
 
-**Total: 30 bugs found, 30 fixed**
+**Total: 30 bugs found, 30 fixed** (30b is root cause fix replacing #30's workaround)
 
 ---
 
