@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engine Extraction Plan — Modularity Engine v0.3.0</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      padding: 40px;
+      line-height: 1.6;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { color: #FFD700; font-size: 28px; margin-bottom: 8px; text-shadow: 0 0 20px rgba(255,215,0,0.3); }
+    h2 { color: #3B82F6; font-size: 20px; margin: 40px 0 12px 0; border-bottom: 1px solid #16213E; padding-bottom: 6px; }
+    h3 { color: #4FC3F7; font-size: 16px; margin: 24px 0 8px 0; }
+    h4 { color: #FF9100; font-size: 14px; margin: 16px 0 6px 0; }
+    .subtitle { color: #888; font-size: 13px; margin-bottom: 30px; }
+    .section { margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    th { background: #16213E; color: #4FC3F7; padding: 8px 12px; text-align: left; font-size: 12px; }
+    td { border-bottom: 1px solid #16213E; padding: 6px 12px; font-size: 12px; }
+    tr:hover td { background: rgba(59,130,246,0.05); }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin: 2px; }
+    .tag-engine { background: #1a3a1a; color: #4CAF50; }
+    .tag-content { background: #3a1a1a; color: #EF4444; }
+    .tag-pluggable { background: #1a1a3a; color: #7C4DFF; }
+    .tag-new { background: #3a3a1a; color: #FFD700; }
+    code { background: #16213E; padding: 2px 6px; border-radius: 3px; font-size: 12px; color: #4FC3F7; }
+    pre { background: #0d1117; border: 1px solid #16213E; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 12px; margin: 12px 0; }
+    pre code { background: none; padding: 0; color: #e0e0e0; }
+    .callout { background: #16213E; border-left: 3px solid #FFD700; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; }
+    .callout-danger { border-left-color: #EF4444; background: #1a1015; }
+    .callout-info { border-left-color: #3B82F6; }
+    .file-tree { background: #0d1117; border: 1px solid #16213E; border-radius: 6px; padding: 16px; font-size: 12px; margin: 12px 0; }
+    .file-tree .dir { color: #FFD700; }
+    .file-tree .file { color: #4FC3F7; }
+    .file-tree .desc { color: #666; }
+    .arrow { color: #FF9100; }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; font-size: 13px; }
+    .toc { background: #0d1117; border: 1px solid #16213E; border-radius: 6px; padding: 20px; margin: 20px 0; }
+    .toc a { color: #4FC3F7; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .toc li { margin: 6px 0; }
+    .dep-matrix td:first-child { font-weight: bold; color: #FFD700; white-space: nowrap; }
+    .question { background: #2a1a0a; border-left: 3px solid #FF9100; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; font-size: 12px; }
+    .question::before { content: "❓ "; }
+    .gap { background: #1a0a0a; border-left: 3px solid #EF4444; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; font-size: 12px; }
+    .gap::before { content: "⚠️ "; }
+    .conflict { background: #1a0a2a; border-left: 3px solid #7C4DFF; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; font-size: 12px; }
+    .conflict::before { content: "🔀 "; }
+  </style>
+</head>
+<body>
+
+<h1>Engine Extraction Plan</h1>
+<div class="subtitle">Modularity Engine v0.3.0 &mdash; Separate engine from content for true modularity<br>
+Source: <code>public/game2.html</code> (3,512 lines, ~134KB single-file)<br>
+Date: August 23, 2026</div>
+
+<!-- ============================================================ -->
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li><a href="#s1">Executive Summary</a></li>
+    <li><a href="#s2">Current Architecture Audit</a></li>
+    <li><a href="#s3">Engine vs Content Classification</a></li>
+    <li><a href="#s4">Proposed Directory Structure</a></li>
+    <li><a href="#s5">External File Specifications</a></li>
+    <li><a href="#s6">Loading Architecture</a></li>
+    <li><a href="#s7">Dependency Map</a></li>
+    <li><a href="#s8">Mechanics & Events Data Model</a></li>
+    <li><a href="#s9">Audio & Graphics Pluggability</a></li>
+    <li><a href="#s10">Engine Refactoring Requirements</a></li>
+    <li><a href="#s11">Migration Roadmap</a></li>
+    <li><a href="#s12">Gaps, Conflicts & Open Questions</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s1">1. Executive Summary</h2>
+<div class="section">
+
+<h3>Goal</h3>
+<p>Extract the Modularity Engine from a single 3,512-line HTML file into a clean engine/content split where:</p>
+<ul>
+  <li>The <strong>engine</strong> (<code>engine.html</code>) contains all game logic, systems, and rendering code</li>
+  <li><strong>Content files</strong> (JSON + SVG + audio) define everything the engine consumes: characters, weapons, enemies, stages, pickups, leveling, audio, mechanics, and visual assets</li>
+  <li>Any content pack can be loaded, swapped, or combined without touching engine code</li>
+  <li>The engine becomes a reusable "mod runtime" that any content creator can feed</li>
+</ul>
+
+<h3>What We're Extracting</h3>
+<table>
+  <tr><th>Category</th><th>Current State</th><th>Target State</th></tr>
+  <tr><td>Game data</td><td>Embedded in <code>EMBEDDED_DATA</code> constant (~230 lines)</td><td>External <code>content/*.json</code> files</td></tr>
+  <tr><td>SVG graphics</td><td>14 inline base64 data URIs in <code>ASSET_MAP</code></td><td>External <code>assets/*.svg</code> files</td></tr>
+  <tr><td>Audio synthesis</td><td>30+ hardcoded synth methods in <code>AudioManager</code></td><td>External <code>content/audio_config.json</code> + pluggable synth registry</td></tr>
+  <tr><td>Stage events</td><td>Hardcoded boss charge, telegraph patterns in <code>MovementSystem</code></td><td>External <code>content/mechanics.json</code> event definitions</td></tr>
+  <tr><td>BGM / background</td><td>Hardcoded <code>#1A1A2E</code> background, no BGM</td><td>External stage config with BGM reference, background config</td></tr>
+  <tr><td>Upgrade options</td><td>Hardcoded in <code>Game._showUpgradeOptions()</code></td><td>External <code>content/upgrades.json</code></td></tr>
+</table>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s2">2. Current Architecture Audit</h2>
+<div class="section">
+
+<h3>File Structure (game2.html)</h3>
+<table>
+  <tr><th>Phase</th><th>Lines</th><th>Classes / Sections</th><th>Type</th></tr>
+  <tr><td>HTML/CSS</td><td>L1-101</td><td>Canvas, loading screen, start overlay</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Core Infra</td><td>L103-288</td><td>EventBus, DataManager, GameState</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Embedded Data</td><td>L289-519</td><td>EMBEDDED_DATA (characters, weapons, enemies, stages, pickups, leveling)</td><td><span class="tag tag-content">Content</span></td></tr>
+  <tr><td>Game Loop</td><td>L520-578</td><td>GameLoop (fixed-timestep 60fps)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Camera</td><td>L579-634</td><td>Camera (follow, shake, coord transforms)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Input</td><td>L635-798</td><td>InputManager (WASD, mouse, touch, upgrade keys)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Entities</td><td>L799-879</td><td>EntityManager (object pool, create/destroy/cleanup)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Spawning</td><td>L880-1026</td><td>SpawnSystem (wave timeline, weighted selection, boss spawn)</td><td><span class="tag tag-engine">Engine</span> <span class="tag tag-pluggable">Data-driven</span></td></tr>
+  <tr><td>Movement</td><td>L1027-1223</td><td>MovementSystem (player, enemy AI, boss charge, projectiles, pickups)</td><td><span class="tag tag-engine">Engine</span> <span class="tag tag-pluggable">Behavior-driven</span></td></tr>
+  <tr><td>Collision</td><td>L1224-1305</td><td>CollisionSystem (AABB: projectile→enemy, orb→enemy, player→enemy, player→pickup)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Weapons</td><td>L1306-1498</td><td>WeaponSystem (W1 projectile, W2 orbit, W3 area pulse, level mgmt)</td><td><span class="tag tag-engine">Engine</span> <span class="tag tag-pluggable">Data-driven</span></td></tr>
+  <tr><td>Damage</td><td>L1499-1589</td><td>DamageSystem (apply damage, crits, iFrames, death, boss death)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Pickups</td><td>L1590-1698</td><td>PickupSystem (drop rolling, magnet, power-up visuals)</td><td><span class="tag tag-engine">Engine</span> <span class="tag tag-pluggable">Data-driven</span></td></tr>
+  <tr><td>Leveling</td><td>L1699-1775</td><td>LevelingSystem (XP tracking, level queue)</td><td><span class="tag tag-engine">Engine</span> <span class="tag tag-pluggable">Data-driven</span></td></tr>
+  <tr><td>SVG Assets</td><td>L1780-1830</td><td>ASSET_MAP (14 inline SVGs), preloadAssets()</td><td><span class="tag tag-content">Content</span></td></tr>
+  <tr><td>Renderer</td><td>L1830-2050</td><td>Renderer (grid, entity draw, pulse effects, boss warning, UI overlay)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Floating Text</td><td>L2053-2110</td><td>FloatingTextSystem</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>UI Manager</td><td>L2110-2164</td><td>UIManager (level-up cards, end screen)</td><td><span class="tag tag-engine">Engine</span></td></tr>
+  <tr><td>Audio</td><td>L2165-2986</td><td>AudioManager (30+ synth methods, pool, ducking, continuous sounds)</td><td><span class="tag tag-engine">Engine</span> <span class="tag tag-pluggable">Config-driven</span></td></tr>
+  <tr><td>Game Orchestrator</td><td>L2988-3392</td><td>Game (wires systems, handles events, upgrade options, boss detection)</td><td><span class="tag tag-engine">Engine</span> <span class="tag tag-pluggable">Partially</span></td></tr>
+  <tr><td>Bootstrap</td><td>L3394-3366</td><td>new Game().init()</td><td><span class="tag tag-engine">Engine</span></td></tr>
+</table>
+
+<h3>Hardcoded Content Found in Engine Code</h3>
+<table>
+  <tr><th>Location</th><th>Hardcoded Content</th><th>Lines</th></tr>
+  <tr><td><code>EMBEDDED_DATA</code></td><td>All character, weapon, enemy, stage, pickup, leveling data</td><td>L289-519</td></tr>
+  <tr><td><code>ASSET_MAP</code></td><td>14 SVG data URIs (base64-encoded)</td><td>L1783-1800</td></tr>
+  <tr><td><code>SpawnSystem._getEnemyColor()</code></td><td>Enemy color map: zombie=#3B8A30, bat=#6B3FA0, skeleton=#C0392B, ghost=#8E44AD, caster=#2E86C1</td><td>L1017-1025</td></tr>
+  <tr><td><code>SpawnSystem._spawnEnemy()</code></td><td>Enemy visual assignment: <code>shape: 'square'</code></td><td>L968-971</td></tr>
+  <tr><td><code>SpawnSystem._spawnBoss()</code></td><td>Boss visual: <code>shape: 'square', color: '#4A0000'</code></td><td>L988-993</td></tr>
+  <tr><td><code>WeaponSystem._fireW1()</code></td><td>Projectile visual: <code>shape: 'square', color: '#FFD700'</code>, speed: 400</td><td>L1383</td></tr>
+  <tr><td><code>WeaponSystem._fireW2()</code></td><td>Orbit visual: <code>shape: 'circle', color: '#4FC3F7'</code></td><td>L1416</td></tr>
+  <tr><td><code>WeaponSystem._fireW3()</code></td><td>Area pulse color: <code>'#FF9100'</code></td><td>L1462</td></tr>
+  <tr><td><code>PickupSystem._onEnemyDeath()</code></td><td>XP gem visual: <code>shape: 'diamond', color: '#4FC3F7', size: 8</code><br>Gold coin visual: <code>shape: 'circle', color: '#FFD700', size: 10</code></td><td>L1601-1620</td></tr>
+  <tr><td><code>PickupSystem._getPowerUpVisual()</code></td><td>screen_wipe, magnet, weapon_levelup visuals</td><td>L1641-1648</td></tr>
+  <tr><td><code>Game._showUpgradeOptions()</code></td><td>3 stat upgrades (Damage +15%, Speed +10%, Health +20) + weapon upgrades</td><td>L3286-3348</td></tr>
+  <tr><td><code>FloatingTextSystem</code></td><td>Floating text colors per pickup type</td><td>L2075-2098</td></tr>
+  <tr><td><code>Renderer._drawUI()</code></td><td>UI colors, font sizes, boss name "THE GRAVEKEEPER"</td><td>L2030-2048</td></tr>
+  <tr><td><code>AudioManager</code></td><td>All 30+ synth methods with hardcoded frequencies, durations, waveforms</td><td>L2165-2986</td></tr>
+  <tr><td><code>MovementSystem._moveBoss()</code></td><td>Boss behavior: chase→windup→charge→pause cycle, timing values</td><td>L1135-1200</td></tr>
+  <tr><td><code>Game</code></td><td>Game time limit: 300s, boss spawn time: 240s</td><td>L3188, L983</td></tr>
+</table>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s3">3. Engine vs Content Classification</h2>
+<div class="section">
+
+<h3>What Stays in the Engine</h3>
+<p>The engine contains all <em>logic</em> — things that process, calculate, render, and respond. It is data-agnostic: it reads configuration but never defines it.</p>
+
+<table>
+  <tr><th>System</th><th>Responsibility</th><th>Content Dependency</th></tr>
+  <tr><td>EventBus</td><td>Pub/sub event routing</td><td>None (pure infrastructure)</td></tr>
+  <tr><td>GameState</td><td>State machine: loading→menu→playing→levelUp→gameOver→endScreen</td><td>None (fixed states)</td></tr>
+  <tr><td>GameLoop</td><td>Fixed-timestep 60fps update/render loop</td><td>None</td></tr>
+  <tr><td>Camera</td><td>Smooth follow, screen shake, coordinate transforms</td><td>None</td></tr>
+  <tr><td>InputManager</td><td>WASD/mouse/touch/keyboard input, upgrade card selection</td><td>None (reads canvas dimensions only)</td></tr>
+  <tr><td>EntityManager</td><td>Object pool, create/destroy/cleanup/getActive</td><td>None (generic entity container)</td></tr>
+  <tr><td>SpawnSystem</td><td>Wave-based spawning, weighted selection, spawn rate control</td><td>Reads: <code>stages.waves</code>, <code>enemies[]</code>, <code>stages.bossConfig</code></td></tr>
+  <tr><td>MovementSystem</td><td>Player movement, enemy AI dispatch, projectile travel, boss state machine</td><td>Reads: <code>enemy.behavior.pattern</code>, <code>mechanics.movement_patterns</code></td></tr>
+  <tr><td>CollisionSystem</td><td>AABB collision detection, event emission</td><td>None (reads entity sizes only)</td></tr>
+  <tr><td>WeaponSystem</td><td>Weapon cooldowns, targeting, firing, level management, orb maintenance</td><td>Reads: <code>weapons[].statsPerLevel[]</code>, <code>weapons[].type</code></td></tr>
+  <tr><td>DamageSystem</td><td>Apply damage with crits/iFrames, emit death events</td><td>Reads: entity stats (armor, critChance, critMultiplier)</td></tr>
+  <tr><td>PickupSystem</td><td>Enemy death→drop rolls→pickup spawning, magnet attraction</td><td>Reads: <code>pickups[]</code>, <code>enemies[].drops</code></td></tr>
+  <tr><td>LevelingSystem</td><td>XP tracking, level-up queue processing</td><td>Reads: <code>leveling.xpCurve[]</code></td></tr>
+  <tr><td>Renderer</td><td>Canvas 2D drawing, entity rendering (with SVG cache), effects, UI overlay</td><td>Reads: <code>ASSET_MAP</code>, stage <code>background</code> config</td></tr>
+  <tr><td>FloatingTextSystem</td><td>Damage/pickup floating text</td><td>None (text derived from events)</td></tr>
+  <tr><td>UIManager</td><td>Level-up cards, end screen overlay</td><td>Reads: upgrade option data, end screen text config</td></tr>
+  <tr><td>AudioManager</td><td>Web Audio synthesis, event→sound routing, pool management, ducking</td><td>Reads: <code>audio_config.json</code>, event-driven triggers</td></tr>
+  <tr><td>Game</td><td>System orchestration, event wiring, upgrade option generation</td><td>Reads: all content data via DataManager</td></tr>
+</table>
+
+<h3>What Becomes Content</h3>
+<table>
+  <tr><th>Content Type</th><th>Current Location</th><th>Target File</th></tr>
+  <tr><td>Character definitions</td><td><code>EMBEDDED_DATA.characters</code></td><td><code>content/characters.json</code></td></tr>
+  <tr><td>Weapon definitions</td><td><code>EMBEDDED_DATA.weapons</code></td><td><code>content/weapons.json</code></td></tr>
+  <tr><td>Enemy definitions</td><td><code>EMBEDDED_DATA.enemies</code></td><td><code>content/enemies.json</code></td></tr>
+  <tr><td>Stage config (waves, timing, background)</td><td><code>EMBEDDED_DATA.stages</code></td><td><code>content/stages.json</code></td></tr>
+  <tr><td>Pickup definitions</td><td><code>EMBEDDED_DATA.pickups</code></td><td><code>content/pickups.json</code></td></tr>
+  <tr><td>Leveling config (XP curve, upgrade pool)</td><td><code>EMBEDDED_DATA.leveling</code></td><td><code>content/leveling.json</code></td></tr>
+  <tr><td>Upgrade options</td><td>Hardcoded in <code>Game._showUpgradeOptions()</code></td><td><code>content/upgrades.json</code></td></tr>
+  <tr><td>SVG graphics</td><td>14 inline base64 in <code>ASSET_MAP</code></td><td><code>assets/*.svg</code></td></tr>
+  <tr><td>Audio config</td><td>Hardcoded in <code>AudioManager</code> synth methods</td><td><code>content/audio_config.json</code></td></tr>
+  <tr><td>Mechanics & events</td><td>Hardcoded in <code>MovementSystem</code> (boss charge, telegraph)</td><td><code>content/mechanics.json</code></td></tr>
+  <tr><td>Stage background / BGM</td><td>Hardcoded <code>#1A1A2E</code>, no BGM</td><td><code>content/stages.json</code> (extended)</td></tr>
+  <tr><td>UI text / strings</td><td>Hardcoded in <code>UIManager</code></td><td><code>content/ui_config.json</code></td></tr>
+  <tr><td>Enemy visual overrides</td><td>Hardcoded in <code>SpawnSystem._getEnemyColor()</code></td><td><code>content/enemies.json</code> (extended)</td></tr>
+</table>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s4">4. Proposed Directory Structure</h2>
+<div class="section">
+
+<div class="file-tree">
+<span class="dir">game/</span><br>
+├── <span class="file">engine.html</span>          <span class="desc">← Self-contained engine (no content data, ~2200 lines)</span><br>
+├── <span class="dir">content/</span><br>
+│   ├── <span class="file">characters.json</span>   <span class="desc">← Character definitions</span><br>
+│   ├── <span class="file">weapons.json</span>      <span class="desc">← Weapon definitions + statsPerLevel</span><br>
+│   ├── <span class="file">enemies.json</span>      <span class="desc">← Enemy definitions + drops + behaviors</span><br>
+│   ├── <span class="file">stages.json</span>       <span class="desc">← Stage config (waves, background, BGM, boss config)</span><br>
+│   ├── <span class="file">pickups.json</span>      <span class="desc">← Pickup definitions + drop tables</span><br>
+│   ├── <span class="file">leveling.json</span>     <span class="desc">← XP curve + passive upgrade options</span><br>
+│   ├── <span class="file">upgrades.json</span>     <span class="desc">← Level-up upgrade pool definitions</span><br>
+│   ├── <span class="file">mechanics.json</span>    <span class="desc">← In-stage events, telegraphs, buffs/debuffs</span><br>
+│   ├── <span class="file">audio_config.json</span> <span class="desc">← Sound event → synth parameter mapping</span><br>
+│   └── <span class="file">ui_config.json</span>    <span class="desc">← UI text, colors, strings, boss name</span><br>
+├── <span class="dir">assets/</span><br>
+│   ├── <span class="file">player.svg</span><br>
+│   ├── <span class="file">zombie.svg</span><br>
+│   ├── <span class="file">bat.svg</span><br>
+│   ├── <span class="file">skeleton.svg</span><br>
+│   ├── <span class="file">ghost.svg</span><br>
+│   ├── <span class="file">caster.svg</span><br>
+│   ├── <span class="file">boss.svg</span><br>
+│   ├── <span class="file">w1_projectile.svg</span><br>
+│   ├── <span class="file">w2_orbit.svg</span><br>
+│   ├── <span class="file">w3_pulse.svg</span><br>
+│   ├── <span class="file">xp_gem_small.svg</span><br>
+│   ├── <span class="file">xp_gem_large.svg</span><br>
+│   ├── <span class="file">gold_coin.svg</span><br>
+│   ├── <span class="file">screen_wipe.svg</span><br>
+│   ├── <span class="file">magnet.svg</span><br>
+│   └── <span class="file">weapon_levelup.svg</span><br>
+└── <span class="dir">content_packs/</span>      <span class="desc">← Optional: alternate content sets</span><br>
+    └── <span class="dir">forest_theme/</span><br>
+        ├── <span class="file">characters.json</span>  <span class="desc">← Overrides root content/ when loaded</span><br>
+        └── <span class="file">stages.json</span>
+</div>
+
+<div class="callout">
+  <strong>Key principle:</strong> <code>engine.html</code> is the same file regardless of what content is loaded. Different games = different <code>content/</code> folders.
+</div>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s5">5. External File Specifications</h2>
+<div class="section">
+
+<!-- ──────── 5.1 characters.json ──────── -->
+<h3>5.1 <code>content/characters.json</code></h3>
+<p>Defines playable characters. One file may contain multiple characters; the engine loads a selected one by <code>id</code>.</p>
+
+<pre><code>{
+  "characters": [
+    {
+      "id": "player_default",
+      "name": "The Survivor",
+      "description": "A lone hero fighting through the night.",
+      "stats": {
+        "maxHealth": 100,
+        "moveSpeed": 200,
+        "armor": 0,
+        "pickupRange": 50,
+        "magnetRange": 0,
+        "critChance": 0,
+        "critMultiplier": 1.5
+      },
+      "hitbox": { "width": 20, "height": 20 },
+      "startingWeapon": "w1_projectile",
+      "visual": {
+        "shape": "square",
+        "size": 24,
+        "color": "#FFD700",
+        "svg": "assets/player.svg"
+      }
+    }
+  ]
+}</code></pre>
+
+<table>
+  <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+  <tr><td><code>id</code></td><td>string</td><td>✅</td><td>Unique identifier</td></tr>
+  <tr><td><code>name</code></td><td>string</td><td>✅</td><td>Display name</td></tr>
+  <tr><td><code>description</code></td><td>string</td><td>❌</td><td>Flavor text</td></tr>
+  <tr><td><code>stats</code></td><td>object</td><td>✅</td><td>Base stats: maxHealth, moveSpeed, armor, pickupRange, magnetRange, critChance, critMultiplier</td></tr>
+  <tr><td><code>hitbox</code></td><td>{width, height}</td><td>✅</td><td>Hitbox dimensions in pixels</td></tr>
+  <tr><td><code>startingWeapon</code></td><td>string</td><td>✅</td><td>Weapon ID auto-equipped at start</td></tr>
+  <tr><td><code>visual</code></td><td>object</td><td>✅</td><td>shape, size, color, svg (path to asset)</td></tr>
+</table>
+
+<!-- ──────── 5.2 weapons.json ──────── -->
+<h3>5.2 <code>content/weapons.json</code></h3>
+<p>Array of weapon definitions. Each weapon has per-level stats and power spike definitions.</p>
+
+<pre><code>{
+  "weapons": [
+    {
+      "id": "w1_projectile",
+      "name": "Projectile",
+      "type": "projectile",
+      "targeting": "nearest",
+      "unlockLevel": 1,
+      "orbDamageCooldown": 0,
+      "description": "Fires a projectile at the nearest enemy.",
+      "statsPerLevel": [
+        { "level": 1, "damage": 8, "cooldown": 1.00, "projectileCount": 1, "projectileSpeed": 400 },
+        { "level": 2, "damage": 10, "cooldown": 0.95, "projectileCount": 1, "projectileSpeed": 400 },
+        { "level": 3, "damage": 12, "cooldown": 0.90, "projectileCount": 1, "projectileSpeed": 400 },
+        { "level": 4, "damage": 15, "cooldown": 0.85, "projectileCount": 1, "projectileSpeed": 420, "pierceCount": 1 },
+        { "level": 5, "damage": 18, "cooldown": 0.80, "projectileCount": 2, "projectileSpeed": 420, "pierceCount": 1 },
+        { "level": 6, "damage": 22, "cooldown": 0.75, "projectileCount": 2, "projectileSpeed": 440, "pierceCount": 1 },
+        { "level": 7, "damage": 28, "cooldown": 0.65, "projectileCount": 3, "projectileSpeed": 440, "pierceCount": 1, "splitCount": 3 }
+      ],
+      "powerSpikes": {
+        "level4": { "name": "Pierce", "description": "Pierces +1 enemy", "statModifiers": { "pierceCount": 1 } },
+        "level7": { "name": "Split", "description": "Splits into 3", "statModifiers": { "splitCount": 3 } }
+      },
+      "visual": {
+        "projectile": { "shape": "square", "color": "#FFD700", "size": 4, "svg": "assets/w1_projectile.svg" }
+      },
+      "sound": {
+        "fire": "w1_fire",
+        "hit": "weapon_hit"
+      }
+    },
+    {
+      "id": "w2_orbit",
+      "name": "Orbit",
+      "type": "orbit",
+      "targeting": "self",
+      "unlockLevel": 3,
+      "orbDamageCooldown": 0.5,
+      "description": "Orbs circle the player and damage enemies on contact.",
+      "statsPerLevel": [
+        { "level": 1, "damage": 5, "cooldown": 2.00, "orbitCount": 2, "orbitSpeed": 2.00, "orbitRadius": 80 },
+        { "level": 2, "damage": 6, "cooldown": 1.85, "orbitCount": 2, "orbitSpeed": 1.85, "orbitRadius": 85 },
+        { "level": 3, "damage": 7, "cooldown": 1.70, "orbitCount": 2, "orbitSpeed": 1.70, "orbitRadius": 90 },
+        { "level": 4, "damage": 9, "cooldown": 1.55, "orbitCount": 3, "orbitSpeed": 1.55, "orbitRadius": 120 },
+        { "level": 5, "damage": 11, "cooldown": 1.40, "orbitCount": 3, "orbitSpeed": 1.40, "orbitRadius": 130 },
+        { "level": 6, "damage": 13, "cooldown": 1.30, "orbitCount": 4, "orbitSpeed": 1.30, "orbitRadius": 140 },
+        { "level": 7, "damage": 16, "cooldown": 1.00, "orbitCount": 4, "orbitSpeed": 1.00, "orbitRadius": 160 }
+      ],
+      "powerSpikes": {
+        "level4": { "name": "Expanded Orbit", "description": "+50% radius, +1 orb", "statModifiers": { "orbitRadiusBonus": 0.50 } },
+        "level7": { "name": "Afterimage", "description": "Damaging trails", "statModifiers": { "afterimageDuration": 0.5 } }
+      },
+      "visual": {
+        "orb": { "shape": "circle", "color": "#4FC3F7", "size": 6, "svg": "assets/w2_orbit.svg" }
+      },
+      "sound": {
+        "hum_start": "orbit_hum_start",
+        "hum_stop": "orbit_hum_stop",
+        "hit": "weapon_hit"
+      }
+    },
+    {
+      "id": "w3_area",
+      "name": "Area",
+      "type": "area",
+      "targeting": "player_position",
+      "unlockLevel": 6,
+      "orbDamageCooldown": 0,
+      "description": "Emits a shockwave damaging all nearby enemies.",
+      "statsPerLevel": [
+        { "level": 1, "damage": 12, "cooldown": 2.50, "pulseRadius": 80, "pulseCount": 1 },
+        { "level": 2, "damage": 15, "cooldown": 2.35, "pulseRadius": 88, "pulseCount": 1 },
+        { "level": 3, "damage": 18, "cooldown": 2.20, "pulseRadius": 96, "pulseCount": 1 },
+        { "level": 4, "damage": 22, "cooldown": 2.00, "pulseRadius": 110, "pulseCount": 2 },
+        { "level": 5, "damage": 27, "cooldown": 1.85, "pulseRadius": 120, "pulseCount": 2 },
+        { "level": 6, "damage": 33, "cooldown": 1.70, "pulseRadius": 135, "pulseCount": 2 },
+        { "level": 7, "damage": 42, "cooldown": 1.40, "pulseRadius": 160, "pulseCount": 3 }
+      ],
+      "powerSpikes": {
+        "level4": { "name": "Double Pulse", "description": "Fires twice", "statModifiers": { "pulseCountBonus": 1 } },
+        "level7": { "name": "Devastation", "description": "Triple + stun", "statModifiers": { "thirdPulseStunDuration": 1.0 } }
+      },
+      "visual": {
+        "pulse": { "color": "#FF9100", "lineWidth": 5, "maxAge": 0.5, "svg": "assets/w3_pulse.svg" }
+      },
+      "sound": {
+        "fire": "w3_pulse"
+      }
+    }
+  ]
+}</code></pre>
+
+<div class="callout">
+  <strong>New field: <code>projectileSpeed</code></strong> — Currently hardcoded to <code>400</code> in <code>WeaponSystem._fireW1()</code> (L1377). Moving this to per-level stats makes weapons fully data-driven.
+</div>
+
+<div class="callout callout-info">
+  <strong>New field: <code>visual</code> sub-objects</strong> — Each weapon type has a visual key matching its entity subtype (<code>projectile</code>, <code>orb</code>, <code>pulse</code>). The engine uses this instead of hardcoded <code>{ shape: 'square', color: '#FFD700' }</code>.
+</div>
+
+<div class="callout callout-info">
+  <strong>New field: <code>sound</code></strong> — Maps weapon events to named sounds. Engine looks up <code>weapon.sound.fire</code> instead of hardcoding <code>'w1_fire'</code>.
+</div>
+
+<!-- ──────── 5.3 enemies.json ──────── -->
+<h3>5.3 <code>content/enemies.json</code></h3>
+<p>Array of enemy definitions including normals and bosses. Each has stats, behavior, drops, spawn config, and optional visual override.</p>
+
+<pre><code>{
+  "enemies": [
+    {
+      "id": "zombie",
+      "name": "Zombie",
+      "type": "normal",
+      "stats": {
+        "hp": 10, "damage": 5, "speed": 40, "size": 10,
+        "xpValue": 1, "goldValue": 1,
+        "goldCoins": { "min": 1, "max": 2 }
+      },
+      "behavior": {
+        "pattern": "chase",
+        "params": { "chaseSpeed": 40 }
+      },
+      "drops": {
+        "powerUpTable": [{ "type": "weapon_levelup", "chance": 0.01 }]
+      },
+      "spawn": {
+        "weight": 100, "firstAppears": "0:00"
+      },
+      "visual": {
+        "shape": "square", "color": "#3B8A30",
+        "svg": "assets/zombie.svg"
+      },
+      "sound": {
+        "death": "zombie_kill"
+      }
+    },
+    {
+      "id": "bat",
+      "name": "Bat",
+      "type": "normal",
+      "stats": {
+        "hp": 5, "damage": 3, "speed": 100, "size": 8,
+        "xpValue": 1, "goldValue": 1,
+        "goldCoins": { "min": 1, "max": 1 }
+      },
+      "behavior": {
+        "pattern": "swarm",
+        "params": { "erraticism": 0.8 }
+      },
+      "drops": {
+        "powerUpTable": [{ "type": "magnet", "chance": 0.05 }]
+      },
+      "spawn": {
+        "weight": 80, "firstAppears": "1:00"
+      },
+      "visual": {
+        "shape": "square", "color": "#6B3FA0",
+        "svg": "assets/bat.svg"
+      },
+      "sound": { "death": "bat_kill" }
+    },
+    {
+      "id": "skeleton",
+      "name": "Skeleton",
+      "type": "normal",
+      "stats": {
+        "hp": 20, "damage": 8, "speed": 50, "size": 12,
+        "xpValue": 3, "goldValue": 2,
+        "goldCoins": { "min": 2, "max": 3 }
+      },
+      "behavior": {
+        "pattern": "chase",
+        "params": { "chaseSpeed": 50 }
+      },
+      "drops": {
+        "powerUpTable": [
+          { "type": "screen_wipe", "chance": 0.02 },
+          { "type": "weapon_levelup", "chance": 0.01 }
+        ]
+      },
+      "spawn": {
+        "weight": 60, "firstAppears": "2:00"
+      },
+      "visual": {
+        "shape": "square", "color": "#C0392B",
+        "svg": "assets/skeleton.svg"
+      },
+      "sound": { "death": "skeleton_kill" }
+    },
+    {
+      "id": "ghost",
+      "name": "Ghost",
+      "type": "normal",
+      "stats": {
+        "hp": 15, "damage": 10, "speed": 80, "size": 12,
+        "xpValue": 2, "goldValue": 2,
+        "goldCoins": { "min": 2, "max": 3 }
+      },
+      "behavior": {
+        "pattern": "wander_chase",
+        "params": { "wanderTime": 2, "chaseTime": 4 }
+      },
+      "drops": {
+        "powerUpTable": [
+          { "type": "magnet", "chance": 0.05 },
+          { "type": "weapon_levelup", "chance": 0.01 }
+        ]
+      },
+      "spawn": {
+        "weight": 50, "firstAppears": "2:30"
+      },
+      "visual": {
+        "shape": "square", "color": "#8E44AD",
+        "svg": "assets/ghost.svg"
+      },
+      "sound": { "death": "ghost_kill" }
+    },
+    {
+      "id": "caster",
+      "name": "Caster",
+      "type": "normal",
+      "stats": {
+        "hp": 12, "damage": 8, "speed": 50, "size": 13,
+        "xpValue": 3, "goldValue": 3,
+        "goldCoins": { "min": 3, "max": 4 }
+      },
+      "behavior": {
+        "pattern": "ranged",
+        "params": {
+          "maintainDistance": 150,
+          "projectileDamage": 6,
+          "projectileSpeed": 150
+        }
+      },
+      "drops": {
+        "powerUpTable": [
+          { "type": "screen_wipe", "chance": 0.02 },
+          { "type": "weapon_levelup", "chance": 0.01 }
+        ]
+      },
+      "spawn": {
+        "weight": 45, "firstAppears": "3:00"
+      },
+      "visual": {
+        "shape": "square", "color": "#2E86C1",
+        "svg": "assets/caster.svg"
+      },
+      "sound": { "death": "caster_kill" }
+    },
+    {
+      "id": "boss_gravekeeper",
+      "name": "The Gravekeeper",
+      "type": "boss",
+      "stats": {
+        "hp": 1000, "damage": 15, "speed": 70, "size": 28,
+        "xpValue": 50, "goldValue": 1,
+        "goldCoins": { "min": 20, "max": 30 }
+      },
+      "behavior": {
+        "pattern": "boss_charge",
+        "params": {
+          "chargeDuration": 1.5,
+          "pauseDuration": 1.0,
+          "chargeSpeedMultiplier": 3.0,
+          "windupDuration": 1.2,
+          "warningZoneLength": 600,
+          "warningZoneWidthMultiplier": 4
+        }
+      },
+      "drops": {
+        "powerUpTable": [{ "type": "weapon_levelup", "chance": 1.0 }]
+      },
+      "spawn": {
+        "weight": 0, "firstAppears": "4:00"
+      },
+      "phases": [
+        {
+          "hpThreshold": 1.0,
+          "speed": 70,
+          "chargeInterval": 3.0,
+          "chargeDuration": 1.5,
+          "pauseDuration": 1.0,
+          "minionCount": 3,
+          "minionInterval": 3.0
+        },
+        {
+          "hpThreshold": 0.5,
+          "speed": 100,
+          "chargeInterval": 2.0,
+          "chargeDuration": 1.5,
+          "pauseDuration": 0.8,
+          "minionCount": 5,
+          "minionInterval": 2.0,
+          "groundPound": {
+            "interval": 5.0,
+            "radius": 80,
+            "damage": 20,
+            "telegraphTime": 0.75
+          }
+        }
+      ],
+      "loot": {
+        "xp": 50,
+        "gold": { "min": 20, "max": 30 },
+        "guaranteedPowerUp": "weapon_levelup"
+      },
+      "screenWipeResistance": 0.8,
+      "chargeResumeBehavior": "continue_from_frozen",
+      "visual": {
+        "shape": "square", "color": "#4A0000",
+        "svg": "assets/boss.svg"
+      },
+      "sound": {
+        "death": "boss_death",
+        "charge_windup": "boss_growl",
+        "charge_start": "boss_charge",
+        "spawn": "boss_spawn"
+      }
+    }
+  ]
+}</code></pre>
+
+<div class="callout">
+  <strong>Key changes from current code:</strong>
+  <ul>
+    <li><code>visual</code> moved from runtime <code>_spawnEnemy()</code> into enemy data — engine no longer hardcodes colors</li>
+    <li><code>sound</code> field maps enemy events to named sounds — engine looks up <code>enemy.sound.death</code></li>
+    <li><code>behavior.params</code> now includes boss-specific tuning (windupDuration, chargeSpeedMultiplier, warningZone dimensions) — extracted from hardcoded values in <code>MovementSystem._moveBoss()</code></li>
+  </ul>
+</div>
+
+<!-- ──────── 5.4 stages.json ──────── -->
+<h3>5.4 <code>content/stages.json</code></h3>
+<p>Stage definitions with waves, visual theme, boss config, and new fields for background + BGM.</p>
+
+<pre><code>{
+  "stages": [
+    {
+      "id": "stage_graveyard",
+      "name": "The Graveyard",
+      "theme": "Gothic horror",
+      "background": {
+        "baseColor": "#1A1A2E",
+        "gridColor": "#16213E",
+        "gridSize": 50,
+        "bgImage": null,
+        "bgParallax": false,
+        "ambientParticles": null
+      },
+      "bgm": {
+        "src": "assets/audio/graveyard_bgm.mp3",
+        "volume": 0.3,
+        "loop": true,
+        "fadeIn": 2.0,
+        "fadeOut": 1.0,
+        "duckForBoss": true,
+        "duckForLevelUp": true
+      },
+      "spawnConfig": {
+        "minDistance": 400,
+        "maxDistance": 600,
+        "maxEnemies": 200,
+        "baseSpawnRate": 0.8,
+        "spawnRateCap": 3.0,
+        "maxEnemyCapBehavior": "stop_spawn"
+      },
+      "waves": [
+        {
+          "time": "0:00-0:30",
+          "enemyTypes": ["zombie"],
+          "spawnRate": 0.8,
+          "compositionWeights": { "zombie": 1.0 },
+          "maxEnemies": 25
+        },
+        {
+          "time": "0:30-1:00",
+          "enemyTypes": ["zombie"],
+          "spawnRate": 1.2,
+          "compositionWeights": { "zombie": 1.0 },
+          "maxEnemies": 40
+        },
+        {
+          "time": "1:00-1:30",
+          "enemyTypes": ["zombie", "bat"],
+          "spawnRate": 1.5,
+          "compositionWeights": { "zombie": 0.55, "bat": 0.45 },
+          "maxEnemies": 60
+        },
+        {
+          "time": "1:30-2:00",
+          "enemyTypes": ["zombie", "bat"],
+          "spawnRate": 1.8,
+          "compositionWeights": { "zombie": 0.55, "bat": 0.45 },
+          "maxEnemies": 80
+        },
+        {
+          "time": "2:00-2:30",
+          "enemyTypes": ["zombie", "bat", "skeleton"],
+          "spawnRate": 2.0,
+          "compositionWeights": { "zombie": 0.40, "bat": 0.35, "skeleton": 0.25 },
+          "maxEnemies": 100
+        },
+        {
+          "time": "2:30-3:00",
+          "enemyTypes": ["zombie", "bat", "skeleton", "ghost"],
+          "spawnRate": 2.2,
+          "compositionWeights": { "zombie": 0.30, "bat": 0.30, "skeleton": 0.25, "ghost": 0.15 },
+          "maxEnemies": 120
+        },
+        {
+          "time": "3:00-3:30",
+          "enemyTypes": ["zombie", "bat", "skeleton", "ghost", "caster"],
+          "spawnRate": 2.5,
+          "compositionWeights": { "zombie": 0.25, "bat": 0.25, "skeleton": 0.20, "ghost": 0.15, "caster": 0.15 },
+          "maxEnemies": 150
+        },
+        {
+          "time": "3:30-4:00",
+          "enemyTypes": ["zombie", "bat", "skeleton", "ghost", "caster"],
+          "spawnRate": 3.0,
+          "compositionWeights": { "zombie": 0.20, "bat": 0.25, "skeleton": 0.20, "ghost": 0.15, "caster": 0.20 },
+          "maxEnemies": 180
+        },
+        {
+          "time": "4:00-4:30",
+          "enemyTypes": ["zombie", "bat", "skeleton", "ghost", "caster"],
+          "spawnRate": 2.0,
+          "compositionWeights": { "zombie": 0.20, "bat": 0.25, "skeleton": 0.20, "ghost": 0.15, "caster": 0.20 },
+          "maxEnemies": 150
+        },
+        {
+          "time": "4:30-5:00",
+          "enemyTypes": ["zombie", "bat", "skeleton", "ghost", "caster"],
+          "spawnRate": 1.5,
+          "compositionWeights": { "zombie": 0.20, "bat": 0.25, "skeleton": 0.20, "ghost": 0.15, "caster": 0.20 },
+          "maxEnemies": 120
+        }
+      ],
+      "difficultyScaling": {
+        "hpMultiplier": "1 + 0.15 * minutes_after_boss_kill",
+        "damageMultiplier": "1 + 0.10 * minutes_after_boss_kill",
+        "timerStart": "boss_death_timestamp"
+      },
+      "xpScaling": {
+        "formula": "base_xp * (1 + 0.05 * floor(t / 60))"
+      },
+      "bossConfig": {
+        "enemyId": "boss_gravekeeper",
+        "spawnTime": "4:00",
+        "announcement": [
+          {
+            "time": 230,
+            "text": "Something stirs in the darkness...",
+            "type": "text",
+            "styling": { "fontSize": 24, "position": "center", "animation": "fadeInHoldFadeOut" }
+          },
+          { "time": 230, "type": "dim", "brightness": 0.8 },
+          {
+            "time": 235,
+            "text": "The Gravekeeper rises!",
+            "type": "shake",
+            "styling": { "fontSize": 28, "position": "center", "animation": "scalePulse" }
+          },
+          { "time": 240, "type": "boss_spawn", "position": "nearest_edge_to_player" }
+        ]
+      },
+      "gameConfig": {
+        "timeLimit": 300,
+        "bossSpawnTime": 240
+      }
+    }
+  ]
+}</code></pre>
+
+<div class="callout">
+  <strong>New fields not in current code:</strong>
+  <ul>
+    <li><code>background.bgImage</code> — Path to a tiled/parallax background image (replaces hardcoded <code>#1A1A2E</code>)</li>
+    <li><code>background.ambientParticles</code> — Optional particle config (e.g., falling leaves, fog wisps)</li>
+    <li><code>bgm</code> — Full BGM config with path, volume, loop, fade, ducking rules</li>
+    <li><code>gameConfig.timeLimit</code> and <code>gameConfig.bossSpawnTime</code> — Currently hardcoded at L3188 (<code>300</code>) and L983 (<code>240</code>)</li>
+  </ul>
+</div>
+
+<!-- ──────── 5.5 pickups.json ──────── -->
+<h3>5.5 <code>content/pickups.json</code></h3>
+<p>Array of pickup/item definitions with visuals, behavior, and drop configuration.</p>
+
+<pre><code>{
+  "pickups": [
+    {
+      "id": "exp_small",
+      "name": "XP Gem (Small)",
+      "type": "exp_small",
+      "value": 1,
+      "visual": {
+        "shape": "diamond", "color": "#4FC3F7", "size": 8,
+        "svg": "assets/xp_gem_small.svg"
+      },
+      "behavior": {
+        "duration": null,
+        "attractRadius": 50,
+        "attractSpeed": 0,
+        "instantBurstRadius": 0
+      },
+      "sound": {
+        "collect": "exp_pickup"
+      }
+    },
+    {
+      "id": "exp_large",
+      "name": "XP Gem (Large)",
+      "type": "exp_large",
+      "value": 5,
+      "visual": {
+        "shape": "diamond", "color": "#81D4FA", "size": 14,
+        "svg": "assets/xp_gem_large.svg"
+      },
+      "behavior": {
+        "duration": null,
+        "attractRadius": 50,
+        "attractSpeed": 0,
+        "instantBurstRadius": 0
+      },
+      "sound": { "collect": "exp_pickup_large" }
+    },
+    {
+      "id": "gold_coin",
+      "name": "Gold Coin",
+      "type": "gold",
+      "value": 0,
+      "visual": {
+        "shape": "circle", "color": "#FFD700", "size": 10,
+        "svg": "assets/gold_coin.svg"
+      },
+      "behavior": {
+        "duration": 30,
+        "attractRadius": 50,
+        "attractSpeed": 0,
+        "instantBurstRadius": 0
+      },
+      "goldValuePerCoin": 1,
+      "sound": { "collect": "gold_pickup" }
+    },
+    {
+      "id": "screen_wipe",
+      "name": "Screen Wipe",
+      "type": "screen_wipe",
+      "value": 0,
+      "visual": {
+        "shape": "star", "color": "#00E676", "size": 16,
+        "svg": "assets/screen_wipe.svg"
+      },
+      "behavior": {
+        "duration": null,
+        "attractRadius": 50,
+        "attractSpeed": 0,
+        "instantBurstRadius": 0
+      },
+      "killsAllEnemies": true,
+      "bossDamage": 200,
+      "bossResistance": 0.8,
+      "sound": { "collect": "screenwipe" }
+    },
+    {
+      "id": "magnet",
+      "name": "Magnet",
+      "type": "magnet",
+      "value": 0,
+      "visual": {
+        "shape": "circle", "color": "#FF4081", "size": 14,
+        "svg": "assets/magnet.svg"
+      },
+      "behavior": {
+        "duration": 10,
+        "attractRadius": 350,
+        "attractSpeed": 400,
+        "instantBurstRadius": 150
+      },
+      "sound": {
+        "collect": "powerup_collect",
+        "hum_start": "magnet_hum_start",
+        "hum_stop": "magnet_hum_stop"
+      }
+    },
+    {
+      "id": "weapon_levelup",
+      "name": "Weapon Level-Up",
+      "type": "weapon_levelup",
+      "value": 0,
+      "visual": {
+        "shape": "triangle", "color": "#FF9100", "size": 16,
+        "svg": "assets/weapon_levelup.svg"
+      },
+      "behavior": {
+        "duration": null,
+        "attractRadius": 50,
+        "attractSpeed": 0,
+        "instantBurstRadius": 0
+      },
+      "sound": { "collect": "powerup_collect" }
+    }
+  ]
+}</code></pre>
+
+<!-- ──────── 5.6 leveling.json ──────── -->
+<h3>5.6 <code>content/leveling.json</code></h3>
+<p>XP curve, passive upgrade pool, and level-up behavior configuration.</p>
+
+<pre><code>{
+  "xpCurve": [
+    { "level": 1, "xpToNext": 5, "cumulativeXp": 0 },
+    { "level": 2, "xpToNext": 10, "cumulativeXp": 5 },
+    { "level": 3, "xpToNext": 15, "cumulativeXp": 15 },
+    { "level": 4, "xpToNext": 22, "cumulativeXp": 30 },
+    { "level": 5, "xpToNext": 32, "cumulativeXp": 52 },
+    { "level": 6, "xpToNext": 45, "cumulativeXp": 84 },
+    { "level": 7, "xpToNext": 62, "cumulativeXp": 129 },
+    { "level": 8, "xpToNext": 85, "cumulativeXp": 191 },
+    { "level": 9, "xpToNext": 115, "cumulativeXp": 276 },
+    { "level": 10, "xpToNext": 155, "cumulativeXp": 391 },
+    { "level": 11, "xpToNext": 210, "cumulativeXp": 546 },
+    { "level": 12, "xpToNext": 280, "cumulativeXp": 756 },
+    { "level": 13, "xpToNext": 375, "cumulativeXp": 1036 },
+    { "level": 14, "xpToNext": 375, "cumulativeXp": 1411 }
+  ],
+  "overflowFormula": {
+    "aboveLevel": 14,
+    "expression": "floor(375 * 1.3^(N-14))",
+    "description": "Exponential scaling for levels beyond 14"
+  },
+  "passiveOptions": [
+    { "id": "max_health", "name": "Max Health +20%", "stat": "maxHealth", "value": 0.20, "description": "Increases maximum HP by 20%", "maxStacks": 5, "icon": "heart" },
+    { "id": "move_speed", "name": "Move Speed +10%", "stat": "moveSpeed", "value": 0.10, "description": "Increases movement speed by 10%", "maxStacks": 3, "icon": "speed" },
+    { "id": "armor", "name": "Armor +1", "stat": "armor", "value": 1, "description": "Reduces all damage by 1", "maxStacks": 3, "icon": "shield" },
+    { "id": "pickup_range", "name": "Pickup Range +25px", "stat": "pickupRange", "value": 25, "description": "Collect pickups from further", "maxStacks": 4, "icon": "magnet" },
+    { "id": "crit_chance", "name": "Crit Chance +5%", "stat": "critChance", "value": 0.05, "description": "5% chance for 1.5x damage", "maxStacks": 4, "icon": "star" }
+  ],
+  "upgradePool": {
+    "weaponWeight": 0.6,
+    "passiveWeight": 0.4,
+    "weaponUnlockGuaranteed": true
+  },
+  "maxLevelUpQueue": 3,
+  "excessXPBehavior": "carry_over",
+  "maxHealthPassiveHealsCurrent": true
+}</code></pre>
+
+<!-- ──────── 5.7 upgrades.json ──────── -->
+<h3>5.7 <code>content/upgrades.json</code> <span class="tag tag-new">New</span></h3>
+<p>Defines the upgrade options shown during level-up. Currently hardcoded in <code>Game._showUpgradeOptions()</code> (L3286-3348).</p>
+
+<pre><code>{
+  "statUpgrades": [
+    {
+      "id": "damage_up",
+      "name": "Damage Up",
+      "description": "+15% base damage",
+      "icon": "sword",
+      "maxStacks": 10,
+      "apply": {
+        "type": "multiply_stat",
+        "target": "damageMultiplier",
+        "value": 1.15
+      }
+    },
+    {
+      "id": "speed_up",
+      "name": "Speed Up",
+      "description": "+10% move speed",
+      "icon": "boot",
+      "maxStacks": 8,
+      "apply": {
+        "type": "multiply_stat",
+        "target": "speedMultiplier",
+        "value": 1.10,
+        "recalcDerived": "speed"
+      }
+    },
+    {
+      "id": "health_up",
+      "name": "Health Up",
+      "description": "+20 max HP & heal",
+      "icon": "heart",
+      "maxStacks": 10,
+      "apply": {
+        "type": "add_stat",
+        "target": "maxHp",
+        "value": 20,
+        "alsoHeal": 20
+      }
+    }
+  ],
+  "weaponUpgradeTemplate": {
+    "namePattern": "{weaponName} Up",
+    "descriptionPattern": "Lv {currentLevel} → {nextLevel}",
+    "apply": {
+      "type": "weapon_levelup",
+      "targetWeapon": "lowest_level_active"
+    }
+  },
+  "selectionCount": 3,
+  "shuffleBeforePick": true
+}</code></pre>
+
+<!-- ──────── 5.8 mechanics.json ──────── -->
+<h3>5.8 <code>content/mechanics.json</code> <span class="tag tag-new">New</span></h3>
+<p>Defines in-stage events, telegraphed damage areas, buffs/debuffs, and scripted mechanics. This is the key file for making stage events data-driven instead of hardcoded in MovementSystem.</p>
+
+<pre><code>{
+  "movementPatterns": {
+    "chase": {
+      "description": "Move directly toward the player",
+      "params": { "chaseSpeed": { "type": "override", "default": 40 } }
+    },
+    "swarm": {
+      "description": "Fast erratic movement toward player",
+      "params": {
+        "erraticism": { "type": "float", "default": 0.8, "min": 0, "max": 1 }
+      }
+    },
+    "wander_chase": {
+      "description": "Alternates between wandering and chasing",
+      "params": {
+        "wanderTime": { "type": "float", "default": 2 },
+        "chaseTime": { "type": "float", "default": 4 }
+      }
+    },
+    "ranged": {
+      "description": "Maintains distance, fires projectiles",
+      "params": {
+        "maintainDistance": { "type": "int", "default": 150 },
+        "projectileDamage": { "type": "int", "default": 6 },
+        "projectileSpeed": { "type": "int", "default": 150 }
+      }
+    },
+    "boss_charge": {
+      "description": "Boss charge pattern with telegraph",
+      "params": {
+        "chargeDuration": { "type": "float", "default": 1.5 },
+        "pauseDuration": { "type": "float", "default": 1.0 },
+        "chargeSpeedMultiplier": { "type": "float", "default": 3.0 },
+        "windupDuration": { "type": "float", "default": 1.2 },
+        "warningZoneLength": { "type": "int", "default": 600 },
+        "warningZoneWidthMultiplier": { "type": "int", "default": 4 }
+      }
+    }
+  },
+
+  "stageEvents": [
+    {
+      "id": "boss_telegraph",
+      "type": "damage_zone",
+      "trigger": "boss_windup",
+      "visual": {
+        "shape": "rectangle",
+        "fillColor": "rgba(255, 145, 0, ${flickerIntensity})",
+        "strokeColor": "rgba(255, 145, 0, 0.55)",
+        "lineWidth": 2,
+        "flickerRate": 0.012,
+        "flickerMin": 0.13,
+        "flickerMax": 0.37,
+        "chevrons": {
+          "count": 5,
+          "color": "rgba(255, 200, 0, ${flickerIntensity + 0.15})",
+          "lineWidth": 2.5
+        }
+      },
+      "duration": "boss_windup_duration",
+      "damageOnContact": false,
+      "destroyOnHit": false
+    },
+    {
+      "id": "ground_pound",
+      "type": "aoe_damage",
+      "trigger": "boss_ground_pound",
+      "visual": {
+        "shape": "circle",
+        "fillColor": "rgba(255, 50, 50, 0.3)",
+        "strokeColor": "#FF3333",
+        "lineWidth": 3,
+        "flickerRate": 0.015,
+        "telegraphDuration": 0.75
+      },
+      "damage": 20,
+      "radius": 80,
+      "damagePlayer": true,
+      "damageEnemies": false
+    }
+  ],
+
+  "buffs": {
+    "boss_enrage": {
+      "name": "Enrage",
+      "description": "Boss enters phase 2 — increased speed and aggression",
+      "appliesTo": "boss",
+      "modifiers": {
+        "speedMultiplier": 1.43,
+        "damageMultiplier": 1.0
+      },
+      "visual": {
+        "aura": { "color": "#FF0000", "size": 1.5, "pulse": true }
+      }
+    }
+  },
+
+  "debuffs": {
+    "stun": {
+      "name": "Stun",
+      "description": "Target cannot move or attack",
+      "effect": "disable_movement",
+      "stackable": false,
+      "visual": {
+        "overheadIcon": "stars",
+        "color": "#FFD700"
+      }
+    }
+  },
+
+  "hazards": {
+    "description": "Future: environmental hazards like fire pools, poison clouds, etc.",
+    "template": {
+      "id": "fire_pool",
+      "type": "persistent_damage_zone",
+      "shape": "circle",
+      "radius": 60,
+      "damagePerSecond": 5,
+      "duration": 10,
+      "visual": {
+        "particles": "fire",
+        "color": "#FF4500"
+      }
+    }
+  }
+}</code></pre>
+
+<!-- ──────── 5.9 audio_config.json ──────── -->
+<h3>5.9 <code>content/audio_config.json</code> <span class="tag tag-new">New</span></h3>
+<p>Maps named sound events to synthesis parameters (or external audio file references). This replaces the 30+ hardcoded synth methods in AudioManager.</p>
+
+<pre><code>{
+  "masterVolume": 0.8,
+  "channels": {
+    "sfx": { "volume": 0.85 },
+    "music": { "volume": 0.7 },
+    "ui": { "volume": 1.0 }
+  },
+  "sfxPoolSize": 16,
+
+  "sounds": {
+    "w1_fire": {
+      "type": "synth",
+      "waveform": "square",
+      "frequency": 880,
+      "duration": 0.08,
+      "envelope": { "attack": 0.005, "decay": 0.04, "sustain": 0.3, "release": 0.03 },
+      "volume": 0.15,
+      "priority": 2
+    },
+    "w3_pulse": {
+      "type": "synth",
+      "waveform": "sine",
+      "frequency": 220,
+      "duration": 0.3,
+      "sweep": { "start": 300, "end": 60 },
+      "envelope": { "attack": 0.01, "decay": 0.15, "sustain": 0.2, "release": 0.14 },
+      "volume": 0.25,
+      "priority": 3
+    },
+    "zombie_kill": {
+      "type": "synth",
+      "waveform": "sawtooth",
+      "frequency": 150,
+      "duration": 0.12,
+      "envelope": { "attack": 0.002, "decay": 0.06, "sustain": 0.2, "release": 0.06 },
+      "volume": 0.12,
+      "priority": 1
+    },
+    "bat_kill": {
+      "type": "synth",
+      "waveform": "sawtooth",
+      "frequency": 600,
+      "duration": 0.06,
+      "envelope": { "attack": 0.001, "decay": 0.03, "sustain": 0.1, "release": 0.03 },
+      "volume": 0.10,
+      "priority": 1
+    },
+    "skeleton_kill": {
+      "type": "synth",
+      "waveform": "square",
+      "frequency": 200,
+      "duration": 0.15,
+      "envelope": { "attack": 0.003, "decay": 0.08, "sustain": 0.2, "release": 0.07 },
+      "volume": 0.14,
+      "priority": 2
+    },
+    "ghost_kill": {
+      "type": "synth",
+      "waveform": "sine",
+      "frequency": 500,
+      "duration": 0.2,
+      "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.15, "release": 0.09 },
+      "volume": 0.12,
+      "priority": 2
+    },
+    "caster_kill": {
+      "type": "synth",
+      "waveform": "triangle",
+      "frequency": 350,
+      "duration": 0.12,
+      "envelope": { "attack": 0.005, "decay": 0.06, "sustain": 0.2, "release": 0.06 },
+      "volume": 0.12,
+      "priority": 2
+    },
+    "player_hurt": {
+      "type": "synth",
+      "waveform": "square",
+      "frequency": 120,
+      "duration": 0.2,
+      "envelope": { "attack": 0.001, "decay": 0.1, "sustain": 0.3, "release": 0.1 },
+      "volume": 0.20,
+      "priority": 5
+    },
+    "player_death": {
+      "type": "synth",
+      "waveform": "sawtooth",
+      "frequency": 80,
+      "duration": 0.5,
+      "sweep": { "start": 200, "end": 40 },
+      "envelope": { "attack": 0.005, "decay": 0.2, "sustain": 0.3, "release": 0.3 },
+      "volume": 0.30,
+      "priority": 10
+    },
+    "powerup_collect": {
+      "type": "synth",
+      "waveform": "sine",
+      "frequencies": [523, 659, 784],
+      "duration": 0.25,
+      "arpeggio": true,
+      "arpeggioInterval": 0.06,
+      "envelope": { "attack": 0.005, "decay": 0.1, "sustain": 0.4, "release": 0.15 },
+      "volume": 0.20,
+      "priority": 4
+    },
+    "exp_pickup": {
+      "type": "synth",
+      "waveform": "sine",
+      "frequency": 880,
+      "duration": 0.06,
+      "envelope": { "attack": 0.002, "decay": 0.03, "sustain": 0.2, "release": 0.03 },
+      "volume": 0.08,
+      "priority": 1
+    },
+    "exp_pickup_large": {
+      "type": "synth",
+      "waveform": "sine",
+      "frequency": 1047,
+      "duration": 0.1,
+      "envelope": { "attack": 0.003, "decay": 0.05, "sustain": 0.3, "release": 0.05 },
+      "volume": 0.12,
+      "priority": 2
+    },
+    "gold_pickup": {
+      "type": "synth",
+      "waveform": "triangle",
+      "frequencies": [1047, 1319],
+      "duration": 0.12,
+      "arpeggio": true,
+      "arpeggioInterval": 0.04,
+      "envelope": { "attack": 0.002, "decay": 0.06, "sustain": 0.3, "release": 0.06 },
+      "volume": 0.10,
+      "priority": 1
+    },
+    "weapon_hit": {
+      "type": "synth",
+      "waveform": "square",
+      "frequency": 300,
+      "duration": 0.05,
+      "envelope": { "attack": 0.001, "decay": 0.02, "sustain": 0.1, "release": 0.03 },
+      "volume": 0.06,
+      "priority": 1
+    },
+    "weapon_unlock": {
+      "type": "synth",
+      "waveform": "sine",
+      "frequencies": [523, 659, 784, 1047],
+      "duration": 0.4,
+      "arpeggio": true,
+      "arpeggioInterval": 0.08,
+      "envelope": { "attack": 0.005, "decay": 0.15, "sustain": 0.4, "release": 0.25 },
+      "volume": 0.25,
+      "priority": 6
+    },
+    "screenwipe": {
+      "type": "synth",
+      "waveform": "sawtooth",
+      "frequency": 100,
+      "duration": 0.6,
+      "sweep": { "start": 80, "end": 400 },
+      "envelope": { "attack": 0.01, "decay": 0.2, "sustain": 0.4, "release": 0.4 },
+      "volume": 0.30,
+      "priority": 8
+    },
+    "boss_spawn": {
+      "type": "synth",
+      "waveform": "sawtooth",
+      "frequency": 55,
+      "duration": 1.0,
+      "sweep": { "start": 55, "end": 40 },
+      "envelope": { "attack": 0.05, "decay": 0.3, "sustain": 0.5, "release": 0.65 },
+      "volume": 0.35,
+      "priority": 10
+    },
+    "boss_death": {
+      "type": "synth",
+      "waveform": "sawtooth",
+      "frequency": 100,
+      "duration": 1.2,
+      "sweep": { "start": 200, "end": 30 },
+      "envelope": { "attack": 0.01, "decay": 0.3, "sustain": 0.4, "release": 0.9 },
+      "volume": 0.35,
+      "priority": 10
+    },
+    "boss_growl": {
+      "type": "synth",
+      "waveform": "sawtooth",
+      "frequency": 65,
+      "duration": 0.8,
+      "envelope": { "attack": 0.05, "decay": 0.3, "sustain": 0.3, "release": 0.45 },
+      "volume": 0.25,
+      "priority": 7
+    },
+    "boss_charge": {
+      "type": "synth",
+      "waveform": "square",
+      "frequency": 80,
+      "duration": 0.3,
+      "envelope": { "attack": 0.005, "decay": 0.1, "sustain": 0.4, "release": 0.2 },
+      "volume": 0.25,
+      "priority": 7
+    }
+  },
+
+  "continuousSounds": {
+    "orbit_hum": {
+      "type": "synth_continuous",
+      "oscillators": [
+        { "waveform": "sine", "frequency": 220 },
+        { "waveform": "sine", "frequency": 330 }
+      ],
+      "volume": 0.04,
+      "fadeIn": 0.3,
+      "fadeOut": 0.3,
+      "startEvent": "weaponUnlock:w2_orbit",
+      "stopEvent": "game_over"
+    },
+    "magnet_hum": {
+      "type": "synth_continuous",
+      "oscillators": [
+        { "waveform": "sine", "frequency": 220 },
+        { "waveform": "sine", "frequency": 330 }
+      ],
+      "volume": 0.06,
+      "maxDuration": 10,
+      "fadeIn": 0.3,
+      "fadeOut": 0.5,
+      "startEvent": "magnetActivate",
+      "stopEvent": "magnetExpire"
+    }
+  },
+
+  "ducking": {
+    "bossActive": { "sfxFactor": 0.6, "fadeIn": 0.3, "fadeOut": 0.5, "fadeOutTarget": 0.85 },
+    "levelUp": { "sfxFactor": 0.1, "fadeIn": 0.05, "fadeOut": 0.2, "fadeOutTarget": 0.85 }
+  }
+}</code></pre>
+
+<!-- ──────── 5.10 ui_config.json ──────── -->
+<h3>5.10 <code>content/ui_config.json</code> <span class="tag tag-new">New</span></h3>
+<p>UI text strings, colors, and layout config. Replaces hardcoded strings in UIManager and Renderer.</p>
+
+<pre><code>{
+  "loadingScreen": {
+    "title": "MODULARITY ENGINE",
+    "version": "v0.3.0",
+    "titleColor": "#FFD700",
+    "bgColor": "#0a0a1a",
+    "fillColor": "#3B82F6",
+    "fontFamily": "'Courier New', monospace"
+  },
+  "startOverlay": {
+    "title": "MODULARITY ENGINE",
+    "instruction": "Click or tap to start",
+    "titleColor": "#FFD700",
+    "instructionColor": "#888"
+  },
+  "hud": {
+    "hpBar": {
+      "x": 10, "y": 10, "width": 200, "height": 16,
+      "bgColor": "#333",
+      "fillColor": "#EF4444",
+      "lowHealthColor": "#FF0000",
+      "lowHealthThreshold": 0.25,
+      "borderColor": "#FFF"
+    },
+    "levelBadge": {
+      "x": "right-30", "y": 18, "radius": 16,
+      "bgColor": "#3B82F6",
+      "textColor": "#FFF",
+      "fontSize": 12
+    },
+    "expBar": {
+      "height": 20,
+      "bgColor": "#333",
+      "fillColor": "#4FC3F7",
+      "position": "bottom"
+    },
+    "bossHpBar": {
+      "width": 240, "height": 14,
+      "bgColor": "#333",
+      "fillColor": "#C0392B",
+      "lowHealthColor": "#FF0000",
+      "lowHealthThreshold": 0.25,
+      "bossNameColor": "#FFF",
+      "bossNameFont": "9px monospace",
+      "position": "top-center",
+      "y": 40
+    }
+  },
+  "levelUpScreen": {
+    "overlayColor": "rgba(0, 0, 0, 0.6)",
+    "title": "LEVEL UP!",
+    "titleColor": "#3B82F6",
+    "titleFontSize": "bold 32px monospace",
+    "cardWidth": 160,
+    "cardHeight": 200,
+    "cardSpacing": 20,
+    "cardBgColor": "#1a1a2e",
+    "cardBorderColor": "#3B82F6",
+    "cardTextColor": "#FFF",
+    "instructionText": "Press 1, 2, or 3 to select",
+    "instructionColor": "#666"
+  },
+  "endScreen": {
+    "overlayColor": "rgba(0, 0, 0, 0.8)",
+    "titles": {
+      "victory": "VICTORY",
+      "survived": "SURVIVED",
+      "defeat": "DEFEATED"
+    },
+    "titleColors": {
+      "victory": "#FFD700",
+      "survived": "#FFF",
+      "defeat": "#EF4444"
+    },
+    "titleFontSize": "bold 48px monospace",
+    "statsColor": "#CCC",
+    "statsFontSize": "16px monospace",
+    "instructionText": "Click to restart",
+    "instructionColor": "#666"
+  },
+  "floatingText": {
+    "damageColor": "#FFF",
+    "critColor": "#FFD700",
+    "critFontSize": 16,
+    "normalFontSize": 12,
+    "critMarker": "!",
+    "pickupColors": {
+      "exp_small": "#4FC3F7",
+      "exp_large": "#81D4FA",
+      "gold_coin": "#FFD700",
+      "weapon_levelup": "#FF9100",
+      "screen_wipe": "#00E676",
+      "magnet": "#FF4081"
+    }
+  },
+  "background": {
+    "canvasClearColor": "#0A0A1A"
+  }
+}</code></pre>
+
+<!-- ──────── 5.11 assets mapping ──────── -->
+<h3>5.11 <code>assets/*.svg</code> — Visual Asset Mapping</h3>
+<p>SVG files stored externally. The engine builds an asset map from <code>enemies.json</code>, <code>characters.json</code>, <code>weapons.json</code>, and <code>pickups.json</code> at load time.</p>
+
+<table>
+  <tr><th>Asset</th><th>File</th><th>ViewBox</th><th>Referenced By</th></tr>
+  <tr><td>Player Character</td><td><code>assets/player.svg</code></td><td>48×48</td><td><code>characters.json → visual.svg</code></td></tr>
+  <tr><td>Zombie</td><td><code>assets/zombie.svg</code></td><td>20×20</td><td><code>enemies.json → visual.svg</code></td></tr>
+  <tr><td>Bat</td><td><code>assets/bat.svg</code></td><td>16×16</td><td><code>enemies.json → visual.svg</code></td></tr>
+  <tr><td>Skeleton</td><td><code>assets/skeleton.svg</code></td><td>24×24</td><td><code>enemies.json → visual.svg</code></td></tr>
+  <tr><td>Ghost</td><td><code>assets/ghost.svg</code></td><td>24×24</td><td><code>enemies.json → visual.svg</code></td></tr>
+  <tr><td>Caster</td><td><code>assets/caster.svg</code></td><td>26×26</td><td><code>enemies.json → visual.svg</code></td></tr>
+  <tr><td>Boss (Gravekeeper)</td><td><code>assets/boss.svg</code></td><td>56×56</td><td><code>enemies.json → visual.svg</code></td></tr>
+  <tr><td>W1 Projectile</td><td><code>assets/w1_projectile.svg</code></td><td>8×8</td><td><code>weapons.json → visual.projectile.svg</code></td></tr>
+  <tr><td>W2 Orbit Sphere</td><td><code>assets/w2_orbit.svg</code></td><td>12×12</td><td><code>weapons.json → visual.orb.svg</code></td></tr>
+  <tr><td>W3 Pulse Ring</td><td><code>assets/w3_pulse.svg</code></td><td>320×320</td><td><code>weapons.json → visual.pulse.svg</code></td></tr>
+  <tr><td>XP Gem Small</td><td><code>assets/xp_gem_small.svg</code></td><td>16×16</td><td><code>pickups.json → visual.svg</code></td></tr>
+  <tr><td>XP Gem Large</td><td><code>assets/xp_gem_large.svg</code></td><td>28×28</td><td><code>pickups.json → visual.svg</code></td></tr>
+  <tr><td>Gold Coin</td><td><code>assets/gold_coin.svg</code></td><td>20×20</td><td><code>pickups.json → visual.svg</code></td></tr>
+  <tr><td>Screen Wipe</td><td><code>assets/screen_wipe.svg</code></td><td>32×32</td><td><code>pickups.json → visual.svg</code></td></tr>
+  <tr><td>Magnet</td><td><code>assets/magnet.svg</code></td><td>28×28</td><td><code>pickups.json → visual.svg</code></td></tr>
+  <tr><td>Weapon Level-Up</td><td><code>assets/weapon_levelup.svg</code></td><td>32×32</td><td><code>pickups.json → visual.svg</code></td></tr>
+</table>
+
+<div class="callout callout-info">
+  <strong>Asset loading strategy:</strong> The engine reads <code>visual.svg</code> paths from all content JSON files at startup and preloads them via <code>new Image()</code>. If a path is missing or fails to load, the engine falls back to the <code>shape</code> + <code>color</code> primitives. This means SVGs are optional — a content pack can use just shapes if desired.
+</div>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s6">6. Loading Architecture</h2>
+<div class="section">
+
+<h3>DataManager Refactor</h3>
+<p>The current <code>DataManager</code> (L176-230) fetches 6 JSON files and falls back to <code>EMBEDDED_DATA</code>. The refactored version:</p>
+<ul>
+  <li>Fetches 10 JSON files (6 original + 4 new)</li>
+  <li>Has no <code>EMBEDDED_DATA</code> constant — data comes from files only</li>
+  <li>Supports content pack overrides (load root <code>content/</code>, then overlay a pack)</li>
+  <li>Builds the asset map from <code>visual.svg</code> fields across all content files</li>
+  <li>Validates required fields and reports missing data</li>
+</ul>
+
+<pre><code>// DataManager.loadAll() — new file list
+const FILES = [
+  { key: 'characters',  path: 'content/characters.json' },
+  { key: 'weapons',     path: 'content/weapons.json' },
+  { key: 'enemies',     path: 'content/enemies.json' },
+  { key: 'stages',      path: 'content/stages.json' },
+  { key: 'pickups',     path: 'content/pickups.json' },
+  { key: 'leveling',    path: 'content/leveling.json' },
+  { key: 'upgrades',    path: 'content/upgrades.json' },
+  { key: 'mechanics',   path: 'content/mechanics.json' },
+  { key: 'audioConfig', path: 'content/audio_config.json' },
+  { key: 'uiConfig',    path: 'content/ui_config.json' },
+];</code></pre>
+
+<h3>Asset Map Construction</h3>
+<p>Instead of a hardcoded <code>ASSET_MAP</code>, the engine builds it dynamically:</p>
+<pre><code>// After all content loaded:
+buildAssetMap() {
+  const map = {};
+  const svgPaths = new Set();
+
+  // Collect SVG paths from all content files
+  for (const char of this.characters.characters) {
+    if (char.visual?.svg) svgPaths.add(char.visual.svg);
+  }
+  for (const weapon of this.weapons.weapons) {
+    for (const key of Object.keys(weapon.visual || {})) {
+      if (weapon.visual[key]?.svg) svgPaths.add(weapon.visual[key].svg);
+    }
+  }
+  for (const enemy of this.enemies.enemies) {
+    if (enemy.visual?.svg) svgPaths.add(enemy.visual.svg);
+  }
+  for (const pickup of this.pickups.pickups) {
+    if (pickup.visual?.svg) svgPaths.add(pickup.visual.svg);
+  }
+
+  // Preload all SVGs as Image objects
+  return preloadImages(svgPaths);
+}</code></pre>
+
+<h3>Content Pack Override System</h3>
+<div class="callout">
+  <strong>Future capability:</strong> <code>content_packs/forest_theme/</code> could contain a <code>stages.json</code> with different background colors, BGM, and wave compositions. The engine loads root <code>content/</code> first, then deep-merges any overrides from the selected pack. This lets modders change stages without touching base content.
+</div>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s7">7. Dependency Map</h2>
+<div class="section">
+
+<p>Which engine systems read which content data:</p>
+
+<table class="dep-matrix">
+  <tr>
+    <th>Engine System</th>
+    <th>characters</th>
+    <th>weapons</th>
+    <th>enemies</th>
+    <th>stages</th>
+    <th>pickups</th>
+    <th>leveling</th>
+    <th>upgrades</th>
+    <th>mechanics</th>
+    <th>audio</th>
+    <th>ui</th>
+  </tr>
+  <tr>
+    <td>SpawnSystem</td>
+    <td></td><td></td><td>✅</td><td>✅</td><td></td><td></td><td></td><td></td><td></td><td></td>
+  </tr>
+  <tr>
+    <td>MovementSystem</td>
+    <td></td><td></td><td>✅</td><td></td><td></td><td></td><td></td><td>✅</td><td></td><td></td>
+  </tr>
+  <tr>
+    <td>WeaponSystem</td>
+    <td></td><td>✅</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+  </tr>
+  <tr>
+    <td>DamageSystem</td>
+    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+  </tr>
+  <tr>
+    <td>PickupSystem</td>
+    <td></td><td></td><td>✅</td><td></td><td>✅</td><td></td><td></td><td></td><td></td><td></td>
+  </tr>
+  <tr>
+    <td>LevelingSystem</td>
+    <td></td><td></td><td></td><td></td><td>✅</td><td>✅</td><td></td><td></td><td></td><td></td>
+  </tr>
+  <tr>
+    <td>Renderer</td>
+    <td></td><td></td><td></td><td>✅</td><td></td><td></td><td></td><td>✅</td><td></td><td>✅</td>
+  </tr>
+  <tr>
+    <td>UIManager</td>
+    <td></td><td></td><td></td><td></td><td></td><td></td><td>✅</td><td></td><td></td><td>✅</td>
+  </tr>
+  <tr>
+    <td>AudioManager</td>
+    <td></td><td>✅</td><td>✅</td><td></td><td>✅</td><td></td><td></td><td></td><td>✅</td><td></td>
+  </tr>
+  <tr>
+    <td>Game (orchestrator)</td>
+    <td>✅</td><td>✅</td><td></td><td>✅</td><td></td><td></td><td>✅</td><td></td><td></td><td></td>
+  </tr>
+  <tr>
+    <td>FloatingTextSystem</td>
+    <td></td><td></td><td></td><td></td><td>✅</td><td></td><td></td><td></td><td></td><td>✅</td>
+  </tr>
+  <tr>
+    <td>InputManager</td>
+    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>✅</td>
+  </tr>
+</table>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s8">8. Mechanics & Events Data Model</h2>
+<div class="section">
+
+<h3>What This Solves</h3>
+<p>Currently, the boss charge mechanic is hardcoded in <code>MovementSystem._moveBoss()</code> (L1135-1200) with fixed states: chase→windup→charge→pause. The telegraph visual is hardcoded in <code>Renderer._drawBossWarningZone()</code>. The ground pound ability (defined in boss <code>phases</code>) is never actually implemented in code — it's just data that nothing reads.</p>
+
+<p>The mechanics.json file makes this extensible:</p>
+
+<table>
+  <tr><th>Mechanic Type</th><th>Description</th><th>Engine Handler</th><th>Data Source</th></tr>
+  <tr><td><code>movement_pattern</code></td><td>Defines how entities move</td><td><code>MovementSystem</code> dispatches by pattern name</td><td><code>mechanics.movementPatterns</code></td></tr>
+  <tr><td><code>damage_zone</code></td><td>Telegraphed rectangular/circular damage area</td><td><code>Renderer</code> draws based on zone config</td><td><code>mechanics.stageEvents</code></td></tr>
+  <tr><td><code>aoe_damage</code></td><td>Circular area-of-effect damage burst</td><td><code>DamageSystem</code> applies radius-based damage</td><td><code>mechanics.stageEvents</code></td></tr>
+  <tr><td><code>buff</code></td><td>Stat modification applied to entities</td><td><code>DamageSystem</code> reads active buffs</td><td><code>mechanics.buffs</code></td></tr>
+  <tr><td><code>debuff</code></td><td>Disabling or reducing entity capabilities</td><td><code>MovementSystem</code> checks active debuffs</td><td><code>mechanics.debuffs</code></td></tr>
+  <tr><td><code>hazard</code></td><td>Persistent environmental damage area</td><td><code>CollisionSystem</code> checks hazard zones</td><td><code>mechanics.hazards</code></td></tr>
+</table>
+
+<h3>Engine Refactoring for Data-Driven Behaviors</h3>
+<pre><code>// MovementSystem — behavior dispatch (replaces hardcoded switch)
+const patterns = this.dataManager.mechanics.movementPatterns;
+
+_moveEnemy(enemy, player, dt) {
+  const patternName = enemy.enemyData?.behavior?.pattern || 'chase';
+  const params = enemy.enemyData?.behavior?.params || {};
+
+  // Engine knows how to execute each registered pattern
+  if (patternName === 'chase') {
+    this._patternChase(enemy, player, dt, params);
+  } else if (patternName === 'swarm') {
+    this._patternSwarm(enemy, player, dt, params);
+  } else if (patternName === 'wander_chase') {
+    this._patternWanderChase(enemy, player, dt, params);
+  } else if (patternName === 'ranged') {
+    this._patternRanged(enemy, player, dt, params);
+  } else if (patternName === 'boss_charge') {
+    this._patternBossCharge(enemy, player, dt, params);
+  }
+  // Future: patternName could reference a registered custom pattern
+}</code></pre>
+
+<div class="callout callout-info">
+  <strong>Future extensibility:</strong> A plugin system could register custom movement patterns via <code>MovementSystem.registerPattern('sine_wave', fn)</code>, allowing content packs to define entirely new enemy behaviors without modifying engine code.
+</div>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s9">9. Audio & Graphics Pluggability</h2>
+<div class="section">
+
+<h3>Audio Pluggability</h3>
+<p>The current AudioManager has 30+ hardcoded synth methods (<code>_synthW1Fire</code>, <code>_synthZombieKill</code>, etc.). The refactored version uses <code>audio_config.json</code> as a lookup table:</p>
+
+<pre><code>// AudioManager.play() — data-driven (replaces 30+ hardcoded methods)
+play(soundId, options = {}) {
+  const config = this.audioConfig.sounds[soundId];
+  if (!config) return;
+
+  if (config.type === 'synth') {
+    this._playSynth(config, options);
+  } else if (config.type === 'file') {
+    this._playFile(config, options);
+  }
+}
+
+_playSynth(config, options) {
+  const sourceX = options.sourceX || 0;
+  const sourceY = options.sourceY || 0;
+
+  // Distance-based volume (existing logic, now generic)
+  let volume = config.volume || 0.15;
+  if (this.player && sourceX && sourceY) {
+    const dx = sourceX - this.player.x;
+    const dy = sourceY - this.player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const maxDist = 600;
+    volume *= Math.max(0.2, 1 - dist / maxDist);
+  }
+
+  // Get a free slot from the pool
+  const slot = this._getFreeSlot(config.priority || 1);
+  if (!slot) return;
+
+  const ctx = this.ctx;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = config.waveform || 'sine';
+  osc.frequency.value = config.frequency || 440;
+
+  // Sweep
+  if (config.sweep) {
+    osc.frequency.setValueAtTime(config.sweep.start, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(config.sweep.end, ctx.currentTime + config.duration);
+  }
+
+  // Envelope
+  const env = config.envelope || {};
+  const t = ctx.currentTime;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(volume, t + (env.attack || 0.01));
+  gain.gain.linearRampToValueAtTime(volume * (env.sustain || 0.5), t + (env.attack || 0.01) + (env.decay || 0.05));
+  gain.gain.linearRampToValueAtTime(0, t + config.duration);
+
+  osc.connect(gain);
+  gain.connect(this.sfxGain);
+  osc.start(t);
+  osc.stop(t + config.duration + 0.05);
+
+  slot.active = true;
+  slot.startTime = t;
+  slot.priority = config.priority || 1;
+  slot.gainNode = gain;
+}</code></pre>
+
+<h3>Graphics Pluggability</h3>
+<p>Three tiers of visual representation, all driven by data:</p>
+<table>
+  <tr><th>Tier</th><th>Source</th><th>Priority</th><th>Use Case</th></tr>
+  <tr><td>1. SVG Asset</td><td><code>entity.visual.svg → assets/*.svg</code></td><td>Highest</td><td>Polished look, content creator provides artwork</td></tr>
+  <tr><td>2. Shape Primitive</td><td><code>entity.visual.shape + .color + .size</code></td><td>Fallback</td><td>Default when no SVG provided</td></tr>
+  <tr><td>3. Null</td><td>No visual defined</td><td>Hide</td><td>Invisible entity (e.g., invisible projectile)</td></tr>
+</table>
+
+<pre><code>// Renderer._drawEntity() — tiered visual rendering
+_drawEntity(entity) {
+  const ctx = this.ctx;
+  ctx.save();
+
+  // iFrame blink
+  if (entity.iFrames > 0 && Math.floor(entity.iFrames * 10) % 2 === 0) {
+    ctx.globalAlpha = 0.5;
+  }
+
+  const x = Math.round(entity.x);
+  const y = Math.round(entity.y);
+  const size = entity.size;
+  const color = entity.visual?.color || '#FFF';
+  const shape = entity.visual?.shape || 'square';
+
+  // Tier 1: SVG asset
+  const cacheKey = this._buildCacheKey(entity);
+  const svgImage = this.imageCache?.[cacheKey];
+  if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
+    const drawSize = size * 2;
+    ctx.drawImage(svgImage, x - size, y - size, drawSize, drawSize);
+  }
+  // Tier 2: Shape primitive
+  else if (shape !== 'none') {
+    ctx.fillStyle = color;
+    this._drawShape(ctx, x, y, size, shape);
+  }
+  // Tier 3: invisible (no else — nothing drawn)
+
+  ctx.restore();
+}
+
+_buildCacheKey(entity) {
+  // Build from content-provided data, not hardcoded type+shape+color
+  const svgPath = entity.visual?.svg;
+  if (svgPath) return svgPath; // Direct path as key
+  return (entity.type || 'unknown') + '_' + (entity.visual?.shape || 'square') + '_' + (entity.visual?.color || '#FFF');
+}</code></pre>
+
+<h3>BGM / Background Pluggability</h3>
+<pre><code>// Renderer._drawGrid() — reads stage config
+_drawGrid() {
+  const bg = this.stageConfig?.background || {};
+  const gridSize = bg.gridSize || 50;
+  const gridColor = bg.gridColor || '#16213E';
+
+  // If bgImage is set, draw tiled background instead of solid color
+  if (bg.bgImage && this.bgImageCache) {
+    // Tile the background image
+    this._drawTiledBackground(bg.bgImage);
+  }
+
+  // Grid lines
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 1;
+  // ... existing grid drawing ...
+}
+
+// Game.update() — BGM management
+_updateBGM() {
+  const bgm = this.stageConfig?.bgm;
+  if (!bgm) return;
+
+  if (!this._bgmPlaying && bgm.src) {
+    this.audioManager.playMusic(bgm.src, bgm);
+    this._bgmPlaying = true;
+  }
+}</code></pre>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s10">10. Engine Refactoring Requirements</h2>
+<div class="section">
+
+<h3>Systems That Need Modification</h3>
+
+<table>
+  <tr><th>System</th><th>Current Lines</th><th>What Changes</th><th>Est. Impact</th></tr>
+  <tr><td>DataManager</td><td>L176-230</td><td>10 files instead of 6, build asset map, no EMBEDDED_DATA fallback</td><td>Medium</td></tr>
+  <tr><td>EMBEDDED_DATA</td><td>L289-519</td><td><strong>Delete entirely</strong> — all data from external files</td><td>Large (230 lines removed)</td></tr>
+  <tr><td>SpawnSystem</td><td>L880-1026</td><td>Remove <code>_getEnemyColor()</code>, read visuals from enemy data</td><td>Small</td></tr>
+  <tr><td>MovementSystem</td><td>L1027-1223</td><td>Read boss params from <code>mechanics.json</code>, parameterize timing values</td><td>Medium</td></tr>
+  <tr><td>WeaponSystem</td><td>L1306-1498</td><td>Read projectile speed/visuals from weapon data, generic fire methods</td><td>Medium</td></tr>
+  <tr><td>PickupSystem</td><td>L1590-1698</td><td>Read visuals from pickup data, remove <code>_getPowerUpVisual()</code></td><td>Small</td></tr>
+  <tr><td>Renderer</td><td>L1776-1982</td><td>Read background/grid colors from stage config, dynamic asset map</td><td>Medium</td></tr>
+  <tr><td>UIManager</td><td>L2053-2164</td><td>Read text/colors from <code>ui_config.json</code></td><td>Medium</td></tr>
+  <tr><td>FloatingTextSystem</td><td>L1983-2052</td><td>Read pickup text/colors from <code>ui_config.json</code></td><td>Small</td></tr>
+  <tr><td>AudioManager</td><td>L2165-2986</td><td>Replace 30+ synth methods with generic <code>_playSynth(config)</code> + config lookup</td><td>Large (600+ lines refactored)</td></tr>
+  <tr><td>Game</td><td>L2988-3392</td><td>Read upgrade options from <code>upgrades.json</code>, time limits from stage config</td><td>Medium</td></tr>
+  <tr><td>ASSET_MAP</td><td>L1783-1800</td><td><strong>Delete entirely</strong> — asset map built dynamically from content data</td><td>Medium (14 base64 URIs removed)</td></tr>
+  <tr><td>HTML</td><td>L1-101</td><td>Keep as-is (loading screen reads from <code>ui_config.json</code> at runtime)</td><td>Small</td></tr>
+</table>
+
+<h3>Systems That Stay Unchanged</h3>
+<ul>
+  <li><strong>EventBus</strong> — Pure infrastructure, no content dependency</li>
+  <li><strong>GameState</strong> — Fixed state machine, no content dependency</li>
+  <li><strong>GameLoop</strong> — Fixed-timestep loop, no content dependency</li>
+  <li><strong>Camera</strong> — Follow/shake logic, no content dependency</li>
+  <li><strong>InputManager</strong> — Input handling, no content dependency (reads canvas size only)</li>
+  <li><strong>EntityManager</strong> — Generic object pool, no content dependency</li>
+  <li><strong>CollisionSystem</strong> — AABB collision, no content dependency</li>
+  <li><strong>DamageSystem</strong> — Damage calculation, no content dependency (reads entity stats)</li>
+</ul>
+
+<h3>Lines of Code Estimate</h3>
+<table>
+  <tr><th>Component</th><th>Current</th><th>After Extraction</th><th>Change</th></tr>
+  <tr><td>Engine (systems + rendering)</td><td>~2,500 lines</td><td>~2,400 lines</td><td>-100 (remove hardcoded data refs)</td></tr>
+  <tr><td>ASSET_MAP (inline SVGs)</td><td>~50 lines</td><td>0 lines</td><td>-50 (moved to files)</td></tr>
+  <tr><td>EMBEDDED_DATA</td><td>~230 lines</td><td>0 lines</td><td>-230 (moved to files)</td></tr>
+  <tr><td>AudioManager</td><td>~820 lines</td><td>~300 lines</td><td>-520 (generic synth engine)</td></tr>
+  <tr><td>DataManager (loader)</td><td>~55 lines</td><td>~120 lines</td><td>+65 (asset map builder, validation)</td></tr>
+  <tr><td>HTML/CSS</td><td>~100 lines</td><td>~100 lines</td><td>0</td></tr>
+  <tr><td><strong>engine.html total</strong></td><td><strong>~3,512 lines</strong></td><td><strong>~2,520 lines</strong></td><td><strong>-992 lines (28%)</strong></td></tr>
+  <tr><td>External JSON files (10)</td><td>0</td><td>~600 lines</td><td>+600</td></tr>
+  <tr><td>External SVG files (14)</td><td>0</td><td>14 files</td><td>Separate files</td></tr>
+  <tr><td><strong>Total project</strong></td><td><strong>~3,512 lines</strong></td><td><strong>~3,120 lines + 14 SVGs</strong></td><td><strong>Simpler engine, richer content</strong></td></tr>
+</table>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s11">11. Migration Roadmap</h2>
+<div class="section">
+
+<h3>Phase 1: Externalize Data (No Engine Changes)</h3>
+<ol>
+  <li>Create <code>content/</code> directory with all 10 JSON files</li>
+  <li>Copy <code>EMBEDDED_DATA</code> content into the respective JSON files</li>
+  <li>Create 14 SVG files in <code>assets/</code></li>
+  <li>Verify the engine loads from JSON files (it already tries <code>fetch</code> first, falls back to embedded)</li>
+  <li>Remove <code>EMBEDDED_DATA</code> constant and <code>getEmbeddedData()</code> method</li>
+  <li>Remove inline base64 <code>ASSET_MAP</code></li>
+  <li>Add the 4 new files: <code>upgrades.json</code>, <code>mechanics.json</code>, <code>audio_config.json</code>, <code>ui_config.json</code></li>
+</ol>
+
+<h3>Phase 2: Refactor Engine to Read External Config</h3>
+<ol>
+  <li>Update <code>DataManager</code> to load 10 files</li>
+  <li>Add dynamic asset map builder from <code>visual.svg</code> fields</li>
+  <li>Refactor <code>SpawnSystem._spawnEnemy()</code> to read visual from enemy data</li>
+  <li>Refactor <code>SpawnSystem._spawnBoss()</code> to read visual from enemy data</li>
+  <li>Remove <code>_getEnemyColor()</code> — colors now in enemy JSON</li>
+  <li>Refactor <code>WeaponSystem._fireW1/W2/W3()</code> to read visuals from weapon data</li>
+  <li>Refactor <code>PickupSystem._onEnemyDeath()</code> to read visuals from pickup data</li>
+  <li>Remove <code>PickupSystem._getPowerUpVisual()</code> — visuals in pickup JSON</li>
+</ol>
+
+<h3>Phase 3: Data-Driven Behaviors</h3>
+<ol>
+  <li>Refactor <code>MovementSystem._moveBoss()</code> to read timing from <code>enemy.behavior.params</code></li>
+  <li>Refactor <code>Renderer._drawBossWarningZone()</code> to read visual config from <code>mechanics.json</code></li>
+  <li>Refactor <code>Game._showUpgradeOptions()</code> to read from <code>upgrades.json</code></li>
+  <li>Refactor <code>Game.update()</code> time limit from <code>stages.gameConfig.timeLimit</code></li>
+</ol>
+
+<h3>Phase 4: Audio Refactor</h3>
+<ol>
+  <li>Refactor <code>AudioManager</code> to use generic <code>_playSynth(config)</code> + <code>audio_config.json</code></li>
+  <li>Move event→sound mapping from hardcoded <code>_wireEvents()</code> to config-driven lookup</li>
+  <li>Add continuous sound support from <code>audio_config.continuousSounds</code></li>
+  <li>Verify all 35+ audio triggers still work</li>
+</ol>
+
+<h3>Phase 5: UI & Polish</h3>
+<ol>
+  <li>Refactor <code>UIManager</code> to read text/colors from <code>ui_config.json</code></li>
+  <li>Refactor <code>Renderer._drawUI()</code> to read from <code>ui_config.json</code></li>
+  <li>Add BGM support from <code>stages.bgm</code> config</li>
+  <li>Add background image support from <code>stages.background.bgImage</code></li>
+  <li>Final integration test: load content, play full game, verify all systems</li>
+</ol>
+
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s12">12. Gaps, Conflicts & Open Questions</h2>
+<div class="section">
+
+<h3>Identified Gaps</h3>
+
+<div class="gap">
+  <strong>Gap 1: No boss phase transitions implemented.</strong> The <code>boss_gravekeeper.phases</code> array defines two phases (HP thresholds, speed, charge intervals, minion spawning, ground pound), but the engine only uses the basic charge cycle. Phase 2's <code>groundPound</code> is defined but never triggered. <strong>Action:</strong> Phase 3 of migration should implement phase-dependent behavior reading from <code>enemy.phases[]</code>.
+</div>
+
+<div class="gap">
+  <strong>Gap 2: Enemy projectile spawning for "caster" not implemented.</strong> The Caster enemy has <code>behavior.params.projectileDamage</code> and <code>projectileSpeed</code>, and the MovementSystem handles the "ranged" pattern (maintain distance), but there is no code to actually spawn enemy projectiles. <strong>Action:</strong> Need to add enemy projectile spawning in WeaponSystem or a new EnemyWeaponSystem, driven by <code>mechanics.json</code> ranged attack config.
+</div>
+
+<div class="gap">
+  <strong>Gap 3: Gold tracking not implemented.</strong> Gold coins are spawned by <code>PickupSystem</code> but the <code>LevelingSystem._onPickup()</code> has a comment "Gold is tracked separately (not implemented yet)" and <code>Game._getStats()</code> always returns <code>gold: 0</code>. <strong>Action:</strong> Add gold state to Game or a new ResourceManager.
+</div>
+
+<div class="gap">
+  <strong>Gap 4: Upgrade options reference <code>game</code> variable instead of <code>game</code> parameter.</strong> In <code>Game._showUpgradeOptions()</code> (L3328), weapon upgrade lambdas reference <code>game.weaponSystem</code> and <code>game.dataManager</code> instead of the <code>game</code> parameter from the <code>apply: (game) => {}</code> callback. This is a latent bug — if <code>game</code> is in scope as a global (it is — <code>const game = new Game()</code> at L3365), it works accidentally. <strong>Action:</strong> Fix the lambdas to use the callback parameter consistently.
+</div>
+
+<div class="gap">
+  <strong>Gap 5: <code>difficultyScaling</code> formulas are strings, not executable.</strong> The stage data defines <code>"hpMultiplier": "1 + 0.15 * minutes_after_boss_kill"</code> as a string expression, but the engine never parses or applies these multipliers. Enemies spawn with their base stats. <strong>Action:</strong> Either implement a safe expression evaluator, or convert to numeric config with clear time breakpoints.
+</div>
+
+<div class="gap">
+  <strong>Gap 6: <code>xpScaling.formula</code> is a string, not executable.</strong> Same issue — <code>"base_xp * (1 + 0.05 * floor(t / 60))"</code> is defined but never applied. XP values come directly from enemy stats. <strong>Action:</strong> Same as Gap 5.
+</div>
+
+<div class="gap">
+  <strong>Gap 7: Boss announcement system not implemented.</strong> The <code>bossConfig.announcement</code> array defines timed text events (dim screen at 230s, text at 235s, boss spawn at 240s), but the engine only checks <code>gameTime >= 240</code> for boss spawn. The "dim" and "text" announcement events are never rendered. <strong>Action:</strong> Implement a StageEventSystem that processes timed announcements.
+</div>
+
+<div class="gap">
+  <strong>Gap 8: No obstacle system.</strong> The stage data defines obstacle types and collision rules, but there's no ObstacleSystem in the engine. <strong>Action:</strong> Either implement obstacles or remove from stage data.
+</div>
+
+<div class="gap">
+  <strong>Gap 9: W3 area pulse visual uses <code>setTimeout</code> for pulse delay.</strong> In <code>WeaponSystem._fireW3()</code> (L1455-1460), <code>setTimeout(() => { this.eventBus.emit('areaPulse', ...) }, i * 250)</code> is used for multi-pulse delay. This is problematic because: (a) it fires outside the game loop, (b) it can fire after game over, (c) it doesn't respect pause state. <strong>Action:</strong> Replace with a queue-based delay system inside WeaponSystem.
+</div>
+
+<div class="gap">
+  <strong>Gap 10: No background music support.</strong> The AudioManager has no <code>playMusic()</code> or <code>stopMusic()</code> methods. The <code>musicGain</code> node is created but never used. <strong>Action:</strong> Add BGM playback methods during Phase 4 audio refactor.
+</div>
+
+<h3>Identified Conflicts</h3>
+
+<div class="conflict">
+  <strong>Conflict 1: Weapon data indexed by array position vs ID.</strong> <code>WeaponSystem._fireW1()</code> reads <code>this.dataManager.weapons[0]</code>, <code>_fireW2()</code> reads <code>weapons[1]</code>, <code>_fireW3()</code> reads <code>weapons[2]</code>. This breaks if the weapons.json array order changes. <strong>Resolution:</strong> Change to <code>weapons.find(w => w.id === 'w1_projectile')</code> — read by ID, not position.
+</div>
+
+<div class="conflict">
+  <strong>Conflict 2: PickupSystem creates pickups with hardcoded visuals, ignoring pickup JSON.</strong> In <code>_onEnemyDeath()</code> (L1601-1620), XP gem and gold coin visuals are hardcoded instead of reading from <code>dataManager.pickups</code>. The pickup JSON <code>visual</code> fields are defined but never used for these drops. <strong>Resolution:</strong> During Phase 2, read visuals from <code>dataManager.pickups</code> by ID.
+</div>
+
+<div class="conflict">
+  <strong>Conflict 3: EventBus "death" event has inconsistent data.</strong> The CollisionSystem emits <code>'death'</code> with <code>data.entity</code> and <code>data.position</code>, but the AudioManager's death handler reads <code>data.type</code> (which is <code>data.entity.type</code>). The pickup handler reads <code>data.pickup.pickupData</code>. The Game handler checks <code>data.entity === this.player</code>. This works but is fragile. <strong>Resolution:</strong> Normalize the death event data shape during Phase 2.
+</div>
+
+<div class="conflict">
+  <strong>Conflict 4: Game time limit vs stage gameConfig.</strong> The 300s limit is hardcoded at L3188, but the stage data has <code>bossConfig.spawnTime: "4:00"</code> (240s). If someone sets a different time limit in <code>gameConfig</code>, the boss might spawn after the game ends. <strong>Resolution:</strong> Read both from <code>stages.gameConfig</code> and validate that <code>bossSpawnTime &lt; timeLimit</code>.
+</div>
+
+<h3>Open Questions</h3>
+
+<div class="question">
+  <strong>Q1: Should the engine support multiple stages in one session?</strong> Currently the game has one stage. Should <code>engine.html</code> support a stage select screen and multiple sequential stages (like Vampire Survivors' stage progression)?
+</div>
+
+<div class="question">
+  <strong>Q2: Should enemy projectiles be a new entity type?</strong> The "caster" enemy needs to fire projectiles. Should these be <code>enemyProjectile</code> entities with their own visual/behavior config, or should they be a subtype of the existing <code>projectile</code> type with a team flag?
+</div>
+
+<div class="question">
+  <strong>Q3: How should boss phases be data-driven?</strong> The <code>phases</code> array in boss data has HP thresholds and stat changes, but transitioning between phases requires engine logic. Should the engine have a generic "phase transition" system that applies stat modifications when HP crosses thresholds?
+</div>
+
+<div class="question">
+  <strong>Q4: Should audio support external audio files (MP3/OGG) or stay synthesizer-only?</strong> The <code>audio_config.json</code> spec includes a <code>"type": "file"</code> option, but the current AudioManager is purely Web Audio API synthesis. Should we add <code>AudioBuffer</code> loading for real audio files, or keep everything synthesized?
+</div>
+
+<div class="question">
+  <strong>Q5: Should the content pack system be implemented now or deferred?</strong> The directory structure includes <code>content_packs/</code> for alternate content sets, but implementing deep-merge override logic adds complexity. Should this be Phase 6 or deferred to a future version?
+</div>
+
+<div class="question">
+  <strong>Q6: How should difficulty scaling formulas be handled?</strong> The current formulas are string expressions (<code>"1 + 0.15 * minutes_after_boss_kill"</code>). Options: (a) implement a safe math expression evaluator, (b) convert to structured config with numeric breakpoints, (c) keep formulas as strings and add a simple evaluator. Which approach?
+</div>
+
+<div class="question">
+  <strong>Q7: Should the loading screen read its config from <code>ui_config.json</code>?</strong> Currently the loading screen HTML is hardcoded with "MODULARITY ENGINE" title. Since <code>ui_config.json</code> is loaded during the loading screen itself, there's a chicken-and-egg problem. Options: (a) hardcode the loading screen and accept it won't change with content packs, (b) use a minimal inline config for the loading screen only, (c) load ui_config.json with a separate small fetch before the main load.
+</div>
+
+<div class="question">
+  <strong>Q8: Should weapon behavior (projectile firing, orbit maintenance, area pulses) be generically data-driven?</strong> Currently each weapon type has a dedicated method (<code>_fireW1</code>, <code>_fireW2</code>, <code>_fireW3</code>). Making this fully generic would mean defining "weapon behavior scripts" in JSON, which is very powerful but significantly increases engine complexity. How far should data-driven weapon behavior go?
+</div>
+
+<div class="question">
+  <strong>Q9: What happens to the <code>content/</code> directory when deployed via Freebuff's preview?</strong> The Freebuff platform serves from <code>public/</code>. The engine HTML and content files need to be at the correct relative paths. Should <code>engine.html</code> go in <code>public/</code> and content in <code>public/content/</code>? Or should everything stay at root level?
+</div>
+
+<div class="question">
+  <strong>Q10: Should the <code>pickups.json</code> <code>dropConfig</code> stay in pickups.json or move to enemies.json?</strong> Currently drop tables are defined per-enemy in <code>enemies.json → drops.powerUpTable</code>, but also referenced in <code>pickups.json → dropConfig.sources</code>. This is redundant — the same data exists in two places. Which is the source of truth?
+</div>
+
+</div>
+
+<!-- ============================================================ -->
+<h2>Appendix: Quick Reference</h2>
+<div class="section">
+
+<h3>All External Files at a Glance</h3>
+<table>
+  <tr><th>#</th><th>File</th><th>Lines (est.)</th><th>Purpose</th><th>Read By</th></tr>
+  <tr><td>1</td><td><code>content/characters.json</code></td><td>~30</td><td>Player character definitions</td><td>Game.startGame()</td></tr>
+  <tr><td>2</td><td><code>content/weapons.json</code></td><td>~120</td><td>Weapon definitions + 7-level stats</td><td>WeaponSystem, Game._showUpgradeOptions()</td></tr>
+  <tr><td>3</td><td><code>content/enemies.json</code></td><td>~130</td><td>Enemy definitions + boss phases + drops</td><td>SpawnSystem, MovementSystem, PickupSystem</td></tr>
+  <tr><td>4</td><td><code>content/stages.json</code></td><td>~100</td><td>Stage config: waves, background, BGM, boss timing</td><td>SpawnSystem, Renderer, Game</td></tr>
+  <tr><td>5</td><td><code>content/pickups.json</code></td><td>~70</td><td>Pickup definitions + visual + behavior + sound</td><td>PickupSystem, LevelingSystem</td></tr>
+  <tr><td>6</td><td><code>content/leveling.json</code></td><td>~40</td><td>XP curve + passive upgrade pool</td><td>LevelingSystem</td></tr>
+  <tr><td>7</td><td><code>content/upgrades.json</code></td><td>~30</td><td>Level-up upgrade option definitions</td><td>Game._showUpgradeOptions()</td></tr>
+  <tr><td>8</td><td><code>content/mechanics.json</code></td><td>~80</td><td>Movement patterns, stage events, buffs/debuffs</td><td>MovementSystem, Renderer, DamageSystem</td></tr>
+  <tr><td>9</td><td><code>content/audio_config.json</code></td><td>~120</td><td>Sound event → synth parameter mapping</td><td>AudioManager</td></tr>
+  <tr><td>10</td><td><code>content/ui_config.json</code></td><td>~80</td><td>UI text, colors, layout config</td><td>UIManager, Renderer, FloatingTextSystem</td></tr>
+  <tr><td>11-24</td><td><code>assets/*.svg</code></td><td>14 files</td><td>Visual assets for all entities and pickups</td><td>Renderer (via asset map)</td></tr>
+</table>
+
+</div>
+
+<hr style="border-color: #16213E; margin: 40px 0;">
+<p style="color: #444; font-size: 11px; text-align: center;">Modularity Engine Extraction Plan v0.1.0 — Generated August 23, 2026</p>
+
+</body>
+</html>
