@@ -167,7 +167,9 @@ The entire player state lives in one JSON object:
     "met": [],
     "relationships": {},
     "completedDialogues": [],
-    "activeRequests": []
+    "activeRequests": [],
+    "companions": [],
+    "partySlots": 2
   },
 
   "factions": {
@@ -489,6 +491,158 @@ The combat engine tells a story through gameplay (surviving, getting stronger). 
       { "id": "steel_armor", "name": "Steel Armor", "cost": 250, "trustRequired": 3, "type": "equipment" },
       { "id": "legendary_blade", "name": "Soulreaver", "cost": 1000, "trustRequired": 5, "type": "legendary" }
     ]
+  },
+  "companion": {
+    "unlockedAtTrust": 3,
+    "partySlotCost": 1,
+    "combatRole": "support",
+    "damageMultiplier": 0.25,
+    "attackSpeedMultiplier": 0.5,
+    "attackPattern": "melee_swipe",
+    "attackRange": 60,
+    "attackCooldown": 2.0,
+    "damageType": "physical",
+    "passiveEffect": null,
+    "combatDialogue": {
+      "onSpawn": ["Let's heat things up!", "Stand back, I'll handle this."],
+      "onKill": ["One less to worry about.", "Hmph. Too easy."],
+      "onBossSpawn": ["That's a big one... stay focused!", "Don't let it corner you!"],
+      "onLowHealth": ["Watch your health!", "Fall back if you need to!"]
+    },
+    "isDeadWeight": false
+  }
+}
+```
+
+### 6.5 NPC Combat Companions & Party System
+
+**Core rule: Survival is 100% on the player character.** NPCs in combat are invulnerable support entities — they cannot take damage, cannot die, and cannot be targeted by enemies. The player is the only entity with an HP bar that matters.
+
+#### Why Invulnerable Support NPCs
+
+| Choice | Justification |
+|---|---|
+| **No NPC health management** | Eliminates the complexity of babysitting allies. The player focuses entirely on their own survival and positioning. No "revive the healer" moments. |
+| **Support-only damage** | NPCs deal 15-30% of player damage. They supplement but never carry. The player always feels like the hero. |
+| **Flavor through dialogue** | NPCs shout battle cries, react to bosses, and comment on kills. This makes the world feel alive without adding mechanical overhead. |
+| **Build补ning** | A player weak in AoE can bring an NPC with area attacks. A player lacking single-target can bring a focused attacker. NPCs fill gaps. |
+| **Dead weight as a feature** | Some NPCs are intentionally weak — bringing them is a social cost (affection building, quest requirement) not a combat optimization. This creates interesting tradeoffs. |
+
+#### Party Slot System
+
+The player has a **limited number of party slots** (default: 2, expandable to 4 via the Tavern building). Each NPC companion occupies 1 slot.
+
+```
+Party Slots:
+[1] ── Gareth (Blacksmith) ── Melee support, 25% damage
+[2] ── Elara (Herbalist) ── Heal-over-time aura, 15% damage
+[3] ── (empty) ── Unlock at Tavern Lv2
+[4] ── (empty) ── Unlock at Tavern Lv3
+```
+
+#### NPC Companion Tiers
+
+| Tier | Trust Required | Damage | Attack Speed | Special | Example NPCs |
+|---|---|---|---|---|---|
+| **Dead Weight** | 0-1 | 10% | Very slow | None. Takes a slot for affection/quest only. | Lost traveler, drunk bard |
+| **Apprentice** | 2 | 20% | Slow | Basic attack pattern. Occasional dialogue. | Young squire, apprentice mage |
+| **Adept** | 3 | 30% | Normal | Active attack pattern. Frequent dialogue. Passive aura. | Gareth, Elara |
+| **Master** | 4 | 40% | Fast | Advanced pattern. Rich dialogue. Strong passive. Unique ability. | Faction leaders |
+| **Sworn** | 5 | 50% | Fast | Full kit. In-combat ultimate ability (cooldown). Maximum dialogue. | Fully romanced/allied NPCs |
+
+#### Dead Weight NPCs
+
+Some NPCs are deliberately weak in combat. Bringing them is a **social cost** — you sacrifice a party slot for:
+- **Affection building**: The NPC gains trust faster when brought along (they "see you in action")
+- **Quest requirements**: "The Blacksmith wants you to bring his apprentice on a run so she can learn"
+- **Faction reputation**: Some faction quests require specific NPCs in the party
+- **Story moments**: Bringing a scared NPC through a dangerous stage has narrative weight
+
+```json
+{
+  "id": "apprentice_ani",
+  "name": "Ani",
+  "title": "Blacksmith's Apprentice",
+  "faction": "forge_brotherhood",
+  "companion": {
+    "unlockedAtTrust": 1,
+    "partySlotCost": 1,
+    "combatRole": "dead_weight",
+    "damageMultiplier": 0.10,
+    "attackSpeedMultiplier": 0.3,
+    "attackPattern": "timid_swing",
+    "attackRange": 40,
+        "attackCooldown": 3.0,
+    "passiveEffect": null,
+    "combatDialogue": {
+      "onSpawn": ["O-okay, I'll do my best...", "Please protect me!", "*nervous gulp*"] ,
+      "onKill": ["I-I got one! Did you see?!", "That was scary..."],
+      "onBossSpawn": ["W-what IS that?!", "*backs away trembling*"] ,
+      "onLowHealth": ["I can't watch...!", "Are you okay?!"] 
+    },
+    "isDeadWeight": true,
+    "affectionBonusMultiplier": 2.0,
+    "questRequiredFor": ["gb_apprentice_training"]
+  }
+}
+```
+
+#### NPC Passive Effects in Combat
+
+Higher-trust NPCs provide passive auras that supplement the player's build:
+
+| NPC | Trust 3 Passive | Trust 5 Passive |
+|---|---|---|
+| **Gareth** (Blacksmith) | +10% player damage | +20% player damage, armor pierce |
+| **Elara** (Herbalist) | Regenerate 1 HP/sec | Regenerate 3 HP/sec, cleanse on hit |
+| **Vex** (Shadow Agent) | +10% crit chance | +20% crit chance, crit damage +25% |
+| **Bram** (Wanderer Scout) | +15% move speed | +25% move speed, enemy slow aura |
+| **Ani** (Apprentice) | None | None (still dead weight, but affection bonus) |
+
+#### In-Combat Dialogue System
+
+NPCs speak during combat via floating text bubbles. This is purely flavor — no player interaction required.
+
+```
+Trigger Frequency:  Every 15-30 seconds (randomized)
+Trigger Events:     Kill streak (3+), boss spawn, player low HP, area clear
+Display Duration:    2 seconds
+Max On Screen:       1 (only one NPC speaks at a time)
+```
+
+Dialogue is defined per-NPC in `combatDialogue` and selected randomly from the pool. Higher trust unlocks more lines and rarer quips.
+
+#### Party Composition Strategy
+
+| Scenario | Recommended Party | Why |
+|---|---|---|
+| **General combat** | 2 Adept-tier NPCs | Balanced damage + utility |
+| **Boss fight** | Master + Adept | Maximum passive bonuses, strong dialogue |
+| **Affection farming** | 1 useful NPC + 1 dead weight | Build trust with the dead weight while staying viable |
+| **Quest completion** | Quest-specified NPC + best available | Meet quest requirements without sacrificing too much |
+| **Challenge run** | Solo (no companions) | All slots empty = no passive effects, pure skill |
+
+#### Combat Engine Integration
+
+The combat engine reads `store.npcs.companions` (the list of NPCs in the party) and spawns them as invulnerable entities:
+
+```javascript
+// CombatModule.startSession()
+const party = store.npcs.companions; // ['blacksmith', 'herbalist']
+for (const npcId of party) {
+  const npcData = dataManager.npcs.find(n => n.id === npcId);
+  if (npcData?.companion) {
+    entityManager.create('companion', {
+      x: player.x + offset,
+      y: player.y + offset,
+      npcId: npcId,
+      damage: baseDamage * npcData.companion.damageMultiplier,
+      attackSpeed: npcData.companion.attackSpeedMultiplier,
+      attackPattern: npcData.companion.attackPattern,
+      invulnerable: true,  // KEY: companions cannot take damage
+      visual: npcData.visual,
+      passiveEffect: npcData.companion.passiveEffect,
+    });
   }
 }
 ```
@@ -942,7 +1096,7 @@ npcModule.onCombatEnd(result);      // Updates NPC reactions ("I heard you fough
 | 8 | `content/mechanics.json` | Movement patterns, telegraphs, buffs/debuffs | ~80 lines | Combat Module |
 | 9 | `content/audio_config.json` | Sound event → synth parameter mapping | ~120 lines | Audio Manager |
 | 10 | `content/ui_config.json` | UI text, colors, layout config | ~80 lines | UI Manager |
-| 11 | `content/npcs.json` | NPC definitions: dialogue, trust, shops, requests | ~200 lines | NPC Module |
+| 11 | `content/npcs.json` | NPC definitions: dialogue, trust, shops, requests, combat companions | ~300 lines | NPC Module, Combat Module |
 | 12 | `content/factions.json` | Faction definitions: ranks, rewards, conflicts | ~60 lines | Faction Module |
 | 13 | `content/skills.json` | Skill tree: nodes, requirements, effects | ~150 lines | Skill Module |
 | 14 | `content/quests.json` | Quest definitions: objectives, rewards, chains | ~200 lines | Quest Module |
@@ -1007,6 +1161,14 @@ The framework is single-player only. No leaderboards (beyond local Arena scores)
 No colorblind mode, no difficulty settings, no input remapping.
 - **Action:** Add an `options` section to the save data and an Options menu in the UI. Include at minimum: difficulty modifier, colorblind palette, input remapping.
 
+**Gap 11: Companion damage tuning could trivialize combat.**
+If the player brings 2 Master-tier NPCs (50% damage each), that's effectively +100% damage — doubling DPS. Combined with skill tree bonuses, combat could become too easy.
+- **Action:** Implement diminishing returns on companion damage when multiple companions are present. Formula: `effectiveDamage = baseMultiplier * (1 - 0.15 * (companionCount - 1))`. Two companions at 30% each → 30% + 25.5% = 55.5% total, not 60%.
+
+**Gap 12: Dead weight NPCs could feel pointless if affection bonuses are too small.**
+If bringing Ani (10% damage) only gives 2x affection gain but costs a party slot, players may never bother.
+- **Action:** Dead weight affection bonus should be significant (3x multiplier) and dead weight NPCs should have unique quest lines that REQUIRE them in the party. This makes bringing them a deliberate choice, not an oversight.
+
 ### Identified Conflicts
 
 **Conflict 1: Gold economy balance.**
@@ -1043,9 +1205,8 @@ Options: (a) Silent protagonist with text-only narration. (b) Narrator with occa
 Options: (a) Seamless transition (camera zooms into the stage). (b) Loading screen with lore text. (c) World map as an intermediate screen.
 - **Recommendation:** (c) World map. It provides a natural place to select stages, view quest objectives, and check intel. Also future-proofs for multiple regions.
 
-**Q3: Should NPCs be able to accompany the player in combat?**
-If an NPC trust level is high enough, they could appear as a combat ally. This would require the combat engine to support AI-controlled allies.
-- **Recommendation:** Defer to a future version. The framework supports it (NPC data has a `combatAlly` field that the combat engine can read), but implementing AI allies is significant scope.
+**Q3: How should NPC combat companions work?** (RESOLVED)
+NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. They provide supplementary damage, in-combat dialogue flavor, and build补ning. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
 
 **Q4: Should there be a "prestige" or "new game+" system?**
 When the player completes all content, should they be able to restart with bonuses? Or is the game "done" at that point?
