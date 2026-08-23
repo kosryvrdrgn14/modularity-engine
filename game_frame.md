@@ -153,13 +153,26 @@ The entire player state lives in one JSON object:
   },
 
   "town": {
+    "phase": 1,
+    "population": 0,
+    "popCap": 5,
     "buildings": {},
     "resources": {
-      "gold": 0,
       "wood": 0,
       "stone": 0,
-      "herbs": 0
+      "herbs": 0,
+      "ore": 0
     },
+    "workers": {
+      "farmers": 0,
+      "miners": 0,
+      "builders": 0,
+      "scholars": 0,
+      "masons": 0,
+      "idle": 0,
+      "assignments": {}
+    },
+    "managers": [],
     "upgrades": {}
   },
 
@@ -354,55 +367,152 @@ If combat were the core, every other feature would be an "add-on" to combat. But
 
 ### Why a Town Hub
 
-Gold earned in combat needs a **sink** — a place to spend it that creates meaningful choices. A town with upgradeable buildings gives the player:
-- **Short-term goals**: "I need 50 more gold to upgrade the Blacksmith"
-- **Long-term goals**: "I need to build the Library to unlock the skill tree"
-- **Visual feedback**: The town grows and changes as you upgrade it
-- **Feature gating**: Buildings unlock features (the Library unlocks skills, the Tavern unlocks faction quests)
+The town is the player's **persistent home** between combat runs. But it's not just a gold sink — it's a living settlement that grows from a campfire to a city. The key design insight: **gold kickstarts the early game, but reputation and quests drive the rest.** This prevents gold inflation from breaking the equipment economy.
 
-### Building Types
+### The Two-Phase Economy
 
-| Building | Cost (Gold) | Unlocks | Upgrade Path |
+The city progresses through two distinct economic phases:
+
+```
+PHASE 1: GOLD-DRIVEN (Early Game)
+──────────────────────────────────
+Player earns gold in combat → Spends gold to build basic structures
+Gold is the primary resource. Buildings cost gold only.
+Ends when: Player has built all Phase 1 structures (small village)
+
+PHASE 2: POPULATION-DRIVEN (Mid-Late Game)
+───────────────────────────────────────────
+Workers arrive as population grows → Workers gather resources autonomously
+Gold becomes secondary. Buildings cost resources (wood, stone, ore) gathered by workers.
+Player gold now spent on: equipment, consumables, NPC hiring, managers
+Ends when: City is fully built (town center Lv5)
+```
+
+**Why this works:**
+- Early game: Gold feels valuable and impactful (building your first Blacksmith costs 200g — meaningful)
+- Mid game: Gold stays valuable for equipment/items (not inflated by city costs)
+- Late game: Gold is spent on NPC managers and luxury items (not mandatory progression)
+- City growth feels earned through reputation and quests, not just grinding gold
+
+### Phase 1: Gold-Driven Structures (Camp → Small Village)
+
+These structures cost gold only. They're the player's first investment.
+
+| Building | Gold Cost | Unlocks | Upgrade Path |
 |---|---|---|---|
-| **Campfire** | Free (starting) | Basic town, rest (heal) | Lv2: +10% gold from combat. Lv3: +20% gold. Lv5: Gold magnet. |
-| **Blacksmith** | 200 | Weapon upgrades between runs, equipment crafting | Lv2: Weapon enchanting. Lv3: Armor crafting. Lv5: Legendary recipes. |
-| **Tavern** | 150 | NPC recruitment, faction quest givers | Lv2: Bonus NPC visitors. Lv3: Rare NPCs. Lv5: Tavern stories (lore). |
-| **Market** | 100 | Buy consumables, sell items, trade resources | Lv2: Bulk discounts. Lv3: Rare items. Lv5: Export goods for gold. |
-| **Library** | 300 | Skill tree access, spell research | Lv2: +1 skill point per level. Lv3: Skill respec. Lv5: Ultimate skills. |
-| **Farm** | 120 | Passive resource generation (herbs, wood) | Lv2: +50% yield. Lv3: New crop types. Lv5: Auto-harvest. |
-| **Quarry** | 120 | Passive resource generation (stone, ore) | Lv2: +50% yield. Lv3: Rare minerals. Lv5: Auto-mining. |
-| **Chapel** | 250 | Faction reputation bonuses, blessing buffs | Lv2: Choose a faction for bonus. Lv3: Cross-faction peace. Lv5: Divine abilities. |
-| **Arena** | 400 | Challenge modes, practice combat, leaderboard | Lv2: Time trials. Lv3: Endless mode. Lv5: Spectator mode. |
-| **Watchtower** | 350 | World map, stage selection, scouting | Lv2: See enemy types before entering. Lv3: Weather effects. Lv5: Aerial view. |
+| **Campfire** | Free | Basic town, rest (heal) | Lv2: +10% gold. Lv3: NPC gathering spot. |
+| **Shelter** | 50 | Pop capacity: 5. First workers arrive. | Lv2: Pop capacity 10. Lv3: Pop capacity 15. |
+| **Blacksmith** | 200 | Weapon upgrades between runs | Lv2: Equipment crafting (costs resources). |
+| **Market** | 100 | Buy consumables, sell items | Lv2: Bulk discounts. |
+| **Farm** | 120 | 1 worker generates herbs/wood | Lv2: +50% yield. |
+| **Quarry** | 120 | 1 worker generates stone/ore | Lv2: +50% yield. |
 
-### Why These Buildings
+**Phase 1 total cost: ~790 gold** (achievable in 3-5 runs)
 
-| Building | Justification |
+### Phase 2: Population-Driven Structures (Village → City)
+
+Once the player has a small village (Campfire + Shelter + Blacksmith + Market + Farm + Quarry all built), the game transitions to Phase 2. New structures are unlocked by **reputation milestones** and **quest completion**, not gold.
+
+Workers arrive as population grows (gated by reputation and shelter upgrades). Workers gather resources autonomously between runs. Buildings cost **resources gathered by workers**, not gold.
+
+| Building | Unlock Condition | Resource Cost | Workers Needed | Upgrade Path |
+|---|---|---|---|---|
+| **Tavern** | Reputation: Friendly with any faction | 30 wood, 20 stone | 2 builders | Lv2: NPC recruitment. Lv3: Faction quest givers. |
+| **Library** | Complete quest: "First Lessons" | 50 wood, 10 herbs | 2 scholars | Lv2: Skill tree access. Lv3: Skill respec. |
+| **Chapel** | Reputation: Honored with any faction | 40 stone, 20 ore | 3 masons | Lv2: Faction blessing. Lv3: Cross-faction peace. |
+| **Arena** | Complete quest: "Prove Your Worth" | 60 stone, 30 ore | 4 builders | Lv2: Time trials. Lv3: Endless mode. |
+| **Watchtower** | Reputation: Friendly with Wanderers' Guild | 40 wood, 30 stone | 3 scouts | Lv2: Enemy intel. Lv3: Weather effects. |
+| **Wall** | Complete quest: "The Hollow Approaches" | 80 stone, 40 ore | 5 masons | Lv2: Enemy spawn distance +20%. Lv3: +50%. |
+| **Town Hall** | Reputation: Honored with 2 factions | 100 wood, 80 stone, 40 ore | 6 builders | Lv2: All buildings +1 level. Lv3: City complete. |
+
+### Worker & Population System
+
+```
+Population Growth:
+  Shelter Lv1 → Pop cap: 5   (1 farmer, 1 miner, 3 idle)
+  Shelter Lv2 → Pop cap: 10  (2 farmers, 2 miners, 1 builder, 5 idle)
+  Shelter Lv3 → Pop cap: 20  (4 farmers, 3 miners, 3 builders, 2 scholars, 8 idle)
+  Town Hall    → Pop cap: 35  (6 farmers, 5 miners, 8 builders, 3 scholars, 3 masons, 10 idle)
+
+Resource Generation (per combat run, ~5 min):
+  Farmer:  +3 wood or +2 herbs (player assigns)
+  Miner:   +3 stone or +2 ore (player assigns)
+  Builder: Required for construction (consumed on build)
+  Scholar: +1 research point (unlocks Library upgrades)
+  Mason:   Required for stone structures (consumed on build)
+```
+
+**Workers are NOT managed day-to-day.** The player assigns worker roles when they return to town (simple UI: drag farmers to wood or herbs). Workers then generate resources passively until the next run. This keeps the city builder lightweight — no real-time micromanagement.
+
+### NPC Managers (Gold Sink for Late Game)
+
+Once the city is growing, the player can spend gold to hire **NPC managers** — named characters who automate city functions:
+
+| Manager | Gold Cost | Function | Unlock |
+|---|---|---|---|
+| **Foreman** | 300 | Auto-assigns workers to optimal roles | Shelter Lv3 |
+| **Steward** | 500 | Auto-collects resources between runs | Town Hall Lv1 |
+| **Quartermaster** | 400 | Optimizes resource allocation for builds | Town Hall Lv1 |
+| **Recruiter** | 350 | Attracts new workers faster | Tavern Lv2 |
+
+**Why NPC managers are the late-game gold sink:** By the time the player has 300+ gold to spend on managers, they've already built most of the city through reputation/quests. Gold at this point is surplus — spending it on managers is a convenience, not a requirement. This keeps gold valuable without making it mandatory for city progression.
+
+### Resource Economy (Full Picture)
+
+```
+PHASE 1 (Gold-Driven):
+  Combat → Gold → Buildings (Campfire, Shelter, Blacksmith, Market, Farm, Quarry)
+
+PHASE 2 (Population-Driven):
+  Workers → Wood/Stone/Herbs/Ore → Buildings (Tavern, Library, Chapel, etc.)
+  Combat → Reputation → Unlocks new buildings
+  Combat → Quest completion → Unlocks new buildings
+  Gold → Equipment, consumables, NPC managers (NOT city buildings)
+
+                  ┌─────────────────┐
+                  │   COMBAT RUN    │
+                  └────────┬────────┘
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+         Gold (early)  Reputation  Quest objectives
+              │            │            │
+              ▼            ▼            ▼
+         ┌─────────┐ ┌─────────┐ ┌─────────┐
+         │ PHASE 1 │ │ UNLOCKS │ │ UNLOCKS │
+         │ Build   │ │ New     │ │ New     │
+         │ basics  │ │ bldgs   │ │ bldgs   │
+         └────┬────┘ └────┬────┘ └────┬────┘
+              │            │            │
+              └────────────┼────────────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │  WORKERS    │
+                    │  Generate   │
+                    │  resources  │
+                    └──────┬──────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │  PHASE 2    │
+                    │  Build      │
+                    │  advanced   │
+                    │  with       │
+                    │  resources  │
+                    └─────────────┘
+```
+
+### Why This Economy Works
+
+| Problem | How This Solves It |
 |---|---|
-| **Campfire** | Gives the player an immediate "home" with no cost. Upgrades provide passive bonuses that make future gold-earning easier (compounding progression). |
-| **Blacksmith** | The primary gold sink for combat-focused players. Weapon upgrades between runs bridge the roguelite (lose upgrades) and RPG (keep progression) loops. |
-| **Tavern** | The NPC hub. Without it, NPCs have nowhere to congregate. The upgrade path controls NPC variety and availability. |
-| **Market** | Provides the economy loop. Buy low, sell high. Consumables from the market can be taken into combat (providing tactical depth). |
-| **Library** | The skill tree needs a physical home in the game world. The Library makes skills feel like a learned ability, not just a menu. |
-| **Farm + Quarry** | Resource generators that provide passive income. These give the player something to check on when they return to town — creating a "return loop" (farm needs harvesting). |
-| **Chapel** | Faction reputation bonuses give the Chapel strategic importance. Choosing which faction to bless creates meaningful choices. |
-| **Arena** | Practice mode and challenges. Lets players test builds without risking a real run. Also provides leaderboards for competitive motivation. |
-| **Watchtower** | World map access. The more you upgrade it, the more information you get about stages before entering. |
-
-### Resource Economy
-
-```
-COMBAT                          TOWN
-─────────                       ─────
-Kill enemies  →  Gold           Gold  →  Buy buildings
-Kill enemies  →  XP             Gold  →  Buy consumables
-Find items    →  Inventory      Herbs →  Potions (blacksmith)
-Boss kills    →  Reputation     Stone →  Building materials
-Time survived →  Quest progress Wood  →  Building materials
-                                      
-         ◄──── Gold flows TO town
-         ────► Items flow TO combat (consumables, equipment)
-```
+| **Gold inflation** | Gold only funds Phase 1 (~790g total). Phase 2 uses worker-gathered resources. Gold stays valuable for equipment/managers. |
+| **Grinding feels bad** | Phase 1 is short (3-5 runs). Phase 2 progression is quest/reputation-based — doing interesting things, not repeating combat for gold. |
+| **City feels alive** | Workers arriving, buildings going up, population growing — the city develops itself as the player earns trust with the world. |
+| **Gold stays relevant** | Equipment, consumables, and NPC managers always cost gold. The player always has a reason to earn gold, even in late game. |
+| **No micromanagement** | Workers auto-generate. Player assigns roles once per visit. No farming sim complexity. |
+| **Quests matter** | Buildings are gated by reputation and quests, not just gold. This makes the NPC/faction systems essential, not optional. |
 
 ### Town View Design
 
@@ -411,7 +521,9 @@ The town is a **static screen** with clickable buildings. Not a real-time simula
 - The player interacts with the building's UI
 - Changes are written to the central store
 
-This is simpler than a real city builder but provides the same loop of **earn → spend → upgrade → unlock**.
+The town visually evolves as buildings are added: Phase 1 shows a campfire with a few tents. Phase 2 shows walls going up, a chapel, an arena. Phase 3 (Town Hall) shows a thriving settlement.
+
+This is simpler than a real city builder but provides the same loop of **earn → spend → upgrade → unlock** without the micromanagement overhead.
 
 ---
 
@@ -1100,7 +1212,7 @@ npcModule.onCombatEnd(result);      // Updates NPC reactions ("I heard you fough
 | 12 | `content/factions.json` | Faction definitions: ranks, rewards, conflicts | ~60 lines | Faction Module |
 | 13 | `content/skills.json` | Skill tree: nodes, requirements, effects | ~150 lines | Skill Module |
 | 14 | `content/quests.json` | Quest definitions: objectives, rewards, chains | ~200 lines | Quest Module |
-| 15 | `content/buildings.json` | Town building definitions: costs, upgrades, unlocks | ~120 lines | Town Module |
+| 15 | `content/buildings.json` | Town building definitions: two-phase costs, upgrades, worker requirements, unlocks | ~150 lines | Town Module |
 | 16 | `content/items.json` | Equipment and consumable definitions | ~100 lines | Inventory Module, Combat Module |
 | 17 | `content/unlocks.json` | Unlock conditions and dependencies | ~80 lines | Unlock Module |
 | 18 | `content/story.json` | Main story dialogue, narrator text, lore entries | ~150 lines | Quest Module, NPC Module |
@@ -1171,9 +1283,8 @@ If bringing Ani (10% damage) only gives 2x affection gain but costs a party slot
 
 ### Identified Conflicts
 
-**Conflict 1: Gold economy balance.**
-If combat gives gold AND the town generates gold (via buildings), the economy could inflate. The player might never feel resource-constrained.
-- **Resolution:** Buildings should cost escalating amounts. Higher-tier buildings cost resources (wood, stone) in addition to gold. The Chapel and Watchtower require quest completion AND resources AND gold. This creates multi-resource gates.
+**Conflict 1: Gold economy balance.** (RESOLVED)
+The two-phase economy solves this. Gold only funds Phase 1 structures (~790g total, achievable in 3-5 runs). Phase 2 structures cost worker-gathered resources, not gold. Gold stays valuable for equipment, consumables, and NPC managers — never inflated by mandatory city costs.
 
 **Conflict 2: NPC trust vs. faction reputation tension.**
 If Gareth (Forge Brotherhood) asks you to steal from the Shadow Covenant, do you gain trust with Gareth but lose reputation with the Covenant? The systems need to be coordinated.
