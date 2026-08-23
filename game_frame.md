@@ -205,6 +205,12 @@ The entire player state lives in one JSON object:
     "features": ["town_basic", "combat_basic"]
   },
 
+  "estates": [],
+  "family": {
+    "wives": [],
+    "children": [],
+    "familyTree": {}
+  },
   "inventory": {
     "equipment": {
       "weapon": null,
@@ -273,6 +279,7 @@ Feature writes:   store.flags.met_blacksmith = true  → "First conversation don
 | 7 | **Quest System** | `QuestModule` | `quests` | `quests`, `combat`, `town`, `npcs`, `unlocks` | `quests`, `flags`, `unlocks` |
 | 8 | **Unlock System** | `UnlockModule` | `unlocks` | `unlocks` | `unlocks` |
 | 9 | **Inventory** | `InventoryModule` | `inventory` | `inventory`, `combat`, `npcs` | `inventory` |
+| 10 | **Estate & Family** | `EstateModule` | `estates`, `family` | `npcs`, `factions`, `town`, `player.totalGold` | `estates`, `family`, `npcs.relationships`, `factions.reputation` |
 
 ### Why These Are Separate Modules
 
@@ -1052,7 +1059,205 @@ Content gating prevents the player from being overwhelmed and creates a sense of
 
 ---
 
-## 11. Macro Progression & Game Loop
+## 11. Estate, Marriage & Family System
+
+### Why This System Exists
+
+The affection system needs a **long-term payoff**. Trust Level 5 with an NPC is meaningful, but what comes after? Marriage and estates give the player:
+- A **major gold sink** for late-game surplus gold
+- A reason to **deepen relationships** beyond max trust
+- A **legacy system** that persists across the entire game
+- **Passive income** that rewards investment without requiring constant attention
+- **Family progression** that creates emotional attachment to the world
+
+### Core Concept
+
+> *To marry an NPC, the player must build them an estate — a self-sustaining property that provides for the family without draining the player's gold. The estate is the player's proof that they can provide. Once built, it runs itself.*
+
+This creates a natural progression:
+1. **Court** the NPC (raise affection through gifts, quests, bringing them along)
+2. **Build** their estate (gold + resources + quests + hired staff)
+3. **Marry** (complete the marriage quest chain)
+4. **Upgrade** the estate (raise affection further, unlock children, earn reputation)
+5. **Legacy** (children grow, become companions/managers, extend the family line)
+
+### Estate Tiers
+
+Each estate progresses through 5 tiers. Higher tiers require more resources, quests, and staff.
+
+| Tier | Name | What It Includes | Cost | Self-Sustaining? |
+|---|---|---|---|---|
+| **0** | Courting | No estate yet. Gift-giving and questing only. | 0 | N/A |
+| **1** | Homestead | Small house + garden. NPC has a home. | 200g, 30 wood | No (player funds upkeep) |
+| **2** | Farmstead | House + farmlands + 1 farmer. Produces food/resources. | 400g, 60 wood, 20 stone, 2 workers | Barely (covers own upkeep) |
+| **3** | Manor | House + farmlands + business + 3 staff. Profitable. | 800g, 100 wood, 60 stone, 30 ore, 4 workers, quest | Yes (generates surplus) |
+| **4** | Estate | Full estate with multiple businesses, staff quarters, grounds. | 1500g, 200 wood, 120 stone, 60 ore, 8 workers, quest chain | Yes (significant income) |
+| **5** | Dynasty | Estate + children + legacy. Endgame property. | 3000g, 400 wood, 200 stone, 100 ore, 12 workers, reputation milestone | Yes (major income + family bonuses) |
+
+### Why These Tiers
+
+| Tier | Design Purpose |
+|---|---|
+| **0 (Courting)** | The relationship-building phase. No gold investment yet — just time and effort. |
+| **1 (Homestead)** | The commitment begins. The player spends gold to give the NPC a home. Small investment, big emotional payoff. |
+| **2 (Farmstead)** | The estate starts producing. The player sees return on investment. Self-sustaining means the NPC is "taken care of." |
+| **3 (Manor)** | Marriage eligibility. The estate is profitable and staffed. The NPC is established. This is the "I can provide" threshold. |
+| **4 (Estate)** | Post-marriage growth. Upgrading the estate raises affection further and unlocks children. |
+| **5 (Dynasty)** | Endgame. The family line continues. Children become companions/managers. The player's legacy is established. |
+
+### Marriage Requirements
+
+To marry an NPC, the player must satisfy **all** of the following:
+
+| Requirement | Why |
+|---|---|
+| **Affection Level 5** (max) | The NPC must fully trust and love the player |
+| **Estate Tier 3+** (Manor) | The player must prove they can provide a home |
+| **Marriage Quest Chain** | A multi-step quest that tests the relationship (see below) |
+| **Faction Reputation: Honored** | The community must recognize the player's standing |
+| **Town Population: 15+** | The town must be large enough to support a wedding |
+
+### Marriage Quest Chain
+
+Each NPC has a unique marriage quest chain that reflects their personality:
+
+**Example: Gareth's Marriage Chain**
+```
+1. "A Ring of Iron" (Trust 5 required)
+   → Forge a special ring at the Blacksmith using rare materials
+   → Objective: Collect 50 ore, 20 rare minerals, complete 3 combat runs without taking damage
+
+2. "The Approval" (Reputation: Honored with Forge Brotherhood)
+   → Present the ring to Gareth's faction leader for blessing
+   → Objective: Talk to faction leader, complete a faction quest
+
+3. "The Wedding" (Estate Tier 3+ required)
+   → Host the wedding at your estate
+   → Objective: Have 20+ town population, all staff hired, estate fully built
+   → Reward: Marriage to Gareth, affection unlocks to Tier 6 (Dynasty)
+```
+
+### Estate Economy
+
+Each estate generates income based on its tier:
+
+```
+Tier 1 (Homestead):    0g/run  (breaks even on upkeep)
+Tier 2 (Farmstead):    +10g/run (small surplus)
+Tier 3 (Manor):        +30g/run (comfortable income)
+Tier 4 (Estate):       +75g/run (significant income)
+Tier 5 (Dynasty):      +150g/run (major income + family bonuses)
+```
+
+**Multiple estates compound.** A player with 3 wives at Tier 4 earns +225g/run passively. This creates a powerful late-game economy without requiring the player to grind manually.
+
+### Why Estates Are Self-Sustaining
+
+The key insight: **the estate pays for itself once built.** The player's gold is the *initial investment*, but the estate's workers and businesses generate enough to cover upkeep. This means:
+- The player never has to "pay rent" for an estate
+- The estate feels like a reward, not a burden
+- Multiple estates compound income, creating exponential growth
+- Gold from estates can be reinvested in more estates or spent on equipment
+
+### Children
+
+Children are unlocked at **Estate Tier 4+** and **Marriage Tier 5** (Dynasty). They represent the ultimate legacy progression.
+
+| Child Property | Details |
+|---|---|
+| **How many** | 1-3 children per marriage (based on estate tier and affection) |
+| **Growth** | Children grow over time (1 child per 10 combat runs, or real-time equivalent) |
+| **Stages** | Infant → Toddler → Child → Teen → Adult |
+| **Adult children** | Become available as companions (unique abilities) or managers (estate automation) |
+| **Inheritance** | Children inherit partial stats from both parents |
+
+### Child Bonuses by Stage
+
+| Stage | Bonus |
+|---|---|
+| **Infant** | +5% affection gain with the parent NPC |
+| **Toddler** | +10% gold from the parent's estate |
+| **Child** | +1 passive stat bonus (player's choice: HP, damage, speed) |
+| **Teen** | Can be assigned as a worker (high efficiency) |
+| **Adult** | Becomes a companion or manager (player's choice) |
+
+### Why Children Work
+
+| Design Aspect | Justification |
+|---|---|
+| **Long-term goal** | Children take time to grow. The player invests in a future payoff. |
+| **Emotional attachment** | Naming children, watching them grow, choosing their path — creates investment. |
+| **Mechanical benefit** | Adult children are powerful companions/managers. The payoff is real. |
+| **Legacy** | The player's family tree grows across the game. Multiple wives = multiple family lines. |
+| **No micromanagement** | Children grow automatically. Player only makes decisions at milestones ( Teen → Adult choice). |
+
+### Multiple Wives & Estates
+
+The player can have **up to 3 wives** (configurable). Each wife has:
+- Her own estate (separate from others)
+- Her own children (separate family line)
+- Her own affection track (independent of other wives)
+- Her own marriage quest chain
+
+**Why limit to 3?**
+- More than 3 estates would overwhelm the player with management
+- 3 wives = 3 family lines = enough for a dynasty without excessive complexity
+- Each wife represents a different faction/story path, encouraging diversity
+
+### NPC Staff for Estates
+
+Estates require hired staff to function. Staff are hired from the Tavern or found through quests:
+
+| Staff Role | Function | Hire Cost | Where to Find |
+|---|---|---|---|
+| **Farmer** | Generates food/resources | 100g | Tavern Lv1 |
+| **Cook** | +10% estate income | 150g | Tavern Lv2 |
+| **Guard** | Protects estate (prevents random events) | 200g | Arena Lv1 |
+| **Nurse** | +1 child growth speed | 250g | Chapel Lv1 |
+| **Tutor** | +1 child stat bonus | 300g | Library Lv2 |
+| **Steward** | Manages estate automation | 400g | Town Hall Lv1 |
+
+### Estate Data Structure
+
+```json
+"estates": [
+  {
+    "id": "estate_gareth",
+    "wifeId": "blacksmith",
+    "tier": 3,
+    "name": "Ironhand Manor",
+    "income": 30,
+    "staff": ["farmer", "cook", "guard"],
+    "children": [
+      { "name": "Forge", "stage": "child", "age": 15, "bonus": "damage" }
+    ],
+    "upgrades": {
+      "farmlands": 2,
+      "workshop": 1,
+      "quarters": 1
+    }
+  }
+]
+```
+
+### Estate → Affection & Reputation Feedback Loop
+
+Upgrading an estate raises affection with the resident NPC:
+
+| Estate Upgrade | Affection Gain | Reputation Gain |
+|---|---|---|
+| Tier 1 → 2 | +1 affection | +5 with NPC's faction |
+| Tier 2 → 3 | +1 affection | +10 with NPC's faction |
+| Tier 3 → 4 | +1 affection (post-marriage) | +15 with NPC's faction |
+| Tier 4 → 5 | +1 affection (post-marriage) | +20 with NPC's faction |
+| Hire new staff | +0.5 affection | — |
+| Add child | +1 affection | +10 with NPC's faction |
+
+This creates a virtuous cycle: **upgrade estate → raise affection → unlock new dialogue/quests → earn reputation → unlock new buildings → upgrade estate further.**
+
+---
+
+## 12. Macro Progression & Game Loop
 
 ### The Meta-Game Loop
 
@@ -1135,7 +1340,7 @@ Each type motivates a different kind of engagement:
 
 ---
 
-## 12. Data Flow Between Systems
+## 13. Data Flow Between Systems
 
 ### Cross-Feature Data Flow Map
 
@@ -1192,7 +1397,7 @@ npcModule.onCombatEnd(result);      // Updates NPC reactions ("I heard you fough
 
 ---
 
-## 13. Content File Architecture
+## 14. Content File Architecture
 
 ### Complete Content File Map
 
@@ -1216,6 +1421,7 @@ npcModule.onCombatEnd(result);      // Updates NPC reactions ("I heard you fough
 | 16 | `content/items.json` | Equipment and consumable definitions | ~100 lines | Inventory Module, Combat Module |
 | 17 | `content/unlocks.json` | Unlock conditions and dependencies | ~80 lines | Unlock Module |
 | 18 | `content/story.json` | Main story dialogue, narrator text, lore entries | ~150 lines | Quest Module, NPC Module |
+| 19 | `content/estates.json` | Estate definitions: tiers, costs, income, staff, children config | ~100 lines | Estate Module |
 
 ### Why Separate Content Files Per System
 
@@ -1227,7 +1433,7 @@ npcModule.onCombatEnd(result);      // Updates NPC reactions ("I heard you fough
 
 ---
 
-## 14. Gaps, Conflicts & Open Questions
+## 15. Gaps, Conflicts & Open Questions
 
 ### Identified Gaps
 
@@ -1280,6 +1486,18 @@ If the player brings 2 Master-tier NPCs (50% damage each), that's effectively +1
 **Gap 12: Dead weight NPCs could feel pointless if affection bonuses are too small.**
 If bringing Ani (10% damage) only gives 2x affection gain but costs a party slot, players may never bother.
 - **Action:** Dead weight affection bonus should be significant (3x multiplier) and dead weight NPCs should have unique quest lines that REQUIRE them in the party. This makes bringing them a deliberate choice, not an oversight.
+
+**Gap 13: Estate income could trivialize the gold economy.**
+3 wives at Tier 4 = +225g/run passive income. Combined with combat earnings, the player could accumulate gold faster than they spend it.
+- **Action:** Cap total estate income at 50% of combat earnings. If combat gives ~200g/run, estate income caps at ~100g/run total. This keeps estates rewarding without making combat irrelevant.
+
+**Gap 14: Children growth speed could feel too slow or too fast.**
+1 child per 10 runs = ~50 minutes of play per growth stage. Too slow for impatient players, too fast for those who want to savor it.
+- **Action:** Make child growth speed configurable (game speed option). Also tie growth to estate upgrades (Nurse speeds growth, Tutor improves child quality). Let the player influence the pace.
+
+**Gap 15: Multiple wives could create imbalance.**
+A player with 3 maxed wives has 3x the estate income, 3x the children, and 3x the reputation bonuses compared to a player with 1 wife.
+- **Action:** This is intentional. The player who invests more time gets more reward. The cap of 3 wives prevents infinite scaling. Each wife requires significant investment (affection + estate + quest chain), so having 3 maxed wives is a major achievement.
 
 ### Identified Conflicts
 
