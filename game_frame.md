@@ -1072,7 +1072,7 @@ The affection system needs a **long-term payoff**. Trust Level 5 with an NPC is 
 
 ### Core Concept
 
-> *To marry an NPC, the player must build them an estate — a self-sustaining property that provides for the family without draining the player's gold. The estate is the player's proof that they can provide. Once built, it runs itself.*
+> *To marry an NPC, the player must build them an estate — a self-contained household that covers its own living costs. The estate's income goes entirely toward feeding, housing, and maintaining the family. It never adds to the player's gold. The player's proof that they can provide is building it — once complete, it sustains itself without any further gold drain on the player.*
 
 This creates a natural progression:
 1. **Court** the NPC (raise affection through gifts, quests, bringing them along)
@@ -1090,9 +1090,9 @@ Each estate progresses through 5 tiers. Higher tiers require more resources, que
 | **0** | Courting | No estate yet. Gift-giving and questing only. | 0 | N/A |
 | **1** | Homestead | Small house + garden. NPC has a home. | 200g, 30 wood | No (player funds upkeep) |
 | **2** | Farmstead | House + farmlands + 1 farmer. Produces food/resources. | 400g, 60 wood, 20 stone, 2 workers | Barely (covers own upkeep) |
-| **3** | Manor | House + farmlands + business + 3 staff. Profitable. | 800g, 100 wood, 60 stone, 30 ore, 4 workers, quest | Yes (generates surplus) |
-| **4** | Estate | Full estate with multiple businesses, staff quarters, grounds. | 1500g, 200 wood, 120 stone, 60 ore, 8 workers, quest chain | Yes (significant income) |
-| **5** | Dynasty | Estate + children + legacy. Endgame property. | 3000g, 400 wood, 200 stone, 100 ore, 12 workers, reputation milestone | Yes (major income + family bonuses) |
+| **3** | Manor | House + farmlands + business + 3 staff. Profitable. | 800g, 100 wood, 60 stone, 30 ore, 4 workers, quest | Yes (covers family costs) |
+| **4** | Estate | Full estate with multiple businesses, staff quarters, grounds. | 1500g, 200 wood, 120 stone, 60 ore, 8 workers, quest chain | Yes (covers family + children costs) |
+| **5** | Dynasty | Estate + children + legacy. Endgame property. | 3000g, 400 wood, 200 stone, 100 ore, 12 workers, reputation milestone | Yes (covers full family + bonuses) |
 
 ### Why These Tiers
 
@@ -1100,8 +1100,8 @@ Each estate progresses through 5 tiers. Higher tiers require more resources, que
 |---|---|
 | **0 (Courting)** | The relationship-building phase. No gold investment yet — just time and effort. |
 | **1 (Homestead)** | The commitment begins. The player spends gold to give the NPC a home. Small investment, big emotional payoff. |
-| **2 (Farmstead)** | The estate starts producing. The player sees return on investment. Self-sustaining means the NPC is "taken care of." |
-| **3 (Manor)** | Marriage eligibility. The estate is profitable and staffed. The NPC is established. This is the "I can provide" threshold. |
+| **2 (Farmstead)** | The estate starts producing enough internally to cover its own upkeep. The NPC is "taken care of" without costing the player more gold. |
+| **3 (Manor)** | Marriage eligibility. The estate covers all family costs and is staffed. The NPC is established. This is the "I can provide" threshold. |
 | **4 (Estate)** | Post-marriage growth. Upgrading the estate raises affection further and unlocks children. |
 | **5 (Dynasty)** | Endgame. The family line continues. Children become companions/managers. The player's legacy is established. |
 
@@ -1137,27 +1137,27 @@ Each NPC has a unique marriage quest chain that reflects their personality:
    → Reward: Marriage to Gareth, affection unlocks to Tier 6 (Dynasty)
 ```
 
-### Estate Economy
+### Estate Economy (Family Maintenance Only)
 
-Each estate generates income based on its tier:
+Each estate generates internal income that is consumed entirely by the household. **None of it goes to the player's gold pool.** The estate covers its own food, staff wages, building maintenance, and family needs.
 
 ```
-Tier 1 (Homestead):    0g/run  (breaks even on upkeep)
-Tier 2 (Farmstead):    +10g/run (small surplus)
-Tier 3 (Manor):        +30g/run (comfortable income)
-Tier 4 (Estate):       +75g/run (significant income)
-Tier 5 (Dynasty):      +150g/run (major income + family bonuses)
+Tier 1 (Homestead):    Costs ~10g/run in upkeep  → Player must cover the deficit
+Tier 2 (Farmstead):    Earns ~10g/run internally  → Breaks even on upkeep (costs player nothing)
+Tier 3 (Manor):        Earns ~30g/run internally  → Covers family + small reserve for repairs
+Tier 4 (Estate):       Earns ~75g/run internally  → Covers large family, children, tutors, nurses
+Tier 5 (Dynasty):      Earns ~150g/run internally → Full dynasty costs covered, legacy secured
 ```
 
-**Multiple estates compound.** A player with 3 wives at Tier 4 earns +225g/run passively. This creates a powerful late-game economy without requiring the player to grind manually.
+**Multiple estates multiply family costs, not player income.** A player with 3 wives at Tier 4 has 3 households to maintain — the estate system pays for all of them internally. The player's gold never increases from estate activity.
 
-### Why Estates Are Self-Sustaining
+### Why Estates Are Self-Contained
 
-The key insight: **the estate pays for itself once built.** The player's gold is the *initial investment*, but the estate's workers and businesses generate enough to cover upkeep. This means:
-- The player never has to "pay rent" for an estate
-- The estate feels like a reward, not a burden
-- Multiple estates compound income, creating exponential growth
-- Gold from estates can be reinvested in more estates or spent on equipment
+The key insight: **the estate covers its own household costs so the player doesn't have to keep funding it.** The player's gold is the *initial investment* to build the estate, but once complete, the estate's workers and businesses generate exactly enough to cover the family's living expenses. This means:
+- The player never has to continuously "pay rent" for an estate after building it
+- The estate feels like a gift to the family, not a money-making machine
+- Multiple estates mean multiple self-sustaining households — more families, same player gold
+- All combat gold stays with the player for equipment, town buildings, and personal upgrades
 
 ### Children
 
@@ -1211,7 +1211,7 @@ Estates require hired staff to function. Staff are hired from the Tavern or foun
 | Staff Role | Function | Hire Cost | Where to Find |
 |---|---|---|---|
 | **Farmer** | Generates food/resources | 100g | Tavern Lv1 |
-| **Cook** | +10% estate income | 150g | Tavern Lv2 |
+| **Cook** | Reduces household costs by 10% (estate breaks even at lower tier) | 150g | Tavern Lv2 |
 | **Guard** | Protects estate (prevents random events) | 200g | Arena Lv1 |
 | **Nurse** | +1 child growth speed | 250g | Chapel Lv1 |
 | **Tutor** | +1 child stat bonus | 300g | Library Lv2 |
@@ -1487,17 +1487,17 @@ If the player brings 2 Master-tier NPCs (50% damage each), that's effectively +1
 If bringing Ani (10% damage) only gives 2x affection gain but costs a party slot, players may never bother.
 - **Action:** Dead weight affection bonus should be significant (3x multiplier) and dead weight NPCs should have unique quest lines that REQUIRE them in the party. This makes bringing them a deliberate choice, not an oversight.
 
-**Gap 13: Estate income could trivialize the gold economy.**
-3 wives at Tier 4 = +225g/run passive income. Combined with combat earnings, the player could accumulate gold faster than they spend it.
-- **Action:** Cap total estate income at 50% of combat earnings. If combat gives ~200g/run, estate income caps at ~100g/run total. This keeps estates rewarding without making combat irrelevant.
+**Gap 13: Estate upkeep at Tier 1-2 could feel like a burden before it breaks even.**
+A Tier 1 Homestead costs the player ~10g/run in upkeep until upgraded. If the player builds 3 estates at Tier 1, that's 30g/run drained — noticeable in early game.
+- **Action:** Tier 1 upkeep should be very low (5g/run) so it's a minor cost. The message should be: "Your investment is growing. Upgrade to let the estate take care of itself." Tier 2 should break even so the player feels the transition from burden to self-sufficiency.
 
 **Gap 14: Children growth speed could feel too slow or too fast.**
 1 child per 10 runs = ~50 minutes of play per growth stage. Too slow for impatient players, too fast for those who want to savor it.
 - **Action:** Make child growth speed configurable (game speed option). Also tie growth to estate upgrades (Nurse speeds growth, Tutor improves child quality). Let the player influence the pace.
 
-**Gap 15: Multiple wives could create imbalance.**
-A player with 3 maxed wives has 3x the estate income, 3x the children, and 3x the reputation bonuses compared to a player with 1 wife.
-- **Action:** This is intentional. The player who invests more time gets more reward. The cap of 3 wives prevents infinite scaling. Each wife requires significant investment (affection + estate + quest chain), so having 3 maxed wives is a major achievement.
+**Gap 15: Multiple wives = multiple self-sustaining households.**
+A player with 3 wives has 3 estates covering 3 families. Each family is self-sufficient, but the initial investment (building 3 Tier 3+ estates) is massive.
+- **Action:** This is intentional and balanced by design. The player spends significant gold and resources upfront to build each estate. The payoff is that all 3 families are cared for without further gold drain. The player's gold stays focused on their own progression — equipment, town, skill tree. Multiple families are a prestige achievement, not a gold generator.
 
 ### Identified Conflicts
 
