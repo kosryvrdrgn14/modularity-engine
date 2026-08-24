@@ -4900,7 +4900,8 @@ class Game {
       return;
     }
     this.gameState.setState('bossIntro');
-    this.gameLoop.paused = true;
+    // Keep loop running so _updateBossIntro timer advances
+    this.gameLoop.paused = false;
     this.inputManager._isPaused = true;
     this.introOverlay = {
       bossName: introConfig.bossName || '???',
