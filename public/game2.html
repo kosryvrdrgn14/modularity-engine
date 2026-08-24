@@ -348,7 +348,7 @@ const EMBEDDED_DATA = {
       visual: { shape: "circle", color: "#4FC3F7" }
     },
     {
-      id: "w3_area", name: "Area", type: "area",
+      id: "weapon_area_pulse", name: "Area", type: "area",
       targeting: "player_position", unlockLevel: 6, orbDamageCooldown: 0,
       statsPerLevel: [
         { level: 1, damage: 12, cooldown: 2.50, pulseRadius: 80, pulseCount: 1 },
@@ -371,7 +371,7 @@ const EMBEDDED_DATA = {
     { id: "zombie", name: "Zombie", type: "normal",
       stats: { hp: 10, damage: 5, speed: 40, size: 10, xpValue: 1, goldValue: 1, goldCoins: { min: 1, max: 2 } },
       behavior: { pattern: "chase", params: { chaseSpeed: 40 } },
-      drops: { powerUpTable: [{ type: "weapon_levelup", chance: 0.01 }] },
+      drops: { powerUpTable: [{ type: "pickup_weapon_level_up", chance: 0.01 }] },
       spawn: { weight: 100, firstAppears: "0:00" }
     },
     { id: "bat", name: "Bat", type: "normal",
@@ -383,19 +383,19 @@ const EMBEDDED_DATA = {
     { id: "skeleton", name: "Skeleton", type: "normal",
       stats: { hp: 20, damage: 8, speed: 50, size: 12, xpValue: 3, goldValue: 2, goldCoins: { min: 2, max: 3 } },
       behavior: { pattern: "chase", params: { chaseSpeed: 50 } },
-      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "weapon_levelup", chance: 0.01 }] },
+      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "pickup_weapon_level_up", chance: 0.01 }] },
       spawn: { weight: 60, firstAppears: "2:00" }
     },
     { id: "ghost", name: "Ghost", type: "normal",
       stats: { hp: 15, damage: 10, speed: 80, size: 12, xpValue: 2, goldValue: 2, goldCoins: { min: 2, max: 3 } },
       behavior: { pattern: "wander_chase", params: { wanderTime: 2, chaseTime: 4 } },
-      drops: { powerUpTable: [{ type: "magnet", chance: 0.05 }, { type: "weapon_levelup", chance: 0.01 }] },
+      drops: { powerUpTable: [{ type: "magnet", chance: 0.05 }, { type: "pickup_weapon_level_up", chance: 0.01 }] },
       spawn: { weight: 50, firstAppears: "2:30" }
     },
     { id: "caster", name: "Caster", type: "normal",
       stats: { hp: 12, damage: 8, speed: 50, size: 13, xpValue: 3, goldValue: 3, goldCoins: { min: 3, max: 4 } },
       behavior: { pattern: "ranged", params: { maintainDistance: 150, projectileDamage: 6, projectileSpeed: 150 } },
-      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "weapon_levelup", chance: 0.01 }] },
+      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "pickup_weapon_level_up", chance: 0.01 }] },
       spawn: { weight: 45, firstAppears: "3:00" }
     },
     { id: "boss_gravekeeper", name: "The Gravekeeper", type: "boss",
@@ -412,14 +412,14 @@ const EMBEDDED_DATA = {
         nameFontSize: 40,
         subtitleFontSize: 18,
       },
-      drops: { powerUpTable: [{ type: "weapon_levelup", chance: 1.0 }] },
+      drops: { powerUpTable: [{ type: "pickup_weapon_level_up", chance: 1.0 }] },
       spawn: { weight: 0, firstAppears: "4:00" },
       phases: [
         { hpThreshold: 1.0, speed: 70, chargeInterval: 3.0, chargeDuration: 1.5, pauseDuration: 1.0, minionCount: 3, minionInterval: 3.0 },
         { hpThreshold: 0.5, speed: 100, chargeInterval: 2.0, chargeDuration: 1.5, pauseDuration: 0.8, minionCount: 5, minionInterval: 2.0,
           groundPound: { interval: 5.0, radius: 80, damage: 20, telegraphTime: 0.75 } }
       ],
-      loot: { xp: 50, gold: { min: 20, max: 30 }, guaranteedPowerUp: "weapon_levelup" },
+      loot: { xp: 50, gold: { min: 20, max: 30 }, guaranteedPowerUp: "pickup_weapon_level_up" },
       screenWipeResistance: 0.8,
       chargeResumeBehavior: "continue_from_frozen"
     },
@@ -490,7 +490,7 @@ const EMBEDDED_DATA = {
       dropConfig: { sources: [{ enemyId: "bat", chance: 0.05 }, { enemyId: "ghost", chance: 0.05 }], guaranteedDropEnemies: [], rollOrder: 3 },
       powerUpDespawnTime: null
     },
-    { id: "weapon_levelup", name: "Weapon Level-Up", type: "weapon_levelup", value: 0,
+    { id: "pickup_weapon_level_up", name: "Weapon Level-Up", type: "pickup_weapon_level_up", value: 0,
       visual: { shape: "triangle", color: "#FF9100", size: 16 },
       behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
       dropConfig: { sources: [{ enemyId: "zombie", chance: 0.01 }, { enemyId: "skeleton", chance: 0.01 }, { enemyId: "ghost", chance: 0.01 }, { enemyId: "caster", chance: 0.01 }], guaranteedDropEnemies: ["boss_gravekeeper"], rollOrder: 1 },
@@ -1484,12 +1484,12 @@ class WeaponSystem {
   }
 
   _fireW3(player, dt) {
-    const level = this.weaponLevels['w3_area'];
+    const level = this.weaponLevels['weapon_area_pulse'];
     if (!level) return;
     // W3 is active — this line only prints once per fire cycle after cooldown
 
-    this.cooldowns['w3_area'] = (this.cooldowns['w3_area'] || 0) - dt;
-    if (this.cooldowns['w3_area'] > 0) return;
+    this.cooldowns['weapon_area_pulse'] = (this.cooldowns['weapon_area_pulse'] || 0) - dt;
+    if (this.cooldowns['weapon_area_pulse'] > 0) return;
 
     const weapon = this.dataManager.weapons[2];
     if (!weapon || !weapon.statsPerLevel) {
@@ -1501,21 +1501,33 @@ class WeaponSystem {
       console.error('[W3] Stats missing for level', level);
       return;
     }
-    this.cooldowns['w3_area'] = stats.cooldown;
+    this.cooldowns['weapon_area_pulse'] = stats.cooldown;
 
-    // Emit area pulse event(s)
+    // Emit area pulse event(s) — queue-based (respects pause/game over)
     const pulseDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
     const pulseCount = stats.pulseCount || 1;
     for (let i = 0; i < pulseCount; i++) {
-      setTimeout(() => {
-        this.eventBus.emit('areaPulse', {
-          x: player.x,
-          y: player.y,
-          damage: pulseDmg,
-          radius: stats.pulseRadius,
-          pulseCount: pulseCount,
-        });
-      }, i * 250);
+      this._w3PulseQueue.push({ delay: i * 0.25, elapsed: 0, dmg: pulseDmg, radius: stats.pulseRadius, pulseCount, fired: false });
+    }
+  }
+
+  _updateW3Pulses(dt) {
+    if (!this._w3PulseQueue || this._w3PulseQueue.length === 0) return;
+    const player = this.entityManager.getActive('player')[0];
+    for (let i = this._w3PulseQueue.length - 1; i >= 0; i--) {
+      const q = this._w3PulseQueue[i];
+      q.elapsed += dt;
+      if (q.elapsed >= q.delay && !q.fired) {
+        q.fired = true;
+        if (player) {
+          this.eventBus.emit('areaPulse', {
+            x: player.x, y: player.y,
+            damage: q.dmg, radius: q.radius,
+            pulseCount: q.pulseCount,
+          });
+        }
+      }
+      if (q.fired) this._w3PulseQueue.splice(i, 1);
     }
   }
 
@@ -1540,6 +1552,7 @@ class WeaponSystem {
 
   reset() {
     this.weaponLevels = {};
+    this._w3PulseQueue = [];
     this.cooldowns = {};
   }
 }
@@ -2562,7 +2575,7 @@ class FloatingTextSystem {
     let text = '', color = '#FFF';
     if (pd.id === 'exp_small') { text = `+${pd.value} XP`; color = '#4FC3F7'; }
     else if (pd.id === 'gold_coin') { text = `+${pd.value} G`; color = '#FFD700'; }
-    else if (pd.id === 'weapon_levelup') { text = 'WEAPON UP!'; color = '#FF9100'; }
+    else if (pd.id === 'pickup_weapon_level_up') { text = 'WEAPON UP!'; color = '#FF9100'; }
     else if (pd.id === 'screen_wipe') { text = 'SCREEN WIPE!'; color = '#00E676'; }
     else if (pd.id === 'magnet') { text = 'MAGNET!'; color = '#FF4081'; }
     if (text) {
@@ -2817,7 +2830,7 @@ class AudioManager {
       const id = data.pickup?.pickupData?.id;
       if (id === 'exp_small') this._playPickupTriad(data.pickup);
       else if (id === 'gold_coin') this._playGoldArpeggio(data.pickup);
-      else if (id === 'weapon_levelup' || id === 'magnet' || id === 'health') this.play('powerup_collect', { sourceX: data.pickup?.x, sourceY: data.pickup?.y });
+      else if (id === 'pickup_weapon_level_up' || id === 'magnet' || id === 'health') this.play('powerup_collect', { sourceX: data.pickup?.x, sourceY: data.pickup?.y });
       else if (id === 'screen_wipe') this.play('screenwipe');
     });
 
@@ -3696,16 +3709,15 @@ class GameManager {
   set_counter(key, value) { this.store.counters[key] = value; this._dirty = true; }
 
   // ── Player Progress ────────────────────────────
-  addXP(amount) {
-    this.store.player.xp += amount;
-    // Check level up (simplified — real implementation reads leveling.json)
-    const xpNeeded = 10 + this.store.player.level * 5;
-    while (this.store.player.xp >= xpNeeded) {
-      this.store.player.xp -= xpNeeded;
-      this.store.player.level++;
-      this.store.skills.skillPoints++;
-      this.store.skills.totalPointsEarned++;
-      this.eventBus.emit('player:levelUp', { level: this.store.player.level });
+  add_xp(amount) {
+    const p = this.store.persistent.player;
+    p.xp += amount;
+    const xpNeeded = 10 + p.level * 5;
+    while (p.xp >= xpNeeded) {
+      p.xp -= xpNeeded;
+      p.level++;
+      this.store.persistent.skills.skill_points++;
+      this.eventBus.emit('player:levelUp', { level: p.level });
     }
     this._dirty = true;
   }
@@ -3893,6 +3905,7 @@ class Game {
     this.telegraphSystem = new TelegraphSystem(this.entityManager, this.eventBus);
     this.gameManager = new GameManager(this.eventBus);
     this.gameManager.init();
+    this._queuedBossIntro = null;
     this.introOverlay = null;
     this.announcements = [];
     this._announcementTriggered = {};
@@ -4055,7 +4068,7 @@ class Game {
       }
       
       // Weapon Level-Up pickup: upgrade lowest-level active weapon
-      if (data.pickup.pickupData?.id === 'weapon_levelup') {
+      if (data.pickup.pickupData?.id === 'pickup_weapon_level_up') {
         this._applyWeaponLevelUp();
       }
     });
@@ -4203,6 +4216,11 @@ class Game {
   }
 
   startBossIntro(introConfig) {
+    // Queue if currently in level-up
+    if (this.gameState.isLevelUp()) {
+      this._queuedBossIntro = introConfig;
+      return;
+    }
     this.gameState.setState('bossIntro');
     this.gameLoop.paused = true;
     this.inputManager._isPaused = true;
@@ -4223,7 +4241,7 @@ class Game {
   }
 
   _applyWeaponLevelUp() {
-    const weaponIds = ['w1_projectile', 'w2_orbit', 'w3_area'];
+    const weaponIds = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     // Find the lowest-level active weapon (prioritize upgrading what's unlocked)
     let bestWeapon = null;
     let bestLevel = Infinity;
@@ -4382,8 +4400,8 @@ class Game {
     ];
 
     // Add weapon upgrades for each unlocked weapon (max level 7)
-    const weaponIds = ['w1_projectile', 'w2_orbit', 'w3_area'];
-    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', w3_area: 'Area' };
+    const weaponIds = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area' };
     for (const wid of weaponIds) {
       const wLevel = game.weaponSystem.weaponLevels[wid] || 0;
       if (wLevel > 0 && wLevel < 7) {
