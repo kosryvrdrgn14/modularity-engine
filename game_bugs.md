@@ -2,7 +2,7 @@
 
 **Project:** Modularity Engine (Vampire Survivors Prototype)
 **File:** `game.html` (single-file HTML5 game)
-**Last Updated:** August 21, 2026
+**Last Updated:** August 24, 2026
 
 ---
 
@@ -45,8 +45,11 @@
 | 31 | No audio plays — missing #start-overlay element (AudioContext never unlocked) | 🔴 Critical | ✅ Fixed | Audio audit |
 | 32 | Audio dies after first power-up selection — duckForLevelUp(true) called on levelUp but duckForLevelUp(false) never called in selectUpgrade handler | 🔴 Critical | ✅ Fixed | User report |
 | 33 | Game freeze: _playPowerUpArpeggio is not a function — undefined method called in pickup handler for weapon_levelup/magnet/health pickups | 🔴 Critical | ✅ Fixed | User report |
+| 34 | NPC portrait not rendering — base64 data URI SVGs in `<img>` tags fail in iframe/CSP contexts | 🟡 Medium | ✅ Fixed | User report |
+| 35 | Elder Rowan dialogue stuck on greeting — _showChoices indentation corrupted during Python code replacement | 🔴 Critical | ✅ Fixed | User report |
+| 36 | W3 area pulse never fires — _updateW3Pulses defined but never called from WeaponSystem.update() | 🔴 Critical | ✅ Fixed | Code review |
 
-**Total: 33 bugs found, 33 fixed** (30b is root cause fix replacing #30's workaround)
+**Total: 36 bugs found, 36 fixed** (30b is root cause fix replacing #30's workaround)
 
 ---
 
@@ -222,6 +225,121 @@ window.addEventListener('keyup', (e) => {
 
 ---
 
+## Bug #34 — NPC Portrait Not Rendering
+
+**Date:** August 24, 2026
+**Severity:** 🟡 Medium (visual)
+**Discovered by:** User manual testing
+
+### Symptom
+NPC portraits (Elder Rowan, Lina) show broken image icons or blank circles in both the NPC card and dialogue overlay.
+
+### Root Cause
+Portraits were loaded as `<img src="data:image/svg+xml;base64,...">` or `<img src="assets/npc_old_man.svg">`. In iframe contexts (Freebuff preview) and some browsers, base64 data URI SVGs in `<img>` tags are blocked by CSP policies or fail to decode. File-path `<img>` tags also fail when served through certain proxy configurations.
+
+### Fix
+Switched from `<img>` tags to **inline SVG elements**:
+1. Created `SVG_PORTRAITS` map with raw SVG strings (not data URIs)
+2. Changed `dialogue-portrait` from `<img>` to `<div>`
+3. NPC cards now inject `<svg>` elements via `innerHTML` instead of `<img>` tags
+4. `_openDialogue()` sets `dialoguePortrait.innerHTML` to styled SVG
+
+```javascript
+// BEFORE (broken in iframe):
+<img class="npc-portrait" src="${npc.portrait}" />
+
+// AFTER (works everywhere):
+const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
+const svgWithClass = svgHtml.replace('<svg ', '<svg class="npc-portrait" ');
+card.innerHTML = `${svgWithClass}<div class="npc-info">...</div>`;
+```
+
+### Prevention Rule
+> **Never use `<img>` tags with data URI SVGs or file-path SVGs for game assets that may render in iframes.** Always use inline SVG elements via `innerHTML` injection from a pre-loaded SVG map.
+
+---
+
+## Bug #35 — Elder Rowan Dialogue Stuck on Greeting
+
+**Date:** August 24, 2026
+**Severity:** 🔴 Critical (dialogue broken)
+**Discovered by:** User manual testing
+
+### Symptom
+Elder Rowan's dialogue shows the greeting text via typewriter but never progresses to show dialogue choices. The dialogue is stuck. Lina's dialogue works correctly.
+
+### Root Cause
+During a Python-based code replacement (to add SVG_PORTRAITS map and update `_openDialogue`), the `_showChoices` method was re-inserted with **4 spaces** of indentation instead of the class-standard **2 spaces**:
+
+```javascript
+// CORRECT (2 spaces — matches class method convention):
+  _showChoices(npc) {
+    this.dom.dialogueChoices.innerHTML = '';
+    ...
+  }
+
+// CORRUPTED (4 spaces — from Python replacement):
+    _showChoices(npc) {
+    this.dom.dialogueChoices.innerHTML = '';
+    ...
+    }
+```
+
+The extra indentation caused `_showChoices` to be parsed with inconsistent brace alignment, breaking the callback chain in `_openDialogue` → `_typewriteText` → `onComplete` → `_showChoices`. The typewriter completed but the callback silently failed.
+
+### Fix
+Corrected `_showChoices` indentation to 2 spaces, matching all other class methods.
+
+### Prevention Rule
+> **When using Python/regex to insert code into JavaScript class methods, always verify the indentation matches the surrounding methods (2 spaces for this project).** Run a visual diff or parse check after any bulk code insertion.
+
+### Related Prevention Checklist
+- [ ] After any Python-based code insertion, verify all class methods use consistent indentation
+- [ ] Run `node -e "new Function(html.match(/<script>([\s\S]*)<\/script>/)[1])"` to verify parse
+- [ ] Check that callback chains (`_typewriteText` → `onComplete` → `_showChoices`) resolve correctly
+
+---
+
+## Bug #36 — W3 Area Pulse Never Fires
+
+**Date:** August 24, 2026
+**Severity:** 🔴 Critical (weapon broken)
+**Discovered by:** Code review
+
+### Symptom
+Weapon 3 (Area Pulse) fires but the pulse effect never triggers — no damage, no visual. The weapon appears to do nothing.
+
+### Root Cause
+`_updateW3Pulses(dt)` was defined in WeaponSystem but **never called** from `WeaponSystem.update()`. The pulse queue filled up but was never processed.
+
+```javascript
+// update() method — _updateW3Pulses was missing:
+update(dt) {
+  this._fireW1(dt);
+  this._fireW2(dt);
+  this._fireW3(dt);
+  // _updateW3Pulses(dt) was never here!
+  this._updateOrbitPositions(dt);
+}
+```
+
+### Fix
+Added the missing call:
+```javascript
+update(dt) {
+  this._fireW1(dt);
+  this._fireW2(dt);
+  this._fireW3(dt);
+  this._updateW3Pulses(dt);  // ← added
+  this._updateOrbitPositions(dt);
+}
+```
+
+### Prevention Rule
+> **When creating a queue-based deferred system (like `_w3PulseQueue`), always ensure the queue processor is called from the main update loop.** Search for all `_queue` variables and verify each has a corresponding `_update*` call in `update()`.
+
+---
+
 ## Known Limitations (Not Bugs)
 
 1. **Audio system** — Stub only, no sounds implemented
@@ -254,4 +372,38 @@ window.addEventListener('keyup', (e) => {
 
 ---
 
-*Report compiled from all development sessions and system audit. 27 bugs found and fixed.*
+*Report compiled from all development sessions and system audit. 36 bugs found and fixed.*
+
+---
+
+## Prevention Checklist — Recurring Patterns
+
+These bugs share common root causes. Use this checklist after any code change session:
+
+### 1. Indentation & Formatting
+| Check | Why |
+|---|---|
+| Class methods use consistent 2-space indentation | Bug #35: wrong indentation broke callback chain |
+| Python/regex insertions preserve surrounding formatting | Bulk replacements can corrupt indentation |
+| Run parse check after any code insertion | Catches syntax errors before user testing |
+
+### 2. Queue-Based Systems
+| Check | Why |
+|---|---|
+| Every `_queue` variable has a processor in `update()` | Bug #36: W3 pulse queue never processed |
+| Every `setInterval`/`setTimeout` has a cleanup path | Prevents post-game-over callbacks |
+| Deferred systems respect pause state | Prevents damage during menus/intros |
+
+### 3. Asset Loading
+| Check | Why |
+|---|---|
+| No `<img>` tags with data URI SVGs in iframe contexts | Bug #34: CSP blocks data URIs |
+| Inline SVG elements used for all NPC/entity portraits | Works in all browser contexts |
+| SVG_PORTRAITS map checked before rendering | Prevents undefined/null SVG errors |
+
+### 4. Callback Chains
+| Check | Why |
+|---|---|
+| `onComplete` callbacks verified with console.log during dev | Bug #35: silent callback failure |
+| Typewriter → choices → response → continue loop tested end-to-end | Prevents stuck dialogue |
+| Event handlers removed/replaced on re-open | Prevents stale listener accumulation |
