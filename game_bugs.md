@@ -1,7 +1,7 @@
 # Game Bug Report — Master Log
 
 **Project:** Modularity Engine (Vampire Survivors Prototype)
-**File:** `game.html` (single-file HTML5 game)
+**File:** `public/game2.html` (single-file HTML5 game)
 **Last Updated:** August 24, 2026
 
 ---

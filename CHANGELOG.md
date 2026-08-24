@@ -2,6 +2,58 @@
 
 ---
 
+## v0.2.5 — Companion, Town & Polish
+**Date:** August 24, 2026
+**Status:** Full game loop with town, companion, and debug tools
+
+### New Features
+- **Title Screen** — Gothic village background, animated embers, fantasy BGM, WASD/arrow navigation, Settings menu
+- **Town System** — Refugee camp after combat, Elder Rowan NPC, camp upgrade (100g → wooden shacks), Lina NPC unlock
+- **Dog Companion** — Pet in town to recruit, follows player in combat, growl AoE attack every 10s, auto-collects loot within 40px, scales with W1 upgrades
+- **3 Companion Slots** — UI shows companion boxes under weapons, dog fills slot 1
+- **NPC Dialogue System** — Typewriter text, choice buttons, topic loops, affection tracking, inline SVG portraits
+- **Debug: Test Town** — Title screen option gives +100g, skips combat
+- **Debug: B Key** — Spawns boss instantly for testing
+
+### Boss Telegraph Fix
+- Telegraph rectangle now extends in the correct charge direction (was 90° off)
+- Boss freezes during windup — telegraph is the truth
+- Charge direction locked to telegraph's final angle
+- Chevrons point forward in charge direction
+
+### Boss Intro Fix
+- Intro timer now advances in `render()` while game loop is paused
+- Entities frozen during intro — no damage during cutscene
+- Skip intro via click/Space during boss introduction
+
+### Audio
+- Full AudioManager with 19+ synthesized sounds
+- Boss charge telegraph warning, spawn roar
+- Dog growl and bark sounds
+- Menu navigate, select, back, locked, powerup sounds
+- Volume sliders with persistent settings
+- Audio ducking during level-up
+
+### Bug Fixes (7 new — #37–#43)
+- Boss hangs during intro (#37)
+- B key skip-to-boss silent fail (#38)
+- B key shows warning but no boss spawn (#39)
+- `game._spawnBoss()` undefined — method on SpawnSystem (#40)
+- Telegraph rectangle 90° off from charge direction (#41)
+- Boss charges at player not telegraph direction (#42)
+- Duplicate TownScreen methods from bulk insert (#43, open)
+
+### SVG Assets (23 total)
+- Enemy sprites: zombie, bat, skeleton, ghost, caster, boss
+- NPC portraits: Elder Rowan, Lina, Dog
+- Dog combat sprite
+- Weapons: W1 projectile, W2 orbit, W3 pulse
+- Pickups: XP gems, gold, magnet, screen wipe, weapon level-up
+- Environment: title background, refugee camp, wooden shacks
+- Player sprite
+
+---
+
 ## v0.2.0 — First Playable Build
 **Date:** August 21, 2026
 **Status:** Playable prototype (30 bugs fixed, audio gaps resolved)
@@ -96,8 +148,8 @@
 - Upgrade key repeat applying upgrades multiple times
 - Double power-up: queue entry not consumed in levelUp handler (root cause fix from Claude review)
 
-### Known Limitations
-- Audio not implemented
+### Known Limitations (resolved in v0.2.5)
+- ~~Audio not implemented~~ ✅ Full AudioManager
 - Gold not tracked on HUD
 - Weapon power spikes (level 4/7 effects) not implemented
 - Passive upgrade pool limited to 3 types
