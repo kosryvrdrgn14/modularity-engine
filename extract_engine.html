@@ -1972,7 +1972,7 @@ _updateBGM() {
 </div>
 
 <div class="gap">
-  <strong>Gap 3: Gold tracking not implemented.</strong> Gold coins are spawned by <code>PickupSystem</code> but the <code>LevelingSystem._onPickup()</code> has a comment "Gold is tracked separately (not implemented yet)" and <code>Game._getStats()</code> always returns <code>gold: 0</code>. <strong>Action:</strong> Add gold state to Game or a new ResourceManager.
+  <strong>Gap 3: Gold tracking not implemented. (RESOLVED) <strong>GameManager</strong> now tracks gold via <code>addGold()</code> / <code>getResource()</code>. PickupSystem writes gold on coin collection. <code>Game._getStats()</code> reads from GameManager. See <code>14_game_manager.md</code>.</strong> Gold coins are spawned by <code>PickupSystem</code> but the <code>LevelingSystem._onPickup()</code> has a comment "Gold is tracked separately (not implemented yet)" and <code>Game._getStats()</code> always returns <code>gold: 0</code>. <strong>Action:</strong> Add gold state to Game or a new ResourceManager.
 </div>
 
 <div class="gap">

@@ -1477,14 +1477,11 @@ npcModule.onCombatEnd(result);      // Updates NPC reactions ("I heard you fough
 When the game updates and the save format changes, old saves could break. We need a migration system.
 - **Question:** Should we use semantic versioning on the save format and include migration functions per version bump? Or is a "reset save on major version change" acceptable?
 
-**Gap 2: Combat engine currently has no "session result" output.**
-The existing combat engine runs until game over and shows stats, but doesn't export a structured result object. We need to define the combat result interface.
-- **Action:** Add `onCombatEnd(result)` hook that packages gold, XP, kills, items, time survived, and quest-relevant events into a standard format.
+**Gap 2: Combat engine currently has no "session result" output.** (RESOLVED)
+The existing combat engine runs until game over and shows stats, but doesn't export a structured result object. **GameManager** now provides `buildCombatResult()` and `endCombatSession(result)` that packages gold, XP, kills, items, time survived, and quest-relevant events into a standard format. See `14_game_manager.md`.
 
-**Gap 3: No resource types beyond gold.**
-The town uses wood, stone, herbs, and gold. But the combat engine only generates gold. Where do other resources come from?
-- **Options:** (a) Farm and Quarry buildings generate resources passively over real time. (b) Resources drop from specific enemies. (c) Resources are earned from specific quest types.
-- **Recommendation:** All three. Farm/Quarry provide baseline. Some enemies drop resources. Quests can reward specific resources. This creates multiple paths to the same goal.
+**Gap 3: No resource types beyond gold.** (PARTIALLY RESOLVED)
+The town uses wood, stone, herbs, and gold. **GameManager** now supports multi-resource tracking (`addResource()`, `spendResource()`, `getResource()`) with 5 resource types: gold, wood, stone, herbs, ore. Resource *earning* (drops, buildings, quests) will be implemented when town/quest modules are built. The store and API are ready.
 
 **Gap 4: No inventory management UI.**
 Items can be earned, bought, and found. But there's no inventory screen to manage equipment and consumables.
@@ -1537,7 +1534,7 @@ A Tier 1 Homestead costs the player ~10g/run in upkeep until upgraded. If the pl
 A player with 3 wives has 3 estates covering 3 families. Each family is self-sufficient, but the initial investment (building 3 Tier 3+ estates) is massive.
 - **Action:** This is intentional and balanced by design. The player spends significant gold and resources upfront to build each estate. The payoff is that all 3 families are cared for without further gold drain. The player's gold stays focused on their own progression — equipment, town, skill tree. Multiple families are a prestige achievement, not a gold generator.
 
-**Gap 16: TelegraphSystem and BossIntroSystem not yet designed.** The combat engine's boss telegraph is hardcoded (warning zone in `Renderer._drawBossWarningZone()`) and bosses spawn without introduction sequences. External content files cannot define new telegraph shapes, attack timings, or boss intro animations. The stage data's `bossConfig.announcement[]` is never rendered. **Action:** See `13_telegraph_and_boss_intro.md` for the full design of: (a) a data-driven TelegraphSystem supporting 6 shape types (rectangle, circle, cone, line, ring, cross), (b) a boss introduction sequence with pause/overlay/resume, (c) stage environmental event telegraphs (falling debris, lava pools), and (d) the announcement system for pre-boss tension text.
+**Gap 16: TelegraphSystem and BossIntroSystem.** (RESOLVED) The combat engine's boss telegraph is hardcoded (warning zone in `Renderer._drawBossWarningZone()`) and bosses spawn without introduction sequences. External content files cannot define new telegraph shapes, attack timings, or boss intro animations. The stage data's `bossConfig.announcement[]` is never rendered. **Action:** See `13_telegraph_and_boss_intro.md` for the full design of: (a) a data-driven TelegraphSystem supporting 6 shape types (rectangle, circle, cone, line, ring, cross), (b) a boss introduction sequence with pause/overlay/resume, (c) stage environmental event telegraphs (falling debris, lava pools), and (d) the announcement system for pre-boss tension text.
 
 ### Identified Conflicts
 

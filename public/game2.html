@@ -918,6 +918,7 @@ class SpawnSystem {
 
   update(dt) {
     this.gameTime += dt;
+    if (this.gameManager) this.gameManager.update(dt);
     
     const stage = this.dataManager.stages;
     const wave = this._getCurrentWave(stage.waves);
@@ -1648,6 +1649,8 @@ class PickupSystem {
     this.magnetActive = false;
     this.magnetTimer = 0;
   }
+
+  setGameManager(gm) { this._gameManager = gm; }
 
   init() {
     this.eventBus.on('death', (data) => this._onEnemyDeath(data));
@@ -3536,6 +3539,288 @@ class AudioManager {
 // MAIN GAME
 // ============================================================
 
+// ============================================================
+// GAME MANAGER
+// Central store, resource tracking, combat session results
+// ============================================================
+
+class GameManager {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.store = null;
+    this._dirty = false;
+    this._autoSaveTimer = 0;
+  }
+
+  init() {
+    // Load from localStorage or create default
+    const saved = localStorage.getItem('modularity_engine_save');
+    if (saved) {
+      try {
+        this.store = JSON.parse(saved);
+        this.store = this._migrate(this.store);
+      } catch(e) {
+        console.warn('Failed to load save, creating new:', e);
+        this.store = this._createDefault();
+      }
+    } else {
+      this.store = this._createDefault();
+    }
+    this.store.meta.lastPlayed = Date.now();
+    this._dirty = true;
+  }
+
+  _createDefault() {
+    return {
+      version: 1,
+      meta: { createdAt: Date.now(), lastSaved: Date.now(), lastPlayed: Date.now(), totalPlayTime: 0, prestigeCount: 0 },
+      player: { name: "Survivor", level: 1, xp: 0, totalGold: 0, totalKills: 0, totalRuns: 0, baseStats: { maxHealth: 100, moveSpeed: 200, damageMultiplier: 1.0, speedMultiplier: 1.0, pickupRadius: 50 } },
+      combat: { unlockedWeapons: ["w1_projectile"], weaponLevels: {}, lastRunStats: null, bestRunStats: null, runHistory: [] },
+      skills: { unlocked: [], skillPoints: 0, totalPointsEarned: 0 },
+      town: { phase: 1, population: 0, popCap: 5, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 }, workers: { farmers: 0, miners: 0, builders: 0, scholars: 0, masons: 0, idle: 0, assignments: {} }, managers: [], upgrades: {} },
+      npcs: { met: [], relationships: {}, completedDialogues: [], activeRequests: [], companions: [], partySlots: 2 },
+      factions: { wanderers_guild: { reputation: 0, rank: "unknown" }, shadow_covenant: { reputation: 0, rank: "unknown" }, forge_brotherhood: { reputation: 0, rank: "unknown" } },
+      quests: { active: [], completed: [], failed: [], available: [], estateQueue: [] },
+      unlocks: { stages: ["stage_graveyard"], items: [], abilities: [], features: ["town_basic", "combat_basic"], characters: ["survivor"] },
+      estates: [],
+      family: { wives: [], children: [], familyTree: {} },
+      inventory: { equipment: { weapon: null, armor: null, accessory: null, relic: null }, consumables: [], maxSlots: 24, surplus: [] },
+      flags: {},
+    };
+  }
+
+  _migrate(data) {
+    const v = data.version || 0;
+    if (v < 1) {
+      data.inventory = data.inventory || {};
+      data.inventory.maxSlots = data.inventory.maxSlots || 24;
+      data.quests = data.quests || {};
+      data.quests.estateQueue = data.quests.estateQueue || [];
+      data.version = 1;
+    }
+    return data;
+  }
+
+  // ── Store Access ───────────────────────────────
+  get(path) {
+    return path.split('.').reduce((obj, key) => obj && obj[key], this.store);
+  }
+
+  set(path, value) {
+    const keys = path.split('.');
+    let obj = this.store;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!obj[keys[i]]) obj[keys[i]] = {};
+      obj = obj[keys[i]];
+    }
+    obj[keys[keys.length - 1]] = value;
+    this._dirty = true;
+  }
+
+  // ── Resource Tracking ──────────────────────────
+  addGold(amount, source) {
+    if (amount <= 0) return;
+    this.store.town.resources.gold += amount;
+    this.store.player.totalGold += amount;
+    this._dirty = true;
+    this.eventBus.emit('resources:changed', { gold: this.store.town.resources.gold, source });
+  }
+
+  spendGold(amount, source) {
+    if (amount > this.store.town.resources.gold) return false;
+    this.store.town.resources.gold -= amount;
+    this._dirty = true;
+    this.eventBus.emit('resources:changed', { gold: this.store.town.resources.gold, source });
+    return true;
+  }
+
+  addResource(type, amount) {
+    if (!this.store.town.resources.hasOwnProperty(type)) return;
+    this.store.town.resources[type] += amount;
+    this._dirty = true;
+    this.eventBus.emit('resources:changed', { [type]: this.store.town.resources[type] });
+  }
+
+  spendResource(type, amount) {
+    if (!this.store.town.resources.hasOwnProperty(type)) return false;
+    if (amount > this.store.town.resources[type]) return false;
+    this.store.town.resources[type] -= amount;
+    this._dirty = true;
+    this.eventBus.emit('resources:changed', { [type]: this.store.town.resources[type] });
+    return true;
+  }
+
+  getResource(type) {
+    return this.store.town.resources[type] || 0;
+  }
+
+  hasResource(type, amount) {
+    return this.getResource(type) >= amount;
+  }
+
+  // ── Player Progress ────────────────────────────
+  addXP(amount) {
+    this.store.player.xp += amount;
+    // Check level up (simplified — real implementation reads leveling.json)
+    const xpNeeded = 10 + this.store.player.level * 5;
+    while (this.store.player.xp >= xpNeeded) {
+      this.store.player.xp -= xpNeeded;
+      this.store.player.level++;
+      this.store.skills.skillPoints++;
+      this.store.skills.totalPointsEarned++;
+      this.eventBus.emit('player:levelUp', { level: this.store.player.level });
+    }
+    this._dirty = true;
+  }
+
+  unlockWeapon(weaponId) {
+    if (!this.store.combat.unlockedWeapons.includes(weaponId)) {
+      this.store.combat.unlockedWeapons.push(weaponId);
+      this._dirty = true;
+      this.eventBus.emit('unlock:weapon', { weaponId });
+    }
+  }
+
+  unlockStage(stageId) {
+    if (!this.store.unlocks.stages.includes(stageId)) {
+      this.store.unlocks.stages.push(stageId);
+      this._dirty = true;
+      this.eventBus.emit('unlock:stage', { stageId });
+    }
+  }
+
+  unlockFeature(featureId) {
+    if (!this.store.unlocks.features.includes(featureId)) {
+      this.store.unlocks.features.push(featureId);
+      this._dirty = true;
+      this.eventBus.emit('unlock:feature', { featureId });
+    }
+  }
+
+  // ── Combat Session ─────────────────────────────
+  buildCombatResult(data) {
+    return {
+      stageId: data.stageId || 'stage_graveyard',
+      stageCompleted: data.stageCompleted || false,
+      timeSurvived: data.timeSurvived || 0,
+      playerLevel: data.playerLevel || 1,
+      kills: data.kills || 0,
+      killsByType: data.killsByType || {},
+      goldEarned: data.goldEarned || 0,
+      xpEarned: data.xpEarned || 0,
+      itemsFound: data.itemsFound || [],
+      bossDefeated: data.bossDefeated || false,
+      weaponsUsed: data.weaponsUsed || [],
+      weaponLevelsEnd: data.weaponLevelsEnd || {},
+      questEvents: data.questEvents || [],
+    };
+  }
+
+  endCombatSession(result) {
+    // Gold
+    this.store.town.resources.gold += result.goldEarned;
+    this.store.player.totalGold += result.goldEarned;
+
+    // XP
+    this.addXP(result.xpEarned);
+
+    // Kill counts
+    this.store.player.totalKills += result.kills;
+    this.store.player.totalRuns += 1;
+
+    // Best run
+    if (!this.store.combat.bestRunStats || result.timeSurvived > this.store.combat.bestRunStats.timeSurvived) {
+      this.store.combat.bestRunStats = result;
+    }
+
+    // Run history (keep last 10)
+    this.store.combat.runHistory.unshift(result);
+    if (this.store.combat.runHistory.length > 10) {
+      this.store.combat.runHistory.pop();
+    }
+    this.store.combat.lastRunStats = result;
+
+    // Items
+    if (result.itemsFound) {
+      for (const item of result.itemsFound) {
+        this._addToInventory(item);
+      }
+    }
+
+    // Boss defeated → faction rep
+    if (result.bossDefeated) {
+      this.store.factions.wanderers_guild.reputation += 10;
+      this.eventBus.emit('faction:reputationChanged', { factionId: 'wanderers_guild', newValue: this.store.factions.wanderers_guild.reputation });
+    }
+
+    // Emit events
+    this.eventBus.emit('combat:sessionEnd', result);
+    this.eventBus.emit('resources:changed', { gold: this.store.town.resources.gold });
+    this.eventBus.emit('player:progressChanged', { level: this.store.player.level, totalGold: this.store.player.totalGold });
+
+    this.save();
+  }
+
+  _addToInventory(item) {
+    // Simplified: just track count in consumables
+    const existing = this.store.inventory.consumables.find(i => i.id === item.id);
+    if (existing) {
+      existing.count += item.count || 1;
+    } else {
+      this.store.inventory.consumables.push({ id: item.id, count: item.count || 1 });
+    }
+    this._dirty = true;
+  }
+
+  // ── Query Helpers ──────────────────────────────
+  getEffectiveStats() {
+    const base = this.store.player.baseStats;
+    // TODO: add skill tree bonuses and equipment bonuses
+    return { ...base };
+  }
+
+  getUnlockedWeapons() {
+    return this.store.combat.unlockedWeapons;
+  }
+
+  getRunHistory() {
+    return this.store.combat.runHistory;
+  }
+
+  getBestRun() {
+    return this.store.combat.bestRunStats;
+  }
+
+  // ── Save/Load ──────────────────────────────────
+  save() {
+    try {
+      this.store.meta.lastSaved = Date.now();
+      localStorage.setItem('modularity_engine_save', JSON.stringify(this.store));
+      this._dirty = false;
+    } catch(e) {
+      console.error('Failed to save:', e);
+    }
+  }
+
+  reset() {
+    this.store = this._createDefault();
+    this.save();
+    this.eventBus.emit('save:reset');
+  }
+
+  // ── Auto-save ──────────────────────────────────
+  update(dt) {
+    if (this._dirty) {
+      this._autoSaveTimer += dt;
+      if (this._autoSaveTimer >= 60) {
+        this.save();
+        this._autoSaveTimer = 0;
+      }
+    }
+  }
+}
+
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
@@ -3563,6 +3848,8 @@ class Game {
     this.uiManager = new UIManager(this.canvas, this.eventBus);
     this.audioManager = new AudioManager(this.eventBus);
     this.telegraphSystem = new TelegraphSystem(this.entityManager, this.eventBus);
+    this.gameManager = new GameManager(this.eventBus);
+    this.gameManager.init();
     this.introOverlay = null;
     this.announcements = [];
     this._announcementTriggered = {};
@@ -3605,6 +3892,7 @@ class Game {
     this.damageSystem.init();
     this.pickupSystem.init();
     this.levelingSystem.init();
+    this.pickupSystem.setGameManager(this.gameManager);
     this.audioManager.init();
 
     // Connect telegraph system to renderer
@@ -3738,6 +4026,10 @@ class Game {
     this.gameState.reset();
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();
+    if (this.gameManager) {
+      this.gameManager.store.town.resources.gold = 0;
+      this.gameManager.store.player.totalRuns++;
+    }
     this.introOverlay = null;
     this._announcementTriggered = {};
     this.renderer._announcements = [];
@@ -3931,9 +4223,27 @@ class Game {
     // Pause the game loop
     this.gameLoop.paused = true;
     this.inputManager._isPaused = true;
-    // Show end screen with result and stats
-    const result = this.gameState.endResult || 'defeat';
+    
+    // Build and submit combat result
     const stats = this.gameState.endStats || this._getStats();
+    const result = this.gameState.endResult || 'defeat';
+    if (this.gameManager) {
+      const combatResult = this.gameManager.buildCombatResult({
+        stageId: 'stage_graveyard',
+        stageCompleted: result === 'victory',
+        timeSurvived: this.gameTime,
+        playerLevel: this.levelingSystem.level,
+        kills: this.entityManager.getCount('enemy'),
+        goldEarned: this.gameManager.getResource('gold'),
+        xpEarned: this.levelingSystem.xp,
+        bossDefeated: result === 'victory',
+        weaponsUsed: Object.keys(this.weaponSystem.weaponLevels).filter(k => this.weaponSystem.weaponLevels[k] > 0),
+        weaponLevelsEnd: { ...this.weaponSystem.weaponLevels },
+      });
+      this.gameManager.endCombatSession(combatResult);
+    }
+    
+    // Show end screen with result and stats
     this.uiManager.showEndScreen(result, stats);
   }
 
@@ -4060,7 +4370,7 @@ class Game {
       time: `${Math.floor(this.gameTime / 60)}:${String(Math.floor(this.gameTime % 60)).padStart(2, '0')}`,
       level: this.levelingSystem.level,
       kills: this.entityManager.getCount('enemy'),
-      gold: 0,
+      gold: this.gameManager ? this.gameManager.getResource('gold') : 0,
     };
   }
 }
