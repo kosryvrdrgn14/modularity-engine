@@ -5800,14 +5800,11 @@ class Game {
   }
 
   _setupEvents() {
-    // DEBUG: Press B to skip to boss spawn (3:50)
+    // DEBUG: Press B to spawn boss immediately
     this.eventBus.on('skipToBoss', () => {
-      console.log('[SKIP] state=' + this.gameState.state + ' gameTime=' + this.gameTime);
-      if (this.gameState.isPlaying()) {
-        this.gameTime = 238;
-        console.log('[SKIP] Set gameTime to 238');
-      } else {
-        console.log('[SKIP] NOT in playing state, skip ignored');
+      console.log('[SKIP] state=' + this.gameState.state);
+      if (this.gameState.isPlaying() && window.skipToBoss) {
+        window.skipToBoss();
       }
     });
 
@@ -6922,15 +6919,20 @@ class TownScreen {
 // START
 // ============================================================
 
-// DEBUG: window.skipToBoss() to jump to boss
+// DEBUG: window.skipToBoss() to spawn boss immediately
 const game = new Game();
 window.skipToBoss = () => {
-  if (game.gameState.isPlaying()) {
-    game.gameTime = 238;
-    console.log('[DEBUG] Jumped to 238s (3:58)');
-  } else {
+  if (!game.gameState.isPlaying()) {
     console.log('[DEBUG] Cannot skip — state:', game.gameState.state);
+    return;
   }
+  const ss = game.spawnSystem;
+  if (ss) {
+    ss.bossSpawned = true;
+    ss.gameTime = 245;
+  }
+  game._spawnBoss();
+  console.log('[DEBUG] Boss spawned!');
 };
 game.init().catch(console.error);
 
