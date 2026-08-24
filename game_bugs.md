@@ -48,6 +48,7 @@
 | 34 | NPC portrait not rendering — base64 data URI SVGs in `<img>` tags fail in iframe/CSP contexts | 🟡 Medium | ✅ Fixed | User report |
 | 35 | Elder Rowan dialogue stuck on greeting — _showChoices indentation corrupted during Python code replacement | 🔴 Critical | ✅ Fixed | User report |
 | 36 | W3 area pulse never fires — _updateW3Pulses defined but never called from WeaponSystem.update() | 🔴 Critical | ✅ Fixed | Code review |
+| — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
 
 **Total: 36 bugs found, 36 fixed** (30b is root cause fix replacing #30's workaround)
 
@@ -375,6 +376,56 @@ update(dt) {
 *Report compiled from all development sessions and system audit. 36 bugs found and fixed.*
 
 ---
+
+
+---
+
+## Companion System — Implementation Notes (v0.3.0)
+
+**Added:** August 24, 2026
+**Spec:** `20_companion_combat_spec.md`, `21_companion_engine_integration.md`
+
+### What Was Built
+
+| Component | Description | Lines |
+|---|---|---|
+| CompanionSystem class | AI state machine (follow → attackRun → growl → return) | ~200 |
+| COMPANION_DATA constant | Dog stats per level (7 levels) | ~30 |
+| isInCone() helper | Cone collision check for growl attack | ~15 |
+| companionDamage handler | DamageSystem integration for companion attacks | ~25 |
+| companionLootCollect handler | PickupSystem integration for loot collection | ~5 |
+| weaponLevelUp sync | Dog stats update when W1 upgrades | ~5 |
+| bossIntro reset | Companion state reset during boss intro | ~3 |
+| Safety timeout | 3s attack run limit prevents infinite chase | ~5 |
+| Companion audio | Growl + bark synthesized sounds | ~30 |
+| Companion rendering | Body, collar, eyes, growl cone effect | ~80 |
+
+### Bugs/Gap Resolutions
+
+| # | Gap | Resolution |
+|---|---|---|
+| 1 | No companion data schema | Created `COMPANION_DATA` constant with 7-level stat table |
+| 2 | Level sync with weapon | Added `weaponLevelUp` event listener that calls `companionSystem.setLevel()` |
+| 3 | Boss intro companion freeze | Added `bossIntro` event listener that forces all companions to `return` state |
+| 4 | Infinite chase safety | Added 3s `_attackRunTimer` limit — forces return if target unreachable |
+
+### Design Decisions (Confirmed)
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Slow effect on growl | No (v1) | Pure damage. Utility companions later. |
+| Auto loot pickup | Yes, 40px range | Mini extension of player looting range. |
+| Scale with player damage stat | No initially | Test first, rebalance later. |
+| Dog only if petted | Yes | Clear player choice consequence. |
+
+### Potential Issues to Watch
+
+| Issue | Risk | Mitigation |
+|---|---|---|
+| Multiple companions targeting same enemy | Low (v1 has only Dog) | Future: target-lock system |
+| Companion stuck in geometry | Medium | 3s safety timeout handles this |
+| Companion during level-up screen | Low | Level-up pauses game, companion state frozen |
+| Performance with 3 companions | Low | Only 3 entities max, simple AI |
 
 ## Prevention Checklist — Recurring Patterns
 
