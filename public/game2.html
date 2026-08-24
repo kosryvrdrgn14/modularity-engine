@@ -992,6 +992,7 @@ class InputManager {
       this.keys[e.code] = true;
       // DEBUG: B key skips to boss
       if (e.code === 'KeyB') {
+        console.log('[B KEY] Pressed, emitting skipToBoss');
         this.eventBus.emit('skipToBoss');
         return;
       }
@@ -4664,8 +4665,12 @@ class Game {
   _setupEvents() {
     // DEBUG: Press B to skip to boss spawn (3:50)
     this.eventBus.on('skipToBoss', () => {
+      console.log('[SKIP] state=' + this.gameState.state + ' gameTime=' + this.gameTime);
       if (this.gameState.isPlaying()) {
-        this.gameTime = 238; // 3:58 — 2 seconds before boss spawns at 4:00
+        this.gameTime = 238;
+        console.log('[SKIP] Set gameTime to 238');
+      } else {
+        console.log('[SKIP] NOT in playing state, skip ignored');
       }
     });
 
@@ -4864,8 +4869,22 @@ class Game {
     if (this.introOverlay.allowSkip && this.introOverlay.elapsed > 0.5) {
       if (this._skipIntroQueued) {
         this._skipIntroQueued = false;
+    this._introClickX = undefined;
+    this._introClickY = undefined;
         this._endBossIntro();
         return;
+      }
+      // Also check click position (skip button area)
+      if (this._introClickX !== undefined) {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        if (this._introClickX > w/2 - 60 && this._introClickX < w/2 + 60 &&
+            this._introClickY > h - 50 && this._introClickY < h - 20) {
+          this._introClickX = undefined;
+          this._endBossIntro();
+          return;
+        }
+        this._introClickX = undefined;
       }
     }
 
@@ -4879,6 +4898,10 @@ class Game {
     this.gameState.setState('playing');
     this.gameLoop.paused = false;
     this.inputManager._isPaused = false;
+    if (this._introClickHandler) {
+      this.canvas.removeEventListener('click', this._introClickHandler);
+      this._introClickHandler = null;
+    }
     // Start boss AI
     if (this.renderer.bossEntity) {
       this.renderer.bossEntity._bossState = 'chase';
@@ -4928,6 +4951,17 @@ class Game {
     };
     this._skipIntroQueued = false;
     this.audioManager.eventBus.emit('bossIntro', introConfig);
+    // Click/tap to skip intro
+    this._introClickHandler = (e) => {
+      if (this.gameState.isBossIntro()) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        this._introClickX = (e.clientX - rect.left) * scaleX;
+        this._introClickY = (e.clientY - rect.top) * scaleY;
+      }
+    };
+    this.canvas.addEventListener('click', this._introClickHandler, { once: false });
   }
 
   _applyWeaponLevelUp() {
@@ -5256,7 +5290,16 @@ class Game {
 // START
 // ============================================================
 
+// DEBUG: window.skipToBoss() to jump to boss
 const game = new Game();
+window.skipToBoss = () => {
+  if (game.gameState.isPlaying()) {
+    game.gameTime = 238;
+    console.log('[DEBUG] Jumped to 238s (3:58)');
+  } else {
+    console.log('[DEBUG] Cannot skip — state:', game.gameState.state);
+  }
+};
 game.init().catch(console.error);
 
 </script>
