@@ -4912,8 +4912,7 @@ class Game {
       return;
     }
     this.gameState.setState('bossIntro');
-    // Keep loop running so _updateBossIntro timer advances
-    this.gameLoop.paused = false;
+    this.gameLoop.paused = true;
     this.inputManager._isPaused = true;
     this.introOverlay = {
       bossName: introConfig.bossName || '???',
@@ -5115,6 +5114,17 @@ class Game {
   }
 
   render(interp) {
+    // Tick boss intro timer even when game loop is paused
+    if (this.gameState.isBossIntro() && this.introOverlay) {
+      const now = performance.now();
+      if (!this._lastIntroTick) this._lastIntroTick = now;
+      const dt = (now - this._lastIntroTick) / 1000;
+      this._lastIntroTick = now;
+      this._updateBossIntro(Math.min(dt, 0.1));
+    } else {
+      this._lastIntroTick = null;
+    }
+
     const entities = this.entityManager.getActive();
     
     // Always render the game world (even during intro, as a frozen frame)
