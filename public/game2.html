@@ -240,9 +240,10 @@ class GameState {
     this.transitions = {
       loading: ['menu', 'playing'],
       menu: ['playing'],
-      playing: ['paused', 'levelUp', 'gameOver'],
+      playing: ['paused', 'levelUp', 'gameOver', 'bossIntro'],
       paused: ['playing'],
       levelUp: ['playing'],
+      bossIntro: ['playing'],
       gameOver: ['endScreen'],
       endScreen: ['menu', 'playing'],
     };
@@ -269,6 +270,7 @@ class GameState {
   isLevelUp() { return this.state === 'levelUp'; }
   isGameOver() { return this.state === 'gameOver'; }
   isEndScreen() { return this.state === 'endScreen'; }
+  isBossIntro() { return this.state === 'bossIntro'; }
 
   triggerGameOver(result, stats) {
     // Prevent multiple triggers
@@ -399,6 +401,17 @@ const EMBEDDED_DATA = {
     { id: "boss_gravekeeper", name: "The Gravekeeper", type: "boss",
       stats: { hp: 1000, damage: 15, speed: 70, size: 28, xpValue: 50, goldValue: 1, goldCoins: { min: 20, max: 30 } },
       behavior: { pattern: "boss_charge", params: { chargeDuration: 1.5, pauseDuration: 1.0 } },
+      intro: {
+        bossName: "The Gravekeeper",
+        bossSubtitle: "Guardian of the Forgotten Dead",
+        totalDuration: 3.5,
+        allowSkip: true,
+        dimColor: "rgba(0, 0, 0, 0.75)",
+        nameColor: "#FF4444",
+        subtitleColor: "#888888",
+        nameFontSize: 40,
+        subtitleFontSize: 18,
+      },
       drops: { powerUpTable: [{ type: "weapon_levelup", chance: 1.0 }] },
       spawn: { weight: 0, firstAppears: "4:00" },
       phases: [
@@ -702,6 +715,10 @@ class InputManager {
       } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
         if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 2 }); }
       }
+      // Skip boss intro
+      if ((e.code === 'Enter' || e.code === 'Space') && this._game && this._game.gameState.isBossIntro()) {
+        this._game._skipIntroQueued = true;
+      }
       // Restart on end screen
       if (e.code === 'Enter' || e.code === 'Space') {
         this.eventBus.emit('restart');
@@ -733,6 +750,11 @@ class InputManager {
       return;
     }
     
+    // Check if skipping boss intro
+    if (this._game && this._game.gameState.isBossIntro()) {
+      this._game._skipIntroQueued = true;
+      return;
+    }
     // Check if clicking to restart on end screen
     if (this._game && (this._game.gameState.isGameOver() || this._game.gameState.isEndScreen())) {
       this.eventBus.emit('restart');
@@ -1171,15 +1193,30 @@ class MovementSystem {
         if (dist > 1) {
           boss._chargeDir = { x: dx / dist, y: dy / dist };
         }
-        // Store charge path for warning zone rendering
-        boss._chargePath = {
-          startX: boss.x,
-          startY: boss.y,
-          dirX: boss._chargeDir.x,
-          dirY: boss._chargeDir.y,
-          length: 600,
-          width: boss.size * 4,
-        };
+        // Spawn telegraph for charge warning zone
+        if (this.telegraphSystem) {
+          this.telegraphSystem.spawn({
+            shapeType: 'rectangle',
+            source: 'boss_charge',
+            sourceEntity: boss,
+            x: boss.x,
+            y: boss.y,
+            width: boss.size * 4,
+            height: 600,
+            angle: Math.atan2(boss._chargeDir.y, boss._chargeDir.x),
+            windupDuration: 1.2,
+            resolveDamage: false,
+            visual: {
+              fillColor: 'rgba(255, 145, 0, 0.25)',
+              strokeColor: 'rgba(255, 145, 0, 0.55)',
+              strokeWidth: 2,
+              flickerRate: 6,
+              chevrons: true,
+              chevronCount: 5,
+            },
+            windupSound: 'boss_charge_warn',
+          });
+        }
 
       }
     } else if (boss._bossState === 'windup') {
@@ -1825,6 +1862,309 @@ async function preloadAssets(onProgress) {
   return cache;
 }
 
+// ============================================================
+// TELEGRAPH SYSTEM
+// Data-driven attack warnings and environmental hazard telegraphs
+// ============================================================
+
+class TelegraphSystem {
+  constructor(entityManager, eventBus) {
+    this.entityManager = entityManager;
+    this.eventBus = eventBus;
+    this.telegraphs = [];
+    this.hazards = [];
+    this.maxTelegraphs = 10;
+    this._nextId = 0;
+  }
+
+  spawn(config) {
+    if (this.telegraphs.length >= this.maxTelegraphs) {
+      this.telegraphs.shift();
+    }
+    const t = {
+      id: 'tg_' + (this._nextId++),
+      shapeType: config.shapeType || 'rectangle',
+      source: config.source || 'unknown',
+      sourceEntity: config.sourceEntity || null,
+      x: config.x || 0, y: config.y || 0,
+      width: config.width || 120, height: config.height || 400,
+      radius: config.radius || 80, innerRadius: config.innerRadius || 40,
+      angle: config.angle || 0, arcDegrees: config.arcDegrees || 90,
+      x1: config.x1 || 0, y1: config.y1 || 0,
+      x2: config.x2 || 100, y2: config.y2 || 200,
+      lineWidth: config.lineWidth || 30,
+      createdAt: 0, windupDuration: config.windupDuration || 1.0, elapsed: 0,
+      resolveDamage: config.resolveDamage !== false,
+      damage: config.damage || 0, knockback: config.knockback || 0,
+      visual: Object.assign({
+        fillColor: 'rgba(255, 145, 0, 0.25)', strokeColor: 'rgba(255, 145, 0, 0.55)',
+        strokeWidth: 2, flickerRate: 6, flickerMin: 0.15, flickerMax: 0.35,
+        chevrons: true, chevronCount: 5, chevronColor: 'rgba(255, 200, 0, 0.7)',
+        pulseScale: false, pulseScaleFrom: 0.8, outlineOnly: false, dangerIcon: null,
+      }, config.visual || {}),
+      windupSound: config.windupSound || null,
+      resolveSound: config.resolveSound || null,
+      onResolve: config.onResolve || null,
+    };
+    this.telegraphs.push(t);
+    this.eventBus.emit('telegraphSpawn', { telegraph: t });
+    return t;
+  }
+
+  spawnHazard(config) {
+    const h = {
+      id: 'hz_' + (this._nextId++),
+      shapeType: config.shapeType || 'circle',
+      x: config.x || 0, y: config.y || 0,
+      radius: config.radius || 60,
+      damage: config.damage || 3, tickInterval: config.tickInterval || 0.5,
+      duration: config.duration || 5.0, elapsed: 0, lastDamageTime: 0,
+      visual: Object.assign({
+        fillColor: 'rgba(255, 80, 0, 0.30)', strokeColor: 'rgba(255, 120, 0, 0.50)',
+        strokeWidth: 2,
+      }, config.visual || {}),
+    };
+    this.hazards.push(h);
+    return h;
+  }
+
+  update(dt) {
+    for (let i = this.telegraphs.length - 1; i >= 0; i--) {
+      const t = this.telegraphs[i];
+      t.elapsed += dt;
+      if (t.elapsed >= t.windupDuration) {
+        if (t.resolveDamage && t.damage > 0) this._resolveDamage(t);
+        if (t.onResolve) t.onResolve(t, this.entityManager);
+        if (t.resolveSound) this.eventBus.emit('playSound', { sound: t.resolveSound });
+        this.eventBus.emit('telegraphResolve', { telegraph: t });
+        this.telegraphs.splice(i, 1);
+      }
+    }
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      const h = this.hazards[i];
+      h.elapsed += dt;
+      if (h.elapsed - h.lastDamageTime >= h.tickInterval) {
+        h.lastDamageTime = h.elapsed;
+        this._resolveHazardDamage(h);
+      }
+      if (h.elapsed >= h.duration) this.hazards.splice(i, 1);
+    }
+  }
+
+  _resolveDamage(t) {
+    const players = this.entityManager.getActive('player');
+    for (const player of players) {
+      if (this._isPointInTelegraph(player.x, player.y, t)) {
+        if (player.iFrames > 0) continue;
+        player.hp -= t.damage;
+        player.iFrames = 0.5;
+        this.eventBus.emit('damage', {
+          entity: player, damage: t.damage, source: t.source,
+          position: { x: player.x, y: player.y },
+        });
+        if (t.knockback > 0 && t.sourceEntity) {
+          const dx = player.x - t.sourceEntity.x;
+          const dy = player.y - t.sourceEntity.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          player.x += (dx / dist) * t.knockback;
+          player.y += (dy / dist) * t.knockback;
+        }
+      }
+    }
+  }
+
+  _resolveHazardDamage(h) {
+    const players = this.entityManager.getActive('player');
+    for (const player of players) {
+      if (this._isPointInHazard(player.x, player.y, h)) {
+        if (player.iFrames > 0) continue;
+        player.hp -= h.damage;
+        player.iFrames = 0.3;
+        this.eventBus.emit('damage', {
+          entity: player, damage: h.damage, source: 'hazard',
+          position: { x: player.x, y: player.y },
+        });
+      }
+    }
+  }
+
+  _isPointInTelegraph(px, py, t) {
+    switch (t.shapeType) {
+      case 'rectangle': {
+        const dx = px - t.x, dy = py - t.y;
+        const cos = Math.cos(-t.angle), sin = Math.sin(-t.angle);
+        const lx = dx * cos - dy * sin, ly = dx * sin + dy * cos;
+        return Math.abs(lx) <= t.width / 2 && Math.abs(ly) <= t.height / 2;
+      }
+      case 'circle': {
+        const dx = px - t.x, dy = py - t.y;
+        return Math.sqrt(dx * dx + dy * dy) <= t.radius;
+      }
+      case 'ring': {
+        const dx = px - t.x, dy = py - t.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist >= t.innerRadius && dist <= t.radius;
+      }
+      case 'cone': {
+        const dx = px - t.x, dy = py - t.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > t.radius) return false;
+        const angle = Math.atan2(dy, dx);
+        const halfArc = (t.arcDegrees * Math.PI / 180) / 2;
+        let diff = angle - t.angle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        return Math.abs(diff) <= halfArc;
+      }
+      case 'line': {
+        const dx = t.x2 - t.x1, dy = t.y2 - t.y1;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return Math.sqrt((px - t.x1) ** 2 + (py - t.y1) ** 2) <= t.lineWidth / 2;
+        let t2 = ((px - t.x1) * dx + (py - t.y1) * dy) / lenSq;
+        t2 = Math.max(0, Math.min(1, t2));
+        const cx = t.x1 + t2 * dx, cy = t.y1 + t2 * dy;
+        return Math.sqrt((px - cx) ** 2 + (py - cy) ** 2) <= t.lineWidth / 2;
+      }
+      case 'cross': {
+        const armHalf = (t.width || 20) / 2, armLen = t.height || 100;
+        if (Math.abs(px - t.x) <= armLen / 2 && Math.abs(py - t.y) <= armHalf) return true;
+        if (Math.abs(px - t.x) <= armHalf && Math.abs(py - t.y) <= armLen / 2) return true;
+        return false;
+      }
+      default: return false;
+    }
+  }
+
+  _isPointInHazard(px, py, h) {
+    if (h.shapeType === 'circle') {
+      const dx = px - h.x, dy = py - h.y;
+      return Math.sqrt(dx * dx + dy * dy) <= h.radius;
+    }
+    return false;
+  }
+
+  render(ctx) {
+    for (const h of this.hazards) this._drawHazard(ctx, h);
+    for (const t of this.telegraphs) this._drawTelegraph(ctx, t);
+  }
+
+  _drawTelegraph(ctx, t) {
+    const v = t.visual;
+    const progress = t.elapsed / t.windupDuration;
+    const flicker = v.flickerMin + (v.flickerMax - v.flickerMin) *
+      (0.5 + 0.5 * Math.sin(Date.now() * 0.001 * v.flickerRate * Math.PI * 2));
+    let scale = 1;
+    if (v.pulseScale) scale = v.pulseScaleFrom + (1 - v.pulseScaleFrom) * progress;
+
+    ctx.save();
+    switch (t.shapeType) {
+      case 'rectangle': {
+        ctx.translate(t.x, t.y); ctx.rotate(t.angle);
+        const w = t.width * scale, h = t.height * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.fillRect(-w/2, -h/2, w, h);
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.strokeRect(-w/2, -h/2, w, h);
+        if (v.chevrons && v.chevronCount > 0) {
+          ctx.strokeStyle = v.chevronColor; ctx.lineWidth = 2.5;
+          const spacing = h / (v.chevronCount + 1);
+          for (let i = 1; i <= v.chevronCount; i++) {
+            const cy = -h/2 + i * spacing;
+            ctx.beginPath(); ctx.moveTo(-6, cy - 6); ctx.lineTo(0, cy); ctx.lineTo(-6, cy + 6); ctx.stroke();
+          }
+        }
+        break;
+      }
+      case 'circle': {
+        const r = t.radius * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, Math.PI * 2); ctx.stroke();
+        if (v.dangerIcon) {
+          ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#FFF'; ctx.fillText(v.dangerIcon, t.x, t.y);
+        }
+        break;
+      }
+      case 'ring': {
+        const outerR = t.radius * scale, innerR = t.innerRadius * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.beginPath(); ctx.arc(t.x, t.y, outerR, 0, Math.PI * 2);
+          ctx.arc(t.x, t.y, innerR, 0, Math.PI * 2, true); ctx.fill();
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.beginPath(); ctx.arc(t.x, t.y, outerR, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(t.x, t.y, innerR, 0, Math.PI * 2); ctx.stroke();
+        break;
+      }
+      case 'cone': {
+        const r = t.radius * scale;
+        const halfArc = (t.arcDegrees * Math.PI / 180) / 2;
+        ctx.beginPath(); ctx.moveTo(t.x, t.y);
+        ctx.arc(t.x, t.y, r, t.angle - halfArc, t.angle + halfArc); ctx.closePath();
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')'); ctx.fill();
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth; ctx.stroke();
+        break;
+      }
+      case 'line': {
+        ctx.strokeStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+        ctx.lineWidth = t.lineWidth * scale; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+        break;
+      }
+      case 'cross': {
+        const armHalf = (t.width || 20) / 2 * scale, armLen = (t.height || 100) * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.fillRect(t.x - armLen/2, t.y - armHalf, armLen, armHalf*2);
+          ctx.fillRect(t.x - armHalf, t.y - armLen/2, armHalf*2, armLen);
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.strokeRect(t.x - armLen/2, t.y - armHalf, armLen, armHalf*2);
+        ctx.strokeRect(t.x - armHalf, t.y - armLen/2, armHalf*2, armLen);
+        break;
+      }
+    }
+    ctx.restore();
+  }
+
+  _drawHazard(ctx, h) {
+    const v = h.visual;
+    ctx.save();
+    ctx.globalAlpha = 0.6 + 0.2 * Math.sin(Date.now() * 0.005);
+    if (h.shapeType === 'circle') {
+      ctx.fillStyle = v.fillColor;
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  clearAll() { this.telegraphs = []; this.hazards = []; }
+
+  getActiveAt(x, y) {
+    const results = [];
+    for (const t of this.telegraphs) {
+      if (this._isPointInTelegraph(x, y, t)) results.push(t);
+    }
+    for (const h of this.hazards) {
+      if (this._isPointInHazard(x, y, h)) results.push(h);
+    }
+    return results;
+  }
+}
+
+
 class Renderer {
   constructor(canvas, camera) {
     this.canvas = canvas;
@@ -1832,6 +2172,10 @@ class Renderer {
     this.camera = camera;
     this.pulseEffects = [];
     this.bossEntity = null;
+    this._telegraphSystem = null;
+    this._announcements = [];
+    this._announcementTimer = 0;
+    this._dimOverlay = null;
     this.imageCache = null;
   }
 
@@ -1883,8 +2227,8 @@ class Renderer {
     // Draw grid
     this._drawGrid();
 
-    // Draw boss charge warning zone (under entities)
-    this._drawBossWarningZone(entities);
+    // Draw telegraphs and hazards (under entities)
+    if (this._telegraphSystem) this._telegraphSystem.render(this.ctx);
 
     // Draw entities (y-sorted, filter active first to avoid NaN from dead entities)
     const sorted = entities.filter(e => e.active).sort((a, b) => a.y - b.y);
@@ -1921,52 +2265,6 @@ class Renderer {
       this.ctx.lineTo(this.camera.x + this.canvas.width, y);
       this.ctx.stroke();
     }
-  }
-
-  _drawBossWarningZone(entities) {
-    // Find boss entity in windup state
-    const boss = entities.find(e => e.type === 'enemy' && e.isBoss && e._bossState === 'windup');
-    if (!boss || !boss._chargePath) return;
-
-    const ctx = this.ctx;
-    const cp = boss._chargePath;
-    const w = cp.width;
-    const l = cp.length;
-    const cx = cp.startX + cp.dirX * l * 0.5;
-    const cy = cp.startY + cp.dirY * l * 0.5;
-
-    ctx.save();
-
-    // Calculate rotation angle from direction
-    const angle = Math.atan2(cp.dirY, cp.dirX);
-    ctx.translate(cx, cy);
-    ctx.rotate(angle);
-
-    // Flickering orange warning fill
-    const flicker = 0.25 + Math.sin(Date.now() * 0.012) * 0.12;
-    ctx.fillStyle = `rgba(255, 145, 0, ${flicker})`;
-    ctx.fillRect(-l * 0.5, -w * 0.5, l, w);
-
-    // Brighter edge strokes
-    ctx.strokeStyle = `rgba(255, 145, 0, 0.55)`;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-l * 0.5, -w * 0.5, l, w);
-
-    // Warning chevrons along the path
-    const chevronCount = 5;
-    const chevronSpacing = l / (chevronCount + 1);
-    ctx.strokeStyle = `rgba(255, 200, 0, ${flicker + 0.15})`;
-    ctx.lineWidth = 2.5;
-    for (let i = 1; i <= chevronCount; i++) {
-      const cx2 = -l * 0.5 + i * chevronSpacing;
-      ctx.beginPath();
-      ctx.moveTo(cx2 - 6, -w * 0.3);
-      ctx.lineTo(cx2, 0);
-      ctx.lineTo(cx2 - 6, w * 0.3);
-      ctx.stroke();
-    }
-
-    ctx.restore();
   }
 
   _drawEntity(entity) {
@@ -2032,6 +2330,152 @@ class Renderer {
     }
     ctx.closePath();
     ctx.fill();
+  }
+
+  showAnnouncement(text, styling) {
+    this._announcements.push({
+      text: text,
+      elapsed: 0,
+      duration: styling.holdDuration || 3.0,
+      fontSize: styling.fontSize || 24,
+      color: styling.color || '#FFFFFF',
+      position: styling.position || 'center',
+      animation: styling.animation || 'fadeInHoldFadeOut',
+    });
+  }
+
+  startDimming(brightness) {
+    this._dimOverlay = {
+      brightness: brightness,
+      elapsed: 0,
+      duration: 2.0,
+    };
+  }
+
+  renderAnnouncements(dt) {
+    // Update announcements
+    for (let i = this._announcements.length - 1; i >= 0; i--) {
+      const a = this._announcements[i];
+      a.elapsed += dt;
+      if (a.elapsed >= a.duration) {
+        this._announcements.splice(i, 1);
+      }
+    }
+    // Update dim overlay
+    if (this._dimOverlay) {
+      this._dimOverlay.elapsed += dt;
+      if (this._dimOverlay.elapsed >= this._dimOverlay.duration) {
+        this._dimOverlay = null;
+      }
+    }
+  }
+
+  _drawAnnouncements() {
+    if (this._announcements.length === 0 && !this._dimOverlay) return;
+    
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    
+    // Dim overlay
+    if (this._dimOverlay) {
+      const alpha = this._dimOverlay.elapsed < 1.0
+        ? this._dimOverlay.elapsed * (1 - this._dimOverlay.brightness)
+        : (1 - this._dimOverlay.brightness);
+      ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+    
+    // Announcement text
+    for (const a of this._announcements) {
+      const progress = a.elapsed / a.duration;
+      let alpha = 1;
+      if (a.animation === 'fadeInHoldFadeOut') {
+        if (progress < 0.15) alpha = progress / 0.15;
+        else if (progress > 0.8) alpha = (1 - progress) / 0.2;
+      } else if (a.animation === 'slam') {
+        if (progress < 0.1) alpha = progress / 0.1;
+        else if (progress > 0.85) alpha = (1 - progress) / 0.15;
+      }
+      alpha = Math.max(0, Math.min(1, alpha));
+      
+      const scale = a.animation === 'slam' && progress < 0.15
+        ? 1 + (1 - progress / 0.15) * 0.5 : 1;
+      
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `bold ${a.fontSize * scale}px "Segoe UI", Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Text shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillText(a.text, w / 2 + 2, h / 2 + 2);
+      
+      // Main text
+      ctx.fillStyle = a.color;
+      ctx.fillText(a.text, w / 2, h / 2);
+      ctx.restore();
+    }
+  }
+
+  _drawBossIntro(overlay) {
+    if (!overlay) return;
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const progress = overlay.elapsed / overlay.totalDuration;
+    
+    // Dark overlay
+    let dimAlpha = 0;
+    if (progress < 0.15) dimAlpha = progress / 0.15;
+    else if (progress > 0.85) dimAlpha = (1 - progress) / 0.15;
+    else dimAlpha = 1;
+    dimAlpha = Math.max(0, Math.min(1, dimAlpha));
+    
+    ctx.save();
+    ctx.fillStyle = overlay.dimColor.replace(/[\d.]+\)$/, (dimAlpha * 0.75) + ')');
+    ctx.fillRect(0, 0, w, h);
+    
+    // Boss name
+    let nameAlpha = 0;
+    if (progress >= 0.1 && progress < 0.25) nameAlpha = (progress - 0.1) / 0.15;
+    else if (progress > 0.85) nameAlpha = (1 - progress) / 0.15;
+    else if (progress >= 0.25) nameAlpha = 1;
+    nameAlpha = Math.max(0, Math.min(1, nameAlpha));
+    
+    const nameScale = progress < 0.2 ? 1 + (1 - (progress - 0.1) / 0.1) * 0.3 : 1;
+    
+    ctx.globalAlpha = nameAlpha;
+    ctx.font = `bold ${overlay.nameFontSize * nameScale}px "Segoe UI", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillText(overlay.bossName, w / 2 + 3, h / 2 - 10 + 3);
+    ctx.fillStyle = overlay.nameColor;
+    ctx.fillText(overlay.bossName, w / 2, h / 2 - 10);
+    
+    // Subtitle
+    let subAlpha = 0;
+    if (progress >= 0.2 && progress < 0.35) subAlpha = (progress - 0.2) / 0.15;
+    else if (progress > 0.85) subAlpha = (1 - progress) / 0.15;
+    else if (progress >= 0.35) subAlpha = 1;
+    subAlpha = Math.max(0, Math.min(1, subAlpha));
+    
+    ctx.globalAlpha = subAlpha;
+    ctx.font = `${overlay.subtitleFontSize}px "Segoe UI", Arial, sans-serif`;
+    ctx.fillStyle = overlay.subtitleColor;
+    ctx.fillText(overlay.bossSubtitle, w / 2, h / 2 + 25);
+    
+    // Skip hint
+    if (overlay.allowSkip && progress > 0.3 && progress < 0.85) {
+      ctx.globalAlpha = 0.5;
+      ctx.font = '14px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#AAA';
+      ctx.fillText('Tap or press Space to skip', w / 2, h - 60);
+    }
+    
+    ctx.restore();
   }
 
   _drawUI(player) {
@@ -3118,6 +3562,10 @@ class Game {
     this.levelingSystem = new LevelingSystem(this.entityManager, this.dataManager, this.eventBus);
     this.uiManager = new UIManager(this.canvas, this.eventBus);
     this.audioManager = new AudioManager(this.eventBus);
+    this.telegraphSystem = new TelegraphSystem(this.entityManager, this.eventBus);
+    this.introOverlay = null;
+    this.announcements = [];
+    this._announcementTriggered = {};
     this.floatingTextSystem = new FloatingTextSystem(this.eventBus);
 
     // Game loop
@@ -3158,6 +3606,10 @@ class Game {
     this.pickupSystem.init();
     this.levelingSystem.init();
     this.audioManager.init();
+
+    // Connect telegraph system to renderer
+    this.renderer._telegraphSystem = this.telegraphSystem;
+    this.movementSystem.telegraphSystem = this.telegraphSystem;
 
     // Setup event listeners
     this._setupEvents();
@@ -3232,6 +3684,14 @@ class Game {
       }
     });
 
+    this.eventBus.on('damage', (data) => {
+      if (data.entity === this.player && data.entity.hp <= 0) {
+        this.gameState.triggerGameOver('defeat', this._getStats());
+        this._handleGameOver();
+        this.audioManager.stopOrbitHum();
+      }
+    });
+
     this.eventBus.on('death', (data) => {
       // GAP 5 FIX: Skip boss deaths here — handled by bossDeath event
       if (data.type === 'boss_gravekeeper') return;
@@ -3243,8 +3703,14 @@ class Game {
     });
 
     this.eventBus.on('bossSpawn', (data) => {
-      this.camera.shake(8, 0.5);
       this.renderer.bossEntity = data.boss;
+      // Check if boss has intro config
+      const bossData = this.dataManager.enemies.find(e => e.type === 'boss');
+      if (bossData && bossData.intro) {
+        this.startBossIntro(bossData.intro);
+      } else {
+        this.camera.shake(8, 0.5);
+      }
     });
 
     this.eventBus.on('bossDeath', (data) => {
@@ -3271,6 +3737,11 @@ class Game {
   startGame() {
     this.gameState.reset();
     this.renderer.bossEntity = null;
+    this.telegraphSystem.clearAll();
+    this.introOverlay = null;
+    this._announcementTriggered = {};
+    this.renderer._announcements = [];
+    this.renderer._dimOverlay = null;
     this.entityManager.clearAll();
     this.spawnSystem.reset();
     this.pickupSystem.reset();
@@ -3301,13 +3772,22 @@ class Game {
   }
 
   update(dt) {
+    // Boss intro state: only update intro timer
+    if (this.gameState.isBossIntro()) {
+      this._updateBossIntro(dt);
+      return;
+    }
     if (!this.gameState.isPlaying()) return;
     // Guard: prevent updates after game over
     if (this.gameState.isGameOver()) return;
 
     this.gameTime += dt;
 
+    // Check pre-boss announcements
+    this._updateAnnouncements();
+
     // Run all systems in order
+    this.telegraphSystem.update(dt);
     this.movementSystem.update(dt);
     this.weaponSystem.update(dt);
     this.collisionSystem.update();
@@ -3331,6 +3811,80 @@ class Game {
       this.gameState.triggerGameOver('survived', this._getStats());
       this._handleGameOver();
     }
+  }
+
+  _updateBossIntro(dt) {
+    if (!this.introOverlay) return;
+    this.introOverlay.elapsed += dt;
+
+    // Camera shake during intro
+    if (this.introOverlay.elapsed >= 1.0 && this.introOverlay.elapsed < 1.1) {
+      this.camera.shake(10, 0.3);
+    }
+
+    // Skip on tap/click if allowed
+    if (this.introOverlay.allowSkip && this.introOverlay.elapsed > 0.5) {
+      if (this._skipIntroQueued) {
+        this._skipIntroQueued = false;
+        this._endBossIntro();
+        return;
+      }
+    }
+
+    if (this.introOverlay.elapsed >= this.introOverlay.totalDuration) {
+      this._endBossIntro();
+    }
+  }
+
+  _endBossIntro() {
+    this.introOverlay = null;
+    this.gameState.setState('playing');
+    this.gameLoop.paused = false;
+    this.inputManager._isPaused = false;
+    // Start boss AI
+    if (this.renderer.bossEntity) {
+      this.renderer.bossEntity._bossState = 'chase';
+      this.renderer.bossEntity._stateTimer = 3;
+    }
+    this.eventBus.emit('bossIntroComplete');
+  }
+
+  _updateAnnouncements() {
+    const stageData = this.dataManager.stages;
+    if (!stageData || !stageData.bossConfig || !stageData.bossConfig.announcement) return;
+    
+    for (const ann of stageData.bossConfig.announcement) {
+      if (this._announcementTriggered[ann.time]) continue;
+      if (this.gameTime >= ann.time) {
+        this._announcementTriggered[ann.time] = true;
+        if (ann.type === 'text' || ann.type === 'boss_name') {
+          this.renderer.showAnnouncement(ann.text, ann.styling || {});
+        }
+        if (ann.type === 'dim') {
+          this.renderer.startDimming(ann.brightness || 0.8);
+        }
+      }
+    }
+  }
+
+  startBossIntro(introConfig) {
+    this.gameState.setState('bossIntro');
+    this.gameLoop.paused = true;
+    this.inputManager._isPaused = true;
+    this.introOverlay = {
+      bossName: introConfig.bossName || '???',
+      bossSubtitle: introConfig.bossSubtitle || '',
+      totalDuration: introConfig.totalDuration || 3.5,
+      elapsed: 0,
+      allowSkip: introConfig.allowSkip !== false,
+      dimColor: introConfig.dimColor || 'rgba(0, 0, 0, 0.75)',
+      nameColor: introConfig.nameColor || '#FF4444',
+      subtitleColor: introConfig.subtitleColor || '#888888',
+      nameFontSize: introConfig.nameFontSize || 40,
+      subtitleFontSize: introConfig.subtitleFontSize || 18,
+    };
+    this._skipIntroQueued = false;
+    this.audioManager.eventBus.emit('bossIntro', introConfig);
   }
 
   _applyWeaponLevelUp() {
@@ -3385,7 +3939,18 @@ class Game {
 
   render(interp) {
     const entities = this.entityManager.getActive();
+    
+    // Always render the game world (even during intro, as a frozen frame)
     this.renderer.render(entities, this.player);
+    
+    // Boss intro overlay
+    if (this.gameState.isBossIntro() && this.introOverlay) {
+      this.renderer._drawBossIntro(this.introOverlay);
+    }
+    
+    // Announcements (rendered on top of everything)
+    this.renderer.renderAnnouncements(1/60);
+    this.renderer._drawAnnouncements();
 
     // Update renderer UI data
     if (this.player) {
