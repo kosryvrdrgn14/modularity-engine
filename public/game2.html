@@ -2488,7 +2488,7 @@ class MovementSystem {
         }
         // Spawn telegraph for charge warning zone
         if (this.telegraphSystem) {
-          this.telegraphSystem.spawn({
+          boss._activeTelegraph = this.telegraphSystem.spawn({
             shapeType: 'rectangle',
             source: 'boss_charge',
             sourceEntity: boss,
@@ -2513,10 +2513,21 @@ class MovementSystem {
 
       }
     } else if (boss._bossState === 'windup') {
-      // Telegraph — orange warning zone shown to player
+      // Track player during windup so telegraph stays accurate
+      if (dist > 1) {
+        boss.x += (dx / dist) * boss.speed * dt;
+        boss.y += (dy / dist) * boss.speed * dt;
+        boss._chargeDir = { x: dx / dist, y: dy / dist };
+        if (boss._activeTelegraph) {
+          boss._activeTelegraph.x = boss.x;
+          boss._activeTelegraph.y = boss.y;
+          boss._activeTelegraph.angle = Math.atan2(boss._chargeDir.y, boss._chargeDir.x);
+        }
+      }
       if (boss._stateTimer <= 0) {
         boss._bossState = 'charge';
         boss._stateTimer = 1.5;
+        boss._activeTelegraph = null;
       }
     } else if (boss._bossState === 'charge') {
       // Rush toward player's position at high speed
