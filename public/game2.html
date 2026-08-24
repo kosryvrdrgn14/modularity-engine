@@ -84,6 +84,243 @@
       0%, 100% { opacity: 0.5; }
       50% { opacity: 1; }
     }
+
+    /* === TITLE SCREEN === */
+    #title-screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a1a;
+      z-index: 100;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+    }
+    #title-screen.active { display: flex; }
+    #title-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.8;
+    }
+    #title-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 26, 0.5);
+    }
+    #title-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      max-width: 380px;
+      width: 90%;
+    }
+    #title-name {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #FFD700;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 2px 4px rgba(0,0,0,0.5);
+      text-align: center;
+      letter-spacing: 2px;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+    #title-subtitle {
+      font-size: 0.85rem;
+      color: #888;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-top: -16px;
+    }
+    #title-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 100%;
+      padding: 16px 20px;
+      background: rgba(10, 10, 26, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 215, 0, 0.12);
+      border-radius: 12px;
+    }
+    .menu-item {
+      padding: 12px 16px;
+      font-size: 1.1rem;
+      color: #ccc;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+    .menu-item:hover { background: rgba(255, 215, 0, 0.06); }
+    .menu-item.selected {
+      color: #FFD700;
+      background: rgba(255, 215, 0, 0.08);
+      transform: scale(1.02);
+    }
+    .menu-item.selected .menu-arrow { opacity: 1; }
+    .menu-arrow {
+      opacity: 0;
+      transition: opacity 0.15s;
+      font-size: 0.9rem;
+    }
+    .menu-item.locked {
+      color: #555;
+      cursor: default;
+      font-style: italic;
+    }
+    .menu-item.locked:hover { background: transparent; }
+    .menu-lock {
+      font-size: 0.85rem;
+      margin-left: auto;
+    }
+    #title-info {
+      display: flex;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #666;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #title-info span { white-space: nowrap; }
+    #title-controls-hint {
+      font-size: 0.7rem;
+      color: #444;
+      text-align: center;
+    }
+    #title-tooltip {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 40, 0.95);
+      color: #aaa;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 110;
+      white-space: nowrap;
+    }
+    #title-tooltip.visible { opacity: 1; }
+    /* Settings sub-screen */
+    #settings-screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 26, 0.92);
+      z-index: 105;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    #settings-screen.active { display: flex; }
+    #settings-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 340px;
+      width: 85%;
+    }
+    #settings-content h2 {
+      color: #FFD700;
+      font-size: 1.4rem;
+      text-align: center;
+      font-family: Georgia, serif;
+    }
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+    }
+    .setting-label {
+      color: #aaa;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-slider {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #2a2a4a;
+      border-radius: 3px;
+      outline: none;
+    }
+    .setting-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #FFD700;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .setting-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: #FFD700;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+    .setting-section-title {
+      color: #666;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 8px;
+    }
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      color: #888;
+      font-size: 0.85rem;
+      padding: 4px 0;
+    }
+    .controls-row span:last-child { color: #bbb; }
+    .settings-back {
+      margin-top: 12px;
+      padding: 10px;
+      color: #888;
+      font-size: 0.9rem;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: color 0.15s;
+    }
+    .settings-back:hover { color: #FFD700; }
+    .settings-danger {
+      margin-top: 8px;
+      padding: 10px;
+      color: #c44;
+      font-size: 0.85rem;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 1px solid rgba(204, 68, 68, 0.3);
+      transition: background 0.15s;
+    }
+    .settings-danger:hover { background: rgba(204, 68, 68, 0.1); }
+
   </style>
 </head>
 <body>
@@ -94,9 +331,58 @@
     <div id="loading-bar"><div id="loading-fill"></div></div>
     <div id="loading-status">Loading...</div>
   </div>
-  <div id="start-overlay">
-    <h2>MODULARITY ENGINE</h2>
-    <p>Click or tap to start</p>
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <img id="title-bg" src="assets/title_background.svg" alt="" />
+    <div id="title-overlay"></div>
+    <div id="title-content">
+      <div id="title-name">Modularity Engine</div>
+      <div id="title-subtitle">A Vampire Survivors Experience</div>
+      <div id="title-menu">
+        <div class="menu-item selected" data-action="play" data-index="0">
+          <span class="menu-arrow">▶</span> Play
+        </div>
+        <div class="menu-item locked" data-action="characters" data-index="1">
+          <span class="menu-arrow">▶</span> Characters <span class="menu-lock">🔒</span>
+        </div>
+        <div class="menu-item locked" data-action="stages" data-index="2">
+          <span class="menu-arrow">▶</span> Stages <span class="menu-lock">🔒</span>
+        </div>
+        <div class="menu-item" data-action="settings" data-index="3">
+          <span class="menu-arrow">▶</span> Settings
+        </div>
+      </div>
+      <div id="title-info">
+        <span id="info-version">v0.2.0</span>
+        <span>│</span>
+        <span id="info-best-run">Best: --:-- Lv--</span>
+        <span>│</span>
+        <span id="info-total-gold">Gold: 0</span>
+      </div>
+      <div id="title-controls-hint">WASD / ↑↓ navigate · ENTER select</div>
+    </div>
+  </div>
+  <div id="title-tooltip"></div>
+
+  <!-- Settings Screen -->
+  <div id="settings-screen">
+    <div id="settings-content">
+      <h2>Settings</h2>
+      <div class="setting-group">
+        <div class="setting-label"><span>SFX Volume</span><span id="sfx-val">85%</span></div>
+        <input type="range" class="setting-slider" id="sfx-slider" min="0" max="100" value="85" />
+        <div class="setting-label"><span>Music Volume</span><span id="music-val">40%</span></div>
+        <input type="range" class="setting-slider" id="music-slider" min="0" max="100" value="40" />
+      </div>
+      <div class="setting-group">
+        <div class="setting-section-title">Controls</div>
+        <div class="controls-row"><span>Move</span><span>WASD / Arrow Keys</span></div>
+        <div class="controls-row"><span>Select Upgrade</span><span>1 / 2 / 3 / Click</span></div>
+        <div class="controls-row"><span>Pause</span><span>Esc</span></div>
+      </div>
+      <div class="settings-danger" id="reset-progress">Reset All Progress</div>
+      <div class="settings-back" id="settings-back">◀ Back</div>
+    </div>
   </div>
 
 <script>
@@ -3546,11 +3832,409 @@ class AudioManager {
       this.sfxGain.gain.linearRampToValueAtTime(0.85, t + 0.2);
     }
   }
+
+  // ═══════════════════════════════════════════════
+  // MENU SFX — Title screen navigation sounds
+  // ═══════════════════════════════════════════════
+
+  playMenuSound(type) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    switch(type) {
+      case 'navigate': this._menuNavigate(t); break;
+      case 'select': this._menuSelect(t); break;
+      case 'back': this._menuBack(t); break;
+      case 'locked': this._menuLocked(t); break;
+      case 'slider': this._menuSlider(t); break;
+      case 'hover': this._menuHover(t); break;
+    }
+  }
+
+  _menuNavigate(t) {
+    this._playNote(600, 0.10, t, 0.04, 'sine', 'ui');
+  }
+
+  _menuSelect(t) {
+    const notes = [523.25, 659.25, 783.99]; // C5 E5 G5
+    for (let i = 0; i < notes.length; i++) {
+      this._playNote(notes[i], 0.15, t + i * 0.04, 0.08, 'square', 'ui');
+    }
+  }
+
+  _menuBack(t) {
+    this._playNote(659.25, 0.10, t, 0.04, 'sine', 'ui');
+    this._playNote(523.25, 0.10, t + 0.04, 0.04, 'sine', 'ui');
+  }
+
+  _menuLocked(t) {
+    this._playNote(200, 0.08, t, 0.08, 'square', 'ui');
+  }
+
+  _menuSlider(t) {
+    this._playNote(1000, 0.06, t, 0.02, 'sine', 'ui');
+  }
+
+  _menuHover(t) {
+    this._playNote(800, 0.04, t, 0.015, 'sine', 'ui');
+  }
+}
+
+// ============================================================
+// TITLE BGM — Fantasy anime village theme synthesizer
+// ============================================================
+
+class TitleBGM {
+  constructor(audioCtx, musicGain) {
+    this.ctx = audioCtx;
+    this.masterGain = musicGain;
+    this.gainNode = null;
+    this.playing = false;
+    this.barIndex = 0;
+    this.beatTimer = 0;
+    this.barDuration = (4 * 60) / 90; // 4 beats at 90 BPM
+    this.firstPlay = true;
+    this._activeOscs = [];
+    this._scheduledBars = 0;
+
+    // D Major scale frequencies
+    this.NOTES = {
+      D4: 293.66, E4: 329.63, F4: 369.99, G4: 392.00,
+      A4: 440.00, B4: 493.88, C5: 554.37, D5: 587.33,
+      E5: 659.25, F5: 739.99, G5: 783.99, A5: 880.00,
+    };
+
+    // Melody: Main Theme A (bars 1-8)
+    this.melodyA = [
+      ['D4', 'F4', 'A4', 'D5'], // Bar 1
+      ['C5', 'A4', 'B4', 'A4'], // Bar 2
+      ['G4', 'B4', 'D5', 'G5'], // Bar 3
+      ['F5', 'E5', 'D5', null], // Bar 4 (half note)
+      ['D4', 'F4', 'A4', 'D5'], // Bar 5
+      ['E5', 'D5', 'C5', 'A4'], // Bar 6
+      ['B4', 'G4', 'A4', 'F4'], // Bar 7
+      ['E4', null, 'D4', null], // Bar 8 (half notes)
+    ];
+
+    // Flute counter-melody (bars 9-12, enters at 0:32)
+    this.fluteA = [
+      ['A5', 'G5', 'F5', 'E5'], // Bar 9 (dotted quarter + eighth)
+      ['D5', 'E5', 'F5', null], // Bar 10
+      ['G5', 'F5', 'E5', 'D5'], // Bar 11
+      ['C5', 'B4', 'A4', null], // Bar 12
+    ];
+
+    // Chords for pad/strings (root notes per bar, bass movement)
+    this.chords = [
+      'D4', 'D4', 'G4', 'D4', // Bars 1-4: D G A D
+      'D4', 'A4', 'G4', 'D4', // Bars 5-8: D Bm Em D
+    ];
+  }
+
+  init() {
+    if (this.gainNode) return;
+    this.gainNode = this.ctx.createGain();
+    this.gainNode.gain.value = 0;
+    this.gainNode.connect(this.masterGain);
+  }
+
+  fadeIn(duration) {
+    if (!this.gainNode) this.init();
+    this.playing = true;
+    const t = this.ctx.currentTime;
+    this.gainNode.gain.cancelScheduledValues(t);
+    this.gainNode.gain.setValueAtTime(0, t);
+    this.gainNode.gain.linearRampToValueAtTime(0.4, t + duration);
+    this.beatTimer = 0;
+    this.barIndex = this.firstPlay ? 0 : 1; // Skip intro on loop
+    this._scheduleBar();
+  }
+
+  fadeOut(duration) {
+    if (!this.gainNode) return;
+    const t = this.ctx.currentTime;
+    this.gainNode.gain.cancelScheduledValues(t);
+    this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, t);
+    this.gainNode.gain.linearRampToValueAtTime(0, t + duration);
+    setTimeout(() => { this.playing = false; this._stopAll(); }, duration * 1000 + 100);
+  }
+
+  stop() {
+    this.playing = false;
+    this._stopAll();
+    if (this.gainNode) {
+      const t = this.ctx.currentTime;
+      this.gainNode.gain.cancelScheduledValues(t);
+      this.gainNode.gain.setValueAtTime(0, t);
+    }
+  }
+
+  update(dt) {
+    if (!this.playing || !this.ctx) return;
+    this.beatTimer += dt;
+    if (this.beatTimer >= this.barDuration) {
+      this.beatTimer -= this.barDuration;
+      this.barIndex++;
+      // Loop: skip intro (bar 0) on repeats
+      const totalBars = 12; // 8 melody + 4 flute
+      if (this.barIndex >= totalBars) {
+        this.barIndex = 1; // Skip intro bar, go to Theme A
+        this.firstPlay = false;
+      }
+      this._scheduleBar();
+    }
+  }
+
+  _scheduleBar() {
+    const barIdx = this.barIndex % 12;
+    const t = this.ctx.currentTime;
+
+    // Piano melody (bars 0-7)
+    if (barIdx < 8) {
+      const notes = this.melodyA[barIdx];
+      const beatDur = this.barDuration / 4;
+      for (let i = 0; i < notes.length; i++) {
+        if (!notes[i]) continue;
+        const freq = this.NOTES[notes[i]];
+        if (!freq) continue;
+        const noteStart = t + i * beatDur;
+        const dur = (notes[i + 1] === null || i === notes.length - 1) ? beatDur * 1.5 : beatDur * 0.8;
+        this._playTone(freq, 0.25, noteStart, dur, 'triangle');
+      }
+    }
+
+    // Pad layer (continuous, changes every bar)
+    {
+      const chordRoot = this.NOTES[this.chords[barIdx % this.chords.length]] || 293.66;
+      this._playTone(chordRoot, 0.12, t, this.barDuration * 0.95, 'sawtooth', 600);
+      this._playTone(chordRoot * 1.5, 0.06, t, this.barDuration * 0.95, 'sawtooth', 600); // 5th
+    }
+
+    // Strings (bars 2+)
+    if (barIdx >= 2) {
+      const chordRoot = this.NOTES[this.chords[barIdx % this.chords.length]] || 293.66;
+      this._playTone(chordRoot, 0.15, t, this.barDuration * 0.9, 'sawtooth', 500);
+      this._playTone(chordRoot * 1.25, 0.08, t, this.barDuration * 0.9, 'sawtooth', 500);
+    }
+
+    // Flute counter-melody (bars 8-11)
+    if (barIdx >= 8 && barIdx < 12) {
+      const fluteBar = barIdx - 8;
+      const notes = this.fluteA[fluteBar];
+      const beatDur = this.barDuration / 4;
+      for (let i = 0; i < notes.length; i++) {
+        if (!notes[i]) continue;
+        const freq = this.NOTES[notes[i]];
+        if (!freq) continue;
+        const noteStart = t + i * beatDur;
+        const dur = (i === notes.length - 1) ? beatDur * 1.5 : beatDur * 0.8;
+        this._playTone(freq, 0.18, noteStart, dur, 'sine');
+      }
+    }
+  }
+
+  _playTone(freq, vol, startTime, duration, waveType, filterFreq) {
+    const osc = this.ctx.createOscillator();
+    osc.type = waveType || 'triangle';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(vol, startTime + 0.02);
+    gain.gain.setValueAtTime(vol, startTime + duration - 0.05);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    if (filterFreq) {
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = filterFreq;
+      osc.connect(filter);
+      filter.connect(gain);
+    } else {
+      osc.connect(gain);
+    }
+    gain.connect(this.gainNode);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+    this._activeOscs.push({ osc, gain });
+
+    osc.onended = () => {
+      const idx = this._activeOscs.findIndex(o => o.osc === osc);
+      if (idx >= 0) this._activeOscs.splice(idx, 1);
+      try { osc.disconnect(); gain.disconnect(); } catch(e) {}
+    };
+  }
+
+  _stopAll() {
+    const oscs = [...this._activeOscs];
+    this._activeOscs = [];
+    for (const { osc } of oscs) {
+      try { osc.stop(); } catch(e) {}
+    }
+  }
+}
+
+// ============================================================
+// TITLE MENU — Navigation and input handler
+// ============================================================
+
+class TitleMenu {
+  constructor(game) {
+    this.game = game;
+    this.selectedIndex = 0;
+    this.items = [
+      { action: 'play', locked: false },
+      { action: 'characters', locked: true },
+      { action: 'stages', locked: true },
+      { action: 'settings', locked: false },
+    ];
+    this.dom = {
+      screen: document.getElementById('title-screen'),
+      menu: document.getElementById('title-menu'),
+      tooltip: document.getElementById('title-tooltip'),
+      infoVersion: document.getElementById('info-version'),
+      infoBestRun: document.getElementById('info-best-run'),
+      infoTotalGold: document.getElementById('info-total-gold'),
+    };
+    this._tooltipTimer = null;
+    this._boundKeyDown = this._handleKeyDown.bind(this);
+    this._boundClick = this._handleClick.bind(this);
+    this._boundMouseMove = this._handleMouseMove.bind(this);
+  }
+
+  show() {
+    this.dom.screen.classList.add('active');
+    this.selectedIndex = 0;
+    this._updateSelection();
+    this._updateInfo();
+    this._bindEvents();
+    this.dom.screen.addEventListener('click', this._boundClick);
+    this.dom.screen.addEventListener('mousemove', this._boundMouseMove);
+  }
+
+  hide() {
+    this.dom.screen.classList.remove('active');
+    this._unbindEvents();
+    this.dom.screen.removeEventListener('click', this._boundClick);
+    this.dom.screen.removeEventListener('mousemove', this._boundMouseMove);
+    this._hideTooltip();
+  }
+
+  _bindEvents() {
+    document.addEventListener('keydown', this._boundKeyDown);
+  }
+
+  _unbindEvents() {
+    document.removeEventListener('keydown', this._boundKeyDown);
+  }
+
+  _handleKeyDown(e) {
+    if (!this.dom.screen.classList.contains('active')) return;
+    if (document.getElementById('settings-screen').classList.contains('active')) return;
+
+    switch(e.key) {
+      case 'ArrowUp': case 'w': case 'W':
+        e.preventDefault();
+        this._moveSelection(-1);
+        break;
+      case 'ArrowDown': case 's': case 'S':
+        e.preventDefault();
+        this._moveSelection(1);
+        break;
+      case 'Enter': case ' ':
+        e.preventDefault();
+        this._select();
+        break;
+    }
+  }
+
+  _handleClick(e) {
+    const item = e.target.closest('.menu-item');
+    if (!item) return;
+    const idx = parseInt(item.dataset.index);
+    if (isNaN(idx)) return;
+    this.selectedIndex = idx;
+    this._updateSelection();
+    this._select();
+  }
+
+  _handleMouseMove(e) {
+    const item = e.target.closest('.menu-item');
+    if (!item) return;
+    const idx = parseInt(item.dataset.index);
+    if (isNaN(idx) || idx === this.selectedIndex) return;
+    this.selectedIndex = idx;
+    this._updateSelection();
+    if (this.game.audioManager) this.game.audioManager.playMenuSound('hover');
+  }
+
+  _moveSelection(dir) {
+    const len = this.items.length;
+    this.selectedIndex = (this.selectedIndex + dir + len) % len;
+    this._updateSelection();
+    if (this.game.audioManager) this.game.audioManager.playMenuSound('navigate');
+  }
+
+  _updateSelection() {
+    const items = this.dom.menu.querySelectorAll('.menu-item');
+    items.forEach((el, i) => {
+      el.classList.toggle('selected', i === this.selectedIndex);
+    });
+  }
+
+  _select() {
+    const item = this.items[this.selectedIndex];
+    if (item.locked) {
+      if (this.game.audioManager) this.game.audioManager.playMenuSound('locked');
+      this._showTooltip('Complete more runs to unlock!');
+      return;
+    }
+    if (this.game.audioManager) this.game.audioManager.playMenuSound('select');
+
+    switch(item.action) {
+      case 'play':
+        this.game._startFromTitle();
+        break;
+      case 'settings':
+        this.game._showSettings();
+        break;
+    }
+  }
+
+  _showTooltip(text) {
+    this.dom.tooltip.textContent = text;
+    this.dom.tooltip.classList.add('visible');
+    clearTimeout(this._tooltipTimer);
+    this._tooltipTimer = setTimeout(() => this._hideTooltip(), 2000);
+  }
+
+  _hideTooltip() {
+    this.dom.tooltip.classList.remove('visible');
+    clearTimeout(this._tooltipTimer);
+  }
+
+  _updateInfo() {
+    const gm = this.game.gameManager;
+    if (!gm) return;
+    const gold = gm.get_resource('gold') || gm.get_currency() || 0;
+    const runs = gm.get_counter('total_runs') || 0;
+    const bestTime = gm.get_counter('best_time') || 0;
+    const bestLevel = gm.get_counter('best_level') || 0;
+    this.dom.infoTotalGold.textContent = `Gold: ${gold}`;
+    if (bestTime > 0) {
+      const min = Math.floor(bestTime / 60);
+      const sec = Math.floor(bestTime % 60);
+      this.dom.infoBestRun.textContent = `Best: ${min}:${String(sec).padStart(2,'0')} Lv${bestLevel}`;
+    } else if (runs > 0) {
+      this.dom.infoBestRun.textContent = `Runs: ${runs}`;
+    }
+  }
 }
 
 // ============================================================
 // MAIN GAME
 // ============================================================
+
 
 
 // ============================================================
@@ -3961,21 +4645,15 @@ class Game {
     // Hide loading screen
     loadingScreen.style.display = 'none';
 
-    // Show "Click to Start" overlay — required for browser audio unlock
-    const startOverlay = document.getElementById('start-overlay');
-    if (startOverlay) {
-      startOverlay.style.display = 'flex';
-      const startGame = () => {
-        startOverlay.style.display = 'none';
-        this.audioManager.resume();
-        this.startGame();
-      };
-      startOverlay.addEventListener('click', startGame, { once: true });
-      startOverlay.addEventListener('touchstart', startGame, { once: true });
-    } else {
-      // Fallback: no overlay element, start immediately
-      this.startGame();
-    }
+    // Initialize title BGM and menu
+    this.titleBGM = new TitleBGM(this.audioManager.ctx, this.audioManager.musicGain);
+    this.titleBGM.init();
+    this.titleMenu = new TitleMenu(this);
+
+    // Show title screen (audio unlocks on first user gesture)
+    this.gameState.setState('title');
+    this.titleMenu.show();
+    this.titleBGM.fadeIn(1.5);
   }
 
   _setupEvents() {
@@ -4280,6 +4958,93 @@ class Game {
     }
   }
 
+  // ═══════════════════════════════════════════════
+  // TITLE SCREEN INTEGRATION
+  // ═══════════════════════════════════════════════
+
+  _startFromTitle() {
+    this.titleMenu.hide();
+    this.titleBGM.fadeOut(1.5);
+    // Resume audio context (browser unlock)
+    this.audioManager.resume();
+    // Start game after title BGM fades
+    setTimeout(() => {
+      this.titleBGM.stop();
+      this.startGame();
+    }, 1500);
+  }
+
+  _showSettings() {
+    const screen = document.getElementById('settings-screen');
+    screen.classList.add('active');
+    // Wire sliders
+    const sfxSlider = document.getElementById('sfx-slider');
+    const musicSlider = document.getElementById('music-slider');
+    const sfxVal = document.getElementById('sfx-val');
+    const musicVal = document.getElementById('music-val');
+    
+    // Set initial values
+    sfxSlider.value = Math.round((this.audioManager.sfxGain?.gain?.value || 0.85) / 0.85 * 100);
+    sfxVal.textContent = sfxSlider.value + '%';
+    musicSlider.value = Math.round((this.audioManager.musicGain?.gain?.value || 0.4) / 0.4 * 100);
+    musicVal.textContent = musicSlider.value + '%';
+
+    sfxSlider.oninput = () => {
+      const v = parseInt(sfxSlider.value);
+      sfxVal.textContent = v + '%';
+      if (this.audioManager.sfxGain) {
+        this.audioManager.sfxGain.gain.value = (v / 100) * 0.85;
+      }
+      this.audioManager.playMenuSound('slider');
+    };
+    musicSlider.oninput = () => {
+      const v = parseInt(musicSlider.value);
+      musicVal.textContent = v + '%';
+      if (this.titleBGM && this.titleBGM.gainNode) {
+        this.titleBGM.gainNode.gain.value = (v / 100) * 0.4;
+      }
+      this.audioManager.playMenuSound('slider');
+    };
+
+    // Back button
+    const backBtn = document.getElementById('settings-back');
+    backBtn.onclick = () => {
+      this.audioManager.playMenuSound('back');
+      screen.classList.remove('active');
+    };
+
+    // Reset progress
+    const resetBtn = document.getElementById('reset-progress');
+    resetBtn.onclick = () => {
+      if (confirm('Reset all progress? This cannot be undone.')) {
+        if (this.gameManager) {
+          this.gameManager.backend.remove('modularity_engine_save');
+          this.gameManager.store = this.gameManager._createDefault();
+          this.titleMenu._updateInfo();
+          this.audioManager.playMenuSound('select');
+        }
+      }
+    };
+
+    // Escape to go back
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.audioManager.playMenuSound('back');
+        screen.classList.remove('active');
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+  }
+
+  _returnToTitle() {
+    // Show title screen again after game over
+    this.gameState.setState('title');
+    this.titleMenu.show();
+    this.titleBGM.fadeIn(1.5);
+  }
+
   _handleGameOver() {
     // Pause the game loop
     this.gameLoop.paused = true;
@@ -4306,6 +5071,34 @@ class Game {
     
     // Show end screen with result and stats
     this.uiManager.showEndScreen(result, stats);
+    
+    // Wire "Return to Title" — after 2 seconds, show a button or auto-transition
+    this._gameOverReturnTimer = setTimeout(() => {
+      this._showGameOverReturnOption();
+    }, 1500);
+  }
+
+  _showGameOverReturnOption() {
+    // Add a "Return to Title" button to the end screen
+    const endScreen = document.getElementById('end-screen');
+    if (!endScreen) {
+      // Create minimal end screen overlay if UIManager doesn't make one
+      const overlay = document.createElement('div');
+      overlay.id = 'end-screen';
+      overlay.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,26,0.9);z-index:98;font-family:Segoe UI,system-ui,sans-serif;';
+      overlay.innerHTML = '<div style="color:#FFD700;font-size:1.5rem;margin-bottom:20px;font-family:Georgia,serif;">Run Complete</div><div id="end-stats" style="color:#aaa;margin-bottom:24px;text-align:center;"></div><div id="return-to-title" style="padding:12px 32px;color:#FFD700;border:1px solid rgba(255,215,0,0.3);border-radius:8px;cursor:pointer;font-size:1rem;transition:background 0.15s;">Return to Title</div>';
+      document.body.appendChild(overlay);
+      const stats = this._getStats();
+      document.getElementById('end-stats').innerHTML = `Time: ${stats.time}<br>Level: ${stats.level}<br>Kills: ${stats.kills}<br>Gold: ${stats.gold}`;
+      document.getElementById('return-to-title').onclick = () => {
+        overlay.remove();
+        this.audioManager.playMenuSound('select');
+        this._returnToTitle();
+      };
+      document.getElementById('return-to-title').onmouseover = () => {
+        this.audioManager.playMenuSound('hover');
+      };
+    }
   }
 
   render(interp) {
