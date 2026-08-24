@@ -990,6 +990,11 @@ class InputManager {
     // Keyboard
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
+      // DEBUG: B key skips to boss
+      if (e.code === 'KeyB' && this.gameState.isPlaying()) {
+        this.eventBus.emit('skipToBoss');
+        return;
+      }
       if (e.code === 'Escape') {
         this.eventBus.emit('pause', { paused: true });
       }
@@ -4657,6 +4662,13 @@ class Game {
   }
 
   _setupEvents() {
+    // DEBUG: Press B to skip to boss spawn (3:50)
+    this.eventBus.on('skipToBoss', () => {
+      if (this.gameState.isPlaying()) {
+        this.gameTime = 230; // 3:50 — 10 seconds before boss at 4:00
+      }
+    });
+
     this.eventBus.on('pause', (data) => {
       if (this.gameState.isPlaying()) {
         this.gameState.setState('paused');
