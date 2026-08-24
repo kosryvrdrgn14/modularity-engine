@@ -6930,9 +6930,11 @@ window.skipToBoss = () => {
   if (ss) {
     ss.bossSpawned = true;
     ss.gameTime = 245;
+    ss._spawnBoss();
+    console.log('[DEBUG] Boss spawned via spawnSystem!');
+  } else {
+    console.log('[DEBUG] spawnSystem not found');
   }
-  game._spawnBoss();
-  console.log('[DEBUG] Boss spawned!');
 };
 game.init().catch(console.error);
 
