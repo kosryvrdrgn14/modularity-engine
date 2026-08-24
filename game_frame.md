@@ -287,7 +287,9 @@ Each module has a **single responsibility** and owns its own data section. Modul
 
 - You can debug the NPC system by reading only `save_data.npcs`
 - You can test combat by mocking only `save_data.combat` and `save_data.player`
-- Adding a new feature (e.g., a crafting system) means adding a new module + data section without touching existing modules
+- Save schema follows Claude's engine-agnostic 5-key structure: `save_version`, `session`, `persistent`, `flags`, `counters`
+- GameManager uses injected `StorageBackend` — HTML uses localStorage, Godot will use FileAccess
+- See `15_engine_agnostic_port.md` for full porting checklist and conflict resolution
 
 ---
 

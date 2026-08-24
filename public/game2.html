@@ -3539,53 +3539,78 @@ class AudioManager {
 // MAIN GAME
 // ============================================================
 
+
+// ============================================================
+// STORAGE BACKEND (Engine-agnostic storage interface)
+// ============================================================
+
+class StorageBackend {
+  load(key) { return null; }
+  save(key, data) {}
+  remove(key) {}
+}
+
+class LocalStorageBackend extends StorageBackend {
+  load(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  }
+  save(key, data) {
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+  }
+  remove(key) { localStorage.removeItem(key); }
+}
+
 // ============================================================
 // GAME MANAGER
 // Central store, resource tracking, combat session results
 // ============================================================
 
 class GameManager {
-  constructor(eventBus) {
+  constructor(eventBus, backend) {
     this.eventBus = eventBus;
+    this.backend = backend || new LocalStorageBackend();
     this.store = null;
     this._dirty = false;
     this._autoSaveTimer = 0;
   }
 
   init() {
-    // Load from localStorage or create default
-    const saved = localStorage.getItem('modularity_engine_save');
+    const saved = this.backend.load('modularity_engine_save');
     if (saved) {
-      try {
-        this.store = JSON.parse(saved);
-        this.store = this._migrate(this.store);
-      } catch(e) {
-        console.warn('Failed to load save, creating new:', e);
-        this.store = this._createDefault();
-      }
+      this.store = this._migrate(saved);
     } else {
       this.store = this._createDefault();
     }
-    this.store.meta.lastPlayed = Date.now();
     this._dirty = true;
   }
 
   _createDefault() {
     return {
-      version: 1,
-      meta: { createdAt: Date.now(), lastSaved: Date.now(), lastPlayed: Date.now(), totalPlayTime: 0, prestigeCount: 0 },
-      player: { name: "Survivor", level: 1, xp: 0, totalGold: 0, totalKills: 0, totalRuns: 0, baseStats: { maxHealth: 100, moveSpeed: 200, damageMultiplier: 1.0, speedMultiplier: 1.0, pickupRadius: 50 } },
-      combat: { unlockedWeapons: ["w1_projectile"], weaponLevels: {}, lastRunStats: null, bestRunStats: null, runHistory: [] },
-      skills: { unlocked: [], skillPoints: 0, totalPointsEarned: 0 },
-      town: { phase: 1, population: 0, popCap: 5, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 }, workers: { farmers: 0, miners: 0, builders: 0, scholars: 0, masons: 0, idle: 0, assignments: {} }, managers: [], upgrades: {} },
-      npcs: { met: [], relationships: {}, completedDialogues: [], activeRequests: [], companions: [], partySlots: 2 },
-      factions: { wanderers_guild: { reputation: 0, rank: "unknown" }, shadow_covenant: { reputation: 0, rank: "unknown" }, forge_brotherhood: { reputation: 0, rank: "unknown" } },
-      quests: { active: [], completed: [], failed: [], available: [], estateQueue: [] },
-      unlocks: { stages: ["stage_graveyard"], items: [], abilities: [], features: ["town_basic", "combat_basic"], characters: ["survivor"] },
-      estates: [],
-      family: { wives: [], children: [], familyTree: {} },
-      inventory: { equipment: { weapon: null, armor: null, accessory: null, relic: null }, consumables: [], maxSlots: 24, surplus: [] },
+      save_version: 1,
+      session: {
+        current_stage_id: null,
+        run_in_progress: false,
+        run_data: { time_survived: 0, kills: 0, gold_earned: 0, level_reached: 1 },
+      },
+      persistent: {
+        currency: 0,
+        player: { level: 1, xp: 0, total_gold: 0, base_stats: { max_health: 100, move_speed: 200, damage_multiplier: 1.0, speed_multiplier: 1.0 } },
+        combat: { unlocked_weapons: ["w1_projectile"], weapon_levels: {}, best_run: null, run_history: [] },
+        skills: { unlocked: [], skill_points: 0 },
+        town: { phase: 1, population: 0, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 } },
+        npcs: { met: [], relationships: {} },
+        factions: { wanderers_guild: { reputation: 0, rank: "unknown" } },
+        quests: { active: [], completed: [] },
+        unlocks: { stages: ["stage_graveyard"], items: [], features: ["town_basic", "combat_basic"] },
+        estates: [],
+        family: { wives: [], children: [] },
+        inventory: { equipment: { weapon: null, armor: null }, consumables: [], max_slots: 24 },
+      },
       flags: {},
+      counters: { total_kills: 0, total_runs: 0 },
     };
   }
 
@@ -3618,45 +3643,57 @@ class GameManager {
   }
 
   // ── Resource Tracking ──────────────────────────
-  addGold(amount, source) {
+  // ── Currency (engine-agnostic name) ──────────────
+  add_currency(amount, source) {
     if (amount <= 0) return;
-    this.store.town.resources.gold += amount;
-    this.store.player.totalGold += amount;
+    this.store.persistent.currency += amount;
+    this.store.persistent.town.resources.gold += amount;
     this._dirty = true;
-    this.eventBus.emit('resources:changed', { gold: this.store.town.resources.gold, source });
+    this.eventBus.emit('resources:changed', { currency: this.store.persistent.currency, source });
   }
 
-  spendGold(amount, source) {
-    if (amount > this.store.town.resources.gold) return false;
-    this.store.town.resources.gold -= amount;
+  spend_currency(amount, source) {
+    if (amount > this.store.persistent.currency) return false;
+    this.store.persistent.currency -= amount;
+    this.store.persistent.town.resources.gold -= amount;
     this._dirty = true;
-    this.eventBus.emit('resources:changed', { gold: this.store.town.resources.gold, source });
+    this.eventBus.emit('resources:changed', { currency: this.store.persistent.currency, source });
     return true;
   }
 
-  addResource(type, amount) {
-    if (!this.store.town.resources.hasOwnProperty(type)) return;
-    this.store.town.resources[type] += amount;
+  get_currency() { return this.store.persistent.currency || 0; }
+
+  // ── Resources ──────────────────────────────────
+  add_resource(type, amount) {
+    if (!this.store.persistent.town.resources.hasOwnProperty(type)) return;
+    this.store.persistent.town.resources[type] += amount;
     this._dirty = true;
-    this.eventBus.emit('resources:changed', { [type]: this.store.town.resources[type] });
   }
 
-  spendResource(type, amount) {
-    if (!this.store.town.resources.hasOwnProperty(type)) return false;
-    if (amount > this.store.town.resources[type]) return false;
-    this.store.town.resources[type] -= amount;
+  spend_resource(type, amount) {
+    const res = this.store.persistent.town.resources;
+    if (!res.hasOwnProperty(type) || amount > res[type]) return false;
+    res[type] -= amount;
     this._dirty = true;
-    this.eventBus.emit('resources:changed', { [type]: this.store.town.resources[type] });
     return true;
   }
 
-  getResource(type) {
-    return this.store.town.resources[type] || 0;
-  }
+  get_resource(type) { return this.store.persistent.town.resources[type] || 0; }
+  has_resource(type, amount) { return this.get_resource(type) >= amount; }
 
-  hasResource(type, amount) {
-    return this.getResource(type) >= amount;
+  // ── Flags (flat key/value) ─────────────────────
+  set_flag(key, value) { this.store.flags[key] = value; this._dirty = true; }
+  get_flag(key) { return !!this.store.flags[key]; }
+  toggle_flag(key) { this.store.flags[key] = !this.store.flags[key]; this._dirty = true; }
+
+  // ── Counters (flat numeric) ────────────────────
+  add_counter(key, amount) {
+    this.store.counters[key] = (this.store.counters[key] || 0) + amount;
+    this._dirty = true;
+    this.eventBus.emit('counter:changed', { key, value: this.store.counters[key] });
   }
+  get_counter(key) { return this.store.counters[key] || 0; }
+  set_counter(key, value) { this.store.counters[key] = value; this._dirty = true; }
 
   // ── Player Progress ────────────────────────────
   addXP(amount) {
@@ -3673,90 +3710,101 @@ class GameManager {
     this._dirty = true;
   }
 
-  unlockWeapon(weaponId) {
-    if (!this.store.combat.unlockedWeapons.includes(weaponId)) {
-      this.store.combat.unlockedWeapons.push(weaponId);
-      this._dirty = true;
-      this.eventBus.emit('unlock:weapon', { weaponId });
-    }
+  unlock_weapon(weapon_id) {
+    const w = this.store.persistent.combat.unlocked_weapons;
+    if (!w.includes(weapon_id)) { w.push(weapon_id); this._dirty = true; this.eventBus.emit('unlock:weapon', { weapon_id }); }
   }
 
-  unlockStage(stageId) {
-    if (!this.store.unlocks.stages.includes(stageId)) {
-      this.store.unlocks.stages.push(stageId);
-      this._dirty = true;
-      this.eventBus.emit('unlock:stage', { stageId });
-    }
+  unlock_stage(stage_id) {
+    const s = this.store.persistent.unlocks.stages;
+    if (!s.includes(stage_id)) { s.push(stage_id); this._dirty = true; this.eventBus.emit('unlock:stage', { stage_id }); }
   }
 
-  unlockFeature(featureId) {
-    if (!this.store.unlocks.features.includes(featureId)) {
-      this.store.unlocks.features.push(featureId);
-      this._dirty = true;
-      this.eventBus.emit('unlock:feature', { featureId });
-    }
+  unlock_feature(feature_id) {
+    const f = this.store.persistent.unlocks.features;
+    if (!f.includes(feature_id)) { f.push(feature_id); this._dirty = true; this.eventBus.emit('unlock:feature', { feature_id }); }
   }
 
   // ── Combat Session ─────────────────────────────
-  buildCombatResult(data) {
+  _buildResult(data) {
     return {
       stageId: data.stageId || 'stage_graveyard',
-      stageCompleted: data.stageCompleted || false,
-      timeSurvived: data.timeSurvived || 0,
-      playerLevel: data.playerLevel || 1,
+      stage_completed: data.stageCompleted || false,
+      time_survived: data.timeSurvived || 0,
+      player_level: data.playerLevel || 1,
       kills: data.kills || 0,
-      killsByType: data.killsByType || {},
-      goldEarned: data.goldEarned || 0,
-      xpEarned: data.xpEarned || 0,
-      itemsFound: data.itemsFound || [],
-      bossDefeated: data.bossDefeated || false,
-      weaponsUsed: data.weaponsUsed || [],
-      weaponLevelsEnd: data.weaponLevelsEnd || {},
+      kills_by_type: data.killsByType || {},
+      gold_earned: data.goldEarned || 0,
+      xp_earned: data.xpEarned || 0,
+      items: data.itemsFound || [],
+      boss_defeated: data.bossDefeated || false,
+      weapons_used: data.weaponsUsed || [],
+      weapon_levels_end: data.weapon_levels_end || {},
       questEvents: data.questEvents || [],
     };
   }
 
-  endCombatSession(result) {
-    // Gold
-    this.store.town.resources.gold += result.goldEarned;
-    this.store.player.totalGold += result.goldEarned;
+  end_session(result) {
+    const p = this.store.persistent;
+    const s = this.store.session;
 
-    // XP
-    this.addXP(result.xpEarned);
-
-    // Kill counts
-    this.store.player.totalKills += result.kills;
-    this.store.player.totalRuns += 1;
-
-    // Best run
-    if (!this.store.combat.bestRunStats || result.timeSurvived > this.store.combat.bestRunStats.timeSurvived) {
-      this.store.combat.bestRunStats = result;
+    // Currency rewards
+    if (result.rewards && result.rewards.currency) {
+      p.currency += result.rewards.currency;
+      p.town.resources.gold += result.rewards.currency;
     }
 
-    // Run history (keep last 10)
-    this.store.combat.runHistory.unshift(result);
-    if (this.store.combat.runHistory.length > 10) {
-      this.store.combat.runHistory.pop();
+    // XP rewards
+    if (result.rewards && result.rewards.xp) {
+      this.add_xp(result.rewards.xp);
     }
-    this.store.combat.lastRunStats = result;
 
-    // Items
-    if (result.itemsFound) {
-      for (const item of result.itemsFound) {
-        this._addToInventory(item);
+    // Flags triggered
+    if (result.flags_triggered) {
+      for (const flag of result.flags_triggered) {
+        this.store.flags[flag] = true;
       }
     }
 
-    // Boss defeated → faction rep
-    if (result.bossDefeated) {
-      this.store.factions.wanderers_guild.reputation += 10;
-      this.eventBus.emit('faction:reputationChanged', { factionId: 'wanderers_guild', newValue: this.store.factions.wanderers_guild.reputation });
+    // Counters updated
+    if (result.counters_updated) {
+      for (const [key, val] of Object.entries(result.counters_updated)) {
+        this.store.counters[key] = (this.store.counters[key] || 0) + val;
+      }
     }
+
+    // Stats
+    this.store.counters.total_runs = (this.store.counters.total_runs || 0) + 1;
+    if (result.stats && result.stats.kills) {
+      this.store.counters.total_kills = (this.store.counters.total_kills || 0) + result.stats.kills;
+    }
+
+    // Best run
+    const time = result.stats ? result.stats.time_survived : 0;
+    if (!p.combat.best_run || time > (p.combat.best_run.stats?.time_survived || 0)) {
+      p.combat.best_run = result;
+    }
+
+    // Run history (keep last 10)
+    p.combat.run_history.unshift(result);
+    if (p.combat.run_history.length > 10) p.combat.run_history.pop();
+
+    // Items
+    if (result.rewards && result.rewards.items) {
+      for (const item of result.rewards.items) {
+        const existing = p.inventory.consumables.find(i => i.id === item.id);
+        if (existing) existing.count += item.count || 1;
+        else p.inventory.consumables.push({ id: item.id, count: item.count || 1 });
+      }
+    }
+
+    // Clear session
+    s.run_in_progress = false;
+    s.run_data = { time_survived: 0, kills: 0, gold_earned: 0, level_reached: 1 };
 
     // Emit events
     this.eventBus.emit('combat:sessionEnd', result);
-    this.eventBus.emit('resources:changed', { gold: this.store.town.resources.gold });
-    this.eventBus.emit('player:progressChanged', { level: this.store.player.level, totalGold: this.store.player.totalGold });
+    this.eventBus.emit('resources:changed', { currency: p.currency });
 
     this.save();
   }
@@ -3780,26 +3828,21 @@ class GameManager {
   }
 
   getUnlockedWeapons() {
-    return this.store.combat.unlockedWeapons;
+    return this.store.persistent.combat.unlocked_weapons;
   }
 
   getRunHistory() {
-    return this.store.combat.runHistory;
+    return this.store.persistent.combat.run_history;
   }
 
   getBestRun() {
-    return this.store.combat.bestRunStats;
+    return this.store.persistent.combat.best_run;
   }
 
   // ── Save/Load ──────────────────────────────────
   save() {
-    try {
-      this.store.meta.lastSaved = Date.now();
-      localStorage.setItem('modularity_engine_save', JSON.stringify(this.store));
-      this._dirty = false;
-    } catch(e) {
-      console.error('Failed to save:', e);
-    }
+    this.backend.save('modularity_engine_save', this.store);
+    this._dirty = false;
   }
 
   reset() {
@@ -4027,8 +4070,8 @@ class Game {
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();
     if (this.gameManager) {
-      this.gameManager.store.town.resources.gold = 0;
-      this.gameManager.store.player.totalRuns++;
+      this.gameManager.store.persistent.town.resources.gold = 0;
+      this.gameManager.store.counters.total_runs++;
     }
     this.introOverlay = null;
     this._announcementTriggered = {};
@@ -4228,19 +4271,19 @@ class Game {
     const stats = this.gameState.endStats || this._getStats();
     const result = this.gameState.endResult || 'defeat';
     if (this.gameManager) {
-      const combatResult = this.gameManager.buildCombatResult({
+      const combatResult = this.gameManager._buildResult({
         stageId: 'stage_graveyard',
-        stageCompleted: result === 'victory',
-        timeSurvived: this.gameTime,
-        playerLevel: this.levelingSystem.level,
+        stage_completed: result === 'victory',
+        time_survived: this.gameTime,
+        player_level: this.levelingSystem.level,
         kills: this.entityManager.getCount('enemy'),
-        goldEarned: this.gameManager.getResource('gold'),
-        xpEarned: this.levelingSystem.xp,
-        bossDefeated: result === 'victory',
-        weaponsUsed: Object.keys(this.weaponSystem.weaponLevels).filter(k => this.weaponSystem.weaponLevels[k] > 0),
-        weaponLevelsEnd: { ...this.weaponSystem.weaponLevels },
+        gold_earned: this.gameManager.get_resource('gold'),
+        xp_earned: this.levelingSystem.xp,
+        boss_defeated: result === 'victory',
+        weapons_used: Object.keys(this.weaponSystem.weaponLevels).filter(k => this.weaponSystem.weaponLevels[k] > 0),
+        weapon_levels_end: { ...this.weaponSystem.weaponLevels },
       });
-      this.gameManager.endCombatSession(combatResult);
+      this.gameManager.end_session(combatResult);
     }
     
     // Show end screen with result and stats
@@ -4370,7 +4413,7 @@ class Game {
       time: `${Math.floor(this.gameTime / 60)}:${String(Math.floor(this.gameTime % 60)).padStart(2, '0')}`,
       level: this.levelingSystem.level,
       kills: this.entityManager.getCount('enemy'),
-      gold: this.gameManager ? this.gameManager.getResource('gold') : 0,
+      gold: this.gameManager ? this.gameManager.get_resource('gold') : 0,
     };
   }
 }
