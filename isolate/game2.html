@@ -2488,7 +2488,7 @@ class MovementSystem {
         }
         // Spawn telegraph for charge warning zone
         if (this.telegraphSystem) {
-          this.telegraphSystem.spawn({
+          boss._activeTelegraph = this.telegraphSystem.spawn({
             shapeType: 'rectangle',
             source: 'boss_charge',
             sourceEntity: boss,
@@ -2513,8 +2513,14 @@ class MovementSystem {
 
       }
     } else if (boss._bossState === 'windup') {
-      // Telegraph — orange warning zone shown to player
+      // Freeze boss — telegraph is the truth
+      // Lock chargeDir to telegraph's final direction at windup end
       if (boss._stateTimer <= 0) {
+        if (boss._activeTelegraph) {
+          const ta = boss._activeTelegraph.angle;
+          boss._chargeDir = { x: Math.cos(ta), y: Math.sin(ta) };
+          boss._activeTelegraph = null;
+        }
         boss._bossState = 'charge';
         boss._stateTimer = 1.5;
       }
@@ -3403,19 +3409,20 @@ class TelegraphSystem {
       case 'rectangle': {
         ctx.translate(t.x, t.y); ctx.rotate(t.angle);
         const w = t.width * scale, h = t.height * scale;
-        // Draw from origin forward (not centered) — telegraph shows where boss WILL go
+        // Rect extends from origin forward along local X-axis (charge direction)
         if (!v.outlineOnly) {
           ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
-          ctx.fillRect(-w/2, 0, w, h);
+          ctx.fillRect(0, -w/2, h, w);
         }
         ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
-        ctx.strokeRect(-w/2, 0, w, h);
+        ctx.strokeRect(0, -w/2, h, w);
+        // Chevrons point forward (right = charge direction)
         if (v.chevrons && v.chevronCount > 0) {
-          ctx.strokeStyle = v.chevronColor; ctx.lineWidth = 2.5;
+          ctx.strokeStyle = v.chevronColor || v.strokeColor; ctx.lineWidth = 2.5;
           const spacing = h / (v.chevronCount + 1);
           for (let i = 1; i <= v.chevronCount; i++) {
-            const cy = i * spacing;
-            ctx.beginPath(); ctx.moveTo(-6, cy - 6); ctx.lineTo(0, cy); ctx.lineTo(-6, cy + 6); ctx.stroke();
+            const cx = i * spacing;
+            ctx.beginPath(); ctx.moveTo(cx - 6, -6); ctx.lineTo(cx, 0); ctx.lineTo(cx - 6, 6); ctx.stroke();
           }
         }
         break;
@@ -5789,14 +5796,11 @@ class Game {
   }
 
   _setupEvents() {
-    // DEBUG: Press B to skip to boss spawn (3:50)
+    // DEBUG: Press B to spawn boss immediately
     this.eventBus.on('skipToBoss', () => {
-      console.log('[SKIP] state=' + this.gameState.state + ' gameTime=' + this.gameTime);
-      if (this.gameState.isPlaying()) {
-        this.gameTime = 238;
-        console.log('[SKIP] Set gameTime to 238');
-      } else {
-        console.log('[SKIP] NOT in playing state, skip ignored');
+      console.log('[SKIP] state=' + this.gameState.state);
+      if (this.gameState.isPlaying() && window.skipToBoss) {
+        window.skipToBoss();
       }
     });
 
@@ -6911,14 +6915,21 @@ class TownScreen {
 // START
 // ============================================================
 
-// DEBUG: window.skipToBoss() to jump to boss
+// DEBUG: window.skipToBoss() to spawn boss immediately
 const game = new Game();
 window.skipToBoss = () => {
-  if (game.gameState.isPlaying()) {
-    game.gameTime = 238;
-    console.log('[DEBUG] Jumped to 238s (3:58)');
-  } else {
+  if (!game.gameState.isPlaying()) {
     console.log('[DEBUG] Cannot skip — state:', game.gameState.state);
+    return;
+  }
+  const ss = game.spawnSystem;
+  if (ss) {
+    ss.bossSpawned = true;
+    ss.gameTime = 245;
+    ss._spawnBoss();
+    console.log('[DEBUG] Boss spawned via spawnSystem!');
+  } else {
+    console.log('[DEBUG] spawnSystem not found');
   }
 };
 game.init().catch(console.error);
