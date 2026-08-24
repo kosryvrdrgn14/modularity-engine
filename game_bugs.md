@@ -48,9 +48,16 @@
 | 34 | NPC portrait not rendering — base64 data URI SVGs in `<img>` tags fail in iframe/CSP contexts | 🟡 Medium | ✅ Fixed | User report |
 | 35 | Elder Rowan dialogue stuck on greeting — _showChoices indentation corrupted during Python code replacement | 🔴 Critical | ✅ Fixed | User report |
 | 36 | W3 area pulse never fires — _updateW3Pulses defined but never called from WeaponSystem.update() | 🔴 Critical | ✅ Fixed | Code review |
+| 37 | Boss hangs during intro — gameLoop.paused=true prevents _updateBossIntro from ticking | 🔴 Critical | ✅ Fixed | User report |
+| 38 | B key skip-to-boss not working — InputManager has no gameState reference, check silently fails | 🟡 Medium | ✅ Fixed | User report |
+| 39 | B key shows warning text but boss never spawns — only set gameTime, didn't call _spawnBoss | 🟡 Medium | ✅ Fixed | User report |
+| 40 | game._spawnBoss() is undefined — method lives on SpawnSystem, not Game | 🔴 Critical | ✅ Fixed | User report |
+| 41 | Telegraph rectangle drawn 90° off — fillRect draws along local Y-axis after ctx.rotate | 🔴 Critical | ✅ Fixed | User report |
+| 42 | Boss charges at player instead of telegraph direction — _chargeDir recalculated at charge start instead of locked to telegraph angle | 🔴 Critical | ✅ Fixed | User report |
+| 43 | Duplicate _showDogDialogue/companion methods — two identical definitions from Python bulk insert | 🟡 Low | ⚠️ Open | Code review |
 | — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
 
-**Total: 36 bugs found, 36 fixed** (30b is root cause fix replacing #30's workaround)
+**Total: 43 bugs found, 42 fixed, 1 open**
 
 ---
 
@@ -457,4 +464,31 @@ These bugs share common root causes. Use this checklist after any code change se
 |---|---|
 | `onComplete` callbacks verified with console.log during dev | Bug #35: silent callback failure |
 | Typewriter → choices → response → continue loop tested end-to-end | Prevents stuck dialogue |
+
+### 5. Pause & Intro Sequences
+| Check | Why |
+|---|---|
+| Intro/cutscene timers advance in `render()`, not `update()` | Bug #37: paused game loop prevents timer from ticking |
+| Entities can't deal damage during paused intro states | Prevents player death during non-gameplay sequences |
+| Boss state resets companions and projectile systems on intro start | Prevents stale AI running during cutscene |
+
+### 6. Cross-System Method Calls
+| Check | Why |
+|---|---|
+| Verify which class owns a method before calling it | Bug #40: `_spawnBoss` is on SpawnSystem, not Game |
+| Debug tools call actual spawn/creation methods, not time hacks | Bug #39: setting gameTime doesn't trigger spawn logic |
+| InputManagers emit events without state checks | Bug #38: InputManager lacked gameState reference |
+
+### 7. Telegraph & Attack Synchronization
+| Check | Why |
+|---|---|
+| Telegraph direction matches attack direction (same angle source) | Bug #41: canvas rotation axis mismatch |
+| Attack direction locked at windup end, not recalculated at attack start | Bug #42: telegraph and charge used different direction snapshots |
+| `fillRect` dimensions verified against canvas rotation axis | X-axis = rotation direction, Y-axis = perpendicular |
+
+### 8. Bulk Code Insertion
+| Check | Why |
+|---|---|
+| Scan for duplicate method definitions after Python/regex insertions | Bug #43: duplicate _showDogDialogue from repeated inserts |
+| Verify class method count matches expected after bulk edits | Catches accidental duplications early |
 | Event handlers removed/replaced on re-open | Prevents stale listener accumulation |
