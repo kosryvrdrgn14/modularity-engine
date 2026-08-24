@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Outer glow aura -->
+  <circle cx="12" cy="10" r="10" fill="#D2B4DE" opacity="0.15"/>
+  <!-- Ghost body - main shape -->
+  <path d="M6 10 Q6 2 12 2 Q18 2 18 10 L18 16 L16 14 L14 16 L12 14 L10 16 L8 14 L6 16 Z" fill="#8E44AD" opacity="0.85"/>
+  <!-- Inner body lighter -->
+  <path d="M8 10 Q8 5 12 5 Q16 5 16 10 L16 14 L14 13 L12 14 L10 13 L8 14 Z" fill="#9B59B6" opacity="0.5"/>
+  <!-- Face area -->
+  <ellipse cx="12" cy="8" rx="4" ry="3" fill="#6C3483" opacity="0.4"/>
+  <!-- Eyes -->
+  <ellipse cx="10.5" cy="7.5" rx="1.5" ry="1.8" fill="#D2B4DE"/>
+  <ellipse cx="13.5" cy="7.5" rx="1.5" ry="1.8" fill="#D2B4DE"/>
+  <!-- Pupils -->
+  <circle cx="10.5" cy="7.8" r="0.6" fill="#1A1A2E"/>
+  <circle cx="13.5" cy="7.8" r="0.6" fill="#1A1A2E"/>
+  <!-- Mouth -->
+  <ellipse cx="12" cy="10.5" rx="1.5" ry="1" fill="#6C3483" opacity="0.5"/>
+</svg>

@@ -1,0 +1,5241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Modularity Engine v0.2.0</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      width: 100%; height: 100%; 
+      overflow: hidden; 
+      background: #0a0a1a;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      z-index: 100;
+    }
+    #loading-screen h1 {
+      font-size: 32px;
+      color: #FFD700;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+    #loading-bar {
+      width: 300px;
+      height: 4px;
+      background: #1a1a2e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #loading-fill {
+      width: 0%;
+      height: 100%;
+      background: #3B82F6;
+      transition: width 0.3s;
+    }
+    #loading-status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+    #start-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 26, 0.92);
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      z-index: 99;
+      cursor: pointer;
+    }
+    #start-overlay h2 {
+      font-size: 28px;
+      color: #FFD700;
+      margin-bottom: 16px;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+    #start-overlay p {
+      font-size: 14px;
+      color: #888;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* === TITLE SCREEN === */
+    #title-screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a1a;
+      z-index: 100;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+    }
+    #title-screen.active { display: flex; }
+    #title-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.8;
+    }
+    #title-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 26, 0.5);
+    }
+    #title-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      max-width: 380px;
+      width: 90%;
+    }
+    #title-name {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #FFD700;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 2px 4px rgba(0,0,0,0.5);
+      text-align: center;
+      letter-spacing: 2px;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+    #title-subtitle {
+      font-size: 0.85rem;
+      color: #888;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-top: -16px;
+    }
+    #title-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 100%;
+      padding: 16px 20px;
+      background: rgba(10, 10, 26, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 215, 0, 0.12);
+      border-radius: 12px;
+    }
+    .menu-item {
+      padding: 12px 16px;
+      font-size: 1.1rem;
+      color: #ccc;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+    .menu-item:hover { background: rgba(255, 215, 0, 0.06); }
+    .menu-item.selected {
+      color: #FFD700;
+      background: rgba(255, 215, 0, 0.08);
+      transform: scale(1.02);
+    }
+    .menu-item.selected .menu-arrow { opacity: 1; }
+    .menu-arrow {
+      opacity: 0;
+      transition: opacity 0.15s;
+      font-size: 0.9rem;
+    }
+    .menu-item.locked {
+      color: #555;
+      cursor: default;
+      font-style: italic;
+    }
+    .menu-item.locked:hover { background: transparent; }
+    .menu-lock {
+      font-size: 0.85rem;
+      margin-left: auto;
+    }
+    #title-info {
+      display: flex;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #666;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #title-info span { white-space: nowrap; }
+    #title-controls-hint {
+      font-size: 0.7rem;
+      color: #444;
+      text-align: center;
+    }
+    #title-tooltip {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 40, 0.95);
+      color: #aaa;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 110;
+      white-space: nowrap;
+    }
+    #title-tooltip.visible { opacity: 1; }
+    /* Settings sub-screen */
+    #settings-screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 26, 0.92);
+      z-index: 105;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    #settings-screen.active { display: flex; }
+    #settings-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 340px;
+      width: 85%;
+    }
+    #settings-content h2 {
+      color: #FFD700;
+      font-size: 1.4rem;
+      text-align: center;
+      font-family: Georgia, serif;
+    }
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+    }
+    .setting-label {
+      color: #aaa;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-slider {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #2a2a4a;
+      border-radius: 3px;
+      outline: none;
+    }
+    .setting-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #FFD700;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .setting-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: #FFD700;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+    .setting-section-title {
+      color: #666;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 8px;
+    }
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      color: #888;
+      font-size: 0.85rem;
+      padding: 4px 0;
+    }
+    .controls-row span:last-child { color: #bbb; }
+    .settings-back {
+      margin-top: 12px;
+      padding: 10px;
+      color: #888;
+      font-size: 0.9rem;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: color 0.15s;
+    }
+    .settings-back:hover { color: #FFD700; }
+    .settings-danger {
+      margin-top: 8px;
+      padding: 10px;
+      color: #c44;
+      font-size: 0.85rem;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 1px solid rgba(204, 68, 68, 0.3);
+      transition: background 0.15s;
+    }
+    .settings-danger:hover { background: rgba(204, 68, 68, 0.1); }
+
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="loading-screen">
+    <h1>MODULARITY ENGINE</h1>
+    <div style="font-size: 12px; color: #666; margin-bottom: 20px;">v0.2.0</div>
+    <div id="loading-bar"><div id="loading-fill"></div></div>
+    <div id="loading-status">Loading...</div>
+  </div>
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <img id="title-bg" src="assets/title_background.svg" alt="" />
+    <div id="title-overlay"></div>
+    <div id="title-content">
+      <div id="title-name">Modularity Engine</div>
+      <div id="title-subtitle">A Vampire Survivors Experience</div>
+      <div id="title-menu">
+        <div class="menu-item selected" data-action="play" data-index="0">
+          <span class="menu-arrow">▶</span> Play
+        </div>
+        <div class="menu-item locked" data-action="characters" data-index="1">
+          <span class="menu-arrow">▶</span> Characters <span class="menu-lock">🔒</span>
+        </div>
+        <div class="menu-item locked" data-action="stages" data-index="2">
+          <span class="menu-arrow">▶</span> Stages <span class="menu-lock">🔒</span>
+        </div>
+        <div class="menu-item" data-action="settings" data-index="3">
+          <span class="menu-arrow">▶</span> Settings
+        </div>
+      </div>
+      <div id="title-info">
+        <span id="info-version">v0.2.0</span>
+        <span>│</span>
+        <span id="info-best-run">Best: --:-- Lv--</span>
+        <span>│</span>
+        <span id="info-total-gold">Gold: 0</span>
+      </div>
+      <div id="title-controls-hint">WASD / ↑↓ navigate · ENTER select</div>
+    </div>
+  </div>
+  <div id="title-tooltip"></div>
+
+  <!-- Settings Screen -->
+  <div id="settings-screen">
+    <div id="settings-content">
+      <h2>Settings</h2>
+      <div class="setting-group">
+        <div class="setting-label"><span>SFX Volume</span><span id="sfx-val">85%</span></div>
+        <input type="range" class="setting-slider" id="sfx-slider" min="0" max="100" value="85" />
+        <div class="setting-label"><span>Music Volume</span><span id="music-val">40%</span></div>
+        <input type="range" class="setting-slider" id="music-slider" min="0" max="100" value="40" />
+      </div>
+      <div class="setting-group">
+        <div class="setting-section-title">Controls</div>
+        <div class="controls-row"><span>Move</span><span>WASD / Arrow Keys</span></div>
+        <div class="controls-row"><span>Select Upgrade</span><span>1 / 2 / 3 / Click</span></div>
+        <div class="controls-row"><span>Pause</span><span>Esc</span></div>
+      </div>
+      <div class="settings-danger" id="reset-progress">Reset All Progress</div>
+      <div class="settings-back" id="settings-back">◀ Back</div>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+// PHASE 1: CORE INFRASTRUCTURE
+// EventBus, DataManager, GameState
+// ============================================================
+
+// --- EventBus ---
+// Central event routing with re-entrancy protection
+class EventBus {
+  constructor() {
+    this.listeners = new Map();
+    this.eventQueue = [];
+    this.processing = false;
+    this.maxNesting = 32;
+    this.nestingDepth = 0;
+  }
+
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+  }
+
+  off(event, callback) {
+    const list = this.listeners.get(event);
+    if (!list) return;
+    const idx = list.indexOf(callback);
+    if (idx !== -1) list.splice(idx, 1);
+  }
+
+  emit(event, data) {
+    // If already processing, queue for later (re-entrancy protection)
+    if (this.processing) {
+      if (this.nestingDepth < this.maxNesting) {
+        this.eventQueue.push({ event, data });
+      }
+      return;
+    }
+
+    this.processing = true;
+    this.nestingDepth = 0;
+    this._dispatch(event, data);
+    
+    // Process queued events
+    while (this.eventQueue.length > 0) {
+      const queued = this.eventQueue.shift();
+      this._dispatch(queued.event, queued.data);
+    }
+    
+    this.processing = false;
+  }
+
+  _dispatch(event, data) {
+    this.nestingDepth++;
+    const list = this.listeners.get(event);
+    if (list) {
+      for (let i = 0; i < list.length; i++) {
+        list[i](data);
+      }
+    }
+    this.nestingDepth--;
+  }
+
+  clear() {
+    this.listeners.clear();
+    this.eventQueue = [];
+    this.processing = false;
+    this.nestingDepth = 0;
+  }
+}
+
+// --- DataManager ---
+// Loads and validates JSON content files
+class DataManager {
+  constructor() {
+    this.characters = null;
+    this.weapons = null;
+    this.enemies = null;
+    this.stages = null;
+    this.pickups = null;
+    this.leveling = null;
+  }
+
+  async loadAll(onProgress) {
+    const files = [
+      { key: 'characters', path: 'content/characters.json' },
+      { key: 'weapons', path: 'content/weapons.json' },
+      { key: 'enemies', path: 'content/enemies.json' },
+      { key: 'stages', path: 'content/stages.json' },
+      { key: 'pickups', path: 'content/pickups.json' },
+      { key: 'leveling', path: 'content/leveling.json' },
+    ];
+
+    const results = await Promise.all(
+      files.map(async (file, idx) => {
+        if (onProgress) onProgress(idx / files.length, `Loading ${file.key}...`);
+        try {
+          const response = await fetch(file.path);
+          if (!response.ok) throw new Error(`Failed to load ${file.path}`);
+          const data = await response.json();
+          return { key: file.key, data, error: null };
+        } catch (error) {
+          console.warn(`Could not load ${file.path}, using embedded data`);
+          return { key: file.key, data: null, error };
+        }
+      })
+    );
+
+    // Use embedded data as fallback
+    for (const result of results) {
+      if (result.data) {
+        this[result.key] = result.data;
+      } else {
+        this[result.key] = this.getEmbeddedData(result.key);
+      }
+    }
+
+    if (onProgress) onProgress(1, 'Ready');
+    return true;
+  }
+
+  getEmbeddedData(key) {
+    return EMBEDDED_DATA[key];
+  }
+}
+
+// --- GameState ---
+// State machine with validated transitions
+class GameState {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.state = 'loading';
+    this.previousState = null;
+    this.endResult = null;
+    this.endStats = null;
+
+    // Valid transitions table
+    this.transitions = {
+      loading: ['menu', 'playing'],
+      menu: ['playing'],
+      playing: ['paused', 'levelUp', 'gameOver', 'bossIntro'],
+      paused: ['playing'],
+      levelUp: ['playing'],
+      bossIntro: ['playing'],
+      gameOver: ['endScreen'],
+      endScreen: ['menu', 'playing'],
+    };
+  }
+
+  canTransition(newState) {
+    const allowed = this.transitions[this.state];
+    return allowed && allowed.includes(newState);
+  }
+
+  setState(newState, data) {
+    if (!this.canTransition(newState)) {
+      console.warn(`Invalid transition: ${this.state} → ${newState}`);
+      return false;
+    }
+    this.previousState = this.state;
+    this.state = newState;
+    this.eventBus.emit('stateChange', { from: this.previousState, to: newState, data });
+    return true;
+  }
+
+  isPlaying() { return this.state === 'playing'; }
+  isPaused() { return this.state === 'paused'; }
+  isLevelUp() { return this.state === 'levelUp'; }
+  isGameOver() { return this.state === 'gameOver'; }
+  isEndScreen() { return this.state === 'endScreen'; }
+  isBossIntro() { return this.state === 'bossIntro'; }
+
+  triggerGameOver(result, stats) {
+    // Prevent multiple triggers
+    if (this.state === 'gameOver' || this.state === 'endScreen') return;
+    this.endResult = result;
+    this.endStats = stats;
+    this.setState('gameOver');
+  }
+
+  reset() {
+    this.state = 'menu';
+    this.previousState = null;
+    this.endResult = null;
+    this.endStats = null;
+  }
+}
+
+// ============================================================
+// EMBEDDED DATA (Fallback if JSON files not found)
+// ============================================================
+const EMBEDDED_DATA = {
+  characters: {
+    id: "player_default",
+    name: "The Survivor",
+    description: "A lone hero fighting through the night.",
+    stats: {
+      maxHealth: 100,
+      moveSpeed: 200,
+      armor: 0,
+      pickupRange: 50,
+      magnetRange: 0,
+      critChance: 0,
+      critMultiplier: 1.5
+    },
+    hitbox: { width: 20, height: 20 },
+    startingWeapon: "w1_projectile",
+    visual: { shape: "square", size: 24, color: "#FFD700" }
+  },
+
+  weapons: [
+    {
+      id: "w1_projectile", name: "Projectile", type: "projectile",
+      targeting: "nearest", unlockLevel: 1, orbDamageCooldown: 0,
+      statsPerLevel: [
+        { level: 1, damage: 8, cooldown: 1.00, projectileCount: 1 },
+        { level: 2, damage: 10, cooldown: 0.95, projectileCount: 1 },
+        { level: 3, damage: 12, cooldown: 0.90, projectileCount: 1 },
+        { level: 4, damage: 15, cooldown: 0.85, projectileCount: 1 },
+        { level: 5, damage: 18, cooldown: 0.80, projectileCount: 2 },
+        { level: 6, damage: 22, cooldown: 0.75, projectileCount: 2 },
+        { level: 7, damage: 28, cooldown: 0.65, projectileCount: 3 },
+      ],
+      powerSpikes: {
+        level4: { name: "Pierce", description: "Pierces +1 enemy", statModifiers: { pierceCount: 1 } },
+        level7: { name: "Split", description: "Splits into 3", statModifiers: { splitCount: 3 } },
+      },
+      visual: { shape: "square", color: "#FFD700" }
+    },
+    {
+      id: "w2_orbit", name: "Orbit", type: "orbit",
+      targeting: "self", unlockLevel: 3, orbDamageCooldown: 0.5,
+      statsPerLevel: [
+        { level: 1, damage: 5, cooldown: 2.00, orbitCount: 2, orbitSpeed: 2.00, orbitRadius: 80 },
+        { level: 2, damage: 6, cooldown: 1.85, orbitCount: 2, orbitSpeed: 1.85, orbitRadius: 85 },
+        { level: 3, damage: 7, cooldown: 1.70, orbitCount: 2, orbitSpeed: 1.70, orbitRadius: 90 },
+        { level: 4, damage: 9, cooldown: 1.55, orbitCount: 3, orbitSpeed: 1.55, orbitRadius: 120 },
+        { level: 5, damage: 11, cooldown: 1.40, orbitCount: 3, orbitSpeed: 1.40, orbitRadius: 130 },
+        { level: 6, damage: 13, cooldown: 1.30, orbitCount: 4, orbitSpeed: 1.30, orbitRadius: 140 },
+        { level: 7, damage: 16, cooldown: 1.00, orbitCount: 4, orbitSpeed: 1.00, orbitRadius: 160 },
+      ],
+      powerSpikes: {
+        level4: { name: "Expanded Orbit", description: "+50% radius, +1 orb", statModifiers: { orbitRadiusBonus: 0.50 } },
+        level7: { name: "Afterimage", description: "Damaging trails", statModifiers: { afterimageDuration: 0.5 } },
+      },
+      visual: { shape: "circle", color: "#4FC3F7" }
+    },
+    {
+      id: "weapon_area_pulse", name: "Area", type: "area",
+      targeting: "player_position", unlockLevel: 6, orbDamageCooldown: 0,
+      statsPerLevel: [
+        { level: 1, damage: 12, cooldown: 2.50, pulseRadius: 80, pulseCount: 1 },
+        { level: 2, damage: 15, cooldown: 2.35, pulseRadius: 88, pulseCount: 1 },
+        { level: 3, damage: 18, cooldown: 2.20, pulseRadius: 96, pulseCount: 1 },
+        { level: 4, damage: 22, cooldown: 2.00, pulseRadius: 110, pulseCount: 2 },
+        { level: 5, damage: 27, cooldown: 1.85, pulseRadius: 120, pulseCount: 2 },
+        { level: 6, damage: 33, cooldown: 1.70, pulseRadius: 135, pulseCount: 2 },
+        { level: 7, damage: 42, cooldown: 1.40, pulseRadius: 160, pulseCount: 3 },
+      ],
+      powerSpikes: {
+        level4: { name: "Double Pulse", description: "Fires twice", statModifiers: { pulseCountBonus: 1 } },
+        level7: { name: "Devastation", description: "Triple + stun", statModifiers: { thirdPulseStunDuration: 1.0 } },
+      },
+      visual: { shape: "circle", color: "#FF9100" }
+    },
+  ],
+
+  enemies: [
+    { id: "zombie", name: "Zombie", type: "normal",
+      stats: { hp: 10, damage: 5, speed: 40, size: 10, xpValue: 1, goldValue: 1, goldCoins: { min: 1, max: 2 } },
+      behavior: { pattern: "chase", params: { chaseSpeed: 40 } },
+      drops: { powerUpTable: [{ type: "pickup_weapon_level_up", chance: 0.01 }] },
+      spawn: { weight: 100, firstAppears: "0:00" }
+    },
+    { id: "bat", name: "Bat", type: "normal",
+      stats: { hp: 5, damage: 3, speed: 100, size: 8, xpValue: 1, goldValue: 1, goldCoins: { min: 1, max: 1 } },
+      behavior: { pattern: "swarm", params: { erraticism: 0.8 } },
+      drops: { powerUpTable: [{ type: "magnet", chance: 0.05 }] },
+      spawn: { weight: 80, firstAppears: "1:00" }
+    },
+    { id: "skeleton", name: "Skeleton", type: "normal",
+      stats: { hp: 20, damage: 8, speed: 50, size: 12, xpValue: 3, goldValue: 2, goldCoins: { min: 2, max: 3 } },
+      behavior: { pattern: "chase", params: { chaseSpeed: 50 } },
+      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "pickup_weapon_level_up", chance: 0.01 }] },
+      spawn: { weight: 60, firstAppears: "2:00" }
+    },
+    { id: "ghost", name: "Ghost", type: "normal",
+      stats: { hp: 15, damage: 10, speed: 80, size: 12, xpValue: 2, goldValue: 2, goldCoins: { min: 2, max: 3 } },
+      behavior: { pattern: "wander_chase", params: { wanderTime: 2, chaseTime: 4 } },
+      drops: { powerUpTable: [{ type: "magnet", chance: 0.05 }, { type: "pickup_weapon_level_up", chance: 0.01 }] },
+      spawn: { weight: 50, firstAppears: "2:30" }
+    },
+    { id: "caster", name: "Caster", type: "normal",
+      stats: { hp: 12, damage: 8, speed: 50, size: 13, xpValue: 3, goldValue: 3, goldCoins: { min: 3, max: 4 } },
+      behavior: { pattern: "ranged", params: { maintainDistance: 150, projectileDamage: 6, projectileSpeed: 150 } },
+      drops: { powerUpTable: [{ type: "screen_wipe", chance: 0.02 }, { type: "pickup_weapon_level_up", chance: 0.01 }] },
+      spawn: { weight: 45, firstAppears: "3:00" }
+    },
+    { id: "boss_gravekeeper", name: "The Gravekeeper", type: "boss",
+      stats: { hp: 1000, damage: 15, speed: 70, size: 28, xpValue: 50, goldValue: 1, goldCoins: { min: 20, max: 30 } },
+      behavior: { pattern: "boss_charge", params: { chargeDuration: 1.5, pauseDuration: 1.0 } },
+      intro: {
+        bossName: "The Gravekeeper",
+        bossSubtitle: "Guardian of the Forgotten Dead",
+        totalDuration: 3.5,
+        allowSkip: true,
+        dimColor: "rgba(0, 0, 0, 0.75)",
+        nameColor: "#FF4444",
+        subtitleColor: "#888888",
+        nameFontSize: 40,
+        subtitleFontSize: 18,
+      },
+      drops: { powerUpTable: [{ type: "pickup_weapon_level_up", chance: 1.0 }] },
+      spawn: { weight: 0, firstAppears: "4:00" },
+      phases: [
+        { hpThreshold: 1.0, speed: 70, chargeInterval: 3.0, chargeDuration: 1.5, pauseDuration: 1.0, minionCount: 3, minionInterval: 3.0 },
+        { hpThreshold: 0.5, speed: 100, chargeInterval: 2.0, chargeDuration: 1.5, pauseDuration: 0.8, minionCount: 5, minionInterval: 2.0,
+          groundPound: { interval: 5.0, radius: 80, damage: 20, telegraphTime: 0.75 } }
+      ],
+      loot: { xp: 50, gold: { min: 20, max: 30 }, guaranteedPowerUp: "pickup_weapon_level_up" },
+      screenWipeResistance: 0.8,
+      chargeResumeBehavior: "continue_from_frozen"
+    },
+  ],
+
+  stages: {
+    id: "stage_graveyard",
+    name: "The Graveyard",
+    theme: "Gothic horror",
+    background: { baseColor: "#1A1A2E", gridColor: "#16213E", gridSize: 50 },
+    spawnConfig: { minDistance: 400, maxDistance: 600, maxEnemies: 200, baseSpawnRate: 0.8, spawnRateCap: 3.0, maxEnemyCapBehavior: "stop_spawn" },
+    waves: [
+      { time: "0:00-0:30", enemyTypes: ["zombie"], spawnRate: 0.8, compositionWeights: { zombie: 1.0 }, maxEnemies: 25 },
+      { time: "0:30-1:00", enemyTypes: ["zombie"], spawnRate: 1.2, compositionWeights: { zombie: 1.0 }, maxEnemies: 40 },
+      { time: "1:00-1:30", enemyTypes: ["zombie", "bat"], spawnRate: 1.5, compositionWeights: { zombie: 0.55, bat: 0.45 }, maxEnemies: 60 },
+      { time: "1:30-2:00", enemyTypes: ["zombie", "bat"], spawnRate: 1.8, compositionWeights: { zombie: 0.55, bat: 0.45 }, maxEnemies: 80 },
+      { time: "2:00-2:30", enemyTypes: ["zombie", "bat", "skeleton"], spawnRate: 2.0, compositionWeights: { zombie: 0.40, bat: 0.35, skeleton: 0.25 }, maxEnemies: 100 },
+      { time: "2:30-3:00", enemyTypes: ["zombie", "bat", "skeleton", "ghost"], spawnRate: 2.2, compositionWeights: { zombie: 0.30, bat: 0.30, skeleton: 0.25, ghost: 0.15 }, maxEnemies: 120 },
+      { time: "3:00-3:30", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster"], spawnRate: 2.5, compositionWeights: { zombie: 0.25, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.15 }, maxEnemies: 150 },
+      { time: "3:30-4:00", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster"], spawnRate: 3.0, compositionWeights: { zombie: 0.20, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.20 }, maxEnemies: 180 },
+      { time: "4:00-4:30", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster", "boss_gravekeeper"], spawnRate: 2.0, compositionWeights: { zombie: 0.20, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.20 }, maxEnemies: 150 },
+      { time: "4:30-5:00", enemyTypes: ["zombie", "bat", "skeleton", "ghost", "caster", "boss_gravekeeper"], spawnRate: 1.5, compositionWeights: { zombie: 0.20, bat: 0.25, skeleton: 0.20, ghost: 0.15, caster: 0.20 }, maxEnemies: 120 },
+    ],
+    difficultyScaling: { hpMultiplier: "1 + 0.15 * minutes_after_boss_kill", damageMultiplier: "1 + 0.10 * minutes_after_boss_kill", timerStart: "boss_death_timestamp" },
+    xpScaling: { formula: "base_xp * (1 + 0.05 * floor(t / 60))" },
+    bossConfig: {
+      enemyId: "boss_gravekeeper", spawnTime: "4:00",
+      announcement: [
+        { time: 230, text: "Something stirs in the darkness...", type: "text", styling: { fontSize: 24, position: "center", animation: "fadeInHoldFadeOut" } },
+        { time: 230, type: "dim", brightness: 0.8 },
+        { time: 235, text: "The Gravekeeper rises!", type: "shake", styling: { fontSize: 28, position: "center", animation: "scalePulse" } },
+        { time: 240, type: "boss_spawn", position: "nearest_edge_to_player" }
+      ]
+    },
+    obstacles: {
+      types: 5, collisionRules: "player+enemies collide, projectiles+pickups pass through",
+      weights: { small_tombstone: 0.30, large_tombstone: 0.10, grave_mound: 0.25, broken_wall: 0.15, cracked_floor: 0.20 },
+      seedDerivation: "hash(stageId + difficultyLevel)"
+    }
+  },
+
+  pickups: [
+    { id: "exp_small", name: "XP Gem (Small)", type: "exp_small", value: 1,
+      visual: { shape: "diamond", color: "#4FC3F7", size: 8 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "zombie", chance: 1.0 }, { enemyId: "bat", chance: 1.0 }, { enemyId: "skeleton", chance: 1.0 }, { enemyId: "ghost", chance: 1.0 }, { enemyId: "caster", chance: 1.0 }], guaranteedDropEnemies: [], rollOrder: 0 }
+    },
+    { id: "exp_large", name: "XP Gem (Large)", type: "exp_large", value: 5,
+      visual: { shape: "diamond", color: "#81D4FA", size: 14 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [], guaranteedDropEnemies: ["boss_gravekeeper"], rollOrder: 0 }
+    },
+    { id: "gold_coin", name: "Gold Coin", type: "gold", value: 0,
+      visual: { shape: "circle", color: "#FFD700", size: 10 },
+      behavior: { duration: 30, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "zombie", chance: 1.0 }, { enemyId: "bat", chance: 1.0 }, { enemyId: "skeleton", chance: 1.0 }, { enemyId: "ghost", chance: 1.0 }, { enemyId: "caster", chance: 1.0 }, { enemyId: "boss_gravekeeper", chance: 1.0 }], guaranteedDropEnemies: [], rollOrder: 0 },
+      goldValuePerCoin: 1
+    },
+    { id: "screen_wipe", name: "Screen Wipe", type: "screen_wipe", value: 0,
+      visual: { shape: "star", color: "#00E676", size: 16 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "skeleton", chance: 0.02 }, { enemyId: "caster", chance: 0.02 }], guaranteedDropEnemies: [], rollOrder: 2 },
+      killsAllEnemies: true, bossDamage: 200, bossResistance: 0.8, powerUpDespawnTime: null
+    },
+    { id: "magnet", name: "Magnet", type: "magnet", value: 0,
+      visual: { shape: "circle", color: "#FF4081", size: 14 },
+      behavior: { duration: 10, attractRadius: 350, attractSpeed: 400, instantBurstRadius: 150 },
+      dropConfig: { sources: [{ enemyId: "bat", chance: 0.05 }, { enemyId: "ghost", chance: 0.05 }], guaranteedDropEnemies: [], rollOrder: 3 },
+      powerUpDespawnTime: null
+    },
+    { id: "pickup_weapon_level_up", name: "Weapon Level-Up", type: "pickup_weapon_level_up", value: 0,
+      visual: { shape: "triangle", color: "#FF9100", size: 16 },
+      behavior: { duration: null, attractRadius: 50, attractSpeed: 0, instantBurstRadius: 0 },
+      dropConfig: { sources: [{ enemyId: "zombie", chance: 0.01 }, { enemyId: "skeleton", chance: 0.01 }, { enemyId: "ghost", chance: 0.01 }, { enemyId: "caster", chance: 0.01 }], guaranteedDropEnemies: ["boss_gravekeeper"], rollOrder: 1 },
+      powerUpDespawnTime: null
+    },
+  ],
+
+  leveling: {
+    xpCurve: [
+      { level: 1, xpToNext: 5, cumulativeXp: 0 },
+      { level: 2, xpToNext: 10, cumulativeXp: 5 },
+      { level: 3, xpToNext: 15, cumulativeXp: 15 },
+      { level: 4, xpToNext: 22, cumulativeXp: 30 },
+      { level: 5, xpToNext: 32, cumulativeXp: 52 },
+      { level: 6, xpToNext: 45, cumulativeXp: 84 },
+      { level: 7, xpToNext: 62, cumulativeXp: 129 },
+      { level: 8, xpToNext: 85, cumulativeXp: 191 },
+      { level: 9, xpToNext: 115, cumulativeXp: 276 },
+      { level: 10, xpToNext: 155, cumulativeXp: 391 },
+      { level: 11, xpToNext: 210, cumulativeXp: 546 },
+      { level: 12, xpToNext: 280, cumulativeXp: 756 },
+      { level: 13, xpToNext: 375, cumulativeXp: 1036 },
+      { level: 14, xpToNext: 375, cumulativeXp: 1411 },
+    ],
+    formula: { forLevel: 14, expression: "floor(375 * 1.3^(N-14))" },
+    upgradePool: { weaponWeight: 0.6, passiveWeight: 0.4, weaponUnlockGuaranteed: true },
+    passiveOptions: [
+      { id: "max_health", name: "Max Health +20%", stat: "maxHealth", value: 0.20, description: "Increases maximum HP by 20%", maxStacks: 5, icon: "heart" },
+      { id: "move_speed", name: "Move Speed +10%", stat: "moveSpeed", value: 0.10, description: "Increases movement speed by 10%", maxStacks: 3, icon: "speed" },
+      { id: "armor", name: "Armor +1", stat: "armor", value: 1, description: "Reduces all damage by 1", maxStacks: 3, icon: "shield" },
+      { id: "pickup_range", name: "Pickup Range +25px", stat: "pickupRange", value: 25, description: "Collect pickups from further", maxStacks: 4, icon: "magnet" },
+      { id: "crit_chance", name: "Crit Chance +5%", stat: "critChance", value: 0.05, description: "5% chance for 1.5x damage", maxStacks: 4, icon: "star" },
+    ],
+    maxLevelUpQueue: 3,
+    excessXPBehavior: "carry_over",
+    maxHealthPassiveHealsCurrent: true,
+  },
+};
+
+// ============================================================
+// PHASE 2: GAME LOOP & CAMERA
+// ============================================================
+
+// --- GameLoop ---
+// Fixed-timestep update/render at 60 FPS
+class GameLoop {
+  constructor(updateFn, renderFn) {
+    this.updateFn = updateFn;
+    this.renderFn = renderFn;
+    this.running = false;
+    this.paused = false;
+    this.frameCount = 0;
+    this.timestep = 1000 / 60; // 16.67ms
+    this.accumulator = 0;
+    this.lastTime = 0;
+    this.maxDelta = 1000 / 30; // Clamp to 33ms (max 2 frames)
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.lastTime = performance.now();
+    this._loop(this.lastTime);
+  }
+
+  stop() {
+    this.running = false;
+  }
+
+  _loop(currentTime) {
+    if (!this.running) return;
+
+    let delta = currentTime - this.lastTime;
+    this.lastTime = currentTime;
+
+    // Clamp delta time (safeguard P7)
+    if (delta > this.maxDelta) delta = this.maxDelta;
+
+    this.accumulator += delta;
+
+    // Fixed-timestep updates
+    while (this.accumulator >= this.timestep) {
+      if (!this.paused) {
+        this.updateFn(this.timestep / 1000); // Pass delta in seconds
+        this.frameCount++;
+      }
+      this.accumulator -= this.timestep;
+    }
+
+    // Render
+    this.renderFn(this.accumulator / this.timestep);
+
+    requestAnimationFrame((t) => this._loop(t));
+  }
+}
+
+// --- Camera ---
+// Follows player with smooth lerp
+class Camera {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.x = 0;
+    this.y = 0;
+    this.targetX = 0;
+    this.targetY = 0;
+    this.lerp = 0.1;
+    this.shakeX = 0;
+    this.shakeY = 0;
+    this.shakeTimer = 0;
+    this.shakeIntensity = 0;
+  }
+
+  follow(target) {
+    this.targetX = target.x - this.canvas.width / 2;
+    this.targetY = target.y - this.canvas.height / 2;
+  }
+
+  shake(intensity, duration) {
+    this.shakeIntensity = intensity;
+    this.shakeTimer = duration;
+  }
+
+  update(dt) {
+    // Smooth lerp
+    this.x += (this.targetX - this.x) * this.lerp;
+    this.y += (this.targetY - this.y) * this.lerp;
+
+    // Screen shake
+    if (this.shakeTimer > 0) {
+      this.shakeTimer -= dt;
+      this.shakeX = (Math.random() - 0.5) * this.shakeIntensity * 2;
+      this.shakeY = (Math.random() - 0.5) * this.shakeIntensity * 2;
+    } else {
+      this.shakeX = 0;
+      this.shakeY = 0;
+    }
+  }
+
+  apply(ctx) {
+    ctx.translate(
+      Math.round(-this.x + this.shakeX),
+      Math.round(-this.y + this.shakeY)
+    );
+  }
+
+  screenToWorld(screenX, screenY) {
+    return { x: screenX + this.x, y: screenY + this.y };
+  }
+
+  worldToScreen(worldX, worldY) {
+    return { x: worldX - this.x, y: worldY - this.y };
+  }
+}
+
+// ============================================================
+// PHASE 3: INPUT SYSTEM
+// ============================================================
+
+// --- InputManager ---
+// Handles mouse/touch click-to-move and WASD/arrow keys
+class InputManager {
+  constructor(canvas, eventBus) {
+    this.canvas = canvas;
+    this.eventBus = eventBus;
+    
+    // Click/tap target
+    this.targetX = 0;
+    this.targetY = 0;
+    this.hasTarget = false;
+    
+    // WASD/Arrow state
+    this.keys = {};
+    
+    // Touch tracking
+    this.touchId = null;
+    
+    // Pause state (prevents movement clicks during levelUp/pause)
+    this._isPaused = false;
+    this._upgradeKeyLock = false;
+    
+    this._bindEvents();
+  }
+
+  _bindEvents() {
+    // Mouse
+    this.canvas.addEventListener('mousedown', (e) => this._onPointerDown(e.clientX, e.clientY));
+    this.canvas.addEventListener('mousemove', (e) => {
+      if (e.buttons & 1) this._onPointerMove(e.clientX, e.clientY);
+    });
+    
+    // Touch
+    this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.changedTouches[0];
+      this.touchId = touch.identifier;
+      this._onPointerDown(touch.clientX, touch.clientY);
+    });
+    this.canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const touch of e.changedTouches) {
+        if (touch.identifier === this.touchId) {
+          this._onPointerMove(touch.clientX, touch.clientY);
+        }
+      }
+    });
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.touchId = null;
+    });
+    
+    // Keyboard
+    window.addEventListener('keydown', (e) => {
+      this.keys[e.code] = true;
+      if (e.code === 'Escape') {
+        this.eventBus.emit('pause', { paused: true });
+      }
+      // Upgrade selection during levelUp state (debounced)
+      if (e.code === 'Digit1' || e.code === 'Numpad1') {
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 0 }); }
+      } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 1 }); }
+      } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
+        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 2 }); }
+      }
+      // Skip boss intro
+      if ((e.code === 'Enter' || e.code === 'Space') && this._game && this._game.gameState.isBossIntro()) {
+        this._game._skipIntroQueued = true;
+      }
+      // Restart on end screen
+      if (e.code === 'Enter' || e.code === 'Space') {
+        this.eventBus.emit('restart');
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      this.keys[e.code] = false;
+      // Reset upgrade lock when ANY number key is released
+      if (e.code === 'Digit1' || e.code === 'Numpad1' ||
+          e.code === 'Digit2' || e.code === 'Numpad2' ||
+          e.code === 'Digit3' || e.code === 'Numpad3') {
+        this._upgradeKeyLock = false;
+      }
+    });
+  }
+
+  _onPointerDown(screenX, screenY) {
+    // Reset keyboard lock on any click (cross-input cleanup)
+    this._upgradeKeyLock = false;
+    
+    const rect = this.canvas.getBoundingClientRect();
+    const x = (screenX - rect.left) * (this.canvas.width / rect.width);
+    const y = (screenY - rect.top) * (this.canvas.height / rect.height);
+    
+    // Check if clicking on upgrade cards during levelUp state (debounced)
+    const cardIndex = this._getUpgradeCardAt(x, y);
+    if (cardIndex >= 0) {
+      if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: cardIndex }); }
+      return;
+    }
+    
+    // Check if skipping boss intro
+    if (this._game && this._game.gameState.isBossIntro()) {
+      this._game._skipIntroQueued = true;
+      return;
+    }
+    // Check if clicking to restart on end screen
+    if (this._game && (this._game.gameState.isGameOver() || this._game.gameState.isEndScreen())) {
+      this.eventBus.emit('restart');
+      return;
+    }
+    
+    // Ignore movement clicks during levelUp/paused state
+    if (this._isPaused) return;
+    
+    this.targetX = x;
+    this.targetY = y;
+    this.hasTarget = true;
+  }
+
+  _getUpgradeCardAt(x, y) {
+    // Card layout must match UIManager._renderLevelUp()
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const cardWidth = 160;
+    const cardHeight = 200;
+    const spacing = 20;
+    const startX = (w - (cardWidth * 3 + spacing * 2)) / 2;
+    const cardY = h / 2 - 80;
+
+    for (let i = 0; i < 3; i++) {
+      const cardX = startX + i * (cardWidth + spacing);
+      if (x >= cardX && x <= cardX + cardWidth && y >= cardY && y <= cardY + cardHeight) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  _onPointerMove(screenX, screenY) {
+    const rect = this.canvas.getBoundingClientRect();
+    this.targetX = (screenX - rect.left) * (this.canvas.width / rect.width);
+    this.targetY = (screenY - rect.top) * (this.canvas.height / rect.height);
+  }
+
+  isKeyDown(code) {
+    return !!this.keys[code];
+  }
+
+  getMovement() {
+    let dx = 0, dy = 0;
+    if (this.isKeyDown('KeyW') || this.isKeyDown('ArrowUp')) dy -= 1;
+    if (this.isKeyDown('KeyS') || this.isKeyDown('ArrowDown')) dy += 1;
+    if (this.isKeyDown('KeyA') || this.isKeyDown('ArrowLeft')) dx -= 1;
+    if (this.isKeyDown('KeyD') || this.isKeyDown('ArrowRight')) dx += 1;
+    // Normalize diagonal
+    if (dx !== 0 && dy !== 0) {
+      const inv = 1 / Math.sqrt(2);
+      dx *= inv;
+      dy *= inv;
+    }
+    return { dx, dy };
+  }
+
+  clearTarget() {
+    this.hasTarget = false;
+  }
+}
+
+// ============================================================
+// PHASE 4: ENTITY MANAGEMENT
+// ============================================================
+
+// --- EntityManager ---
+// Object pooling for game entities
+class EntityManager {
+  constructor() {
+    this.entities = [];
+    this.nextId = 1;
+    this.pools = {
+      enemy: [],
+      projectile: [],
+      pickup: [],
+      orb: [],
+    };
+    this.poolLimits = {
+      enemy: 200,
+      projectile: 500,
+      pickup: 500,
+      orb: 50,
+    };
+  }
+
+  create(type, data) {
+    const entity = {
+      ...data,
+      id: this.nextId++,
+      type,
+      active: true,
+      x: data.x || 0,
+      y: data.y || 0,
+      vx: data.vx || 0,
+      vy: data.vy || 0,
+      hp: data.hp || 0,
+      maxHp: data.hp || 0,
+      damage: data.damage || 0,
+      speed: data.speed || 0,
+      size: data.size || 10,
+      stats: data.stats || {},
+      behavior: data.behavior || null,
+      weaponData: data.weaponData || null,
+      pickupData: data.pickupData || null,
+      visual: data.visual || {},
+      iFrames: 0,
+      age: 0,
+    };
+    this.entities.push(entity);
+    return entity;
+  }
+
+  destroy(entity) {
+    entity.active = false;
+  }
+
+  clearAll() {
+    this.entities = [];
+    this.nextId = 1;
+  }
+
+  getActive(type) {
+    if (type) {
+      return this.entities.filter(e => e.active && e.type === type);
+    }
+    return this.entities.filter(e => e.active);
+  }
+
+  getCount(type) {
+    return this.entities.filter(e => e.active && e.type === type).length;
+  }
+
+  cleanup() {
+    // Remove inactive entities (safeguard P6 - separate cleanup phase)
+    this.entities = this.entities.filter(e => e.active);
+  }
+
+  getPoolCount(type) {
+    return this.pools[type] ? this.pools[type].length : 0;
+  }
+}
+
+// ============================================================
+// PHASE 5: SPAWN SYSTEM
+// ============================================================
+
+// --- SpawnSystem ---
+// Spawns enemies based on wave timeline
+class SpawnSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.spawnTimer = 0;
+    this.gameTime = 0;
+    this.currentWave = 0;
+    this.bossSpawned = false;
+  }
+
+  update(dt) {
+    this.gameTime += dt;
+    if (this.gameManager) this.gameManager.update(dt);
+    
+    const stage = this.dataManager.stages;
+    const wave = this._getCurrentWave(stage.waves);
+    
+    if (!wave) return;
+    
+    // Check spawn cap
+    const enemyCount = this.entityManager.getCount('enemy') + this.entityManager.getCount('boss');
+    if (enemyCount >= wave.maxEnemies) return;
+    
+    // Spawn rate with accumulator pattern
+    this.spawnTimer += dt;
+    const spawnInterval = 1 / wave.spawnRate;
+    
+    while (this.spawnTimer >= spawnInterval) {
+      this.spawnTimer -= spawnInterval;
+      this._spawnEnemy(wave);
+    }
+    
+    // Boss spawn at 4:00 (240 seconds)
+    if (!this.bossSpawned && this.gameTime >= 240) {
+      this._spawnBoss();
+      this.bossSpawned = true;
+    }
+  }
+
+  _getCurrentWave(waves) {
+    for (let i = waves.length - 1; i >= 0; i--) {
+      const parts = waves[i].time.split('-');
+      const start = this._parseTime(parts[0]);
+      if (this.gameTime >= start) {
+        return waves[i];
+      }
+    }
+    return waves[0];
+  }
+
+  _parseTime(str) {
+    const [min, sec] = str.split(':').map(Number);
+    return min * 60 + sec;
+  }
+
+  _spawnEnemy(wave) {
+    const enemies = this.dataManager.enemies.filter(e => e.type === 'normal');
+    const weights = wave.compositionWeights;
+    
+    // Weighted random selection
+    let totalWeight = 0;
+    for (const enemy of enemies) {
+      totalWeight += (weights[enemy.id] || 0);
+    }
+    
+    if (totalWeight <= 0) return;
+    
+    let roll = Math.random() * totalWeight;
+    let selected = enemies[0];
+    
+    for (const enemy of enemies) {
+      roll -= (weights[enemy.id] || 0);
+      if (roll <= 0) {
+        selected = enemy;
+        break;
+      }
+    }
+    
+    // Spawn at random position around player
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 400 + Math.random() * 200;
+    const player = this.entityManager.getActive('player')[0];
+    const px = player ? player.x : 0;
+    const py = player ? player.y : 0;
+    
+    this.entityManager.create('enemy', {
+      x: px + Math.cos(angle) * dist,
+      y: py + Math.sin(angle) * dist,
+      hp: selected.stats.hp,
+      damage: selected.stats.damage,
+      speed: selected.stats.speed,
+      size: selected.stats.size,
+      enemyData: selected,
+      visual: { shape: 'square', color: this._getEnemyColor(selected.id) },
+    });
+  }
+
+  _spawnBoss() {
+    const boss = this.dataManager.enemies.find(e => e.type === 'boss');
+    if (!boss) return;
+    
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 500;
+    const player = this.entityManager.getActive('player')[0];
+    const px = player ? player.x : 0;
+    const py = player ? player.y : 0;
+    
+    this.entityManager.create('enemy', {
+      x: px + Math.cos(angle) * dist,
+      y: py + Math.sin(angle) * dist,
+      hp: boss.stats.hp,
+      damage: boss.stats.damage,
+      speed: boss.stats.speed,
+      size: boss.stats.size,
+      enemyData: boss,
+      isBoss: true,
+      visual: { shape: 'square', color: '#4A0000' },
+    });
+    
+    this.eventBus.emit('bossSpawn', { boss });
+  }
+
+  _getEnemyColor(id) {
+    const colors = {
+      zombie: '#3B8A30',   // Brighter green — visible against dark bg
+      bat: '#6B3FA0',      // Purple — was invisible (matched bg color)
+      skeleton: '#C0392B', // Bright red
+      ghost: '#8E44AD',    // Light purple
+      caster: '#2E86C1',   // Blue
+    };
+    return colors[id] || '#555';
+  }
+
+  reset() {
+    this.spawnTimer = 0;
+    this.gameTime = 0;
+    this.currentWave = 0;
+    this.bossSpawned = false;
+  }
+}
+
+// ============================================================
+// PHASE 6: MOVEMENT SYSTEM
+// ============================================================
+
+// --- MovementSystem ---
+// Handles player pathfinding and enemy movement
+class MovementSystem {
+  constructor(entityManager, inputManager) {
+    this.entityManager = entityManager;
+    this.inputManager = inputManager;
+  }
+
+  update(dt) {
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    // Player movement
+    this._movePlayer(player, dt);
+    
+    // Enemy movement
+    this._moveEnemies(player, dt);
+    
+    // Projectile movement
+    this._moveProjectiles(dt);
+    
+    // Pickup floating
+    this._updatePickups(dt);
+  }
+
+  _movePlayer(player, dt) {
+    const kb = this.inputManager.getMovement();
+    
+    if (kb.dx !== 0 || kb.dy !== 0) {
+      // WASD movement
+      player.x += kb.dx * player.speed * dt;
+      player.y += kb.dy * player.speed * dt;
+      this.inputManager.clearTarget();
+    } else if (this.inputManager.hasTarget) {
+      // Click/tap movement
+      const dx = this.inputManager.targetX - player.x;
+      const dy = this.inputManager.targetY - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist > 5) {
+        const speed = Math.min(player.speed * dt, dist);
+        player.x += (dx / dist) * speed;
+        player.y += (dy / dist) * speed;
+      } else {
+        this.inputManager.clearTarget();
+      }
+    }
+  }
+
+  _moveEnemies(player, dt) {
+    const enemies = this.entityManager.getActive('enemy');
+    
+    for (const enemy of enemies) {
+      if (enemy.isBoss) {
+        this._moveBoss(enemy, player, dt);
+        continue;
+      }
+      
+      const behavior = enemy.enemyData?.behavior?.pattern || 'chase';
+      const dx = player.x - enemy.x;
+      const dy = player.y - enemy.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (behavior === 'swarm') {
+        // Bat: fast with erratic movement
+        if (dist > 1) {
+          const erraticX = (Math.random() - 0.5) * 60;
+          const erraticY = (Math.random() - 0.5) * 60;
+          enemy.x += ((dx + erraticX) / dist) * enemy.speed * dt;
+          enemy.y += ((dy + erraticY) / dist) * enemy.speed * dt;
+        }
+      } else if (behavior === 'wander_chase') {
+        // Ghost: wander sometimes, chase other times
+        if (!enemy._wanderTimer) enemy._wanderTimer = 0;
+        if (!enemy._isChasing) enemy._isChasing = false;
+        enemy._wanderTimer -= dt;
+        if (enemy._wanderTimer <= 0) {
+          enemy._isChasing = !enemy._isChasing;
+          enemy._wanderTimer = enemy._isChasing ? 4 : 2;
+        }
+        if (enemy._isChasing && dist > 1) {
+          enemy.x += (dx / dist) * enemy.speed * dt;
+          enemy.y += (dy / dist) * enemy.speed * dt;
+        } else {
+          // Wander
+          if (!enemy._wanderDx) {
+            enemy._wanderDx = (Math.random() - 0.5) * 2;
+            enemy._wanderDy = (Math.random() - 0.5) * 2;
+          }
+          enemy.x += enemy._wanderDx * enemy.speed * 0.5 * dt;
+          enemy.y += enemy._wanderDy * enemy.speed * 0.5 * dt;
+        }
+      } else if (behavior === 'ranged') {
+        // Caster: maintain distance
+        const preferredDist = 150;
+        if (dist < preferredDist - 30 && dist > 1) {
+          // Too close, back away
+          enemy.x -= (dx / dist) * enemy.speed * dt;
+          enemy.y -= (dy / dist) * enemy.speed * dt;
+        } else if (dist > preferredDist + 30 && dist > 1) {
+          // Too far, approach
+          enemy.x += (dx / dist) * enemy.speed * dt;
+          enemy.y += (dy / dist) * enemy.speed * dt;
+        }
+        // Stand still if in range (ranged attackers don't chase)
+      } else {
+        // Default chase (zombie, skeleton)
+        if (dist > 1) {
+          enemy.x += (dx / dist) * enemy.speed * dt;
+          enemy.y += (dy / dist) * enemy.speed * dt;
+        } else {
+          enemy.x -= dt * 10;
+        }
+      }
+    }
+  }
+
+  _moveBoss(boss, player, dt) {
+    // Boss charge behavior
+    if (!boss._bossState) {
+      boss._bossState = 'chase';
+      boss._stateTimer = 3;
+      boss._chargeDir = { x: 0, y: 0 };
+    }
+    
+    boss._stateTimer -= dt;
+    const dx = player.x - boss.x;
+    const dy = player.y - boss.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (boss._bossState === 'chase') {
+      // Move toward player
+      if (dist > 1) {
+        boss.x += (dx / dist) * boss.speed * dt;
+        boss.y += (dy / dist) * boss.speed * dt;
+      }
+      if (boss._stateTimer <= 0) {
+        // Start charge windup
+        boss._bossState = 'windup';
+        boss._stateTimer = 1.2;
+        if (dist > 1) {
+          boss._chargeDir = { x: dx / dist, y: dy / dist };
+        }
+        // Spawn telegraph for charge warning zone
+        if (this.telegraphSystem) {
+          this.telegraphSystem.spawn({
+            shapeType: 'rectangle',
+            source: 'boss_charge',
+            sourceEntity: boss,
+            x: boss.x,
+            y: boss.y,
+            width: boss.size * 4,
+            height: 600,
+            angle: Math.atan2(boss._chargeDir.y, boss._chargeDir.x),
+            windupDuration: 1.2,
+            resolveDamage: false,
+            visual: {
+              fillColor: 'rgba(255, 145, 0, 0.25)',
+              strokeColor: 'rgba(255, 145, 0, 0.55)',
+              strokeWidth: 2,
+              flickerRate: 6,
+              chevrons: true,
+              chevronCount: 5,
+            },
+            windupSound: 'boss_charge_warn',
+          });
+        }
+
+      }
+    } else if (boss._bossState === 'windup') {
+      // Telegraph — orange warning zone shown to player
+      if (boss._stateTimer <= 0) {
+        boss._bossState = 'charge';
+        boss._stateTimer = 1.5;
+      }
+    } else if (boss._bossState === 'charge') {
+      // Rush toward player's position at high speed
+      boss.x += boss._chargeDir.x * boss.speed * 3 * dt;
+      boss.y += boss._chargeDir.y * boss.speed * 3 * dt;
+      if (boss._stateTimer <= 0) {
+        boss._bossState = 'pause';
+        boss._stateTimer = 1.0;
+      }
+    } else if (boss._bossState === 'pause') {
+      // Pause after charge
+      if (boss._stateTimer <= 0) {
+        boss._bossState = 'chase';
+        boss._stateTimer = 3;
+      }
+    }
+  }
+
+  _moveProjectiles(dt) {
+    const projectiles = this.entityManager.getActive('projectile');
+    
+    for (const proj of projectiles) {
+      proj.x += proj.vx * dt;
+      proj.y += proj.vy * dt;
+      proj.age = (proj.age || 0) + dt;
+      proj.distanceTraveled = (proj.distanceTraveled || 0) + Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy) * dt;
+      
+      // Despawn after 3 seconds or 600px traveled
+      if (proj.age > 3 || proj.distanceTraveled > 600) {
+        this.entityManager.destroy(proj);
+      }
+    }
+  }
+
+  _updatePickups(dt) {
+    const pickups = this.entityManager.getActive('pickup');
+    for (const pickup of pickups) {
+      pickup.age = (pickup.age || 0) + dt;
+      // Float animation
+      pickup.floatOffset = Math.sin(pickup.age * 3) * 2;
+    }
+  }
+}
+
+// ============================================================
+// PHASE 7: COLLISION SYSTEM
+// ============================================================
+
+// --- CollisionSystem ---
+// AABB collision detection
+class CollisionSystem {
+  constructor(entityManager, eventBus) {
+    this.entityManager = entityManager;
+    this.eventBus = eventBus;
+  }
+
+  update() {
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    const enemies = this.entityManager.getActive('enemy');
+    const projectiles = this.entityManager.getActive('projectile');
+    const pickups = this.entityManager.getActive('pickup');
+
+    // Player vs Enemy (contact damage)
+    for (const enemy of enemies) {
+      if (this._checkAABB(player, enemy)) {
+        this.eventBus.emit('contactDamage', { target: player, source: enemy, damage: enemy.damage });
+      }
+    }
+
+    // Projectile vs Enemy
+    for (const proj of projectiles) {
+      for (const enemy of enemies) {
+        if (this._checkAABB(proj, enemy)) {
+          this.eventBus.emit('projectileHit', { projectile: proj, target: enemy, damage: proj.damage });
+          this.entityManager.destroy(proj);
+          break;
+        }
+      }
+    }
+
+    // Orb vs Enemy
+    const orbs = this.entityManager.getActive('orb');
+    for (const orb of orbs) {
+      for (const enemy of enemies) {
+        if (this._checkAABB(orb, enemy)) {
+          // Check damage cooldown per enemy for this orb
+          if (!orb._hitEnemies) orb._hitEnemies = {};
+          const hitKey = enemy.id;
+          if (!orb._hitEnemies[hitKey] || orb._hitEnemies[hitKey] <= 0) {
+            this.eventBus.emit('projectileHit', { projectile: orb, target: enemy, damage: orb.damage });
+            orb._hitEnemies[hitKey] = 0.5; // 0.5s cooldown per enemy
+          }
+        }
+      }
+      // Decay hit cooldowns
+      if (orb._hitEnemies) {
+        for (const key in orb._hitEnemies) {
+          orb._hitEnemies[key] = Math.max(0, orb._hitEnemies[key] - 1/60);
+        }
+      }
+    }
+
+    // Player vs Pickup (proximity collection)
+    const collectRange = (player.stats.pickupRange || 50);
+    for (const pickup of pickups) {
+      const dx = pickup.x - player.x;
+      const dy = pickup.y - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < collectRange) {
+        this.eventBus.emit('pickup', { player, pickup });
+        this.entityManager.destroy(pickup);
+      }
+    }
+  }
+
+  _checkAABB(a, b) {
+    return a.x - a.size < b.x + b.size &&
+           a.x + a.size > b.x - b.size &&
+           a.y - a.size < b.y + b.size &&
+           a.y + a.size > b.y - b.size;
+  }
+}
+
+// ============================================================
+// PHASE 8: WEAPON SYSTEM
+// ============================================================
+
+// --- WeaponSystem ---
+// Handles weapon cooldowns, targeting, and firing
+class WeaponSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.weaponLevels = {};
+    this.cooldowns = {};
+  }
+
+  init(player) {
+    // Start with W1
+    this.weaponLevels['w1_projectile'] = 1;
+    this.cooldowns['w1_projectile'] = 0;
+  }
+
+  update(dt) {
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    // Update cooldowns
+    for (const weaponId in this.cooldowns) {
+      this.cooldowns[weaponId] = Math.max(0, this.cooldowns[weaponId] - dt);
+    }
+
+    // Fire weapons
+    this._fireW1(player, dt);
+    this._fireW2(player, dt);
+    this._fireW3(player, dt);
+  }
+
+  _fireW1(player, dt) {
+    const level = this.weaponLevels['w1_projectile'];
+    if (!level) return;
+
+    if (this.cooldowns['w1_projectile'] > 0) return;
+
+    const weapon = this.dataManager.weapons[0];
+    const stats = weapon.statsPerLevel[level - 1];
+    this.cooldowns['w1_projectile'] = stats.cooldown;
+
+    // Find nearest enemy
+    const enemies = this.entityManager.getActive('enemy');
+    if (enemies.length === 0) return;
+
+    let nearest = null;
+    let minDist = Infinity;
+    for (const enemy of enemies) {
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    if (!nearest) return;
+
+    // Fire projectile
+    const dx = nearest.x - player.x;
+    const dy = nearest.y - player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) return;  // Guard: enemy on top of player
+    const speed = 400;
+
+    const finalDamage = Math.floor(stats.damage * (player.damageMultiplier || 1));
+    const projCount = stats.projectileCount || 1;
+    const baseAngle = Math.atan2(dy, dx);
+    const spreadAngle = 0.25;
+    for (let i = 0; i < projCount; i++) {
+      const angle = projCount === 1 ? baseAngle : baseAngle + (i - (projCount - 1) / 2) * spreadAngle;
+      this.entityManager.create('projectile', {
+        x: player.x,
+        y: player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        damage: finalDamage,
+        size: 4,
+        visual: { shape: 'square', color: '#FFD700' },
+      });
+    }
+    // GAP 1 FIX: Emit weaponFire so AudioManager can play w1_fire
+    this.eventBus.emit('weaponFire', { weaponId: 'w1_projectile' });
+  }
+
+  _fireW2(player, dt) {
+    const level = this.weaponLevels['w2_orbit'];
+    if (!level) return;
+
+    const weapon = this.dataManager.weapons[1];
+    const stats = weapon.statsPerLevel[level - 1];
+    const orbCount = stats.orbitCount;
+
+    // Maintain orbs
+    const existingOrbs = this.entityManager.getActive('orb').filter(o => o.ownerId === player.id);
+    
+    // Remove excess orbs
+    while (existingOrbs.length > orbCount) {
+      this.entityManager.destroy(existingOrbs.pop());
+    }
+
+    // Create missing orbs
+    while (existingOrbs.length < orbCount) {
+      const orbDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
+      const orb = this.entityManager.create('orb', {
+        ownerId: player.id,
+        x: player.x,
+        y: player.y,
+        damage: orbDmg,
+        size: 6,
+        orbitAngle: (existingOrbs.length / orbCount) * Math.PI * 2,
+        orbitRadius: stats.orbitRadius,
+        orbitSpeed: stats.orbitSpeed,
+        visual: { shape: 'circle', color: '#4FC3F7' },
+      });
+      existingOrbs.push(orb);
+    }
+
+    // Update orb positions
+    for (const orb of existingOrbs) {
+      orb.orbitAngle += dt * (Math.PI * 2 / orb.orbitSpeed);
+      orb.x = player.x + Math.cos(orb.orbitAngle) * orb.orbitRadius;
+      orb.y = player.y + Math.sin(orb.orbitAngle) * orb.orbitRadius;
+    }
+  }
+
+  _fireW3(player, dt) {
+    const level = this.weaponLevels['weapon_area_pulse'];
+    if (!level) return;
+    // W3 is active — this line only prints once per fire cycle after cooldown
+
+    this.cooldowns['weapon_area_pulse'] = (this.cooldowns['weapon_area_pulse'] || 0) - dt;
+    if (this.cooldowns['weapon_area_pulse'] > 0) return;
+
+    const weapon = this.dataManager.weapons[2];
+    if (!weapon || !weapon.statsPerLevel) {
+      console.error('[W3] Weapon data missing!', weapon);
+      return;
+    }
+    const stats = weapon.statsPerLevel[level - 1];
+    if (!stats) {
+      console.error('[W3] Stats missing for level', level);
+      return;
+    }
+    this.cooldowns['weapon_area_pulse'] = stats.cooldown;
+
+    // Emit area pulse event(s) — queue-based (respects pause/game over)
+    const pulseDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
+    const pulseCount = stats.pulseCount || 1;
+    for (let i = 0; i < pulseCount; i++) {
+      this._w3PulseQueue.push({ delay: i * 0.25, elapsed: 0, dmg: pulseDmg, radius: stats.pulseRadius, pulseCount, fired: false });
+    }
+  }
+
+  _updateW3Pulses(dt) {
+    if (!this._w3PulseQueue || this._w3PulseQueue.length === 0) return;
+    const player = this.entityManager.getActive('player')[0];
+    for (let i = this._w3PulseQueue.length - 1; i >= 0; i--) {
+      const q = this._w3PulseQueue[i];
+      q.elapsed += dt;
+      if (q.elapsed >= q.delay && !q.fired) {
+        q.fired = true;
+        if (player) {
+          this.eventBus.emit('areaPulse', {
+            x: player.x, y: player.y,
+            damage: q.dmg, radius: q.radius,
+            pulseCount: q.pulseCount,
+          });
+        }
+      }
+      if (q.fired) this._w3PulseQueue.splice(i, 1);
+    }
+  }
+
+  levelUp(weaponId) {
+    const current = this.weaponLevels[weaponId] || 0;
+    if (current < 7) {
+      this.weaponLevels[weaponId] = current + 1;
+      this.eventBus.emit('weaponLevelUp', { weaponId, newLevel: current + 1 });
+    }
+  }
+
+  unlockWeapon(weaponId) {
+    if (!this.weaponLevels[weaponId]) {
+      this.weaponLevels[weaponId] = 1;
+      this.cooldowns[weaponId] = 0;
+    }
+  }
+
+  getWeaponLevel(weaponId) {
+    return this.weaponLevels[weaponId] || 0;
+  }
+
+  reset() {
+    this.weaponLevels = {};
+    this._w3PulseQueue = [];
+    this.cooldowns = {};
+  }
+}
+
+// ============================================================
+// PHASE 9: DAMAGE SYSTEM
+// ============================================================
+
+// --- DamageSystem ---
+// Applies damage, crits, knockback, invincibility
+class DamageSystem {
+  constructor(entityManager, eventBus, renderer) {
+    this.entityManager = entityManager;
+    this.eventBus = eventBus;
+    this.renderer = renderer;
+  }
+
+  init() {
+    this.eventBus.on('contactDamage', (data) => this._handleDamage(data.target, data.source, data.damage));
+    this.eventBus.on('projectileHit', (data) => this._handleProjectileHit(data));
+    this.eventBus.on('areaPulse', (data) => this._handleAreaPulse(data));
+  }
+
+  _handleDamage(target, source, baseDamage) {
+    if (!target || !target.active) return;
+    if (target.iFrames > 0) return;
+
+    // Apply armor
+    const armor = target.stats.armor || 0;
+    const afterArmor = Math.max(1, baseDamage - armor);
+
+    // Apply crit
+    const critChance = source.stats?.critChance || 0;
+    const critMultiplier = source.stats?.critMultiplier || 1.5;
+    const isCrit = Math.random() < critChance;
+    const finalDamage = isCrit ? Math.floor(afterArmor * critMultiplier) : afterArmor;
+
+    target.hp -= finalDamage;
+    target.iFrames = 0.5;
+
+    this.eventBus.emit('damage', {
+      target,
+      source,
+      damage: finalDamage,
+      isCrit,
+      position: { x: target.x, y: target.y },
+    });
+
+    if (target.hp <= 0) {
+      target.active = false;
+      this.eventBus.emit('death', {
+        entity: target,
+        killer: source,
+        position: { x: target.x, y: target.y },
+      });
+      // Boss death triggers victory
+      if (target.isBoss) {
+        this.eventBus.emit('bossDeath', { boss: target, killer: source });
+      }
+    }
+  }
+
+  _handleProjectileHit(data) {
+    const player = this.entityManager.getActive('player')[0];
+    this._handleDamage(data.target, { stats: player?.stats || {} }, data.projectile.damage);
+  }
+
+  _handleAreaPulse(data) {
+    const enemies = this.entityManager.getActive('enemy');
+    const player = this.entityManager.getActive('player')[0];
+    for (const enemy of enemies) {
+      const dx = enemy.x - data.x;
+      const dy = enemy.y - data.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < data.radius) {
+        this._handleDamage(enemy, { stats: player?.stats || {} }, data.damage);
+      }
+    }
+    // Visual pulse effect
+    if (this.renderer) {
+      this.renderer.addPulseEffect(data.x, data.y, data.radius, '#FF9100');
+    }
+  }
+
+  update(dt) {
+    // Update iFrames
+    const all = this.entityManager.getActive();
+    for (const entity of all) {
+      if (entity.iFrames > 0) {
+        entity.iFrames = Math.max(0, entity.iFrames - dt);
+      }
+    }
+  }
+}
+
+// ============================================================
+// PHASE 10: PICKUP SYSTEM
+// ============================================================
+
+// --- PickupSystem ---
+// Handles item drops and magnet attraction
+class PickupSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.magnetActive = false;
+    this.magnetTimer = 0;
+  }
+
+  setGameManager(gm) { this._gameManager = gm; }
+
+  init() {
+    this.eventBus.on('death', (data) => this._onEnemyDeath(data));
+    this.eventBus.on('magnetActivate', (data) => this._onMagnetActivate(data));
+  }
+
+  _onEnemyDeath(data) {
+    const enemy = data.entity;
+    if (!enemy.enemyData) return;
+
+    // Drop XP gem
+    this.entityManager.create('pickup', {
+      x: data.position.x + (Math.random() - 0.5) * 20,
+      y: data.position.y + (Math.random() - 0.5) * 20,
+      pickupData: { id: 'exp_small', value: enemy.enemyData.stats.xpValue },
+      visual: { shape: 'diamond', color: '#4FC3F7', size: 8 },
+    });
+
+    // Drop gold coins
+    const goldCoins = enemy.enemyData.stats.goldCoins;
+    if (goldCoins) {
+      const count = goldCoins.min + Math.floor(Math.random() * (goldCoins.max - goldCoins.min + 1));
+      for (let i = 0; i < count; i++) {
+        this.entityManager.create('pickup', {
+          x: data.position.x + (Math.random() - 0.5) * 60,
+          y: data.position.y + (Math.random() - 0.5) * 60,
+          pickupData: { id: 'gold_coin', value: 1 },
+          visual: { shape: 'circle', color: '#FFD700', size: 10 },
+        });
+      }
+    }
+
+    // Drop power-ups
+    const drops = enemy.enemyData.drops.powerUpTable;
+    for (const drop of drops) {
+      if (Math.random() < drop.chance) {
+        this.entityManager.create('pickup', {
+          x: data.position.x,
+          y: data.position.y,
+          pickupData: { id: drop.type },
+          visual: this._getPowerUpVisual(drop.type),
+          isPowerUp: true,
+        });
+        break;
+      }
+    }
+  }
+
+  _getPowerUpVisual(type) {
+    const visuals = {
+      screen_wipe: { shape: 'star', color: '#00E676', size: 16 },
+      magnet: { shape: 'circle', color: '#FF4081', size: 14 },
+      weapon_levelup: { shape: 'triangle', color: '#FF9100', size: 16 },
+    };
+    return visuals[type] || { shape: 'circle', color: '#FFF', size: 12 };
+  }
+
+  _onMagnetActivate(data) {
+    this.magnetActive = true;
+    this.magnetTimer = 10; // 10 seconds
+  }
+
+  update(dt) {
+    if (!this.magnetActive) return;
+
+    this.magnetTimer -= dt;
+    if (this.magnetTimer <= 0) {
+      this.magnetActive = false;
+      return;
+    }
+
+    // Attract pickups
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    const pickups = this.entityManager.getActive('pickup');
+    for (const pickup of pickups) {
+      const dx = player.x - pickup.x;
+      const dy = player.y - pickup.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 350 && dist > 0) {
+        const speed = 400;
+        pickup.x += (dx / dist) * speed * dt;
+        pickup.y += (dy / dist) * speed * dt;
+      }
+    }
+  }
+
+  reset() {
+    this.magnetActive = false;
+    this.magnetTimer = 0;
+  }
+}
+
+// ============================================================
+// PHASE 11: LEVELING SYSTEM
+// ============================================================
+
+// --- LevelingSystem ---
+// Tracks XP and triggers level-ups
+class LevelingSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.level = 1;
+    this.xp = 0;
+    this.queue = [];
+  }
+
+  init() {
+    this.eventBus.on('pickup', (data) => this._onPickup(data));
+    this.eventBus.on('death', (data) => this._onEnemyDeath(data));
+  }
+
+  _onPickup(data) {
+    if (data.pickup.pickupData?.id === 'exp_small') {
+      this.addXP(data.pickup.pickupData.value);
+    } else if (data.pickup.pickupData?.id === 'gold_coin') {
+      // Gold is tracked separately (not implemented yet)
+    }
+  }
+
+  _onEnemyDeath(data) {
+    // XP from kills is handled via pickups
+  }
+
+  addXP(amount) {
+    this.xp += amount;
+    
+    while (this.xp >= this._getXpToNext(this.level) && this.queue.length < 3) {
+      const xpNeeded = this._getXpToNext(this.level);
+      this.xp -= xpNeeded;
+      this.level++;
+      this.queue.push(this.level);
+      this.eventBus.emit('levelUp', { level: this.level });
+    }
+  }
+
+  _getXpToNext(level) {
+    const curve = this.dataManager.leveling.xpCurve;
+    const entry = curve.find(e => e.level === level);
+    if (entry) return entry.xpToNext;
+    // Formula for level 14+
+    return Math.floor(375 * Math.pow(1.3, level - 14));
+  }
+
+  hasPendingLevelUp() {
+    return this.queue.length > 0;
+  }
+
+  getNextLevel() {
+    return this.queue[0];
+  }
+
+  consumeLevelUp() {
+    return this.queue.shift();
+  }
+
+  reset() {
+    this.level = 1;
+    this.xp = 0;
+    this.queue = [];
+  }
+
+  update(dt) {
+    // Leveling system is event-driven, no per-frame updates needed
+    // This method exists for consistency with other systems
+  }
+}
+
+// ============================================================
+// PHASE 12: RENDERING
+// ============================================================
+
+// --- Renderer ---
+// Canvas 2D rendering
+// ─── ASSET MANAGER ─── Preloads SVGs as Image objects
+const ASSET_MAP = {
+  'player_square_#FFD700': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+CiAgPCEtLSBCb2R5IGJhc2UgLS0+CiAgPHJlY3QgeD0iMTIiIHk9IjgiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyOCIgcng9IjMiIGZpbGw9IiNGRkQ3MDAiLz4KICA8IS0tIERhcmsgZ29sZCBzaGFkb3cgZWRnZXMgLS0+CiAgPHJlY3QgeD0iMTIiIHk9IjgiIHdpZHRoPSIyNCIgaGVpZ2h0PSI0IiByeD0iMyIgZmlsbD0iI0I4ODYwQiIvPgogIDxyZWN0IHg9IjEyIiB5PSIzMiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjQiIHJ4PSIzIiBmaWxsPSIjQjg4NjBCIi8+CiAgPHJlY3QgeD0iMTIiIHk9IjgiIHdpZHRoPSI0IiBoZWlnaHQ9IjI4IiByeD0iMiIgZmlsbD0iI0I4ODYwQiIgb3BhY2l0eT0iMC40Ii8+CiAgPCEtLSBBcm1vciBjaGVzdCBwbGF0ZSAtLT4KICA8cmVjdCB4PSIxNiIgeT0iMTQiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNCIgcng9IjIiIGZpbGw9IiNGRkQ3MDAiLz4KICA8cmVjdCB4PSIxOCIgeT0iMTYiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMCIgcng9IjEiIGZpbGw9IiNGRkY4REMiLz4KICA8IS0tIEFybW9yIGhpZ2hsaWdodCAtLT4KICA8cmVjdCB4PSIyMCIgeT0iMTgiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIiBmaWxsPSIjRkZENzAwIiBvcGFjaXR5PSIwLjYiLz4KICA8IS0tIFZpc29yL2hlbG1ldCAtLT4KICA8cmVjdCB4PSIxOCIgeT0iNiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjQjg4NjBCIi8+CiAgPHJlY3QgeD0iMjAiIHk9IjgiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIiBmaWxsPSIjRkZENzAwIi8+CiAgPCEtLSBFeWUgc2xpdCAtLT4KICA8cmVjdCB4PSIyMSIgeT0iMTAiIHdpZHRoPSI2IiBoZWlnaHQ9IjIiIHJ4PSIwLjUiIGZpbGw9IiMxQTFBMkUiLz4KICA8IS0tIENhcGUvdHJhaWwgLS0+CiAgPHBhdGggZD0iTTE0IDM2IFEyNCA0NCAzNCAzNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQjg4NjBCIiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9IjAuNiIvPgogIDxwYXRoIGQ9Ik0xNiAzOCBRMjQgNDYgMzIgMzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRDcwMCIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz4KICA8IS0tIFNob3VsZGVyIGd1YXJkcyAtLT4KICA8cmVjdCB4PSI4IiB5PSIxMiIgd2lkdGg9IjYiIGhlaWdodD0iOCIgcng9IjIiIGZpbGw9IiNCODg2MEIiLz4KICA8cmVjdCB4PSIzNCIgeT0iMTIiIHdpZHRoPSI2IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjQjg4NjBCIi8+CiAgPHJlY3QgeD0iOSIgeT0iMTMiIHdpZHRoPSI0IiBoZWlnaHQ9IjYiIHJ4PSIxIiBmaWxsPSIjRkZENzAwIi8+CiAgPHJlY3QgeD0iMzUiIHk9IjEzIiB3aWR0aD0iNCIgaGVpZ2h0PSI2IiByeD0iMSIgZmlsbD0iI0ZGRDcwMCIvPgo8L3N2Zz4=',
+  'enemy_square_#3B8A30': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCI+CiAgPCEtLSBab21iaWUgYm9keSAtLT4KICA8cmVjdCB4PSI0IiB5PSI0IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjM0I4QTMwIi8+CiAgPCEtLSBEYXJrIHNoYWRvdyAtLT4KICA8cmVjdCB4PSI0IiB5PSI0IiB3aWR0aD0iMTIiIGhlaWdodD0iMyIgcng9IjIiIGZpbGw9IiMyRDZBMjUiLz4KICA8cmVjdCB4PSI0IiB5PSIxMyIgd2lkdGg9IjEyIiBoZWlnaHQ9IjMiIHJ4PSIyIiBmaWxsPSIjMkQ2QTI1Ii8+CiAgPCEtLSBSYWdnZWQgZWRnZXMgLS0+CiAgPHJlY3QgeD0iMyIgeT0iOCIgd2lkdGg9IjIiIGhlaWdodD0iMyIgZmlsbD0iIzNCOEEzMCIgb3BhY2l0eT0iMC43Ii8+CiAgPHJlY3QgeD0iMTUiIHk9IjkiIHdpZHRoPSIyIiBoZWlnaHQ9IjMiIGZpbGw9IiMzQjhBMzAiIG9wYWNpdHk9IjAuNyIvPgogIDwhLS0gSGlnaGxpZ2h0IC0tPgogIDxyZWN0IHg9IjYiIHk9IjYiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIiBmaWxsPSIjNUFBODRGIiBvcGFjaXR5PSIwLjUiLz4KICA8IS0tIEV5ZXMgLS0+CiAgPGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjEuNSIgZmlsbD0iI0ZGNDQ0NCIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iOCIgcj0iMS41IiBmaWxsPSIjRkY0NDQ0Ii8+CiAgPCEtLSBNb3V0aCAtLT4KICA8cmVjdCB4PSI3IiB5PSIxMSIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC41IiBmaWxsPSIjMUEzQTE1Ii8+CiAgPCEtLSBSZWFjaGluZyBhcm1zIC0tPgogIDxyZWN0IHg9IjIiIHk9IjYiIHdpZHRoPSIzIiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjMkQ2QTI1Ii8+CiAgPHJlY3QgeD0iMTUiIHk9IjYiIHdpZHRoPSIzIiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjMkQ2QTI1Ii8+Cjwvc3ZnPg==',
+  'enemy_square_#6B3FA0': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+CiAgPCEtLSBMZWZ0IHdpbmcgLS0+CiAgPHBhdGggZD0iTTcgNyBMMSAzIEwyIDcgTDEgOSBMNyA4IFoiIGZpbGw9IiM2QjNGQTAiLz4KICA8IS0tIFJpZ2h0IHdpbmcgLS0+CiAgPHBhdGggZD0iTTkgNyBMMTUgMyBMMTQgNyBMMTUgOSBMOSA4IFoiIGZpbGw9IiM2QjNGQTAiLz4KICA8IS0tIFdpbmcgaGlnaGxpZ2h0cyAtLT4KICA8cGF0aCBkPSJNNyA3IEwyIDQgTDMgNyBaIiBmaWxsPSIjOUI2RkQwIiBvcGFjaXR5PSIwLjUiLz4KICA8cGF0aCBkPSJNOSA3IEwxNCA0IEwxMyA3IFoiIGZpbGw9IiM5QjZGRDAiIG9wYWNpdHk9IjAuNSIvPgogIDwhLS0gQm9keSAtLT4KICA8ZWxsaXBzZSBjeD0iOCIgY3k9IjcuNSIgcng9IjIuNSIgcnk9IjMiIGZpbGw9IiM0QTJENzAiLz4KICA8IS0tIEhlYWQgLS0+CiAgPGNpcmNsZSBjeD0iOCIgY3k9IjUiIHI9IjIiIGZpbGw9IiM2QjNGQTAiLz4KICA8IS0tIEVhcnMgLS0+CiAgPHBvbHlnb24gcG9pbnRzPSI2LjUsMy41IDYsMS41IDcuNSwzLjUiIGZpbGw9IiM0QTJENzAiLz4KICA8cG9seWdvbiBwb2ludHM9IjkuNSwzLjUgMTAsMS41IDguNSwzLjUiIGZpbGw9IiM0QTJENzAiLz4KICA8IS0tIEV5ZXMgLS0+CiAgPGNpcmNsZSBjeD0iNy4yIiBjeT0iNSIgcj0iMC43IiBmaWxsPSIjRkY0NDQ0Ii8+CiAgPGNpcmNsZSBjeD0iOC44IiBjeT0iNSIgcj0iMC43IiBmaWxsPSIjRkY0NDQ0Ii8+Cjwvc3ZnPg==',
+  'enemy_square_#C0392B': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+CiAgPCEtLSBCb2R5L3JpYmNhZ2UgLS0+CiAgPHJlY3QgeD0iOCIgeT0iMTAiIHdpZHRoPSI4IiBoZWlnaHQ9IjEwIiByeD0iMiIgZmlsbD0iI0MwMzkyQiIvPgogIDxyZWN0IHg9IjkiIHk9IjExIiB3aWR0aD0iNiIgaGVpZ2h0PSI4IiByeD0iMSIgZmlsbD0iIzkyMkIyMSIvPgogIDwhLS0gUmliIGxpbmVzIC0tPgogIDxsaW5lIHgxPSIxMCIgeTE9IjEzIiB4Mj0iMTQiIHkyPSIxMyIgc3Ryb2tlPSIjRjVFNkNDIiBzdHJva2Utd2lkdGg9IjAuOCIgb3BhY2l0eT0iMC42Ii8+CiAgPGxpbmUgeDE9IjEwIiB5MT0iMTUiIHgyPSIxNCIgeTI9IjE1IiBzdHJva2U9IiNGNUU2Q0MiIHN0cm9rZS13aWR0aD0iMC44IiBvcGFjaXR5PSIwLjYiLz4KICA8bGluZSB4MT0iMTAiIHkxPSIxNyIgeDI9IjE0IiB5Mj0iMTciIHN0cm9rZT0iI0Y1RTZDQyIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuNiIvPgogIDwhLS0gU2t1bGwgLS0+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSI3IiByPSI0IiBmaWxsPSIjRjVFNkNDIi8+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSI3IiByPSIzLjUiIGZpbGw9IiNFOEQ1QjciLz4KICA8IS0tIEV5ZSBzb2NrZXRzIC0tPgogIDxlbGxpcHNlIGN4PSIxMC41IiBjeT0iNi41IiByeD0iMS4yIiByeT0iMSIgZmlsbD0iIzFBMUEyRSIvPgogIDxlbGxpcHNlIGN4PSIxMy41IiBjeT0iNi41IiByeD0iMS4yIiByeT0iMSIgZmlsbD0iIzFBMUEyRSIvPgogIDwhLS0gUmVkIGV5ZSBnbG93IC0tPgogIDxjaXJjbGUgY3g9IjEwLjUiIGN5PSI2LjUiIHI9IjAuNSIgZmlsbD0iI0ZGNDQ0NCIvPgogIDxjaXJjbGUgY3g9IjEzLjUiIGN5PSI2LjUiIHI9IjAuNSIgZmlsbD0iI0ZGNDQ0NCIvPgogIDwhLS0gSmF3IC0tPgogIDxyZWN0IHg9IjEwIiB5PSI5IiB3aWR0aD0iNCIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjUiIGZpbGw9IiNENEM0QTAiLz4KICA8IS0tIFNob3VsZGVyIGJvbmVzIC0tPgogIDxyZWN0IHg9IjQiIHk9IjEwIiB3aWR0aD0iNSIgaGVpZ2h0PSIyLjUiIHJ4PSIxIiBmaWxsPSIjQzAzOTJCIi8+CiAgPHJlY3QgeD0iMTUiIHk9IjEwIiB3aWR0aD0iNSIgaGVpZ2h0PSIyLjUiIHJ4PSIxIiBmaWxsPSIjQzAzOTJCIi8+CiAgPCEtLSBXZWFwb24gKHN3b3JkKSAtLT4KICA8cmVjdCB4PSIxOSIgeT0iNSIgd2lkdGg9IjIiIGhlaWdodD0iMTQiIHJ4PSIwLjUiIGZpbGw9IiM5MjJCMjEiLz4KICA8cmVjdCB4PSIxOCIgeT0iNCIgd2lkdGg9IjQiIGhlaWdodD0iMiIgcng9IjAuNSIgZmlsbD0iI0MwMzkyQiIvPgogIDxyZWN0IHg9IjE5LjUiIHk9IjUiIHdpZHRoPSIxIiBoZWlnaHQ9IjEyIiBmaWxsPSIjRjVFNkNDIiBvcGFjaXR5PSIwLjMiLz4KPC9zdmc+',
+  'enemy_square_#8E44AD': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+CiAgPCEtLSBPdXRlciBnbG93IGF1cmEgLS0+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSIxMCIgcj0iMTAiIGZpbGw9IiNEMkI0REUiIG9wYWNpdHk9IjAuMTUiLz4KICA8IS0tIEdob3N0IGJvZHkgLSBtYWluIHNoYXBlIC0tPgogIDxwYXRoIGQ9Ik02IDEwIFE2IDIgMTIgMiBRMTggMiAxOCAxMCBMMTggMTYgTDE2IDE0IEwxNCAxNiBMMTIgMTQgTDEwIDE2IEw4IDE0IEw2IDE2IFoiIGZpbGw9IiM4RTQ0QUQiIG9wYWNpdHk9IjAuODUiLz4KICA8IS0tIElubmVyIGJvZHkgbGlnaHRlciAtLT4KICA8cGF0aCBkPSJNOCAxMCBROCA1IDEyIDUgUTE2IDUgMTYgMTAgTDE2IDE0IEwxNCAxMyBMMTIgMTQgTDEwIDEzIEw4IDE0IFoiIGZpbGw9IiM5QjU5QjYiIG9wYWNpdHk9IjAuNSIvPgogIDwhLS0gRmFjZSBhcmVhIC0tPgogIDxlbGxpcHNlIGN4PSIxMiIgY3k9IjgiIHJ4PSI0IiByeT0iMyIgZmlsbD0iIzZDMzQ4MyIgb3BhY2l0eT0iMC40Ii8+CiAgPCEtLSBFeWVzIC0tPgogIDxlbGxpcHNlIGN4PSIxMC41IiBjeT0iNy41IiByeD0iMS41IiByeT0iMS44IiBmaWxsPSIjRDJCNERFIi8+CiAgPGVsbGlwc2UgY3g9IjEzLjUiIGN5PSI3LjUiIHJ4PSIxLjUiIHJ5PSIxLjgiIGZpbGw9IiNEMkI0REUiLz4KICA8IS0tIFB1cGlscyAtLT4KICA8Y2lyY2xlIGN4PSIxMC41IiBjeT0iNy44IiByPSIwLjYiIGZpbGw9IiMxQTFBMkUiLz4KICA8Y2lyY2xlIGN4PSIxMy41IiBjeT0iNy44IiByPSIwLjYiIGZpbGw9IiMxQTFBMkUiLz4KICA8IS0tIE1vdXRoIC0tPgogIDxlbGxpcHNlIGN4PSIxMiIgY3k9IjEwLjUiIHJ4PSIxLjUiIHJ5PSIxIiBmaWxsPSIjNkMzNDgzIiBvcGFjaXR5PSIwLjUiLz4KPC9zdmc+',
+  'enemy_square_#2E86C1': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNiAyNiI+CiAgPCEtLSBDbG9hayBzcHJlYWQgLS0+CiAgPGVsbGlwc2UgY3g9IjEzIiBjeT0iMTQiIHJ4PSIxMCIgcnk9IjkiIGZpbGw9IiMxQjRGNzIiLz4KICA8IS0tIElubmVyIHJvYmUgLS0+CiAgPGVsbGlwc2UgY3g9IjEzIiBjeT0iMTMiIHJ4PSI3IiByeT0iNyIgZmlsbD0iIzJFODZDMSIvPgogIDwhLS0gUm9iZSBoaWdobGlnaHQgLS0+CiAgPGVsbGlwc2UgY3g9IjEzIiBjeT0iMTEiIHJ4PSI1IiByeT0iNCIgZmlsbD0iIzM0OThEQiIgb3BhY2l0eT0iMC40Ii8+CiAgPCEtLSBIb29kIC0tPgogIDxwYXRoIGQ9Ik04IDEwIFExMyAyIDE4IDEwIiBmaWxsPSIjMUI0RjcyIi8+CiAgPHBhdGggZD0iTTkgMTAgUTEzIDQgMTcgMTAiIGZpbGw9IiMyRTg2QzEiLz4KICA8IS0tIEZhY2Ugc2hhZG93IC0tPgogIDxlbGxpcHNlIGN4PSIxMyIgY3k9IjkiIHJ4PSIzIiByeT0iMiIgZmlsbD0iIzBFMkEzRCIvPgogIDwhLS0gRXllcyAtLT4KICA8Y2lyY2xlIGN4PSIxMS41IiBjeT0iOSIgcj0iMC44IiBmaWxsPSIjQUVENkYxIi8+CiAgPGNpcmNsZSBjeD0iMTQuNSIgY3k9IjkiIHI9IjAuOCIgZmlsbD0iI0FFRDZGMSIvPgogIDwhLS0gU3RhZmYgLS0+CiAgPHJlY3QgeD0iMjAiIHk9IjQiIHdpZHRoPSIyIiBoZWlnaHQ9IjE4IiByeD0iMSIgZmlsbD0iIzVENEUzNyIvPgogIDxyZWN0IHg9IjIwLjUiIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjE2IiBmaWxsPSIjOEI3MzU1IiBvcGFjaXR5PSIwLjMiLz4KICA8IS0tIFN0YWZmIHRvcCBvcmIgLS0+CiAgPGNpcmNsZSBjeD0iMjEiIGN5PSI0IiByPSIzIiBmaWxsPSIjMDI4OEQxIiBvcGFjaXR5PSIwLjUiLz4KICA8Y2lyY2xlIGN4PSIyMSIgY3k9IjQiIHI9IjIiIGZpbGw9IiMyOUI2RjYiLz4KICA8Y2lyY2xlIGN4PSIyMSIgY3k9IjMuNSIgcj0iMSIgZmlsbD0iI0UxRjVGRSIvPgogIDwhLS0gTWFnaWMgZ2xvdyBsaW5lcyAtLT4KICA8bGluZSB4MT0iMjEiIHkxPSI0IiB4Mj0iMTgiIHkyPSI4IiBzdHJva2U9IiNBRUQ2RjEiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjQiLz4KICA8bGluZSB4MT0iMjEiIHkxPSI0IiB4Mj0iMjQiIHkyPSI4IiBzdHJva2U9IiNBRUQ2RjEiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjQiLz4KICA8bGluZSB4MT0iMjEiIHkxPSI0IiB4Mj0iMjEiIHkyPSI5IiBzdHJva2U9IiNBRUQ2RjEiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjQiLz4KPC9zdmc+',
+  'enemy_square_#4A0000': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1NiA1NiI+CiAgPCEtLSBEYXJrIGF1cmEgLS0+CiAgPGNpcmNsZSBjeD0iMjgiIGN5PSIyOCIgcj0iMjciIGZpbGw9IiMxQTAwMDAiIG9wYWNpdHk9IjAuMyIvPgogIDwhLS0gTWFzc2l2ZSBzaG91bGRlcnMvYXJtb3IgLS0+CiAgPHJlY3QgeD0iNCIgeT0iMTYiIHdpZHRoPSIxOCIgaGVpZ2h0PSIyMiIgcng9IjMiIGZpbGw9IiM0QTAwMDAiLz4KICA8cmVjdCB4PSIzNCIgeT0iMTYiIHdpZHRoPSIxOCIgaGVpZ2h0PSIyMiIgcng9IjMiIGZpbGw9IiM0QTAwMDAiLz4KICA8IS0tIFNob3VsZGVyIGFybW9yIHBsYXRlcyAtLT4KICA8cmVjdCB4PSI2IiB5PSIxOCIgd2lkdGg9IjE0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjM0EwMDAwIi8+CiAgPHJlY3QgeD0iMzYiIHk9IjE4IiB3aWR0aD0iMTQiIGhlaWdodD0iOCIgcng9IjIiIGZpbGw9IiMzQTAwMDAiLz4KICA8cmVjdCB4PSI4IiB5PSIxOSIgd2lkdGg9IjEwIiBoZWlnaHQ9IjYiIHJ4PSIxIiBmaWxsPSIjNUExMDEwIiBvcGFjaXR5PSIwLjYiLz4KICA8cmVjdCB4PSIzOCIgeT0iMTkiIHdpZHRoPSIxMCIgaGVpZ2h0PSI2IiByeD0iMSIgZmlsbD0iIzVBMTAxMCIgb3BhY2l0eT0iMC42Ii8+CiAgPCEtLSBCb2R5IGNvcmUgLS0+CiAgPHJlY3QgeD0iMTYiIHk9IjE0IiB3aWR0aD0iMjQiIGhlaWdodD0iMjgiIHJ4PSI0IiBmaWxsPSIjNEEwMDAwIi8+CiAgPCEtLSBDaGVzdCBwbGF0ZSAtLT4KICA8cmVjdCB4PSIyMCIgeT0iMTgiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgcng9IjIiIGZpbGw9IiMzQTAwMDAiLz4KICA8IS0tIFJ1bmUgY3JhY2tzIG9uIGNoZXN0IC0tPgogIDxsaW5lIHgxPSIyNCIgeTE9IjIwIiB4Mj0iMjgiIHkyPSIzMCIgc3Ryb2tlPSIjRkYxNzQ0IiBzdHJva2Utd2lkdGg9IjAuOCIgb3BhY2l0eT0iMC42Ii8+CiAgPGxpbmUgeDE9IjMyIiB5MT0iMjIiIHgyPSIyOCIgeTI9IjMyIiBzdHJva2U9IiNGRjE3NDQiIHN0cm9rZS13aWR0aD0iMC44IiBvcGFjaXR5PSIwLjYiLz4KICA8bGluZSB4MT0iMjIiIHkxPSIyOCIgeDI9IjM0IiB5Mj0iMjgiIHN0cm9rZT0iI0ZGMTc0NCIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuNCIvPgogIDwhLS0gU2t1bGwvZGVhdGggbWFzayAtLT4KICA8Y2lyY2xlIGN4PSIyOCIgY3k9IjEwIiByPSI3IiBmaWxsPSIjM0EwMDAwIi8+CiAgPGNpcmNsZSBjeD0iMjgiIGN5PSIxMCIgcj0iNiIgZmlsbD0iIzJBMDAwMCIvPgogIDwhLS0gQ3Jvd24vaG9ybnMgLS0+CiAgPHBvbHlnb24gcG9pbnRzPSIyMiw2IDIwLDEgMjQsNSIgZmlsbD0iIzRBMDAwMCIvPgogIDxwb2x5Z29uIHBvaW50cz0iMzQsNiAzNiwxIDMyLDUiIGZpbGw9IiM0QTAwMDAiLz4KICA8cG9seWdvbiBwb2ludHM9IjI4LDQgMjgsMCAzMCw0IiBmaWxsPSIjNUExMDEwIi8+CiAgPCEtLSBFeWUgc29ja2V0cyAtLT4KICA8ZWxsaXBzZSBjeD0iMjUiIGN5PSI5IiByeD0iMi41IiByeT0iMiIgZmlsbD0iIzFBMDAwMCIvPgogIDxlbGxpcHNlIGN4PSIzMSIgY3k9IjkiIHJ4PSIyLjUiIHJ5PSIyIiBmaWxsPSIjMUEwMDAwIi8+CiAgPCEtLSBHbG93aW5nIHJlZCBleWVzIC0tPgogIDxjaXJjbGUgY3g9IjI1IiBjeT0iOSIgcj0iMS41IiBmaWxsPSIjRkYxNzQ0Ii8+CiAgPGNpcmNsZSBjeD0iMzEiIGN5PSI5IiByPSIxLjUiIGZpbGw9IiNGRjE3NDQiLz4KICA8Y2lyY2xlIGN4PSIyNSIgY3k9IjguNSIgcj0iMC42IiBmaWxsPSIjRkY4QTgwIi8+CiAgPGNpcmNsZSBjeD0iMzEiIGN5PSI4LjUiIHI9IjAuNiIgZmlsbD0iI0ZGOEE4MCIvPgogIDwhLS0gSmF3L21vdXRoIC0tPgogIDxwYXRoIGQ9Ik0yMyAxMyBRMjggMTcgMzMgMTMiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFBMDAwMCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8IS0tIFNjeXRoZSBibGFkZSAtLT4KICA8cGF0aCBkPSJNNDQgNCBRNTIgMTAgNDggMjAgTDQ2IDE4IFE0OCAxMiA0NCA4IFoiIGZpbGw9IiM1QTEwMTAiLz4KICA8cGF0aCBkPSJNNDQgNCBRNTAgOSA0NyAxNyBMNDYgMTYgUTQ4IDExIDQ0IDcgWiIgZmlsbD0iIzdBMjAyMCIgb3BhY2l0eT0iMC41Ii8+CiAgPCEtLSBTY3l0aGUgaGFuZGxlIC0tPgogIDxyZWN0IHg9IjQyIiB5PSIxNiIgd2lkdGg9IjIuNSIgaGVpZ2h0PSIyMiIgcng9IjEiIGZpbGw9IiMzQTAwMDAiLz4KICA8cmVjdCB4PSI0Mi41IiB5PSIxNiIgd2lkdGg9IjEuNSIgaGVpZ2h0PSIyMCIgZmlsbD0iIzVBMTAxMCIgb3BhY2l0eT0iMC40Ii8+CiAgPCEtLSBCb3R0b20gYXJtb3IgcGxhdGVzIC0tPgogIDxyZWN0IHg9IjE4IiB5PSI0MCIgd2lkdGg9IjgiIGhlaWdodD0iMTAiIHJ4PSIyIiBmaWxsPSIjM0EwMDAwIi8+CiAgPHJlY3QgeD0iMzAiIHk9IjQwIiB3aWR0aD0iOCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IiMzQTAwMDAiLz4KPC9zdmc+',
+  'projectile_square_#FFD700': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4IDgiPgogIDwhLS0gT3V0ZXIgZ2xvdyAtLT4KICA8cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iNiIgaGVpZ2h0PSI2IiByeD0iMSIgZmlsbD0iI0ZGQTAwMCIgb3BhY2l0eT0iMC40Ii8+CiAgPCEtLSBDb3JlIHByb2plY3RpbGUgLS0+CiAgPHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjQiIGhlaWdodD0iNCIgcng9IjEiIGZpbGw9IiNGRkQ3MDAiLz4KICA8IS0tIEhvdCBjZW50ZXIgLS0+CiAgPHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjIiIGhlaWdodD0iMiIgcng9IjAuNSIgZmlsbD0iI0ZGRjhEQyIvPgo8L3N2Zz4=',
+  'orb_circle_#4FC3F7': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMiAxMiI+CiAgPCEtLSBPdXRlciBnbG93IHJpbmcgLS0+CiAgPGNpcmNsZSBjeD0iNiIgY3k9IjYiIHI9IjUuNSIgZmlsbD0iIzAyODhEMSIgb3BhY2l0eT0iMC4zIi8+CiAgPCEtLSBNYWluIG9yYiAtLT4KICA8Y2lyY2xlIGN4PSI2IiBjeT0iNiIgcj0iNCIgZmlsbD0iIzRGQzNGNyIvPgogIDwhLS0gSW5uZXIgZ2xvdyAtLT4KICA8Y2lyY2xlIGN4PSI2IiBjeT0iNiIgcj0iMi41IiBmaWxsPSIjODFENEZBIiBvcGFjaXR5PSIwLjciLz4KICA8IS0tIEhvdCBjZW50ZXIgLS0+CiAgPGNpcmNsZSBjeD0iNiIgY3k9IjUuNSIgcj0iMS41IiBmaWxsPSIjRTFGNUZFIi8+CiAgPCEtLSBTcGFya2xlIC0tPgogIDxjaXJjbGUgY3g9IjciIGN5PSI0IiByPSIwLjYiIGZpbGw9IiNGRkZGRkYiLz4KPC9zdmc+',
+  'pickup_diamond_#4FC3F7': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+CiAgPCEtLSBHZW0gZGlhbW9uZCBzaGFwZSAtLT4KICA8cG9seWdvbiBwb2ludHM9IjgsMSAxNCw4IDgsMTUgMiw4IiBmaWxsPSIjNEZDM0Y3Ii8+CiAgPCEtLSBGYWNldCBsaW5lcyAtLT4KICA8bGluZSB4MT0iOCIgeTE9IjEiIHgyPSI4IiB5Mj0iMTUiIHN0cm9rZT0iIzI5QjZGNiIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuNiIvPgogIDxsaW5lIHgxPSIyIiB5MT0iOCIgeDI9IjE0IiB5Mj0iOCIgc3Ryb2tlPSIjMjlCNkY2IiBzdHJva2Utd2lkdGg9IjAuNSIgb3BhY2l0eT0iMC42Ii8+CiAgPCEtLSBIaWdobGlnaHQgZmFjZXRzIC0tPgogIDxwb2x5Z29uIHBvaW50cz0iOCwxIDE0LDggOCw4IiBmaWxsPSIjQjNFNUZDIiBvcGFjaXR5PSIwLjQiLz4KICA8IS0tIFNwYXJrbGUgLS0+CiAgPGNpcmNsZSBjeD0iMTAiIGN5PSI0IiByPSIxIiBmaWxsPSIjRTFGNUZFIi8+CiAgPGNpcmNsZSBjeD0iMTAiIGN5PSI0IiByPSIwLjQiIGZpbGw9IiNGRkZGRkYiLz4KPC9zdmc+',
+  'pickup_circle_#FFD700': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCI+CiAgPCEtLSBDb2luIGJvZHkgLS0+CiAgPGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iOCIgZmlsbD0iI0ZGRDcwMCIvPgogIDwhLS0gRGFyayByaW0gLS0+CiAgPGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQjg4NjBCIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDwhLS0gSW5uZXIgcmluZyAtLT4KICA8Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSI2IiBmaWxsPSJub25lIiBzdHJva2U9IiNCODg2MEIiIHN0cm9rZS13aWR0aD0iMC44IiBvcGFjaXR5PSIwLjUiLz4KICA8IS0tIFNoaW5lIGFyYyAtLT4KICA8cGF0aCBkPSJNNiA2IFExMCA0IDE0IDYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRjhEQyIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDwhLS0gRG9sbGFyIHN5bWJvbCAtLT4KICA8dGV4dCB4PSIxMCIgeT0iMTMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzZXJpZiIgZm9udC1zaXplPSI5IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iI0I4ODYwQiI+JDwvdGV4dD4KPC9zdmc+',
+  'pickup_star_#00E676': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPCEtLSBPdXRlciBnbG93IC0tPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjE0IiBmaWxsPSIjNjlGMEFFIiBvcGFjaXR5PSIwLjIiLz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxMSIgZmlsbD0iIzY5RjBBRSIgb3BhY2l0eT0iMC4xNSIvPgogIDwhLS0gU3RhciBib2R5IC0tPgogIDxwb2x5Z29uIHBvaW50cz0iMTYsMiAxOS41LDExIDI5LDExIDIxLjUsMTcuNSAyNCwyNyAxNiwyMS41IDgsMjcgMTAuNSwxNy41IDMsMTEgMTIuNSwxMSIgZmlsbD0iIzAwRTY3NiIvPgogIDwhLS0gU3RhciBpbm5lciBoaWdobGlnaHQgLS0+CiAgPHBvbHlnb24gcG9pbnRzPSIxNiw2IDE4LjUsMTIgMjUsMTIgMjAsMTYgMjIsMjMgMTYsMTkgMTAsMjMgMTIsMTYgNywxMiAxMy41LDEyIiBmaWxsPSIjNjlGMEFFIiBvcGFjaXR5PSIwLjUiLz4KICA8IS0tIENlbnRlciBnbG93IC0tPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMTUiIHI9IjMiIGZpbGw9IiNCOUY2Q0EiIG9wYWNpdHk9IjAuNiIvPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMTUiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgb3BhY2l0eT0iMC41Ii8+CiAgPCEtLSBFbmVyZ3kgc3BhcmtzIC0tPgogIDxsaW5lIHgxPSIxNiIgeTE9IjAiIHgyPSIxNiIgeTI9IjQiIHN0cm9rZT0iIzY5RjBBRSIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjUiLz4KICA8bGluZSB4MT0iMzAiIHkxPSIxNiIgeDI9IjI2IiB5Mj0iMTYiIHN0cm9rZT0iIzY5RjBBRSIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjUiLz4KICA8bGluZSB4MT0iMiIgeTE9IjE2IiB4Mj0iNiIgeTI9IjE2IiBzdHJva2U9IiM2OUYwQUUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC41Ii8+CiAgPGxpbmUgeDE9IjE2IiB5MT0iMzAiIHgyPSIxNiIgeTI9IjI2IiBzdHJva2U9IiM2OUYwQUUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg==',
+  'pickup_circle_#FF4081': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCI+CiAgPCEtLSBNYWduZXRpYyBmaWVsZCBsaW5lcyAtLT4KICA8ZWxsaXBzZSBjeD0iMTQiIGN5PSIxNCIgcng9IjEyIiByeT0iMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGODBBQiIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuMjUiLz4KICA8ZWxsaXBzZSBjeD0iMTQiIGN5PSIxNCIgcng9IjEwIiByeT0iMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGODBBQiIgc3Ryb2tlLXdpZHRoPSIwLjYiIG9wYWNpdHk9IjAuMiIvPgogIDwhLS0gVS1tYWduZXQgc2hhcGUgLS0+CiAgPHBhdGggZD0iTTggOCBMOCAxOCBROCAyNCAxNCAyNCBRMjAgMjQgMjAgMTggTDIwIDgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGNDA4MSIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8IS0tIE5vcnRoIHBvbGUgKHJlZCkgLS0+CiAgPHJlY3QgeD0iNiIgeT0iNiIgd2lkdGg9IjUiIGhlaWdodD0iNiIgcng9IjEuNSIgZmlsbD0iI0Y1MDA1NyIvPgogIDx0ZXh0IHg9IjguNSIgeT0iMTEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjUiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5OPC90ZXh0PgogIDwhLS0gU291dGggcG9sZSAoYmx1ZSkgLS0+CiAgPHJlY3QgeD0iMTciIHk9IjYiIHdpZHRoPSI1IiBoZWlnaHQ9IjYiIHJ4PSIxLjUiIGZpbGw9IiMyOTc5RkYiLz4KICA8dGV4dCB4PSIxOS41IiB5PSIxMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNSIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNGRkYiPlM8L3RleHQ+CiAgPCEtLSBDZW50ZXIgZ2xvdyAtLT4KICA8Y2lyY2xlIGN4PSIxNCIgY3k9IjE2IiByPSIzIiBmaWxsPSIjRkY4MEFCIiBvcGFjaXR5PSIwLjQiLz4KICA8Y2lyY2xlIGN4PSIxNCIgY3k9IjE2IiByPSIxLjUiIGZpbGw9IiNGRjQwODEiIG9wYWNpdHk9IjAuNiIvPgo8L3N2Zz4=',
+  'pickup_triangle_#FF9100': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPCEtLSBPdXRlciBnbG93IC0tPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjE0IiBmaWxsPSIjRkZBQjQwIiBvcGFjaXR5PSIwLjE1Ii8+CiAgPCEtLSBVcHdhcmQgY2hldnJvbiAvIGFycm93IC0tPgogIDxwb2x5Z29uIHBvaW50cz0iMTYsMyAyOCwxOCAyMiwxOCAxNiwxMCAxMCwxOCA0LDE4IiBmaWxsPSIjRkY5MTAwIi8+CiAgPCEtLSBJbm5lciBjaGV2cm9uIGhpZ2hsaWdodCAtLT4KICA8cG9seWdvbiBwb2ludHM9IjE2LDcgMjQsMTcgMjAsMTcgMTYsMTEgMTIsMTcgOCwxNyIgZmlsbD0iI0ZGQUI0MCIgb3BhY2l0eT0iMC42Ii8+CiAgPCEtLSBDZW50ZXIgZ2xvdyAtLT4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIzIiBmaWxsPSIjRkZFMEIyIiBvcGFjaXR5PSIwLjUiLz4KICA8IS0tIFdlYXBvbiBpY29uIGhpbnQgKHNtYWxsIHN3b3JkIHNpbGhvdWV0dGUpIC0tPgogIDxyZWN0IHg9IjE1IiB5PSIxOCIgd2lkdGg9IjIiIGhlaWdodD0iOCIgcng9IjAuNSIgZmlsbD0iI0U2NTEwMCIgb3BhY2l0eT0iMC43Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjE4IiB3aWR0aD0iNiIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjUiIGZpbGw9IiNFNjUxMDAiIG9wYWNpdHk9IjAuNyIvPgogIDwhLS0gRW5lcmd5IHNwYXJrcyAtLT4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjMiIHI9IjEiIGZpbGw9IiNGRkFCNDAiIG9wYWNpdHk9IjAuNiIvPgogIDxjaXJjbGUgY3g9IjEwIiBjeT0iOCIgcj0iMC42IiBmaWxsPSIjRkZBQjQwIiBvcGFjaXR5PSIwLjQiLz4KICA8Y2lyY2xlIGN4PSIyMiIgY3k9IjgiIHI9IjAuNiIgZmlsbD0iI0ZGQUI0MCIgb3BhY2l0eT0iMC40Ii8+Cjwvc3ZnPg==',
+};
+
+async function preloadAssets(onProgress) {
+  const cache = {};
+  const entries = Object.entries(ASSET_MAP);
+  let loaded = 0;
+  for (const [key, path] of entries) {
+    const img = new Image();
+    img.src = path;
+    cache[key] = img;
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+    loaded++;
+    if (onProgress) onProgress(loaded / entries.length);
+  }
+  return cache;
+}
+
+// ============================================================
+// TELEGRAPH SYSTEM
+// Data-driven attack warnings and environmental hazard telegraphs
+// ============================================================
+
+class TelegraphSystem {
+  constructor(entityManager, eventBus) {
+    this.entityManager = entityManager;
+    this.eventBus = eventBus;
+    this.telegraphs = [];
+    this.hazards = [];
+    this.maxTelegraphs = 10;
+    this._nextId = 0;
+  }
+
+  spawn(config) {
+    if (this.telegraphs.length >= this.maxTelegraphs) {
+      this.telegraphs.shift();
+    }
+    const t = {
+      id: 'tg_' + (this._nextId++),
+      shapeType: config.shapeType || 'rectangle',
+      source: config.source || 'unknown',
+      sourceEntity: config.sourceEntity || null,
+      x: config.x || 0, y: config.y || 0,
+      width: config.width || 120, height: config.height || 400,
+      radius: config.radius || 80, innerRadius: config.innerRadius || 40,
+      angle: config.angle || 0, arcDegrees: config.arcDegrees || 90,
+      x1: config.x1 || 0, y1: config.y1 || 0,
+      x2: config.x2 || 100, y2: config.y2 || 200,
+      lineWidth: config.lineWidth || 30,
+      createdAt: 0, windupDuration: config.windupDuration || 1.0, elapsed: 0,
+      resolveDamage: config.resolveDamage !== false,
+      damage: config.damage || 0, knockback: config.knockback || 0,
+      visual: Object.assign({
+        fillColor: 'rgba(255, 145, 0, 0.25)', strokeColor: 'rgba(255, 145, 0, 0.55)',
+        strokeWidth: 2, flickerRate: 6, flickerMin: 0.15, flickerMax: 0.35,
+        chevrons: true, chevronCount: 5, chevronColor: 'rgba(255, 200, 0, 0.7)',
+        pulseScale: false, pulseScaleFrom: 0.8, outlineOnly: false, dangerIcon: null,
+      }, config.visual || {}),
+      windupSound: config.windupSound || null,
+      resolveSound: config.resolveSound || null,
+      onResolve: config.onResolve || null,
+    };
+    this.telegraphs.push(t);
+    this.eventBus.emit('telegraphSpawn', { telegraph: t });
+    return t;
+  }
+
+  spawnHazard(config) {
+    const h = {
+      id: 'hz_' + (this._nextId++),
+      shapeType: config.shapeType || 'circle',
+      x: config.x || 0, y: config.y || 0,
+      radius: config.radius || 60,
+      damage: config.damage || 3, tickInterval: config.tickInterval || 0.5,
+      duration: config.duration || 5.0, elapsed: 0, lastDamageTime: 0,
+      visual: Object.assign({
+        fillColor: 'rgba(255, 80, 0, 0.30)', strokeColor: 'rgba(255, 120, 0, 0.50)',
+        strokeWidth: 2,
+      }, config.visual || {}),
+    };
+    this.hazards.push(h);
+    return h;
+  }
+
+  update(dt) {
+    for (let i = this.telegraphs.length - 1; i >= 0; i--) {
+      const t = this.telegraphs[i];
+      t.elapsed += dt;
+      if (t.elapsed >= t.windupDuration) {
+        if (t.resolveDamage && t.damage > 0) this._resolveDamage(t);
+        if (t.onResolve) t.onResolve(t, this.entityManager);
+        if (t.resolveSound) this.eventBus.emit('playSound', { sound: t.resolveSound });
+        this.eventBus.emit('telegraphResolve', { telegraph: t });
+        this.telegraphs.splice(i, 1);
+      }
+    }
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      const h = this.hazards[i];
+      h.elapsed += dt;
+      if (h.elapsed - h.lastDamageTime >= h.tickInterval) {
+        h.lastDamageTime = h.elapsed;
+        this._resolveHazardDamage(h);
+      }
+      if (h.elapsed >= h.duration) this.hazards.splice(i, 1);
+    }
+  }
+
+  _resolveDamage(t) {
+    const players = this.entityManager.getActive('player');
+    for (const player of players) {
+      if (this._isPointInTelegraph(player.x, player.y, t)) {
+        if (player.iFrames > 0) continue;
+        player.hp -= t.damage;
+        player.iFrames = 0.5;
+        this.eventBus.emit('damage', {
+          entity: player, damage: t.damage, source: t.source,
+          position: { x: player.x, y: player.y },
+        });
+        if (t.knockback > 0 && t.sourceEntity) {
+          const dx = player.x - t.sourceEntity.x;
+          const dy = player.y - t.sourceEntity.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          player.x += (dx / dist) * t.knockback;
+          player.y += (dy / dist) * t.knockback;
+        }
+      }
+    }
+  }
+
+  _resolveHazardDamage(h) {
+    const players = this.entityManager.getActive('player');
+    for (const player of players) {
+      if (this._isPointInHazard(player.x, player.y, h)) {
+        if (player.iFrames > 0) continue;
+        player.hp -= h.damage;
+        player.iFrames = 0.3;
+        this.eventBus.emit('damage', {
+          entity: player, damage: h.damage, source: 'hazard',
+          position: { x: player.x, y: player.y },
+        });
+      }
+    }
+  }
+
+  _isPointInTelegraph(px, py, t) {
+    switch (t.shapeType) {
+      case 'rectangle': {
+        const dx = px - t.x, dy = py - t.y;
+        const cos = Math.cos(-t.angle), sin = Math.sin(-t.angle);
+        const lx = dx * cos - dy * sin, ly = dx * sin + dy * cos;
+        return Math.abs(lx) <= t.width / 2 && Math.abs(ly) <= t.height / 2;
+      }
+      case 'circle': {
+        const dx = px - t.x, dy = py - t.y;
+        return Math.sqrt(dx * dx + dy * dy) <= t.radius;
+      }
+      case 'ring': {
+        const dx = px - t.x, dy = py - t.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist >= t.innerRadius && dist <= t.radius;
+      }
+      case 'cone': {
+        const dx = px - t.x, dy = py - t.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > t.radius) return false;
+        const angle = Math.atan2(dy, dx);
+        const halfArc = (t.arcDegrees * Math.PI / 180) / 2;
+        let diff = angle - t.angle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        return Math.abs(diff) <= halfArc;
+      }
+      case 'line': {
+        const dx = t.x2 - t.x1, dy = t.y2 - t.y1;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return Math.sqrt((px - t.x1) ** 2 + (py - t.y1) ** 2) <= t.lineWidth / 2;
+        let t2 = ((px - t.x1) * dx + (py - t.y1) * dy) / lenSq;
+        t2 = Math.max(0, Math.min(1, t2));
+        const cx = t.x1 + t2 * dx, cy = t.y1 + t2 * dy;
+        return Math.sqrt((px - cx) ** 2 + (py - cy) ** 2) <= t.lineWidth / 2;
+      }
+      case 'cross': {
+        const armHalf = (t.width || 20) / 2, armLen = t.height || 100;
+        if (Math.abs(px - t.x) <= armLen / 2 && Math.abs(py - t.y) <= armHalf) return true;
+        if (Math.abs(px - t.x) <= armHalf && Math.abs(py - t.y) <= armLen / 2) return true;
+        return false;
+      }
+      default: return false;
+    }
+  }
+
+  _isPointInHazard(px, py, h) {
+    if (h.shapeType === 'circle') {
+      const dx = px - h.x, dy = py - h.y;
+      return Math.sqrt(dx * dx + dy * dy) <= h.radius;
+    }
+    return false;
+  }
+
+  render(ctx) {
+    for (const h of this.hazards) this._drawHazard(ctx, h);
+    for (const t of this.telegraphs) this._drawTelegraph(ctx, t);
+  }
+
+  _drawTelegraph(ctx, t) {
+    const v = t.visual;
+    const progress = t.elapsed / t.windupDuration;
+    const flicker = v.flickerMin + (v.flickerMax - v.flickerMin) *
+      (0.5 + 0.5 * Math.sin(Date.now() * 0.001 * v.flickerRate * Math.PI * 2));
+    let scale = 1;
+    if (v.pulseScale) scale = v.pulseScaleFrom + (1 - v.pulseScaleFrom) * progress;
+
+    ctx.save();
+    switch (t.shapeType) {
+      case 'rectangle': {
+        ctx.translate(t.x, t.y); ctx.rotate(t.angle);
+        const w = t.width * scale, h = t.height * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.fillRect(-w/2, -h/2, w, h);
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.strokeRect(-w/2, -h/2, w, h);
+        if (v.chevrons && v.chevronCount > 0) {
+          ctx.strokeStyle = v.chevronColor; ctx.lineWidth = 2.5;
+          const spacing = h / (v.chevronCount + 1);
+          for (let i = 1; i <= v.chevronCount; i++) {
+            const cy = -h/2 + i * spacing;
+            ctx.beginPath(); ctx.moveTo(-6, cy - 6); ctx.lineTo(0, cy); ctx.lineTo(-6, cy + 6); ctx.stroke();
+          }
+        }
+        break;
+      }
+      case 'circle': {
+        const r = t.radius * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, Math.PI * 2); ctx.stroke();
+        if (v.dangerIcon) {
+          ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#FFF'; ctx.fillText(v.dangerIcon, t.x, t.y);
+        }
+        break;
+      }
+      case 'ring': {
+        const outerR = t.radius * scale, innerR = t.innerRadius * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.beginPath(); ctx.arc(t.x, t.y, outerR, 0, Math.PI * 2);
+          ctx.arc(t.x, t.y, innerR, 0, Math.PI * 2, true); ctx.fill();
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.beginPath(); ctx.arc(t.x, t.y, outerR, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(t.x, t.y, innerR, 0, Math.PI * 2); ctx.stroke();
+        break;
+      }
+      case 'cone': {
+        const r = t.radius * scale;
+        const halfArc = (t.arcDegrees * Math.PI / 180) / 2;
+        ctx.beginPath(); ctx.moveTo(t.x, t.y);
+        ctx.arc(t.x, t.y, r, t.angle - halfArc, t.angle + halfArc); ctx.closePath();
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')'); ctx.fill();
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth; ctx.stroke();
+        break;
+      }
+      case 'line': {
+        ctx.strokeStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+        ctx.lineWidth = t.lineWidth * scale; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+        break;
+      }
+      case 'cross': {
+        const armHalf = (t.width || 20) / 2 * scale, armLen = (t.height || 100) * scale;
+        if (!v.outlineOnly) {
+          ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
+          ctx.fillRect(t.x - armLen/2, t.y - armHalf, armLen, armHalf*2);
+          ctx.fillRect(t.x - armHalf, t.y - armLen/2, armHalf*2, armLen);
+        }
+        ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
+        ctx.strokeRect(t.x - armLen/2, t.y - armHalf, armLen, armHalf*2);
+        ctx.strokeRect(t.x - armHalf, t.y - armLen/2, armHalf*2, armLen);
+        break;
+      }
+    }
+    ctx.restore();
+  }
+
+  _drawHazard(ctx, h) {
+    const v = h.visual;
+    ctx.save();
+    ctx.globalAlpha = 0.6 + 0.2 * Math.sin(Date.now() * 0.005);
+    if (h.shapeType === 'circle') {
+      ctx.fillStyle = v.fillColor;
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  clearAll() { this.telegraphs = []; this.hazards = []; }
+
+  getActiveAt(x, y) {
+    const results = [];
+    for (const t of this.telegraphs) {
+      if (this._isPointInTelegraph(x, y, t)) results.push(t);
+    }
+    for (const h of this.hazards) {
+      if (this._isPointInHazard(x, y, h)) results.push(h);
+    }
+    return results;
+  }
+}
+
+
+class Renderer {
+  constructor(canvas, camera) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.camera = camera;
+    this.pulseEffects = [];
+    this.bossEntity = null;
+    this._telegraphSystem = null;
+    this._announcements = [];
+    this._announcementTimer = 0;
+    this._dimOverlay = null;
+    this.imageCache = null;
+  }
+
+  addPulseEffect(x, y, radius, color) {
+    this.pulseEffects.push({ x, y, radius, color, age: 0, maxAge: 0.5 });
+  }
+
+  _updateAndDrawPulses(dt) {
+    for (let i = this.pulseEffects.length - 1; i >= 0; i--) {
+      const p = this.pulseEffects[i];
+      p.age += dt || 1/60;
+      if (p.age >= p.maxAge) {
+        this.pulseEffects.splice(i, 1);
+        continue;
+      }
+      const progress = p.age / p.maxAge;
+      const currentRadius = p.radius * progress;
+      const ctx = this.ctx;
+      
+      // Semi-transparent fill (shockwave body)
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = 0.25 * (1 - progress);
+      ctx.fill();
+      
+      // Bright stroke (shockwave edge)
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = p.color;
+      ctx.globalAlpha = 0.7 * (1 - progress);
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  clear() {
+    this.ctx.fillStyle = '#1A1A2E';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  render(entities, player) {
+    this.clear();
+    this.ctx.save();
+    this.camera.apply(this.ctx);
+
+    // Draw grid
+    this._drawGrid();
+
+    // Draw telegraphs and hazards (under entities)
+    if (this._telegraphSystem) this._telegraphSystem.render(this.ctx);
+
+    // Draw entities (y-sorted, filter active first to avoid NaN from dead entities)
+    const sorted = entities.filter(e => e.active).sort((a, b) => a.y - b.y);
+    for (const entity of sorted) {
+      this._drawEntity(entity);
+    }
+
+    // Draw pulse effects (after entities, before camera restore)
+    this._updateAndDrawPulses(1/60);
+
+    this.ctx.restore();
+
+    // Draw UI overlay (not affected by camera)
+    this._drawUI(player);
+  }
+
+  _drawGrid() {
+    const gridSize = 50;
+    const startX = Math.floor(this.camera.x / gridSize) * gridSize;
+    const startY = Math.floor(this.camera.y / gridSize) * gridSize;
+    
+    this.ctx.strokeStyle = '#16213E';
+    this.ctx.lineWidth = 1;
+    
+    for (let x = startX; x < this.camera.x + this.canvas.width + gridSize; x += gridSize) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, this.camera.y);
+      this.ctx.lineTo(x, this.camera.y + this.canvas.height);
+      this.ctx.stroke();
+    }
+    for (let y = startY; y < this.camera.y + this.canvas.height + gridSize; y += gridSize) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.camera.x, y);
+      this.ctx.lineTo(this.camera.x + this.canvas.width, y);
+      this.ctx.stroke();
+    }
+  }
+
+  _drawEntity(entity) {
+    const ctx = this.ctx;
+    ctx.save();
+    
+    // iFrame blink
+    if (entity.iFrames > 0 && Math.floor(entity.iFrames * 10) % 2 === 0) {
+      ctx.globalAlpha = 0.5;
+    }
+
+    const x = Math.round(entity.x);
+    const y = Math.round(entity.y);
+    const size = entity.size;
+    const color = entity.visual?.color || '#FFF';
+    const shape = entity.visual?.shape || 'square';
+
+    // SVG REPLACEMENT: check image cache first, fall back to shapes
+    const cacheKey = (entity.type || 'unknown') + '_' + shape + '_' + color;
+    const svgImage = this.imageCache && this.imageCache[cacheKey];
+    if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
+      const drawSize = size * 2;
+      ctx.drawImage(svgImage, x - size, y - size, drawSize, drawSize);
+    } else {
+      ctx.fillStyle = color;
+      if (shape === 'square') {
+        ctx.fillRect(x - size, y - size, size * 2, size * 2);
+      } else if (shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (shape === 'diamond') {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size, y);
+        ctx.closePath();
+        ctx.fill();
+      } else if (shape === 'triangle') {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y + size);
+        ctx.lineTo(x - size, y + size);
+        ctx.closePath();
+        ctx.fill();
+      } else if (shape === 'star') {
+        this._drawStar(x, y, size, 5);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  _drawStar(x, y, radius, points) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const r = i % 2 === 0 ? radius : radius * 0.5;
+      const angle = (i * Math.PI) / points - Math.PI / 2;
+      if (i === 0) ctx.moveTo(x + r * Math.cos(angle), y + r * Math.sin(angle));
+      else ctx.lineTo(x + r * Math.cos(angle), y + r * Math.sin(angle));
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  showAnnouncement(text, styling) {
+    this._announcements.push({
+      text: text,
+      elapsed: 0,
+      duration: styling.holdDuration || 3.0,
+      fontSize: styling.fontSize || 24,
+      color: styling.color || '#FFFFFF',
+      position: styling.position || 'center',
+      animation: styling.animation || 'fadeInHoldFadeOut',
+    });
+  }
+
+  startDimming(brightness) {
+    this._dimOverlay = {
+      brightness: brightness,
+      elapsed: 0,
+      duration: 2.0,
+    };
+  }
+
+  renderAnnouncements(dt) {
+    // Update announcements
+    for (let i = this._announcements.length - 1; i >= 0; i--) {
+      const a = this._announcements[i];
+      a.elapsed += dt;
+      if (a.elapsed >= a.duration) {
+        this._announcements.splice(i, 1);
+      }
+    }
+    // Update dim overlay
+    if (this._dimOverlay) {
+      this._dimOverlay.elapsed += dt;
+      if (this._dimOverlay.elapsed >= this._dimOverlay.duration) {
+        this._dimOverlay = null;
+      }
+    }
+  }
+
+  _drawAnnouncements() {
+    if (this._announcements.length === 0 && !this._dimOverlay) return;
+    
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    
+    // Dim overlay
+    if (this._dimOverlay) {
+      const alpha = this._dimOverlay.elapsed < 1.0
+        ? this._dimOverlay.elapsed * (1 - this._dimOverlay.brightness)
+        : (1 - this._dimOverlay.brightness);
+      ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+    
+    // Announcement text
+    for (const a of this._announcements) {
+      const progress = a.elapsed / a.duration;
+      let alpha = 1;
+      if (a.animation === 'fadeInHoldFadeOut') {
+        if (progress < 0.15) alpha = progress / 0.15;
+        else if (progress > 0.8) alpha = (1 - progress) / 0.2;
+      } else if (a.animation === 'slam') {
+        if (progress < 0.1) alpha = progress / 0.1;
+        else if (progress > 0.85) alpha = (1 - progress) / 0.15;
+      }
+      alpha = Math.max(0, Math.min(1, alpha));
+      
+      const scale = a.animation === 'slam' && progress < 0.15
+        ? 1 + (1 - progress / 0.15) * 0.5 : 1;
+      
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `bold ${a.fontSize * scale}px "Segoe UI", Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Text shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillText(a.text, w / 2 + 2, h / 2 + 2);
+      
+      // Main text
+      ctx.fillStyle = a.color;
+      ctx.fillText(a.text, w / 2, h / 2);
+      ctx.restore();
+    }
+  }
+
+  _drawBossIntro(overlay) {
+    if (!overlay) return;
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const progress = overlay.elapsed / overlay.totalDuration;
+    
+    // Dark overlay
+    let dimAlpha = 0;
+    if (progress < 0.15) dimAlpha = progress / 0.15;
+    else if (progress > 0.85) dimAlpha = (1 - progress) / 0.15;
+    else dimAlpha = 1;
+    dimAlpha = Math.max(0, Math.min(1, dimAlpha));
+    
+    ctx.save();
+    ctx.fillStyle = overlay.dimColor.replace(/[\d.]+\)$/, (dimAlpha * 0.75) + ')');
+    ctx.fillRect(0, 0, w, h);
+    
+    // Boss name
+    let nameAlpha = 0;
+    if (progress >= 0.1 && progress < 0.25) nameAlpha = (progress - 0.1) / 0.15;
+    else if (progress > 0.85) nameAlpha = (1 - progress) / 0.15;
+    else if (progress >= 0.25) nameAlpha = 1;
+    nameAlpha = Math.max(0, Math.min(1, nameAlpha));
+    
+    const nameScale = progress < 0.2 ? 1 + (1 - (progress - 0.1) / 0.1) * 0.3 : 1;
+    
+    ctx.globalAlpha = nameAlpha;
+    ctx.font = `bold ${overlay.nameFontSize * nameScale}px "Segoe UI", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillText(overlay.bossName, w / 2 + 3, h / 2 - 10 + 3);
+    ctx.fillStyle = overlay.nameColor;
+    ctx.fillText(overlay.bossName, w / 2, h / 2 - 10);
+    
+    // Subtitle
+    let subAlpha = 0;
+    if (progress >= 0.2 && progress < 0.35) subAlpha = (progress - 0.2) / 0.15;
+    else if (progress > 0.85) subAlpha = (1 - progress) / 0.15;
+    else if (progress >= 0.35) subAlpha = 1;
+    subAlpha = Math.max(0, Math.min(1, subAlpha));
+    
+    ctx.globalAlpha = subAlpha;
+    ctx.font = `${overlay.subtitleFontSize}px "Segoe UI", Arial, sans-serif`;
+    ctx.fillStyle = overlay.subtitleColor;
+    ctx.fillText(overlay.bossSubtitle, w / 2, h / 2 + 25);
+    
+    // Skip hint
+    if (overlay.allowSkip && progress > 0.3 && progress < 0.85) {
+      ctx.globalAlpha = 0.5;
+      ctx.font = '14px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#AAA';
+      ctx.fillText('Tap or press Space to skip', w / 2, h - 60);
+    }
+    
+    ctx.restore();
+  }
+
+  _drawUI(player) {
+    if (!player) return;
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+
+    // HP Bar
+    const hpPercent = player.hp / player.maxHp;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(10, 10, 200, 16);
+    ctx.fillStyle = hpPercent > 0.25 ? '#EF4444' : '#FF0000';
+    ctx.fillRect(10, 10, 200 * hpPercent, 16);
+    ctx.strokeStyle = '#FFF';
+    ctx.strokeRect(10, 10, 200, 16);
+
+    // Level
+    ctx.fillStyle = '#3B82F6';
+    ctx.beginPath();
+    ctx.arc(w - 30, 18, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.level || 1, w - 30, 22);
+
+    // Boss Health Bar (if boss is alive)
+    if (this.bossEntity && this.bossEntity.active) {
+      const bossHp = this.bossEntity.hp / this.bossEntity.maxHp;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(w/2 - 120, 40, 240, 14);
+      ctx.fillStyle = bossHp > 0.25 ? '#C0392B' : '#FF0000';
+      ctx.fillRect(w/2 - 120, 40, 240 * bossHp, 14);
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(w/2 - 120, 40, 240, 14);
+      ctx.fillStyle = '#FFF';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('THE GRAVEKEEPER', w/2, 51);
+    }
+
+    // EXP Bar
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, h - 20, w, 20);
+    ctx.fillStyle = '#4FC3F7';
+    ctx.fillRect(0, h - 20, w * (this.xpPercent || 0), 20);
+  }
+}
+
+// ============================================================
+// PHASE 12b: FLOATING TEXT SYSTEM
+// ============================================================
+
+class FloatingTextSystem {
+  constructor(eventBus) {
+    this.texts = [];
+    eventBus.on('damage', (data) => this._onDamage(data));
+    eventBus.on('pickup', (data) => this._onPickup(data));
+  }
+
+  _onDamage(data) {
+    if (!data.position) return;
+    const isCrit = data.isCrit;
+    this.texts.push({
+      x: data.position.x + (Math.random() - 0.5) * 10,
+      y: data.position.y - 10,
+      text: isCrit ? `${data.damage}!` : `${data.damage}`,
+      color: isCrit ? '#FFD700' : '#FFF',
+      fontSize: isCrit ? 16 : 12,
+      age: 0,
+      maxAge: 0.8,
+      vy: -40,
+    });
+  }
+
+  _onPickup(data) {
+    if (!data.pickup?.pickupData) return;
+    const pd = data.pickup.pickupData;
+    let text = '', color = '#FFF';
+    if (pd.id === 'exp_small') { text = `+${pd.value} XP`; color = '#4FC3F7'; }
+    else if (pd.id === 'gold_coin') { text = `+${pd.value} G`; color = '#FFD700'; }
+    else if (pd.id === 'pickup_weapon_level_up') { text = 'WEAPON UP!'; color = '#FF9100'; }
+    else if (pd.id === 'screen_wipe') { text = 'SCREEN WIPE!'; color = '#00E676'; }
+    else if (pd.id === 'magnet') { text = 'MAGNET!'; color = '#FF4081'; }
+    if (text) {
+      this.texts.push({
+        x: data.player.x + (Math.random() - 0.5) * 20,
+        y: data.player.y - 20,
+        text, color,
+        fontSize: pd.id.includes('wipe') || pd.id === 'magnet' ? 14 : 10,
+        age: 0, maxAge: 1.0, vy: -30,
+      });
+    }
+  }
+
+  update(dt) {
+    for (let i = this.texts.length - 1; i >= 0; i--) {
+      const t = this.texts[i];
+      t.age += dt;
+      t.y += t.vy * dt;
+      if (t.age >= t.maxAge) {
+        this.texts.splice(i, 1);
+      }
+    }
+  }
+
+  draw(ctx) {
+    for (const t of this.texts) {
+      const alpha = Math.max(0, 1 - t.age / t.maxAge);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = t.color;
+      ctx.font = `bold ${t.fontSize}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(t.text, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ============================================================
+// PHASE 13: UI SYSTEM
+// ============================================================
+
+// --- UIManager ---
+// HUD, level-up screen, end screens
+class UIManager {
+  constructor(canvas, eventBus) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.eventBus = eventBus;
+    this.levelUpOptions = null;
+    this.endScreen = null;
+  }
+
+  showLevelUp(options) {
+    this.levelUpOptions = options;
+  }
+
+  hideLevelUp() {
+    this.levelUpOptions = null;
+  }
+
+  showEndScreen(result, stats) {
+    this.endScreen = { result, stats };
+  }
+
+  hideEndScreen() {
+    this.endScreen = null;
+  }
+
+  render() {
+    if (this.levelUpOptions) this._renderLevelUp();
+    if (this.endScreen) this._renderEndScreen();
+  }
+
+  _renderLevelUp() {
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+
+    // Overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Title
+    ctx.fillStyle = '#3B82F6';
+    ctx.font = 'bold 32px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('LEVEL UP!', w / 2, h / 2 - 120);
+
+    // Cards
+    const cardWidth = 160;
+    const cardHeight = 200;
+    const spacing = 20;
+    const startX = (w - (cardWidth * 3 + spacing * 2)) / 2;
+
+    for (let i = 0; i < 3; i++) {
+      const x = startX + i * (cardWidth + spacing);
+      const y = h / 2 - 80;
+
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x, y, cardWidth, cardHeight);
+      ctx.strokeStyle = '#3B82F6';
+      ctx.strokeRect(x, y, cardWidth, cardHeight);
+
+      ctx.fillStyle = '#FFF';
+      ctx.font = '14px monospace';
+      ctx.fillText(`[${i + 1}]`, x + cardWidth / 2, y + 30);
+      ctx.fillText(this.levelUpOptions[i]?.name || 'Upgrade', x + cardWidth / 2, y + 60);
+    }
+
+    ctx.fillStyle = '#666';
+    ctx.font = '12px monospace';
+    ctx.fillText('Press 1, 2, or 3 to select', w / 2, h / 2 + 140);
+  }
+
+  _renderEndScreen() {
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+
+    // Overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Title
+    const titles = { victory: 'VICTORY', survived: 'SURVIVED', defeat: 'DEFEATED' };
+    const colors = { victory: '#FFD700', survived: '#FFF', defeat: '#EF4444' };
+    
+    ctx.fillStyle = colors[this.endScreen.result] || '#FFF';
+    ctx.font = 'bold 48px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(titles[this.endScreen.result] || 'GAME OVER', w / 2, h / 2 - 50);
+
+    // Stats
+    if (this.endScreen.stats) {
+      ctx.font = '16px monospace';
+      ctx.fillStyle = '#CCC';
+      const stats = this.endScreen.stats;
+      ctx.fillText(`Time: ${stats.time || '0:00'}`, w / 2, h / 2 + 10);
+      ctx.fillText(`Level: ${stats.level || 1}`, w / 2, h / 2 + 40);
+      ctx.fillText(`Kills: ${stats.kills || 0}`, w / 2, h / 2 + 70);
+      ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, h / 2 + 100);
+    }
+
+    ctx.fillStyle = '#666';
+    ctx.font = '14px monospace';
+    ctx.fillText('Click to restart', w / 2, h / 2 + 150);
+  }
+}
+
+// ============================================================
+// PHASE 14: AUDIO SYSTEM (Full Implementation)
+// ============================================================
+
+class AudioManager {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.ctx = null;
+    this.initialized = false;
+    this.player = null;
+
+    // Master / channel gains
+    this.masterGain = null;
+    this.sfxGain = null;
+    this.musicGain = null;
+    this.uiGain = null;
+
+    // 16-slot SFX pool
+    this.sfxSlots = [];
+    this.MAX_SLOTS = 16;
+
+    // Payout triad engine state
+    this.C_MAJOR_SCALE = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50];
+    this.comboIndex = 0;
+    this.lastPickupTime = 0;
+    this.COMBO_TIMEOUT = 0.6;
+
+    // Priority ducking state
+    this.activeDucks = [];
+    this.duckTimers = [];
+
+    // Boss active state
+    this.bossActive = false;
+
+    // Continuous sounds
+    this._orbitHumNode = null;
+    this._orbitHumGain = null;
+    this._orbitHumRunning = false;
+    this._magnetHumNode = null;
+    this._magnetHumGain = null;
+    this._magnetTimer = 0;
+  }
+
+  // ─────────────────────────────────────────────
+  // INITIALIZATION
+  // ─────────────────────────────────────────────
+
+  init() {
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+
+      // Master gain
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.8;
+      this.masterGain.connect(this.ctx.destination);
+
+      // Channel gains
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = 0.85;
+      this.sfxGain.connect(this.masterGain);
+
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = 0.7;
+      this.musicGain.connect(this.masterGain);
+
+      this.uiGain = this.ctx.createGain();
+      this.uiGain.gain.value = 1.0;
+      this.uiGain.connect(this.masterGain);
+
+      // Init SFX pool
+      for (let i = 0; i < this.MAX_SLOTS; i++) {
+        this.sfxSlots.push({ active: false, startTime: 0, priority: 10, gainNode: null });
+      }
+
+      // Wire game events
+      this._wireEvents();
+
+    } catch (e) {
+      console.warn('Web Audio not supported');
+    }
+  }
+
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  setPlayer(player) {
+    this.player = player;
+  }
+
+  // ─────────────────────────────────────────────
+  // EVENT WIRING — Map game events to sounds
+  // ─────────────────────────────────────────────
+
+  _wireEvents() {
+    const bus = this.eventBus;
+
+    // PICKUP — route by pickupData.id
+    bus.on('pickup', (data) => {
+      const id = data.pickup?.pickupData?.id;
+      if (id === 'exp_small') this._playPickupTriad(data.pickup);
+      else if (id === 'gold_coin') this._playGoldArpeggio(data.pickup);
+      else if (id === 'pickup_weapon_level_up' || id === 'magnet' || id === 'health') this.play('powerup_collect', { sourceX: data.pickup?.x, sourceY: data.pickup?.y });
+      else if (id === 'screen_wipe') this.play('screenwipe');
+    });
+
+    // DEATH — route by enemy type (skip boss — handled by bossDeath)
+    bus.on('death', (data) => {
+      if (data.type === 'boss_gravekeeper') return;
+      if (data.type === 'player') { this.play('player_death'); return; }
+      const killMap = { zombie: 'zombie_kill', bat: 'bat_kill', skeleton: 'skeleton_kill', ghost: 'ghost_kill', caster: 'caster_kill' };
+      if (killMap[data.type]) this.play(killMap[data.type]);
+    });
+
+    // WEAPON EVENTS
+    bus.on('weaponFire', (data) => {
+      if (data.weaponId === 'w1_projectile') this.play('w1_fire');
+    });
+    bus.on('projectileHit', () => this.play('weapon_hit'));
+    bus.on('areaPulse', () => this.play('w3_pulse'));
+    bus.on('weaponLevelUp', () => this.play('powerup_collect'));
+    bus.on('weaponUnlock', (data) => {
+      this.play('weapon_unlock');
+      // Start W2 hum if orbit weapon unlocked
+      if (data.weaponId === 'w2_orbit') this.startOrbitHum();
+    });
+
+    // PLAYER DAMAGE
+    bus.on('contactDamage', () => this.play('player_hurt'));
+
+    // LEVEL UP & UI
+    bus.on('levelUp', () => this.play('levelup'));
+    bus.on('selectUpgrade', () => this.play('ui_click'));
+
+    // BOSS
+    bus.on('bossSpawn', (data) => {
+      this.bossActive = true;
+      this.play('boss_spawn');
+      this._duckForBoss(true);
+    });
+    bus.on('bossDeath', () => {
+      this.bossActive = false;
+      this.play('boss_death');
+      this._duckForBoss(false);
+      this.stopOrbitHum();
+    });
+    bus.on('bossCharge', (data) => {
+      if (data.phase === 'windup') this.play('boss_charge');
+    });
+
+    // MAGNET
+    bus.on('magnetActivate', () => this._startMagnetHum());
+
+    // RESTART
+    bus.on('restart', () => {
+      this.play('restart');
+      this.stopOrbitHum();
+      this._stopMagnetHum();
+      this.bossActive = false;
+    });
+
+    // GAME OVER (player death triggers this)
+    bus.on('stateChange', (data) => {
+      if (data.to === 'gameOver' || data.to === 'endScreen') {
+        this.stopOrbitHum();
+        this._stopMagnetHum();
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────
+  // SOUND POOL — 16-slot eviction
+  // ─────────────────────────────────────────────
+
+  _acquireSlot(priority) {
+    // Find free slot
+    for (let i = 0; i < this.MAX_SLOTS; i++) {
+      if (!this.sfxSlots[i].active) return i;
+    }
+    // All occupied — evict lowest priority (highest number = lowest)
+    let worstIdx = 0;
+    let worstPri = -1;
+    for (let i = 0; i < this.MAX_SLOTS; i++) {
+      if (this.sfxSlots[i].priority > worstPri) {
+        worstPri = this.sfxSlots[i].priority;
+        worstIdx = i;
+      }
+    }
+    // Don't evict if new sound is lower priority
+    if (priority > worstPri) return -1;
+    // Stop the evicted sound
+    this._stopSlot(worstIdx);
+    return worstIdx;
+  }
+
+  _stopSlot(idx) {
+    const slot = this.sfxSlots[idx];
+    if (!slot.active) return;
+    try {
+      if (slot.oscillator) { slot.oscillator.stop(); slot.oscillator.disconnect(); }
+      if (slot.noiseSource) { slot.noiseSource.stop(); slot.noiseSource.disconnect(); }
+      if (slot.gainNode) slot.gainNode.disconnect();
+      if (slot.filterNode) slot.filterNode.disconnect();
+    } catch (e) { /* already stopped */ }
+    slot.active = false;
+  }
+
+  _releaseSlot(idx) {
+    const slot = this.sfxSlots[idx];
+    if (!slot) return;
+    setTimeout(() => this._stopSlot(idx), 50);
+  }
+
+  // ─────────────────────────────────────────────
+  // PLAY — Main entry point
+  // ─────────────────────────────────────────────
+
+  play(soundId, opts) {
+    if (!this.ctx || !this.initialized) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    opts = opts || {};
+    const priority = opts.priority || 9;
+    const channel = opts.channel || 'sfx';
+    const dist = this._getDistance(opts.sourceX, opts.sourceY);
+    const vol = this._distanceVolume(dist, opts.minVol);
+
+    switch (soundId) {
+      // WEAPONS
+      case 'w1_fire': this._synthW1Fire(vol); break;
+      case 'w3_pulse': this._synthW3Pulse(vol); break;
+      case 'weapon_hit': this._synthWeaponHit(vol); break;
+      case 'weapon_unlock': this._synthWeaponUnlock(vol, channel); break;
+
+      // ENEMY KILLS
+      case 'zombie_kill': this._synthEnemyKill(vol, 'zombie'); break;
+      case 'bat_kill': this._synthEnemyKill(vol, 'bat'); break;
+      case 'skeleton_kill': this._synthEnemyKill(vol, 'skeleton'); break;
+      case 'ghost_kill': this._synthEnemyKill(vol, 'ghost'); break;
+      case 'caster_kill': this._synthEnemyKill(vol, 'caster'); break;
+
+      // BOSS
+      case 'boss_spawn': this._synthBossSpawn(vol, channel); break;
+      case 'boss_death': this._synthBossDeath(vol, channel); break;
+      case 'boss_charge': this._synthBossCharge(vol); break;
+
+      // PLAYER
+      case 'player_hurt': this._synthPlayerHurt(vol, channel); break;
+      case 'player_death': this._synthPlayerDeath(vol, channel); break;
+
+      // UI
+      case 'levelup': this._synthLevelUp(vol, channel); break;
+      case 'ui_click': this._synthUIClick(vol, channel); break;
+      case 'restart': this._synthRestart(vol, channel); break;
+
+      // POWER-UPS
+      case 'powerup_collect': this._synthPowerUp(vol, channel); break;
+      case 'screenwipe': this._synthScreenWipe(vol, channel); break;
+
+      default: break;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // DISTANCE-BASED AUDIO
+  // ─────────────────────────────────────────────
+
+  _getDistance(sourceX, sourceY) {
+    if (!this.player || sourceX == null || sourceY == null) return 0;
+    const dx = sourceX - this.player.x;
+    const dy = sourceY - this.player.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  _distanceVolume(dist, minVol) {
+    minVol = minVol || 0.2;
+    if (dist <= 0) return 1.0;
+    if (dist <= 100) return 1.0;
+    if (dist <= 200) return 0.7;
+    if (dist <= 400) return 0.4;
+    return minVol;
+  }
+
+  // ─────────────────────────────────────────────
+  // PAYOUT TRIAD ENGINE — XP & Gold pickups
+  // ─────────────────────────────────────────────
+
+  _playPickupTriad(pickupEntity) {
+    const now = this.ctx.currentTime;
+    // Combo stepping
+    if (now - this.lastPickupTime > this.COMBO_TIMEOUT) this.comboIndex = 0;
+    this.lastPickupTime = now;
+
+    const baseFreq = this.C_MAJOR_SCALE[this.comboIndex % this.C_MAJOR_SCALE.length];
+    this.comboIndex++;
+
+    const gain = 0.08 + Math.random() * 0.04; // 0.08–0.12
+    const jitter = (Math.random() - 0.5) * 30; // ±15 Hz
+
+    // 3-note arpeggio: Base → x1.5 → x2.0
+    const notes = [baseFreq + jitter, (baseFreq + jitter) * 1.5, (baseFreq + jitter) * 2.0];
+    const noteLen = 0.015;
+    const noteGap = 0.02;
+
+    for (let i = 0; i < notes.length; i++) {
+      this._playNote(notes[i], gain, now + i * noteGap, noteLen, 'square', 'sfx');
+    }
+  }
+
+  _playGoldArpeggio(pickupEntity) {
+    const now = this.ctx.currentTime;
+    if (now - this.lastPickupTime > this.COMBO_TIMEOUT) this.comboIndex = 0;
+    this.lastPickupTime = now;
+
+    const baseFreq = this.C_MAJOR_SCALE[this.comboIndex % this.C_MAJOR_SCALE.length];
+    this.comboIndex++;
+
+    const gain = 0.09 + Math.random() * 0.04;
+    const jitter = (Math.random() - 0.5) * 30;
+
+    // Brighter pattern: Base → x1.25 → x1.5
+    const notes = [baseFreq + jitter, (baseFreq + jitter) * 1.25, (baseFreq + jitter) * 1.5];
+    const noteLen = 0.012;
+    const noteGap = 0.018;
+
+    for (let i = 0; i < notes.length; i++) {
+      this._playNote(notes[i], gain, now + i * noteGap, noteLen, 'square', 'sfx');
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // SYNTHESIS — All sound functions
+  // ─────────────────────────────────────────────
+
+  // Helper: play a single note
+  _playNote(freq, vol, startTime, duration, waveform, channel) {
+    const slotIdx = this._acquireSlot(9);
+    if (slotIdx < 0) return;
+    const slot = this.sfxSlots[slotIdx];
+    slot.active = true;
+    slot.startTime = startTime;
+    slot.priority = 9;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = waveform || 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(vol, startTime + 0.003);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    const dest = channel === 'ui' ? this.uiGain : this.sfxGain;
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.01);
+
+    slot.oscillator = osc;
+    slot.gainNode = gain;
+    slot.filterNode = null;
+
+    osc.onended = () => {
+      slot.active = false;
+      try { osc.disconnect(); gain.disconnect(); } catch(e) {}
+    };
+  }
+
+  // Helper: noise burst
+  _playNoise(vol, startTime, duration, filterFreq, filterQ, channel) {
+    const slotIdx = this._acquireSlot(8);
+    if (slotIdx < 0) return;
+    const slot = this.sfxSlots[slotIdx];
+    slot.active = true;
+    slot.startTime = startTime;
+    slot.priority = 8;
+
+    const bufferSize = this.ctx.sampleRate * duration;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = filterFreq || 800;
+    filter.Q.value = filterQ || 1;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(vol, startTime + 0.002);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    const dest = channel === 'ui' ? this.uiGain : this.sfxGain;
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(dest);
+    source.start(startTime);
+    source.stop(startTime + duration + 0.01);
+
+    slot.noiseSource = source;
+    slot.gainNode = gain;
+    slot.filterNode = filter;
+
+    source.onended = () => {
+      slot.active = false;
+      try { source.disconnect(); filter.disconnect(); gain.disconnect(); } catch(e) {}
+    };
+  }
+
+  // --- WEAPON SOUNDS ---
+
+  _synthW1Fire(vol) {
+    // Short square blip, pitch scales with damage
+    const freq = 600 + Math.random() * 200;
+    this._playNote(freq, vol * 0.12, this.ctx.currentTime, 0.03, 'square', 'sfx');
+  }
+
+  _synthW3Pulse(vol) {
+    // Sawtooth → LP filter burst: 800Hz → 200Hz over 0.3s
+    const t = this.ctx.currentTime;
+    const slotIdx = this._acquireSlot(6);
+    if (slotIdx < 0) return;
+    const slot = this.sfxSlots[slotIdx];
+    slot.active = true; slot.startTime = t; slot.priority = 6;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.linearRampToValueAtTime(200, t + 0.3);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 1200;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.2, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.35);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.4);
+
+    slot.oscillator = osc; slot.gainNode = gain; slot.filterNode = filter;
+    osc.onended = () => { slot.active = false; };
+  }
+
+  _synthWeaponHit(vol) {
+    // Short noise burst 200–800Hz
+    this._playNoise(vol * 0.08, this.ctx.currentTime, 0.03, 500, 1.5, 'sfx');
+  }
+
+  _synthWeaponUnlock(vol, channel) {
+    // Rising triad: C5→E5→G5
+    const t = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99];
+    for (let i = 0; i < notes.length; i++) {
+      this._playNote(notes[i], vol * 0.18, t + i * 0.05, 0.08, 'square', channel);
+    }
+  }
+
+  // --- ENEMY KILL SOUNDS ---
+
+  _synthEnemyKill(vol, type) {
+    const t = this.ctx.currentTime;
+    const freqs = {
+      zombie: { start: 400, end: 100, dur: 0.15, wave: 'square' },
+      bat: { start: 1200, end: 800, dur: 0.08, wave: 'square' },
+      skeleton: { start: 300, end: 150, dur: 0.2, wave: 'square' },
+      ghost: { start: 600, end: 200, dur: 0.3, wave: 'sine' },
+      caster: { start: 500, end: 200, dur: 0.15, wave: 'square' },
+    };
+    const s = freqs[type] || freqs.zombie;
+
+    const slotIdx = this._acquireSlot(7);
+    if (slotIdx < 0) return;
+    const slot = this.sfxSlots[slotIdx];
+    slot.active = true; slot.startTime = t; slot.priority = 7;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = s.wave;
+    osc.frequency.setValueAtTime(s.start, t);
+    osc.frequency.linearRampToValueAtTime(s.end, t + s.dur);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.12, t);
+    gain.gain.linearRampToValueAtTime(0, t + s.dur);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + s.dur + 0.01);
+
+    slot.oscillator = osc; slot.gainNode = gain;
+
+    // Skeleton gets a layered noise (armor clank)
+    if (type === 'skeleton') {
+      this._playNoise(vol * 0.06, t, 0.1, 600, 2, 'sfx');
+    }
+    // Ghost gets an ethereal wail (sine + slight reverb feel via second osc)
+    if (type === 'ghost') {
+      const osc2 = this.ctx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(s.start * 1.5, t);
+      osc2.frequency.linearRampToValueAtTime(s.end * 0.5, t + s.dur);
+      const g2 = this.ctx.createGain();
+      g2.gain.setValueAtTime(vol * 0.05, t);
+      g2.gain.linearRampToValueAtTime(0, t + s.dur);
+      osc2.connect(g2); g2.connect(this.sfxGain);
+      osc2.start(t); osc2.stop(t + s.dur + 0.01);
+    }
+
+    osc.onended = () => { slot.active = false; };
+  }
+
+  // --- BOSS SOUNDS ---
+
+  _synthBossSpawn(vol, channel) {
+    // Ground-shaking impact: 80Hz → 40Hz
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.linearRampToValueAtTime(40, t + 1.0);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.25, t);
+    gain.gain.linearRampToValueAtTime(0, t + 1.0);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 1.05);
+
+    // Layered noise
+    this._playNoise(vol * 0.15, t, 0.5, 100, 0.5, channel);
+  }
+
+  _synthBossDeath(vol, channel) {
+    // Layered: 60Hz + 120Hz + 240Hz over 2.0s
+    const t = this.ctx.currentTime;
+    const freqs = [60, 120, 240];
+    for (const freq of freqs) {
+      const osc = this.ctx.createOscillator();
+      osc.type = freq === 60 ? 'sine' : 'square';
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.linearRampToValueAtTime(freq * 0.5, t + 2.0);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(vol * 0.15, t);
+      gain.gain.linearRampToValueAtTime(0, t + 2.0);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 2.05);
+    }
+    // Deep noise burst
+    this._playNoise(vol * 0.12, t, 0.8, 80, 0.5, channel);
+  }
+
+  _synthBossCharge(vol) {
+    // Low sweep: 80Hz → 120Hz over 0.4s (warning growl)
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.linearRampToValueAtTime(120, t + 0.4);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.15, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.45);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.5);
+  }
+
+  // --- PLAYER SOUNDS ---
+
+  _synthPlayerHurt(vol, channel) {
+    // 200Hz → 100Hz blunt impact
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.linearRampToValueAtTime(100, t + 0.1);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.18, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.12);
+
+    osc.connect(gain);
+    gain.connect(channel === 'ui' ? this.uiGain : this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
+  _synthPlayerDeath(vol, channel) {
+    // Slow descending wail: 400Hz → 50Hz over 1.5s
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.linearRampToValueAtTime(50, t + 1.5);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.2, t);
+    gain.gain.linearRampToValueAtTime(0, t + 1.6);
+
+    osc.connect(gain);
+    gain.connect(channel === 'ui' ? this.uiGain : this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 1.7);
+  }
+
+  // --- UI SOUNDS ---
+
+  _synthLevelUp(vol, channel) {
+    // Ascending scale: C5→E5→G5→C6 over 0.2s
+    const t = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    for (let i = 0; i < notes.length; i++) {
+      this._playNote(notes[i], vol * 0.2, t + i * 0.05, 0.1, 'square', channel);
+    }
+  }
+
+  _synthUIClick(vol, channel) {
+    // Tiny sine 800Hz
+    this._playNote(800, vol * 0.08, this.ctx.currentTime, 0.02, 'sine', channel);
+  }
+
+  _synthRestart(vol, channel) {
+    // Quick ascending blip: 440Hz → 880Hz
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.linearRampToValueAtTime(880, t + 0.1);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.12, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.uiGain);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
+  // --- POWER-UP SOUNDS ---
+
+  _synthPowerUp(vol, channel) {
+    // Full 5-note arpeggio: Base→x1.25→x1.5→x2.0→x2.5
+    const t = this.ctx.currentTime;
+    const base = 523.25 + (Math.random() - 0.5) * 20;
+    const ratios = [1, 1.25, 1.5, 2.0, 2.5];
+    for (let i = 0; i < ratios.length; i++) {
+      this._playNote(base * ratios[i], vol * 0.18, t + i * 0.025, 0.08, 'square', channel);
+    }
+  }
+
+  _synthScreenWipe(vol, channel) {
+    // Dramatic sweep: 2000Hz → 100Hz + noise burst over 1.5s
+    const t = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(2000, t);
+    osc.frequency.linearRampToValueAtTime(100, t + 1.5);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.2, t);
+    gain.gain.linearRampToValueAtTime(0, t + 1.6);
+
+    const dest = channel === 'ui' ? this.uiGain : this.sfxGain;
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(t);
+    osc.stop(t + 1.6);
+
+    // Noise burst layer
+    this._playNoise(vol * 0.12, t, 0.8, 500, 1, channel);
+  }
+
+  // ─────────────────────────────────────────────
+  // CONTINUOUS SOUNDS — W2 Orbit Hum
+  // ─────────────────────────────────────────────
+
+  startOrbitHum() {
+    if (this._orbitHumRunning || !this.ctx) return;
+    this._orbitHumRunning = true;
+
+    const osc1 = this.ctx.createOscillator();
+    osc1.type = 'triangle';
+    osc1.frequency.value = 110;
+
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.value = 165; // Perfect 5th
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.04, this.ctx.currentTime + 0.3);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.sfxGain);
+    osc1.start();
+    osc2.start();
+
+    this._orbitHumNode = [osc1, osc2];
+    this._orbitHumGain = gain;
+  }
+
+  stopOrbitHum() {
+    if (!this._orbitHumRunning || !this._orbitHumGain) return;
+    this._orbitHumRunning = false;
+    const t = this.ctx.currentTime;
+    this._orbitHumGain.gain.linearRampToValueAtTime(0, t + 0.3);
+    const nodes = this._orbitHumNode;
+    setTimeout(() => {
+      if (nodes) nodes.forEach(n => { try { n.stop(); n.disconnect(); } catch(e) {} });
+    }, 400);
+    this._orbitHumNode = null;
+    this._orbitHumGain = null;
+  }
+
+  // ─────────────────────────────────────────────
+  // CONTINUOUS SOUNDS — Magnet Hum
+  // ─────────────────────────────────────────────
+
+  _startMagnetHum() {
+    if (this._magnetHumNode) return; // already playing
+    if (!this.ctx) return;
+
+    const osc1 = this.ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.value = 220;
+
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.value = 330; // Perfect 5th
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 0.3);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.sfxGain);
+    osc1.start();
+    osc2.start();
+
+    this._magnetHumNode = [osc1, osc2];
+    this._magnetHumGain = gain;
+    this._magnetTimer = 10;
+
+    // Fade out in last 0.5s, stop at 10s
+    this._magnetInterval = setInterval(() => {
+      this._magnetTimer -= 0.1;
+      if (this._magnetTimer <= 0.5 && this._magnetHumGain) {
+        this._magnetHumGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this._magnetTimer);
+      }
+      if (this._magnetTimer <= 0) this._stopMagnetHum();
+    }, 100);
+  }
+
+  _stopMagnetHum() {
+    if (this._magnetInterval) { clearInterval(this._magnetInterval); this._magnetInterval = null; }
+    if (!this._magnetHumNode) return;
+    const nodes = this._magnetHumNode;
+    this._magnetHumNode = null;
+    this._magnetHumGain = null;
+    this._magnetTimer = 0;
+    setTimeout(() => {
+      nodes.forEach(n => { try { n.stop(); n.disconnect(); } catch(e) {} });
+    }, 50);
+  }
+
+  // ─────────────────────────────────────────────
+  // DUCKING — Priority system
+  // ─────────────────────────────────────────────
+
+  _duckAll(factor, duration) {
+    if (!this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    this.sfxGain.gain.linearRampToValueAtTime(factor, t + 0.05);
+    if (duration > 0) {
+      setTimeout(() => {
+        if (this.sfxGain) this.sfxGain.gain.linearRampToValueAtTime(0.85, this.ctx.currentTime + 0.1);
+      }, duration * 1000);
+    }
+  }
+
+  _duckForBoss(active) {
+    if (!this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    if (active) {
+      this.sfxGain.gain.linearRampToValueAtTime(0.6, t + 0.3);
+    } else {
+      this.sfxGain.gain.linearRampToValueAtTime(0.85, t + 0.5);
+    }
+  }
+
+  // Level-up screen duck (called from Game)
+  duckForLevelUp(active) {
+    if (!this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    if (active) {
+      this.sfxGain.gain.linearRampToValueAtTime(0.1, t + 0.05);
+    } else {
+      this.sfxGain.gain.linearRampToValueAtTime(0.85, t + 0.2);
+    }
+  }
+
+  // ═══════════════════════════════════════════════
+  // MENU SFX — Title screen navigation sounds
+  // ═══════════════════════════════════════════════
+
+  playMenuSound(type) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    switch(type) {
+      case 'navigate': this._menuNavigate(t); break;
+      case 'select': this._menuSelect(t); break;
+      case 'back': this._menuBack(t); break;
+      case 'locked': this._menuLocked(t); break;
+      case 'slider': this._menuSlider(t); break;
+      case 'hover': this._menuHover(t); break;
+    }
+  }
+
+  _menuNavigate(t) {
+    this._playNote(600, 0.10, t, 0.04, 'sine', 'ui');
+  }
+
+  _menuSelect(t) {
+    const notes = [523.25, 659.25, 783.99]; // C5 E5 G5
+    for (let i = 0; i < notes.length; i++) {
+      this._playNote(notes[i], 0.15, t + i * 0.04, 0.08, 'square', 'ui');
+    }
+  }
+
+  _menuBack(t) {
+    this._playNote(659.25, 0.10, t, 0.04, 'sine', 'ui');
+    this._playNote(523.25, 0.10, t + 0.04, 0.04, 'sine', 'ui');
+  }
+
+  _menuLocked(t) {
+    this._playNote(200, 0.08, t, 0.08, 'square', 'ui');
+  }
+
+  _menuSlider(t) {
+    this._playNote(1000, 0.06, t, 0.02, 'sine', 'ui');
+  }
+
+  _menuHover(t) {
+    this._playNote(800, 0.04, t, 0.015, 'sine', 'ui');
+  }
+}
+
+// ============================================================
+// TITLE BGM — Fantasy anime village theme synthesizer
+// ============================================================
+
+class TitleBGM {
+  constructor(audioCtx, musicGain) {
+    this.ctx = audioCtx;
+    this.masterGain = musicGain;
+    this.gainNode = null;
+    this.playing = false;
+    this.barIndex = 0;
+    this.beatTimer = 0;
+    this.barDuration = (4 * 60) / 90; // 4 beats at 90 BPM
+    this.firstPlay = true;
+    this._activeOscs = [];
+    this._scheduledBars = 0;
+
+    // D Major scale frequencies
+    this.NOTES = {
+      D4: 293.66, E4: 329.63, F4: 369.99, G4: 392.00,
+      A4: 440.00, B4: 493.88, C5: 554.37, D5: 587.33,
+      E5: 659.25, F5: 739.99, G5: 783.99, A5: 880.00,
+    };
+
+    // Melody: Main Theme A (bars 1-8)
+    this.melodyA = [
+      ['D4', 'F4', 'A4', 'D5'], // Bar 1
+      ['C5', 'A4', 'B4', 'A4'], // Bar 2
+      ['G4', 'B4', 'D5', 'G5'], // Bar 3
+      ['F5', 'E5', 'D5', null], // Bar 4 (half note)
+      ['D4', 'F4', 'A4', 'D5'], // Bar 5
+      ['E5', 'D5', 'C5', 'A4'], // Bar 6
+      ['B4', 'G4', 'A4', 'F4'], // Bar 7
+      ['E4', null, 'D4', null], // Bar 8 (half notes)
+    ];
+
+    // Flute counter-melody (bars 9-12, enters at 0:32)
+    this.fluteA = [
+      ['A5', 'G5', 'F5', 'E5'], // Bar 9 (dotted quarter + eighth)
+      ['D5', 'E5', 'F5', null], // Bar 10
+      ['G5', 'F5', 'E5', 'D5'], // Bar 11
+      ['C5', 'B4', 'A4', null], // Bar 12
+    ];
+
+    // Chords for pad/strings (root notes per bar, bass movement)
+    this.chords = [
+      'D4', 'D4', 'G4', 'D4', // Bars 1-4: D G A D
+      'D4', 'A4', 'G4', 'D4', // Bars 5-8: D Bm Em D
+    ];
+  }
+
+  init() {
+    if (this.gainNode) return;
+    this.gainNode = this.ctx.createGain();
+    this.gainNode.gain.value = 0;
+    this.gainNode.connect(this.masterGain);
+  }
+
+  fadeIn(duration) {
+    if (!this.gainNode) this.init();
+    this.playing = true;
+    const t = this.ctx.currentTime;
+    this.gainNode.gain.cancelScheduledValues(t);
+    this.gainNode.gain.setValueAtTime(0, t);
+    this.gainNode.gain.linearRampToValueAtTime(0.4, t + duration);
+    this.beatTimer = 0;
+    this.barIndex = this.firstPlay ? 0 : 1; // Skip intro on loop
+    this._scheduleBar();
+  }
+
+  fadeOut(duration) {
+    if (!this.gainNode) return;
+    const t = this.ctx.currentTime;
+    this.gainNode.gain.cancelScheduledValues(t);
+    this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, t);
+    this.gainNode.gain.linearRampToValueAtTime(0, t + duration);
+    setTimeout(() => { this.playing = false; this._stopAll(); }, duration * 1000 + 100);
+  }
+
+  stop() {
+    this.playing = false;
+    this._stopAll();
+    if (this.gainNode) {
+      const t = this.ctx.currentTime;
+      this.gainNode.gain.cancelScheduledValues(t);
+      this.gainNode.gain.setValueAtTime(0, t);
+    }
+  }
+
+  update(dt) {
+    if (!this.playing || !this.ctx) return;
+    this.beatTimer += dt;
+    if (this.beatTimer >= this.barDuration) {
+      this.beatTimer -= this.barDuration;
+      this.barIndex++;
+      // Loop: skip intro (bar 0) on repeats
+      const totalBars = 12; // 8 melody + 4 flute
+      if (this.barIndex >= totalBars) {
+        this.barIndex = 1; // Skip intro bar, go to Theme A
+        this.firstPlay = false;
+      }
+      this._scheduleBar();
+    }
+  }
+
+  _scheduleBar() {
+    const barIdx = this.barIndex % 12;
+    const t = this.ctx.currentTime;
+
+    // Piano melody (bars 0-7)
+    if (barIdx < 8) {
+      const notes = this.melodyA[barIdx];
+      const beatDur = this.barDuration / 4;
+      for (let i = 0; i < notes.length; i++) {
+        if (!notes[i]) continue;
+        const freq = this.NOTES[notes[i]];
+        if (!freq) continue;
+        const noteStart = t + i * beatDur;
+        const dur = (notes[i + 1] === null || i === notes.length - 1) ? beatDur * 1.5 : beatDur * 0.8;
+        this._playTone(freq, 0.25, noteStart, dur, 'triangle');
+      }
+    }
+
+    // Pad layer (continuous, changes every bar)
+    {
+      const chordRoot = this.NOTES[this.chords[barIdx % this.chords.length]] || 293.66;
+      this._playTone(chordRoot, 0.12, t, this.barDuration * 0.95, 'sawtooth', 600);
+      this._playTone(chordRoot * 1.5, 0.06, t, this.barDuration * 0.95, 'sawtooth', 600); // 5th
+    }
+
+    // Strings (bars 2+)
+    if (barIdx >= 2) {
+      const chordRoot = this.NOTES[this.chords[barIdx % this.chords.length]] || 293.66;
+      this._playTone(chordRoot, 0.15, t, this.barDuration * 0.9, 'sawtooth', 500);
+      this._playTone(chordRoot * 1.25, 0.08, t, this.barDuration * 0.9, 'sawtooth', 500);
+    }
+
+    // Flute counter-melody (bars 8-11)
+    if (barIdx >= 8 && barIdx < 12) {
+      const fluteBar = barIdx - 8;
+      const notes = this.fluteA[fluteBar];
+      const beatDur = this.barDuration / 4;
+      for (let i = 0; i < notes.length; i++) {
+        if (!notes[i]) continue;
+        const freq = this.NOTES[notes[i]];
+        if (!freq) continue;
+        const noteStart = t + i * beatDur;
+        const dur = (i === notes.length - 1) ? beatDur * 1.5 : beatDur * 0.8;
+        this._playTone(freq, 0.18, noteStart, dur, 'sine');
+      }
+    }
+  }
+
+  _playTone(freq, vol, startTime, duration, waveType, filterFreq) {
+    const osc = this.ctx.createOscillator();
+    osc.type = waveType || 'triangle';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(vol, startTime + 0.02);
+    gain.gain.setValueAtTime(vol, startTime + duration - 0.05);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    if (filterFreq) {
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = filterFreq;
+      osc.connect(filter);
+      filter.connect(gain);
+    } else {
+      osc.connect(gain);
+    }
+    gain.connect(this.gainNode);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+    this._activeOscs.push({ osc, gain });
+
+    osc.onended = () => {
+      const idx = this._activeOscs.findIndex(o => o.osc === osc);
+      if (idx >= 0) this._activeOscs.splice(idx, 1);
+      try { osc.disconnect(); gain.disconnect(); } catch(e) {}
+    };
+  }
+
+  _stopAll() {
+    const oscs = [...this._activeOscs];
+    this._activeOscs = [];
+    for (const { osc } of oscs) {
+      try { osc.stop(); } catch(e) {}
+    }
+  }
+}
+
+// ============================================================
+// TITLE MENU — Navigation and input handler
+// ============================================================
+
+class TitleMenu {
+  constructor(game) {
+    this.game = game;
+    this.selectedIndex = 0;
+    this.items = [
+      { action: 'play', locked: false },
+      { action: 'characters', locked: true },
+      { action: 'stages', locked: true },
+      { action: 'settings', locked: false },
+    ];
+    this.dom = {
+      screen: document.getElementById('title-screen'),
+      menu: document.getElementById('title-menu'),
+      tooltip: document.getElementById('title-tooltip'),
+      infoVersion: document.getElementById('info-version'),
+      infoBestRun: document.getElementById('info-best-run'),
+      infoTotalGold: document.getElementById('info-total-gold'),
+    };
+    this._tooltipTimer = null;
+    this._boundKeyDown = this._handleKeyDown.bind(this);
+    this._boundClick = this._handleClick.bind(this);
+    this._boundMouseMove = this._handleMouseMove.bind(this);
+  }
+
+  show() {
+    this.dom.screen.classList.add('active');
+    this.selectedIndex = 0;
+    this._updateSelection();
+    this._updateInfo();
+    this._bindEvents();
+    this.dom.screen.addEventListener('click', this._boundClick);
+    this.dom.screen.addEventListener('mousemove', this._boundMouseMove);
+  }
+
+  hide() {
+    this.dom.screen.classList.remove('active');
+    this._unbindEvents();
+    this.dom.screen.removeEventListener('click', this._boundClick);
+    this.dom.screen.removeEventListener('mousemove', this._boundMouseMove);
+    this._hideTooltip();
+  }
+
+  _bindEvents() {
+    document.addEventListener('keydown', this._boundKeyDown);
+  }
+
+  _unbindEvents() {
+    document.removeEventListener('keydown', this._boundKeyDown);
+  }
+
+  _handleKeyDown(e) {
+    if (!this.dom.screen.classList.contains('active')) return;
+    if (document.getElementById('settings-screen').classList.contains('active')) return;
+
+    switch(e.key) {
+      case 'ArrowUp': case 'w': case 'W':
+        e.preventDefault();
+        this._moveSelection(-1);
+        break;
+      case 'ArrowDown': case 's': case 'S':
+        e.preventDefault();
+        this._moveSelection(1);
+        break;
+      case 'Enter': case ' ':
+        e.preventDefault();
+        this._select();
+        break;
+    }
+  }
+
+  _handleClick(e) {
+    const item = e.target.closest('.menu-item');
+    if (!item) return;
+    const idx = parseInt(item.dataset.index);
+    if (isNaN(idx)) return;
+    this.selectedIndex = idx;
+    this._updateSelection();
+    this._select();
+  }
+
+  _handleMouseMove(e) {
+    const item = e.target.closest('.menu-item');
+    if (!item) return;
+    const idx = parseInt(item.dataset.index);
+    if (isNaN(idx) || idx === this.selectedIndex) return;
+    this.selectedIndex = idx;
+    this._updateSelection();
+    if (this.game.audioManager) this.game.audioManager.playMenuSound('hover');
+  }
+
+  _moveSelection(dir) {
+    const len = this.items.length;
+    this.selectedIndex = (this.selectedIndex + dir + len) % len;
+    this._updateSelection();
+    if (this.game.audioManager) this.game.audioManager.playMenuSound('navigate');
+  }
+
+  _updateSelection() {
+    const items = this.dom.menu.querySelectorAll('.menu-item');
+    items.forEach((el, i) => {
+      el.classList.toggle('selected', i === this.selectedIndex);
+    });
+  }
+
+  _select() {
+    const item = this.items[this.selectedIndex];
+    if (item.locked) {
+      if (this.game.audioManager) this.game.audioManager.playMenuSound('locked');
+      this._showTooltip('Complete more runs to unlock!');
+      return;
+    }
+    if (this.game.audioManager) this.game.audioManager.playMenuSound('select');
+
+    switch(item.action) {
+      case 'play':
+        this.game._startFromTitle();
+        break;
+      case 'settings':
+        this.game._showSettings();
+        break;
+    }
+  }
+
+  _showTooltip(text) {
+    this.dom.tooltip.textContent = text;
+    this.dom.tooltip.classList.add('visible');
+    clearTimeout(this._tooltipTimer);
+    this._tooltipTimer = setTimeout(() => this._hideTooltip(), 2000);
+  }
+
+  _hideTooltip() {
+    this.dom.tooltip.classList.remove('visible');
+    clearTimeout(this._tooltipTimer);
+  }
+
+  _updateInfo() {
+    const gm = this.game.gameManager;
+    if (!gm) return;
+    const gold = gm.get_resource('gold') || gm.get_currency() || 0;
+    const runs = gm.get_counter('total_runs') || 0;
+    const bestTime = gm.get_counter('best_time') || 0;
+    const bestLevel = gm.get_counter('best_level') || 0;
+    this.dom.infoTotalGold.textContent = `Gold: ${gold}`;
+    if (bestTime > 0) {
+      const min = Math.floor(bestTime / 60);
+      const sec = Math.floor(bestTime % 60);
+      this.dom.infoBestRun.textContent = `Best: ${min}:${String(sec).padStart(2,'0')} Lv${bestLevel}`;
+    } else if (runs > 0) {
+      this.dom.infoBestRun.textContent = `Runs: ${runs}`;
+    }
+  }
+}
+
+// ============================================================
+// MAIN GAME
+// ============================================================
+
+
+
+// ============================================================
+// STORAGE BACKEND (Engine-agnostic storage interface)
+// ============================================================
+
+class StorageBackend {
+  load(key) { return null; }
+  save(key, data) {}
+  remove(key) {}
+}
+
+class LocalStorageBackend extends StorageBackend {
+  load(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  }
+  save(key, data) {
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+  }
+  remove(key) { localStorage.removeItem(key); }
+}
+
+// ============================================================
+// GAME MANAGER
+// Central store, resource tracking, combat session results
+// ============================================================
+
+class GameManager {
+  constructor(eventBus, backend) {
+    this.eventBus = eventBus;
+    this.backend = backend || new LocalStorageBackend();
+    this.store = null;
+    this._dirty = false;
+    this._autoSaveTimer = 0;
+  }
+
+  init() {
+    const saved = this.backend.load('modularity_engine_save');
+    if (saved) {
+      this.store = this._migrate(saved);
+    } else {
+      this.store = this._createDefault();
+    }
+    this._dirty = true;
+  }
+
+  _createDefault() {
+    return {
+      save_version: 1,
+      session: {
+        current_stage_id: null,
+        run_in_progress: false,
+        run_data: { time_survived: 0, kills: 0, gold_earned: 0, level_reached: 1 },
+      },
+      persistent: {
+        currency: 0,
+        player: { level: 1, xp: 0, total_gold: 0, base_stats: { max_health: 100, move_speed: 200, damage_multiplier: 1.0, speed_multiplier: 1.0 } },
+        combat: { unlocked_weapons: ["w1_projectile"], weapon_levels: {}, best_run: null, run_history: [] },
+        skills: { unlocked: [], skill_points: 0 },
+        town: { phase: 1, population: 0, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 } },
+        npcs: { met: [], relationships: {} },
+        factions: { wanderers_guild: { reputation: 0, rank: "unknown" } },
+        quests: { active: [], completed: [] },
+        unlocks: { stages: ["stage_graveyard"], items: [], features: ["town_basic", "combat_basic"] },
+        estates: [],
+        family: { wives: [], children: [] },
+        inventory: { equipment: { weapon: null, armor: null }, consumables: [], max_slots: 24 },
+      },
+      flags: {},
+      counters: { total_kills: 0, total_runs: 0 },
+    };
+  }
+
+  _migrate(data) {
+    const v = data.version || 0;
+    if (v < 1) {
+      data.inventory = data.inventory || {};
+      data.inventory.maxSlots = data.inventory.maxSlots || 24;
+      data.quests = data.quests || {};
+      data.quests.estateQueue = data.quests.estateQueue || [];
+      data.version = 1;
+    }
+    return data;
+  }
+
+  // ── Store Access ───────────────────────────────
+  get(path) {
+    return path.split('.').reduce((obj, key) => obj && obj[key], this.store);
+  }
+
+  set(path, value) {
+    const keys = path.split('.');
+    let obj = this.store;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!obj[keys[i]]) obj[keys[i]] = {};
+      obj = obj[keys[i]];
+    }
+    obj[keys[keys.length - 1]] = value;
+    this._dirty = true;
+  }
+
+  // ── Resource Tracking ──────────────────────────
+  // ── Currency (engine-agnostic name) ──────────────
+  add_currency(amount, source) {
+    if (amount <= 0) return;
+    this.store.persistent.currency += amount;
+    this.store.persistent.town.resources.gold += amount;
+    this._dirty = true;
+    this.eventBus.emit('resources:changed', { currency: this.store.persistent.currency, source });
+  }
+
+  spend_currency(amount, source) {
+    if (amount > this.store.persistent.currency) return false;
+    this.store.persistent.currency -= amount;
+    this.store.persistent.town.resources.gold -= amount;
+    this._dirty = true;
+    this.eventBus.emit('resources:changed', { currency: this.store.persistent.currency, source });
+    return true;
+  }
+
+  get_currency() { return this.store.persistent.currency || 0; }
+
+  // ── Resources ──────────────────────────────────
+  add_resource(type, amount) {
+    if (!this.store.persistent.town.resources.hasOwnProperty(type)) return;
+    this.store.persistent.town.resources[type] += amount;
+    this._dirty = true;
+  }
+
+  spend_resource(type, amount) {
+    const res = this.store.persistent.town.resources;
+    if (!res.hasOwnProperty(type) || amount > res[type]) return false;
+    res[type] -= amount;
+    this._dirty = true;
+    return true;
+  }
+
+  get_resource(type) { return this.store.persistent.town.resources[type] || 0; }
+  has_resource(type, amount) { return this.get_resource(type) >= amount; }
+
+  // ── Flags (flat key/value) ─────────────────────
+  set_flag(key, value) { this.store.flags[key] = value; this._dirty = true; }
+  get_flag(key) { return !!this.store.flags[key]; }
+  toggle_flag(key) { this.store.flags[key] = !this.store.flags[key]; this._dirty = true; }
+
+  // ── Counters (flat numeric) ────────────────────
+  add_counter(key, amount) {
+    this.store.counters[key] = (this.store.counters[key] || 0) + amount;
+    this._dirty = true;
+    this.eventBus.emit('counter:changed', { key, value: this.store.counters[key] });
+  }
+  get_counter(key) { return this.store.counters[key] || 0; }
+  set_counter(key, value) { this.store.counters[key] = value; this._dirty = true; }
+
+  // ── Player Progress ────────────────────────────
+  add_xp(amount) {
+    const p = this.store.persistent.player;
+    p.xp += amount;
+    const xpNeeded = 10 + p.level * 5;
+    while (p.xp >= xpNeeded) {
+      p.xp -= xpNeeded;
+      p.level++;
+      this.store.persistent.skills.skill_points++;
+      this.eventBus.emit('player:levelUp', { level: p.level });
+    }
+    this._dirty = true;
+  }
+
+  unlock_weapon(weapon_id) {
+    const w = this.store.persistent.combat.unlocked_weapons;
+    if (!w.includes(weapon_id)) { w.push(weapon_id); this._dirty = true; this.eventBus.emit('unlock:weapon', { weapon_id }); }
+  }
+
+  unlock_stage(stage_id) {
+    const s = this.store.persistent.unlocks.stages;
+    if (!s.includes(stage_id)) { s.push(stage_id); this._dirty = true; this.eventBus.emit('unlock:stage', { stage_id }); }
+  }
+
+  unlock_feature(feature_id) {
+    const f = this.store.persistent.unlocks.features;
+    if (!f.includes(feature_id)) { f.push(feature_id); this._dirty = true; this.eventBus.emit('unlock:feature', { feature_id }); }
+  }
+
+  // ── Combat Session ─────────────────────────────
+  _buildResult(data) {
+    return {
+      stageId: data.stageId || 'stage_graveyard',
+      stage_completed: data.stageCompleted || false,
+      time_survived: data.timeSurvived || 0,
+      player_level: data.playerLevel || 1,
+      kills: data.kills || 0,
+      kills_by_type: data.killsByType || {},
+      gold_earned: data.goldEarned || 0,
+      xp_earned: data.xpEarned || 0,
+      items: data.itemsFound || [],
+      boss_defeated: data.bossDefeated || false,
+      weapons_used: data.weaponsUsed || [],
+      weapon_levels_end: data.weapon_levels_end || {},
+      questEvents: data.questEvents || [],
+    };
+  }
+
+  end_session(result) {
+    const p = this.store.persistent;
+    const s = this.store.session;
+
+    // Currency rewards
+    if (result.rewards && result.rewards.currency) {
+      p.currency += result.rewards.currency;
+      p.town.resources.gold += result.rewards.currency;
+    }
+
+    // XP rewards
+    if (result.rewards && result.rewards.xp) {
+      this.add_xp(result.rewards.xp);
+    }
+
+    // Flags triggered
+    if (result.flags_triggered) {
+      for (const flag of result.flags_triggered) {
+        this.store.flags[flag] = true;
+      }
+    }
+
+    // Counters updated
+    if (result.counters_updated) {
+      for (const [key, val] of Object.entries(result.counters_updated)) {
+        this.store.counters[key] = (this.store.counters[key] || 0) + val;
+      }
+    }
+
+    // Stats
+    this.store.counters.total_runs = (this.store.counters.total_runs || 0) + 1;
+    if (result.stats && result.stats.kills) {
+      this.store.counters.total_kills = (this.store.counters.total_kills || 0) + result.stats.kills;
+    }
+
+    // Best run
+    const time = result.stats ? result.stats.time_survived : 0;
+    if (!p.combat.best_run || time > (p.combat.best_run.stats?.time_survived || 0)) {
+      p.combat.best_run = result;
+    }
+
+    // Run history (keep last 10)
+    p.combat.run_history.unshift(result);
+    if (p.combat.run_history.length > 10) p.combat.run_history.pop();
+
+    // Items
+    if (result.rewards && result.rewards.items) {
+      for (const item of result.rewards.items) {
+        const existing = p.inventory.consumables.find(i => i.id === item.id);
+        if (existing) existing.count += item.count || 1;
+        else p.inventory.consumables.push({ id: item.id, count: item.count || 1 });
+      }
+    }
+
+    // Clear session
+    s.run_in_progress = false;
+    s.run_data = { time_survived: 0, kills: 0, gold_earned: 0, level_reached: 1 };
+
+    // Emit events
+    this.eventBus.emit('combat:sessionEnd', result);
+    this.eventBus.emit('resources:changed', { currency: p.currency });
+
+    this.save();
+  }
+
+  _addToInventory(item) {
+    // Simplified: just track count in consumables
+    const existing = this.store.inventory.consumables.find(i => i.id === item.id);
+    if (existing) {
+      existing.count += item.count || 1;
+    } else {
+      this.store.inventory.consumables.push({ id: item.id, count: item.count || 1 });
+    }
+    this._dirty = true;
+  }
+
+  // ── Query Helpers ──────────────────────────────
+  getEffectiveStats() {
+    const base = this.store.player.baseStats;
+    // TODO: add skill tree bonuses and equipment bonuses
+    return { ...base };
+  }
+
+  getUnlockedWeapons() {
+    return this.store.persistent.combat.unlocked_weapons;
+  }
+
+  getRunHistory() {
+    return this.store.persistent.combat.run_history;
+  }
+
+  getBestRun() {
+    return this.store.persistent.combat.best_run;
+  }
+
+  // ── Save/Load ──────────────────────────────────
+  save() {
+    this.backend.save('modularity_engine_save', this.store);
+    this._dirty = false;
+  }
+
+  reset() {
+    this.store = this._createDefault();
+    this.save();
+    this.eventBus.emit('save:reset');
+  }
+
+  // ── Auto-save ──────────────────────────────────
+  update(dt) {
+    if (this._dirty) {
+      this._autoSaveTimer += dt;
+      if (this._autoSaveTimer >= 60) {
+        this.save();
+        this._autoSaveTimer = 0;
+      }
+    }
+  }
+}
+
+
+class Game {
+  constructor() {
+    this.canvas = document.getElementById('game-canvas');
+    this.resizeCanvas();
+    window.addEventListener('resize', () => this.resizeCanvas());
+
+    // Core systems
+    this.eventBus = new EventBus();
+    this.dataManager = new DataManager();
+    this.gameState = new GameState(this.eventBus);
+
+    // Game systems
+    this.camera = new Camera(this.canvas);
+    this.inputManager = new InputManager(this.canvas, this.eventBus);
+    this.inputManager._game = this;
+    this.entityManager = new EntityManager();
+    this.spawnSystem = new SpawnSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.movementSystem = new MovementSystem(this.entityManager, this.inputManager);
+    this.collisionSystem = new CollisionSystem(this.entityManager, this.eventBus);
+    this.weaponSystem = new WeaponSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.renderer = new Renderer(this.canvas, this.camera);
+    this.damageSystem = new DamageSystem(this.entityManager, this.eventBus, this.renderer);
+    this.pickupSystem = new PickupSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.levelingSystem = new LevelingSystem(this.entityManager, this.dataManager, this.eventBus);
+    this.uiManager = new UIManager(this.canvas, this.eventBus);
+    this.audioManager = new AudioManager(this.eventBus);
+    this.telegraphSystem = new TelegraphSystem(this.entityManager, this.eventBus);
+    this.gameManager = new GameManager(this.eventBus);
+    this.gameManager.init();
+    this._queuedBossIntro = null;
+    this.introOverlay = null;
+    this.announcements = [];
+    this._announcementTriggered = {};
+    this.floatingTextSystem = new FloatingTextSystem(this.eventBus);
+
+    // Game loop
+    this.gameLoop = new GameLoop(
+      (dt) => this.update(dt),
+      (interp) => this.render(interp)
+    );
+
+    this.gameTime = 0;
+    this.player = null;
+  }
+
+  resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = window.innerWidth * dpr;
+    this.canvas.height = window.innerHeight * dpr;
+  }
+
+  async init() {
+    const loadingFill = document.getElementById('loading-fill');
+    const loadingStatus = document.getElementById('loading-status');
+    const loadingScreen = document.getElementById('loading-screen');
+
+    // Load data
+    await this.dataManager.loadAll((progress, status) => {
+      loadingFill.style.width = `${progress * 100}%`;
+      loadingStatus.textContent = status;
+    });
+
+    // Preload SVG assets
+    this.renderer.imageCache = await preloadAssets((p) => {
+      loadingFill.style.width = `${p * 100}%`;
+      loadingStatus.textContent = `Loading assets... ${Math.round(p * 100)}%`;
+    });
+
+    // Init systems
+    this.damageSystem.init();
+    this.pickupSystem.init();
+    this.levelingSystem.init();
+    this.pickupSystem.setGameManager(this.gameManager);
+    this.audioManager.init();
+
+    // Connect telegraph system to renderer
+    this.renderer._telegraphSystem = this.telegraphSystem;
+    this.movementSystem.telegraphSystem = this.telegraphSystem;
+
+    // Setup event listeners
+    this._setupEvents();
+
+    // Hide loading screen
+    loadingScreen.style.display = 'none';
+
+    // Initialize title BGM and menu
+    this.titleBGM = new TitleBGM(this.audioManager.ctx, this.audioManager.musicGain);
+    this.titleBGM.init();
+    this.titleMenu = new TitleMenu(this);
+
+    // Show title screen (audio unlocks on first user gesture)
+    this.gameState.setState('title');
+    this.titleMenu.show();
+    this.titleBGM.fadeIn(1.5);
+  }
+
+  _setupEvents() {
+    this.eventBus.on('pause', (data) => {
+      if (this.gameState.isPlaying()) {
+        this.gameState.setState('paused');
+        this.gameLoop.paused = true;
+        this.inputManager._isPaused = true;
+      } else if (this.gameState.isPaused()) {
+        this.gameState.setState('playing');
+        this.gameLoop.paused = false;
+        this.inputManager._isPaused = false;
+        this.audioManager.duckForLevelUp(false);
+      }
+    });
+
+    this.eventBus.on('levelUp', (data) => {
+      this._checkWeaponUnlocks();
+      
+      // Consume the queue entry that triggered this event. Without this,
+      // the entry stays in the queue and selectUpgrade() sees it as a
+      // still-pending level-up, opening a second upgrade screen.
+      if (this.levelingSystem.hasPendingLevelUp()) {
+        this.levelingSystem.consumeLevelUp();
+      }
+      
+      this.gameState.setState('levelUp');
+      this.gameLoop.paused = true;
+      this.inputManager._isPaused = true;
+      this.audioManager.duckForLevelUp(true);
+      this._showUpgradeOptions();
+    });
+
+    this.eventBus.on('selectUpgrade', (data) => {
+      if (!this.gameState.isLevelUp()) return;
+      if (!this.uiManager.levelUpOptions) return;
+      const index = data.index;
+      if (index < 0 || index >= this.uiManager.levelUpOptions.length) return;
+      const option = this.uiManager.levelUpOptions[index];
+      if (option && option.apply) option.apply(this);
+      this.uiManager.hideLevelUp();
+      if (this.levelingSystem.hasPendingLevelUp()) {
+        this.levelingSystem.consumeLevelUp();
+        this._showUpgradeOptions();
+      } else {
+        this.gameState.setState('playing');
+        this.gameLoop.paused = false;
+        this.inputManager._isPaused = false;
+        this.audioManager.duckForLevelUp(false);
+      }
+    });
+
+    this.eventBus.on('damage', (data) => {
+      if (data.entity === this.player && data.entity.hp <= 0) {
+        this.gameState.triggerGameOver('defeat', this._getStats());
+        this._handleGameOver();
+        this.audioManager.stopOrbitHum();
+      }
+    });
+
+    this.eventBus.on('death', (data) => {
+      // GAP 5 FIX: Skip boss deaths here — handled by bossDeath event
+      if (data.type === 'boss_gravekeeper') return;
+      if (data.entity === this.player) {
+        this.gameState.triggerGameOver('defeat', this._getStats());
+        this._handleGameOver();
+        this.audioManager.stopOrbitHum();
+      }
+    });
+
+    this.eventBus.on('bossSpawn', (data) => {
+      this.renderer.bossEntity = data.boss;
+      // Check if boss has intro config
+      const bossData = this.dataManager.enemies.find(e => e.type === 'boss');
+      if (bossData && bossData.intro) {
+        this.startBossIntro(bossData.intro);
+      } else {
+        this.camera.shake(8, 0.5);
+      }
+    });
+
+    this.eventBus.on('bossDeath', (data) => {
+      this.gameState.triggerGameOver('victory', this._getStats());
+      this._handleGameOver();
+    });
+
+    this.eventBus.on('pickup', (data) => {
+      if (data.pickup.pickupData?.id === 'magnet') {
+        this.eventBus.emit('magnetActivate', { player: data.player });
+      }
+      
+      // Weapon Level-Up pickup: upgrade lowest-level active weapon
+      if (data.pickup.pickupData?.id === 'pickup_weapon_level_up') {
+        this._applyWeaponLevelUp();
+      }
+    });
+
+    this.eventBus.on('restart', () => {
+      this.startGame();
+    });
+  }
+
+  startGame() {
+    this.gameState.reset();
+    this.renderer.bossEntity = null;
+    this.telegraphSystem.clearAll();
+    if (this.gameManager) {
+      this.gameManager.store.persistent.town.resources.gold = 0;
+      this.gameManager.store.counters.total_runs++;
+    }
+    this.introOverlay = null;
+    this._announcementTriggered = {};
+    this.renderer._announcements = [];
+    this.renderer._dimOverlay = null;
+    this.entityManager.clearAll();
+    this.spawnSystem.reset();
+    this.pickupSystem.reset();
+    this.levelingSystem.reset();
+    this.weaponSystem.reset();
+    this.gameTime = 0;
+
+    // Create player
+    const charData = this.dataManager.characters;
+    this.player = this.entityManager.create('player', {
+      x: 0,
+      y: 0,
+      hp: charData.stats.maxHealth,
+      maxHp: charData.stats.maxHealth,
+      speed: charData.stats.moveSpeed,
+      stats: charData.stats,
+      size: charData.hitbox.width / 2,
+      visual: charData.visual,
+      damageMultiplier: 1,
+    });
+
+    this.weaponSystem.init(this.player);
+    // GAP 4 FIX: Pass player reference to AudioManager for distance calculations
+    this.audioManager.setPlayer(this.player);
+    this.gameState.setState('playing');
+    this.gameLoop.paused = false;
+    this.gameLoop.start();
+  }
+
+  update(dt) {
+    // Boss intro state: only update intro timer
+    if (this.gameState.isBossIntro()) {
+      this._updateBossIntro(dt);
+      return;
+    }
+    if (!this.gameState.isPlaying()) return;
+    // Guard: prevent updates after game over
+    if (this.gameState.isGameOver()) return;
+
+    this.gameTime += dt;
+
+    // Check pre-boss announcements
+    this._updateAnnouncements();
+
+    // Run all systems in order
+    this.telegraphSystem.update(dt);
+    this.movementSystem.update(dt);
+    this.weaponSystem.update(dt);
+    this.collisionSystem.update();
+    this.damageSystem.update(dt);
+    this.entityManager.cleanup();
+    this.spawnSystem.update(dt);
+    this.pickupSystem.update(dt);
+    this.levelingSystem.update(dt);
+
+    // GAP 2+3 FIX: Detect boss state transitions for audio events
+    this._detectBossStateChanges();
+
+    // Update camera
+    if (this.player) {
+      this.camera.follow(this.player);
+    }
+    this.camera.update(dt);
+
+    // Check game over conditions
+    if (this.gameTime >= 300) {
+      this.gameState.triggerGameOver('survived', this._getStats());
+      this._handleGameOver();
+    }
+  }
+
+  _updateBossIntro(dt) {
+    if (!this.introOverlay) return;
+    this.introOverlay.elapsed += dt;
+
+    // Camera shake during intro
+    if (this.introOverlay.elapsed >= 1.0 && this.introOverlay.elapsed < 1.1) {
+      this.camera.shake(10, 0.3);
+    }
+
+    // Skip on tap/click if allowed
+    if (this.introOverlay.allowSkip && this.introOverlay.elapsed > 0.5) {
+      if (this._skipIntroQueued) {
+        this._skipIntroQueued = false;
+        this._endBossIntro();
+        return;
+      }
+    }
+
+    if (this.introOverlay.elapsed >= this.introOverlay.totalDuration) {
+      this._endBossIntro();
+    }
+  }
+
+  _endBossIntro() {
+    this.introOverlay = null;
+    this.gameState.setState('playing');
+    this.gameLoop.paused = false;
+    this.inputManager._isPaused = false;
+    // Start boss AI
+    if (this.renderer.bossEntity) {
+      this.renderer.bossEntity._bossState = 'chase';
+      this.renderer.bossEntity._stateTimer = 3;
+    }
+    this.eventBus.emit('bossIntroComplete');
+  }
+
+  _updateAnnouncements() {
+    const stageData = this.dataManager.stages;
+    if (!stageData || !stageData.bossConfig || !stageData.bossConfig.announcement) return;
+    
+    for (const ann of stageData.bossConfig.announcement) {
+      if (this._announcementTriggered[ann.time]) continue;
+      if (this.gameTime >= ann.time) {
+        this._announcementTriggered[ann.time] = true;
+        if (ann.type === 'text' || ann.type === 'boss_name') {
+          this.renderer.showAnnouncement(ann.text, ann.styling || {});
+        }
+        if (ann.type === 'dim') {
+          this.renderer.startDimming(ann.brightness || 0.8);
+        }
+      }
+    }
+  }
+
+  startBossIntro(introConfig) {
+    // Queue if currently in level-up
+    if (this.gameState.isLevelUp()) {
+      this._queuedBossIntro = introConfig;
+      return;
+    }
+    this.gameState.setState('bossIntro');
+    this.gameLoop.paused = true;
+    this.inputManager._isPaused = true;
+    this.introOverlay = {
+      bossName: introConfig.bossName || '???',
+      bossSubtitle: introConfig.bossSubtitle || '',
+      totalDuration: introConfig.totalDuration || 3.5,
+      elapsed: 0,
+      allowSkip: introConfig.allowSkip !== false,
+      dimColor: introConfig.dimColor || 'rgba(0, 0, 0, 0.75)',
+      nameColor: introConfig.nameColor || '#FF4444',
+      subtitleColor: introConfig.subtitleColor || '#888888',
+      nameFontSize: introConfig.nameFontSize || 40,
+      subtitleFontSize: introConfig.subtitleFontSize || 18,
+    };
+    this._skipIntroQueued = false;
+    this.audioManager.eventBus.emit('bossIntro', introConfig);
+  }
+
+  _applyWeaponLevelUp() {
+    const weaponIds = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    // Find the lowest-level active weapon (prioritize upgrading what's unlocked)
+    let bestWeapon = null;
+    let bestLevel = Infinity;
+    for (const wid of weaponIds) {
+      const level = this.weaponSystem.weaponLevels[wid] || 0;
+      if (level > 0 && level < bestLevel) {
+        bestLevel = level;
+        bestWeapon = wid;
+      }
+    }
+    if (bestWeapon) {
+      this.weaponSystem.levelUp(bestWeapon);
+    }
+  }
+
+  // GAP 2+3 FIX: Detect boss state transitions and emit events for AudioManager
+  _detectBossStateChanges() {
+    if (!this.renderer.bossEntity) return;
+    const boss = this.renderer.bossEntity;
+    if (!boss || boss.hp <= 0) return;
+    
+    const prevState = boss._prevAudioState || '';
+    const currState = boss._bossState || '';
+    
+    if (prevState !== currState) {
+      boss._prevAudioState = currState;
+      
+      // Windup = telegraph before charge — play warning growl
+      if (currState === 'windup') {
+        this.eventBus.emit('bossCharge', { boss, phase: 'windup' });
+      }
+      // Charge = actual rush — play impact sound
+      if (currState === 'charge') {
+        this.eventBus.emit('bossCharge', { boss, phase: 'charge' });
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════
+  // TITLE SCREEN INTEGRATION
+  // ═══════════════════════════════════════════════
+
+  _startFromTitle() {
+    this.titleMenu.hide();
+    this.titleBGM.fadeOut(1.5);
+    // Resume audio context (browser unlock)
+    this.audioManager.resume();
+    // Start game after title BGM fades
+    setTimeout(() => {
+      this.titleBGM.stop();
+      this.startGame();
+    }, 1500);
+  }
+
+  _showSettings() {
+    const screen = document.getElementById('settings-screen');
+    screen.classList.add('active');
+    // Wire sliders
+    const sfxSlider = document.getElementById('sfx-slider');
+    const musicSlider = document.getElementById('music-slider');
+    const sfxVal = document.getElementById('sfx-val');
+    const musicVal = document.getElementById('music-val');
+    
+    // Set initial values
+    sfxSlider.value = Math.round((this.audioManager.sfxGain?.gain?.value || 0.85) / 0.85 * 100);
+    sfxVal.textContent = sfxSlider.value + '%';
+    musicSlider.value = Math.round((this.audioManager.musicGain?.gain?.value || 0.4) / 0.4 * 100);
+    musicVal.textContent = musicSlider.value + '%';
+
+    sfxSlider.oninput = () => {
+      const v = parseInt(sfxSlider.value);
+      sfxVal.textContent = v + '%';
+      if (this.audioManager.sfxGain) {
+        this.audioManager.sfxGain.gain.value = (v / 100) * 0.85;
+      }
+      this.audioManager.playMenuSound('slider');
+    };
+    musicSlider.oninput = () => {
+      const v = parseInt(musicSlider.value);
+      musicVal.textContent = v + '%';
+      if (this.titleBGM && this.titleBGM.gainNode) {
+        this.titleBGM.gainNode.gain.value = (v / 100) * 0.4;
+      }
+      this.audioManager.playMenuSound('slider');
+    };
+
+    // Back button
+    const backBtn = document.getElementById('settings-back');
+    backBtn.onclick = () => {
+      this.audioManager.playMenuSound('back');
+      screen.classList.remove('active');
+    };
+
+    // Reset progress
+    const resetBtn = document.getElementById('reset-progress');
+    resetBtn.onclick = () => {
+      if (confirm('Reset all progress? This cannot be undone.')) {
+        if (this.gameManager) {
+          this.gameManager.backend.remove('modularity_engine_save');
+          this.gameManager.store = this.gameManager._createDefault();
+          this.titleMenu._updateInfo();
+          this.audioManager.playMenuSound('select');
+        }
+      }
+    };
+
+    // Escape to go back
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.audioManager.playMenuSound('back');
+        screen.classList.remove('active');
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+  }
+
+  _returnToTitle() {
+    // Show title screen again after game over
+    this.gameState.setState('title');
+    this.titleMenu.show();
+    this.titleBGM.fadeIn(1.5);
+  }
+
+  _handleGameOver() {
+    // Pause the game loop
+    this.gameLoop.paused = true;
+    this.inputManager._isPaused = true;
+    
+    // Build and submit combat result
+    const stats = this.gameState.endStats || this._getStats();
+    const result = this.gameState.endResult || 'defeat';
+    if (this.gameManager) {
+      const combatResult = this.gameManager._buildResult({
+        stageId: 'stage_graveyard',
+        stage_completed: result === 'victory',
+        time_survived: this.gameTime,
+        player_level: this.levelingSystem.level,
+        kills: this.entityManager.getCount('enemy'),
+        gold_earned: this.gameManager.get_resource('gold'),
+        xp_earned: this.levelingSystem.xp,
+        boss_defeated: result === 'victory',
+        weapons_used: Object.keys(this.weaponSystem.weaponLevels).filter(k => this.weaponSystem.weaponLevels[k] > 0),
+        weapon_levels_end: { ...this.weaponSystem.weaponLevels },
+      });
+      this.gameManager.end_session(combatResult);
+    }
+    
+    // Show end screen with result and stats
+    this.uiManager.showEndScreen(result, stats);
+    
+    // Wire "Return to Title" — after 2 seconds, show a button or auto-transition
+    this._gameOverReturnTimer = setTimeout(() => {
+      this._showGameOverReturnOption();
+    }, 1500);
+  }
+
+  _showGameOverReturnOption() {
+    // Add a "Return to Title" button to the end screen
+    const endScreen = document.getElementById('end-screen');
+    if (!endScreen) {
+      // Create minimal end screen overlay if UIManager doesn't make one
+      const overlay = document.createElement('div');
+      overlay.id = 'end-screen';
+      overlay.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,26,0.9);z-index:98;font-family:Segoe UI,system-ui,sans-serif;';
+      overlay.innerHTML = '<div style="color:#FFD700;font-size:1.5rem;margin-bottom:20px;font-family:Georgia,serif;">Run Complete</div><div id="end-stats" style="color:#aaa;margin-bottom:24px;text-align:center;"></div><div id="return-to-title" style="padding:12px 32px;color:#FFD700;border:1px solid rgba(255,215,0,0.3);border-radius:8px;cursor:pointer;font-size:1rem;transition:background 0.15s;">Return to Title</div>';
+      document.body.appendChild(overlay);
+      const stats = this._getStats();
+      document.getElementById('end-stats').innerHTML = `Time: ${stats.time}<br>Level: ${stats.level}<br>Kills: ${stats.kills}<br>Gold: ${stats.gold}`;
+      document.getElementById('return-to-title').onclick = () => {
+        overlay.remove();
+        this.audioManager.playMenuSound('select');
+        this._returnToTitle();
+      };
+      document.getElementById('return-to-title').onmouseover = () => {
+        this.audioManager.playMenuSound('hover');
+      };
+    }
+  }
+
+  render(interp) {
+    const entities = this.entityManager.getActive();
+    
+    // Always render the game world (even during intro, as a frozen frame)
+    this.renderer.render(entities, this.player);
+    
+    // Boss intro overlay
+    if (this.gameState.isBossIntro() && this.introOverlay) {
+      this.renderer._drawBossIntro(this.introOverlay);
+    }
+    
+    // Announcements (rendered on top of everything)
+    this.renderer.renderAnnouncements(1/60);
+    this.renderer._drawAnnouncements();
+
+    // Update renderer UI data
+    if (this.player) {
+      this.renderer.level = this.levelingSystem.level;
+      this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
+    }
+
+    // Floating damage/pickup text
+    this.floatingTextSystem.update(1/60);
+    const ctx = this.renderer.ctx;
+    ctx.save();
+    this.camera.apply(ctx);
+    this.floatingTextSystem.draw(ctx);
+    ctx.restore();
+
+    // Always render UI (includes end screen overlay when game over)
+    this.uiManager.render();
+  }
+
+  _checkWeaponUnlocks() {
+    const level = this.levelingSystem.level;
+    const weapons = this.dataManager.weapons;
+    console.log(`[WeaponUnlock] Checking at level ${level}, weapons count: ${weapons ? weapons.length : 'null'}`);
+    if (!weapons || !Array.isArray(weapons)) {
+      console.error('[WeaponUnlock] weapons is not an array:', weapons);
+      return;
+    }
+    for (const weapon of weapons) {
+      console.log(`[WeaponUnlock] ${weapon.id}: unlockLevel=${weapon.unlockLevel}, currentLevel=${this.weaponSystem.weaponLevels[weapon.id] || 0}`);
+      if (weapon.unlockLevel && level >= weapon.unlockLevel) {
+        if (!this.weaponSystem.weaponLevels[weapon.id]) {
+          console.log(`[WeaponUnlock] UNLOCKING ${weapon.id}!`);
+          this.weaponSystem.unlockWeapon(weapon.id);
+          this.eventBus.emit('weaponUnlock', { weaponId: weapon.id, name: weapon.name });
+        }
+      }
+    }
+  }
+
+  _showUpgradeOptions() {
+    if (this.gameState.isLevelUp() && this.uiManager.levelUpOptions) return;
+  
+    // Build upgrade pool: stat upgrades + weapon upgrades for active weapons
+    const upgrades = [
+      {
+        name: 'Damage Up',
+        desc: '+15% base damage',
+        apply: (game) => {
+          if (game.player) {
+            if (!game.player.damageMultiplier) game.player.damageMultiplier = 1;
+            game.player.damageMultiplier *= 1.15;
+          }
+        },
+      },
+      {
+        name: 'Speed Up',
+        desc: '+10% move speed',
+        apply: (game) => {
+          if (game.player) {
+            if (!game.player.speedMultiplier) game.player.speedMultiplier = 1;
+            game.player.speedMultiplier *= 1.10;
+            game.player.speed = (game.player.stats?.moveSpeed || 200) * game.player.speedMultiplier;
+          }
+        },
+      },
+      {
+        name: 'Health Up',
+        desc: '+20 max HP & heal',
+        apply: (game) => {
+          if (game.player) {
+            game.player.maxHp += 20;
+            game.player.hp = Math.min(game.player.hp + 20, game.player.maxHp);
+          }
+        },
+      },
+    ];
+
+    // Add weapon upgrades for each unlocked weapon (max level 7)
+    const weaponIds = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area' };
+    for (const wid of weaponIds) {
+      const wLevel = game.weaponSystem.weaponLevels[wid] || 0;
+      if (wLevel > 0 && wLevel < 7) {
+        const wData = game.dataManager.weapons.find(w => w.id === wid);
+        const nextStats = wData?.statsPerLevel?.[wLevel]; // next level's stats
+        const desc = nextStats ? `Lv ${wLevel} → ${wLevel + 1}` : `Upgrade ${weaponNames[wid]}`;
+        upgrades.push({
+          name: `${weaponNames[wid]} Up`,
+          desc: desc,
+          apply: (game) => {
+            game.weaponSystem.levelUp(wid);
+          },
+        });
+      }
+    }
+
+    // Shuffle and pick 3
+    for (let i = upgrades.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [upgrades[i], upgrades[j]] = [upgrades[j], upgrades[i]];
+    }
+    this.uiManager.showLevelUp(upgrades.slice(0, 3));
+  }
+
+  _getStats() {
+    return {
+      time: `${Math.floor(this.gameTime / 60)}:${String(Math.floor(this.gameTime % 60)).padStart(2, '0')}`,
+      level: this.levelingSystem.level,
+      kills: this.entityManager.getCount('enemy'),
+      gold: this.gameManager ? this.gameManager.get_resource('gold') : 0,
+    };
+  }
+}
+
+// ============================================================
+// START
+// ============================================================
+
+const game = new Game();
+game.init().catch(console.error);
+
+</script>
+</body>
+</html>

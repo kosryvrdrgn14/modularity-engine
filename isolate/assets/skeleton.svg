@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Body/ribcage -->
+  <rect x="8" y="10" width="8" height="10" rx="2" fill="#C0392B"/>
+  <rect x="9" y="11" width="6" height="8" rx="1" fill="#922B21"/>
+  <!-- Rib lines -->
+  <line x1="10" y1="13" x2="14" y2="13" stroke="#F5E6CC" stroke-width="0.8" opacity="0.6"/>
+  <line x1="10" y1="15" x2="14" y2="15" stroke="#F5E6CC" stroke-width="0.8" opacity="0.6"/>
+  <line x1="10" y1="17" x2="14" y2="17" stroke="#F5E6CC" stroke-width="0.8" opacity="0.6"/>
+  <!-- Skull -->
+  <circle cx="12" cy="7" r="4" fill="#F5E6CC"/>
+  <circle cx="12" cy="7" r="3.5" fill="#E8D5B7"/>
+  <!-- Eye sockets -->
+  <ellipse cx="10.5" cy="6.5" rx="1.2" ry="1" fill="#1A1A2E"/>
+  <ellipse cx="13.5" cy="6.5" rx="1.2" ry="1" fill="#1A1A2E"/>
+  <!-- Red eye glow -->
+  <circle cx="10.5" cy="6.5" r="0.5" fill="#FF4444"/>
+  <circle cx="13.5" cy="6.5" r="0.5" fill="#FF4444"/>
+  <!-- Jaw -->
+  <rect x="10" y="9" width="4" height="1.5" rx="0.5" fill="#D4C4A0"/>
+  <!-- Shoulder bones -->
+  <rect x="4" y="10" width="5" height="2.5" rx="1" fill="#C0392B"/>
+  <rect x="15" y="10" width="5" height="2.5" rx="1" fill="#C0392B"/>
+  <!-- Weapon (sword) -->
+  <rect x="19" y="5" width="2" height="14" rx="0.5" fill="#922B21"/>
+  <rect x="18" y="4" width="4" height="2" rx="0.5" fill="#C0392B"/>
+  <rect x="19.5" y="5" width="1" height="12" fill="#F5E6CC" opacity="0.3"/>
+</svg>
