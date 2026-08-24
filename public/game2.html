@@ -5719,10 +5719,8 @@ class TownScreen {
         this._typewriterTimer = null;
       }
     });
-    this.dom.dialogueContinue.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
-      this.dom.dialogueOverlay.classList.remove('active');
-    });
+    // dialogueContinue click handled inline in _showChoices() per-topic
+    // so it loops back to choices instead of closing the overlay.
   }
 
   show(runStats) {
