@@ -990,6 +990,11 @@ class InputManager {
     // Keyboard
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
+      // DEBUG: B key skips to boss
+      if (e.code === 'KeyB') {
+        this.eventBus.emit('skipToBoss');
+        return;
+      }
       if (e.code === 'Escape') {
         this.eventBus.emit('pause', { paused: true });
       }
@@ -4657,6 +4662,13 @@ class Game {
   }
 
   _setupEvents() {
+    // DEBUG: Press B to skip to boss spawn (3:50)
+    this.eventBus.on('skipToBoss', () => {
+      if (this.gameState.isPlaying()) {
+        this.gameTime = 238; // 3:58 — 2 seconds before boss spawns at 4:00
+      }
+    });
+
     this.eventBus.on('pause', (data) => {
       if (this.gameState.isPlaying()) {
         this.gameState.setState('paused');
@@ -5102,6 +5114,17 @@ class Game {
   }
 
   render(interp) {
+    // Tick boss intro timer even when game loop is paused
+    if (this.gameState.isBossIntro() && this.introOverlay) {
+      const now = performance.now();
+      if (!this._lastIntroTick) this._lastIntroTick = now;
+      const dt = (now - this._lastIntroTick) / 1000;
+      this._lastIntroTick = now;
+      this._updateBossIntro(Math.min(dt, 0.1));
+    } else {
+      this._lastIntroTick = null;
+    }
+
     const entities = this.entityManager.getActive();
     
     // Always render the game world (even during intro, as a frozen frame)
