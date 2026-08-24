@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A0A1A"/>
+      <stop offset="60%" stop-color="#0F0F2A"/>
+      <stop offset="100%" stop-color="#1A1A2E"/>
+    </linearGradient>
+    <radialGradient id="fireGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF6600" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#FF4400" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#FF2200" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moonGlow2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C8D8E8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#C8D8E8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Night sky -->
+  <rect width="800" height="450" fill="url(#nightSky)"/>
+
+  <!-- Stars -->
+  <circle cx="80" cy="40" r="1" fill="#fff" opacity="0.6"/>
+  <circle cx="200" cy="25" r="1.3" fill="#fff" opacity="0.8"/>
+  <circle cx="350" cy="50" r="0.8" fill="#fff" opacity="0.5"/>
+  <circle cx="500" cy="30" r="1.1" fill="#fff" opacity="0.7"/>
+  <circle cx="650" cy="45" r="1" fill="#fff" opacity="0.6"/>
+  <circle cx="750" cy="20" r="1.4" fill="#fff" opacity="0.9"/>
+  <circle cx="120" cy="70" r="0.7" fill="#fff" opacity="0.4"/>
+  <circle cx="420" cy="65" r="0.9" fill="#fff" opacity="0.5"/>
+  <circle cx="580" cy="55" r="1.2" fill="#fff" opacity="0.7"/>
+
+  <!-- Moon -->
+  <circle cx="680" cy="70" r="30" fill="url(#moonGlow2)"/>
+  <circle cx="680" cy="70" r="14" fill="#C8D8E8" opacity="0.8"/>
+  <circle cx="687" cy="65" r="12" fill="#0F0F2A"/>
+
+  <!-- Ground -->
+  <path d="M0 350 Q100 345 200 348 Q300 342 400 345 Q500 340 600 343 Q700 338 800 340 L800 450 L0 450 Z" fill="#1A1A1A"/>
+  <path d="M0 360 Q100 357 200 359 Q300 355 400 357 Q500 353 600 355 Q700 351 800 353 L800 450 L0 450 Z" fill="#151515"/>
+
+  <!-- Tent 1 (left) - rough triangular -->
+  <path d="M100 350 L140 290 L180 350 Z" fill="#3A3020" stroke="#2A2015" stroke-width="1"/>
+  <path d="M100 350 L140 290" fill="none" stroke="#4A4030" stroke-width="1" opacity="0.5"/>
+  <line x1="140" y1="290" x2="140" y2="350" stroke="#2A2015" stroke-width="1.5"/>
+
+  <!-- Tent 2 (center-left) -->
+  <path d="M250 350 L300 275 L350 350 Z" fill="#353025" stroke="#252015" stroke-width="1"/>
+  <path d="M280 350 L300 275" fill="none" stroke="#454035" stroke-width="1" opacity="0.4"/>
+  <line x1="300" y1="275" x2="300" y2="350" stroke="#252015" stroke-width="1.5"/>
+
+  <!-- Tent 3 (center-right) - larger -->
+  <path d="M420 350 L480 265 L540 350 Z" fill="#3D3528" stroke="#2D2518" stroke-width="1"/>
+  <path d="M450 350 L480 265" fill="none" stroke="#4D4538" stroke-width="1" opacity="0.4"/>
+  <line x1="480" y1="265" x2="480" y2="350" stroke="#2D2518" stroke-width="1.5"/>
+  <!-- Tent opening -->
+  <path d="M465 350 L480 320 L495 350 Z" fill="#1A1A1A"/>
+
+  <!-- Tent 4 (right) -->
+  <path d="M620 350 L660 285 L700 350 Z" fill="#383022" stroke="#282012" stroke-width="1"/>
+  <line x1="660" y1="285" x2="660" y2="350" stroke="#282012" stroke-width="1.5"/>
+
+  <!-- Scattered rocks -->
+  <ellipse cx="200" cy="370" rx="8" ry="4" fill="#222"/>
+  <ellipse cx="550" cy="375" rx="6" ry="3" fill="#1E1E1E"/>
+  <ellipse cx="720" cy="368" rx="10" ry="5" fill="#222"/>
+
+  <!-- Campfire glow on ground -->
+  <ellipse cx="400" cy="365" rx="80" ry="20" fill="url(#fireGlow)"/>
+
+  <!-- Campfire logs -->
+  <line x1="385" y1="360" x2="415" y2="355" stroke="#3A2010" stroke-width="4" stroke-linecap="round"/>
+  <line x1="390" y1="355" x2="420" y2="362" stroke="#2A1808" stroke-width="3" stroke-linecap="round"/>
+  <line x1="380" y1="358" x2="410" y2="365" stroke="#3A2010" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Fire flames -->
+  <path d="M395 350 Q400 330 405 350" fill="#FF6600" opacity="0.9">
+    <animate attributeName="d" values="M395 350 Q400 330 405 350;M393 350 Q400 325 407 350;M395 350 Q400 330 405 350" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  <path d="M397 350 Q400 335 403 350" fill="#FFAA00" opacity="0.8">
+    <animate attributeName="d" values="M397 350 Q400 335 403 350;M396 350 Q400 332 404 350;M397 350 Q400 335 403 350" dur="0.4s" repeatCount="indefinite"/>
+  </path>
+  <path d="M398 350 Q400 340 402 350" fill="#FFDD44" opacity="0.9">
+    <animate attributeName="d" values="M398 350 Q400 340 402 350;M397 350 Q400 337 403 350;M398 350 Q400 340 402 350" dur="0.3s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Sparks -->
+  <circle cx="398" cy="340" r="1" fill="#FFAA00" opacity="0.7">
+    <animate attributeName="cy" values="340;310;280" dur="1.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.7;0.3;0" dur="1.5s" repeatCount="indefinite"/>
+    <animate attributeName="cx" values="398;395;400" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="402" cy="342" r="0.8" fill="#FFCC00" opacity="0.6">
+    <animate attributeName="cy" values="342;315;290" dur="1.8s" repeatCount="indefinite" begin="0.5s"/>
+    <animate attributeName="opacity" values="0.6;0.2;0" dur="1.8s" repeatCount="indefinite" begin="0.5s"/>
+  </circle>
+
+  <!-- Simple fence posts -->
+  <line x1="50" y1="355" x2="50" y2="340" stroke="#2A2015" stroke-width="2"/>
+  <line x1="70" y1="353" x2="70" y2="338" stroke="#2A2015" stroke-width="2"/>
+  <line x1="50" y1="342" x2="70" y2="340" stroke="#2A2015" stroke-width="1.5"/>
+
+  <!-- Distant trees silhouette -->
+  <path d="M0 330 L10 310 L20 330 L30 305 L40 330 L50 315 L60 330" fill="#0D0D15" opacity="0.5"/>
+  <path d="M740 325 L750 300 L760 325 L770 295 L780 325 L790 310 L800 325" fill="#0D0D15" opacity="0.5"/>
+</svg>

@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="nightSky2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A0A1A"/>
+      <stop offset="60%" stop-color="#0F0F2A"/>
+      <stop offset="100%" stop-color="#1A1A2E"/>
+    </linearGradient>
+    <radialGradient id="fireGlow2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF6600" stop-opacity="0.35"/>
+      <stop offset="50%" stop-color="#FF4400" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FF2200" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="windowGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFAA44" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#FF8822" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Night sky -->
+  <rect width="800" height="450" fill="url(#nightSky2)"/>
+
+  <!-- Stars -->
+  <circle cx="60" cy="35" r="1" fill="#fff" opacity="0.6"/>
+  <circle cx="180" cy="20" r="1.3" fill="#fff" opacity="0.8"/>
+  <circle cx="320" cy="45" r="0.8" fill="#fff" opacity="0.5"/>
+  <circle cx="480" cy="28" r="1.1" fill="#fff" opacity="0.7"/>
+  <circle cx="620" cy="40" r="1" fill="#fff" opacity="0.6"/>
+  <circle cx="740" cy="18" r="1.4" fill="#fff" opacity="0.9"/>
+  <circle cx="100" cy="60" r="0.7" fill="#fff" opacity="0.4"/>
+  <circle cx="400" cy="55" r="0.9" fill="#fff" opacity="0.5"/>
+
+  <!-- Moon -->
+  <circle cx="700" cy="65" r="14" fill="#C8D8E8" opacity="0.8"/>
+  <circle cx="707" cy="60" r="12" fill="#0F0F2A"/>
+
+  <!-- Ground -->
+  <path d="M0 350 Q100 345 200 348 Q300 342 400 345 Q500 340 600 343 Q700 338 800 340 L800 450 L0 450 Z" fill="#1A1A1A"/>
+  <path d="M0 360 Q100 357 200 359 Q300 355 400 357 Q500 353 600 355 Q700 351 800 353 L800 450 L0 450 Z" fill="#151515"/>
+
+  <!-- Dirt path -->
+  <path d="M350 450 Q370 400 390 370 Q400 360 410 370 Q430 400 450 450" fill="#1E1A14" opacity="0.6"/>
+
+  <!-- Shack 1 (left) - wooden walls -->
+  <rect x="80" y="295" width="80" height="55" fill="#3A2A18" stroke="#2A1A08" stroke-width="1"/>
+  <path d="M75 295 L120 265 L165 295" fill="#4A3520" stroke="#3A2510" stroke-width="1"/>
+  <!-- Wood planks -->
+  <line x1="80" y1="310" x2="160" y2="310" stroke="#2A1A08" stroke-width="0.5" opacity="0.5"/>
+  <line x1="80" y1="325" x2="160" y2="325" stroke="#2A1A08" stroke-width="0.5" opacity="0.5"/>
+  <!-- Window with warm glow -->
+  <rect x="100" y="305" width="16" height="12" fill="#1A1A1A"/>
+  <rect x="100" y="305" width="16" height="12" fill="url(#windowGlow)" opacity="0.8"/>
+  <rect x="100" y="305" width="16" height="12" fill="none" stroke="#2A1A08" stroke-width="1"/>
+  <line x1="108" y1="305" x2="108" y2="317" stroke="#2A1A08" stroke-width="0.5"/>
+  <line x1="100" y1="311" x2="116" y2="311" stroke="#2A1A08" stroke-width="0.5"/>
+  <!-- Door -->
+  <rect x="130" y="320" width="18" height="30" fill="#2A1A08" stroke="#1A0A00" stroke-width="1"/>
+  <circle cx="144" cy="336" r="1.5" fill="#8B7355"/>
+
+  <!-- Shack 2 (center-left) -->
+  <rect x="220" y="285" width="90" height="65" fill="#3D2D1A" stroke="#2D1D0A" stroke-width="1"/>
+  <path d="M215 285 L265 250 L315 285" fill="#4D3822" stroke="#3D2812" stroke-width="1"/>
+  <line x1="220" y1="305" x2="310" y2="305" stroke="#2D1D0A" stroke-width="0.5" opacity="0.5"/>
+  <line x1="220" y1="325" x2="310" y2="325" stroke="#2D1D0A" stroke-width="0.5" opacity="0.5"/>
+  <!-- Two windows -->
+  <rect x="235" y="298" width="14" height="11" fill="url(#windowGlow)" opacity="0.7"/>
+  <rect x="235" y="298" width="14" height="11" fill="none" stroke="#2D1D0A" stroke-width="1"/>
+  <rect x="275" y="298" width="14" height="11" fill="url(#windowGlow)" opacity="0.7"/>
+  <rect x="275" y="298" width="14" height="11" fill="none" stroke="#2D1D0A" stroke-width="1"/>
+  <!-- Door -->
+  <rect x="255" y="318" width="20" height="32" fill="#2D1D0A" stroke="#1D0D00" stroke-width="1"/>
+  <circle cx="271" cy="335" r="1.5" fill="#8B7355"/>
+
+  <!-- Campfire (improved - stone ring) -->
+  <ellipse cx="430" cy="362" rx="25" ry="8" fill="#2A2A2A" stroke="#3A3A3A" stroke-width="1"/>
+  <ellipse cx="430" cy="360" rx="20" ry="6" fill="#1A1A1A"/>
+  <!-- Logs -->
+  <line x1="420" y1="358" x2="440" y2="355" stroke="#3A2010" stroke-width="3" stroke-linecap="round"/>
+  <line x1="422" y1="355" x2="442" y2="360" stroke="#2A1808" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Fire -->
+  <path d="M425 352 Q430 335 435 352" fill="#FF6600" opacity="0.9">
+    <animate attributeName="d" values="M425 352 Q430 335 435 352;M423 352 Q430 330 437 352;M425 352 Q430 335 435 352" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  <path d="M427 352 Q430 340 433 352" fill="#FFAA00" opacity="0.8">
+    <animate attributeName="d" values="M427 352 Q430 340 433 352;M426 352 Q430 337 434 352;M427 352 Q430 340 433 352" dur="0.4s" repeatCount="indefinite"/>
+  </path>
+  <!-- Fire glow -->
+  <ellipse cx="430" cy="362" rx="60" ry="18" fill="url(#fireGlow2)"/>
+
+  <!-- Shack 3 (center-right) - larger, better built -->
+  <rect x="520" y="280" width="100" height="70" fill="#402E1C" stroke="#30200C" stroke-width="1"/>
+  <path d="M515 280 L570 240 L625 280" fill="#503A24" stroke="#403014" stroke-width="1"/>
+  <!-- Chimney -->
+  <rect x="590" y="248" width="12" height="32" fill="#3A2A18"/>
+  <rect x="588" y="245" width="16" height="5" fill="#4A3520"/>
+  <!-- Smoke -->
+  <circle cx="596" cy="238" r="3" fill="#666" opacity="0.3">
+    <animate attributeName="cy" values="238;210;185" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0.15;0" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="cx" values="596;600;594" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <!-- Planks -->
+  <line x1="520" y1="300" x2="620" y2="300" stroke="#30200C" stroke-width="0.5" opacity="0.5"/>
+  <line x1="520" y1="320" x2="620" y2="320" stroke="#30200C" stroke-width="0.5" opacity="0.5"/>
+  <line x1="520" y1="340" x2="620" y2="340" stroke="#30200C" stroke-width="0.5" opacity="0.5"/>
+  <!-- Windows -->
+  <rect x="535" y="293" width="16" height="12" fill="url(#windowGlow)" opacity="0.7"/>
+  <rect x="535" y="293" width="16" height="12" fill="none" stroke="#30200C" stroke-width="1"/>
+  <rect x="590" y="293" width="16" height="12" fill="url(#windowGlow)" opacity="0.7"/>
+  <rect x="590" y="293" width="16" height="12" fill="none" stroke="#30200C" stroke-width="1"/>
+  <!-- Door -->
+  <rect x="560" y="318" width="22" height="32" fill="#2A1A08" stroke="#1A0A00" stroke-width="1"/>
+  <circle cx="578" cy="335" r="1.5" fill="#8B7355"/>
+
+  <!-- Shack 4 (right) -->
+  <rect x="680" y="300" width="70" height="50" fill="#382A16" stroke="#281A06" stroke-width="1"/>
+  <path d="M675 300 L715 275 L755 300" fill="#483520" stroke="#382510" stroke-width="1"/>
+  <rect x="695" y="310" width="12" height="10" fill="url(#windowGlow)" opacity="0.6"/>
+  <rect x="695" y="310" width="12" height="10" fill="none" stroke="#281A06" stroke-width="1"/>
+  <rect x="720" y="320" width="16" height="30" fill="#281A06" stroke="#180A00" stroke-width="1"/>
+
+  <!-- Barrel -->
+  <ellipse cx="190" cy="355" rx="10" ry="8" fill="#3A2810" stroke="#2A1800" stroke-width="1"/>
+  <line x1="180" y1="352" x2="200" y2="352" stroke="#4A3820" stroke-width="1"/>
+  <line x1="180" y1="358" x2="200" y2="358" stroke="#4A3820" stroke-width="1"/>
+
+  <!-- Crates -->
+  <rect x="500" y="345" width="14" height="12" fill="#3A2A14" stroke="#2A1A04" stroke-width="1"/>
+  <line x1="500" y1="351" x2="514" y2="351" stroke="#2A1A04" stroke-width="0.5"/>
+  <rect x="516" y="348" width="12" height="9" fill="#352510" stroke="#251500" stroke-width="1"/>
+
+  <!-- Scattered rocks -->
+  <ellipse cx="460" cy="370" rx="7" ry="3.5" fill="#222"/>
+  <ellipse cx="170" cy="368" rx="5" ry="2.5" fill="#1E1E1E"/>
+</svg>
