@@ -321,6 +321,281 @@
     }
     .settings-danger:hover { background: rgba(204, 68, 68, 0.1); }
 
+
+    /* === TOWN SCREEN === */
+    #town-screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      background: #0A0A1A;
+      z-index: 95;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+    }
+    #town-screen.active { display: flex; }
+    #town-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.85;
+      transition: opacity 0.5s;
+    }
+    #town-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 26, 0.45);
+    }
+    #town-topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(10, 10, 26, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255, 215, 0, 0.12);
+    }
+    #town-topbar .camp-name {
+      font-size: 1.1rem;
+      color: #FFD700;
+      font-family: Georgia, serif;
+      font-weight: 600;
+    }
+    #town-topbar .stats {
+      display: flex;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+    #town-topbar .stats span { white-space: nowrap; }
+    #town-npc-area {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 20px;
+      overflow-y: auto;
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .npc-card {
+      display: flex;
+      gap: 14px;
+      padding: 14px;
+      background: rgba(20, 18, 30, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 215, 0, 0.1);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .npc-card:hover {
+      border-color: rgba(255, 215, 0, 0.3);
+      transform: scale(1.01);
+    }
+    .npc-card.locked {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .npc-card.locked:hover {
+      border-color: rgba(255, 215, 0, 0.1);
+      transform: none;
+    }
+    .npc-portrait {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .npc-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .npc-name {
+      font-size: 1rem;
+      color: #E0D0C0;
+      font-family: Georgia, serif;
+      font-weight: 600;
+    }
+    .npc-greeting {
+      font-size: 0.85rem;
+      color: #888;
+      font-style: italic;
+      line-height: 1.3;
+    }
+    .npc-action {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      color: #FFD700;
+    }
+    .npc-lock-text {
+      font-size: 0.8rem;
+      color: #666;
+      font-style: italic;
+    }
+    /* Upgrade card */
+    .upgrade-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(30, 25, 15, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .upgrade-card:hover {
+      border-color: rgba(255, 170, 0, 0.4);
+      transform: scale(1.01);
+    }
+    .upgrade-card.disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .upgrade-card.disabled:hover {
+      border-color: rgba(255, 170, 0, 0.2);
+      transform: none;
+    }
+    .upgrade-label {
+      font-size: 0.95rem;
+      color: #FFAA44;
+      font-family: Georgia, serif;
+    }
+    .upgrade-cost {
+      font-size: 0.85rem;
+      color: #FFD700;
+    }
+    #town-bottombar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 14px 20px;
+      background: rgba(10, 10, 26, 0.85);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(255, 215, 0, 0.12);
+    }
+    .town-btn {
+      padding: 10px 24px;
+      font-size: 0.95rem;
+      color: #FFD700;
+      background: transparent;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: Georgia, serif;
+      transition: all 0.15s;
+    }
+    .town-btn:hover {
+      background: rgba(255, 215, 0, 0.08);
+      border-color: rgba(255, 215, 0, 0.5);
+    }
+    .town-btn.primary {
+      background: rgba(255, 215, 0, 0.1);
+      border-color: rgba(255, 215, 0, 0.4);
+    }
+    /* Dialogue overlay */
+    #dialogue-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 96;
+      padding: 20px;
+    }
+    #dialogue-overlay.active { display: flex; }
+    #dialogue-box {
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+      background: rgba(15, 12, 25, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    #dialogue-header {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    #dialogue-portrait {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    #dialogue-name {
+      font-size: 1.1rem;
+      color: #FFD700;
+      font-family: Georgia, serif;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    #dialogue-text {
+      font-size: 0.9rem;
+      color: #E0D0C0;
+      line-height: 1.5;
+      min-height: 40px;
+      font-family: Georgia, serif;
+    }
+    #dialogue-choices {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .dialogue-choice {
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      color: #CCC;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      font-family: Georgia, serif;
+      transition: all 0.15s;
+    }
+    .dialogue-choice:hover {
+      background: rgba(255, 215, 0, 0.06);
+      border-color: rgba(255, 215, 0, 0.2);
+      color: #FFD700;
+    }
+    #dialogue-continue {
+      display: none;
+      margin-top: 12px;
+      padding: 8px 20px;
+      font-size: 0.85rem;
+      color: #FFD700;
+      background: transparent;
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: Georgia, serif;
+      transition: all 0.15s;
+    }
+    #dialogue-continue:hover {
+      background: rgba(255, 215, 0, 0.08);
+    }
+
   </style>
 </head>
 <body>
@@ -351,6 +626,9 @@
         <div class="menu-item" data-action="settings" data-index="3">
           <span class="menu-arrow">▶</span> Settings
         </div>
+        <div class="menu-item" data-action="test-town" data-index="4" style="border-top: 1px solid rgba(255,255,255,0.06); margin-top: 4px; padding-top: 12px;">
+          <span class="menu-arrow">▶</span> <span style="color:#FF9100;">Test Town</span> <span style="font-size:0.7rem;color:#666;margin-left:auto;">+100g</span>
+        </div>
       </div>
       <div id="title-info">
         <span id="info-version">v0.2.0</span>
@@ -363,6 +641,40 @@
     </div>
   </div>
   <div id="title-tooltip"></div>
+
+
+  <!-- Town Screen -->
+  <div id="town-screen">
+    <img id="town-bg" src="assets/town_refugee_camp.svg" alt="" />
+    <div id="town-overlay"></div>
+    <div id="town-topbar">
+      <span class="camp-name" id="town-camp-name">Refugee Camp</span>
+      <div class="stats">
+        <span id="town-gold">💰 0</span>
+        <span id="town-run-stats">—</span>
+      </div>
+    </div>
+    <div id="town-npc-area"></div>
+    <div id="town-bottombar">
+      <button class="town-btn primary" id="town-fight">Return to Combat</button>
+      <button class="town-btn" id="town-title">Return to Title</button>
+    </div>
+  </div>
+
+  <!-- Dialogue Overlay -->
+  <div id="dialogue-overlay">
+    <div id="dialogue-box">
+      <div id="dialogue-header">
+        <img id="dialogue-portrait" src="" alt="" />
+        <div>
+          <div id="dialogue-name"></div>
+          <div id="dialogue-text"></div>
+        </div>
+      </div>
+      <div id="dialogue-choices"></div>
+      <button id="dialogue-continue">Continue</button>
+    </div>
+  </div>
 
   <!-- Settings Screen -->
   <div id="settings-screen">
@@ -531,7 +843,8 @@ class GameState {
       levelUp: ['playing'],
       bossIntro: ['playing'],
       gameOver: ['endScreen'],
-      endScreen: ['menu', 'playing'],
+      endScreen: ['town', 'menu', 'playing'],
+      town: ['combat', 'title', 'town'],
     };
   }
 
@@ -556,6 +869,7 @@ class GameState {
   isLevelUp() { return this.state === 'levelUp'; }
   isGameOver() { return this.state === 'gameOver'; }
   isEndScreen() { return this.state === 'endScreen'; }
+  isTown() { return this.state === 'town'; }
   isBossIntro() { return this.state === 'bossIntro'; }
 
   triggerGameOver(result, stats) {
@@ -4095,6 +4409,7 @@ class TitleMenu {
       { action: 'characters', locked: true },
       { action: 'stages', locked: true },
       { action: 'settings', locked: false },
+      { action: 'test-town', locked: false },
     ];
     this.dom = {
       screen: document.getElementById('title-screen'),
@@ -4205,6 +4520,9 @@ class TitleMenu {
         break;
       case 'settings':
         this.game._showSettings();
+        break;
+      case 'test-town':
+        this.game._testTown();
         break;
     }
   }
@@ -4657,6 +4975,7 @@ class Game {
     this.titleBGM = new TitleBGM(this.audioManager.ctx, this.audioManager.musicGain);
     this.titleBGM.init();
     this.titleMenu = new TitleMenu(this);
+    this.townScreen = new TownScreen(this);
 
     // Show title screen (audio unlocks on first user gesture)
     this.gameState.setState('title');
@@ -5010,6 +5329,21 @@ class Game {
   // TITLE SCREEN INTEGRATION
   // ═══════════════════════════════════════════════
 
+  _testTown() {
+    // Debug: go directly to town with 100 gold
+    this.titleMenu.hide();
+    this.titleBGM.stop();
+    this.audioManager.resume();
+    if (this.gameManager) {
+      this.gameManager.add_currency(100, 'debug');
+      this.gameManager.set('persistent.town.phase', 1);
+      this.gameManager.set_flag('town_camp_upgraded', false);
+      NPC_DATA.cute_girl.unlocked = false;
+    }
+    this.gameState.setState('town');
+    this.townScreen.show({ time: '4:32', level: 8, kills: 20, gold: 100 });
+  }
+
   _startFromTitle() {
     this.titleMenu.hide();
     this.titleBGM.fadeOut(1.5);
@@ -5127,26 +5461,10 @@ class Game {
   }
 
   _showGameOverReturnOption() {
-    // Add a "Return to Title" button to the end screen
-    const endScreen = document.getElementById('end-screen');
-    if (!endScreen) {
-      // Create minimal end screen overlay if UIManager doesn't make one
-      const overlay = document.createElement('div');
-      overlay.id = 'end-screen';
-      overlay.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,26,0.9);z-index:98;font-family:Segoe UI,system-ui,sans-serif;';
-      overlay.innerHTML = '<div style="color:#FFD700;font-size:1.5rem;margin-bottom:20px;font-family:Georgia,serif;">Run Complete</div><div id="end-stats" style="color:#aaa;margin-bottom:24px;text-align:center;"></div><div id="return-to-title" style="padding:12px 32px;color:#FFD700;border:1px solid rgba(255,215,0,0.3);border-radius:8px;cursor:pointer;font-size:1rem;transition:background 0.15s;">Return to Title</div>';
-      document.body.appendChild(overlay);
-      const stats = this._getStats();
-      document.getElementById('end-stats').innerHTML = `Time: ${stats.time}<br>Level: ${stats.level}<br>Kills: ${stats.kills}<br>Gold: ${stats.gold}`;
-      document.getElementById('return-to-title').onclick = () => {
-        overlay.remove();
-        this.audioManager.playMenuSound('select');
-        this._returnToTitle();
-      };
-      document.getElementById('return-to-title').onmouseover = () => {
-        this.audioManager.playMenuSound('hover');
-      };
-    }
+    // Transition to town screen after a brief delay
+    const stats = this._getStats();
+    this.gameState.setState('town');
+    this.townScreen.show(stats);
   }
 
   render(interp) {
@@ -5285,6 +5603,290 @@ class Game {
       kills: this.entityManager.getCount('enemy'),
       gold: this.gameManager ? this.gameManager.get_resource('gold') : 0,
     };
+  }
+}
+
+
+// ============================================================
+// TOWN SYSTEM — Post-combat hub screen
+// ============================================================
+
+const NPC_DATA = {
+  old_man: {
+    id: 'old_man',
+    name: 'Elder Rowan',
+    portrait: 'assets/npc_old_man.svg',
+    unlocked: true,
+    greeting: "Welcome back, traveler. The road has been dangerous, but we're alive.",
+    topics: [
+      {
+        id: 'about_camp',
+        text: 'Tell me about the camp.',
+        response: "We were farmers, merchants, refugees... The Gravekeeper's rise drove us here. These tents are all we have left. But you — you fight. That gives us hope.",
+        affection: 0,
+      },
+      {
+        id: 'about_graveyard',
+        text: 'Have you seen anything strange?',
+        response: "The graveyard to the east... The dead don't rest easy there. Something ancient keeps them rising. Be careful if you go back.",
+        affection: 0,
+        flag: 'graveyard_warning',
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  },
+  cute_girl: {
+    id: 'cute_girl',
+    name: 'Lina',
+    portrait: 'assets/npc_cute_girl.svg',
+    unlocked: false,
+    unlockCondition: 'town_camp_upgraded',
+    greeting: "Oh! You fixed up the camp! I'm... I'm Lina. Thank you for making this place safer.",
+    topics: [
+      {
+        id: 'about_herself',
+        text: 'How did you end up here?',
+        response: "I was a baker's daughter in the city. When the dead started walking, we fled. My family... I don't know if they made it. But I'm grateful to be alive.",
+        affection: 1,
+      },
+      {
+        id: 'help',
+        text: 'Is there anything I can do to help?',
+        response: "If you could clear the graveyard, maybe we could rebuild the city road. People would start coming back. Please... be careful out there.",
+        affection: 1,
+        flag: 'lina_quest_hint',
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  }
+};
+
+class TownScreen {
+  constructor(game) {
+    this.game = game;
+    this.dom = {
+      screen: document.getElementById('town-screen'),
+      bg: document.getElementById('town-bg'),
+      campName: document.getElementById('town-camp-name'),
+      gold: document.getElementById('town-gold'),
+      runStats: document.getElementById('town-run-stats'),
+      npcArea: document.getElementById('town-npc-area'),
+      fightBtn: document.getElementById('town-fight'),
+      titleBtn: document.getElementById('town-title'),
+      dialogueOverlay: document.getElementById('dialogue-overlay'),
+      dialoguePortrait: document.getElementById('dialogue-portrait'),
+      dialogueName: document.getElementById('dialogue-name'),
+      dialogueText: document.getElementById('dialogue-text'),
+      dialogueChoices: document.getElementById('dialogue-choices'),
+      dialogueContinue: document.getElementById('dialogue-continue'),
+    };
+    this._typewriterTimer = null;
+    this._lastRunStats = null;
+    this._setupEvents();
+  }
+
+  _setupEvents() {
+    this.dom.fightBtn.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this.hide();
+      this.game.startGame();
+    });
+    this.dom.titleBtn.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this.hide();
+      this.game._returnToTitle();
+    });
+    this.dom.dialogueOverlay.addEventListener('click', (e) => {
+      // Skip typewriter on click
+      if (this._typewriterTimer && e.target === this.dom.dialogueText) {
+        clearInterval(this._typewriterTimer);
+        this._typewriterTimer = null;
+      }
+    });
+    this.dom.dialogueContinue.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this.dom.dialogueOverlay.classList.remove('active');
+    });
+  }
+
+  show(runStats) {
+    this._lastRunStats = runStats;
+    this.dom.screen.classList.add('active');
+    this._updateDisplay();
+    this._renderNPCs();
+  }
+
+  hide() {
+    this.dom.screen.classList.remove('active');
+    this.dom.dialogueOverlay.classList.remove('active');
+    if (this._typewriterTimer) {
+      clearInterval(this._typewriterTimer);
+      this._typewriterTimer = null;
+    }
+  }
+
+  _updateDisplay() {
+    const gm = this.game.gameManager;
+    const phase = gm.get('persistent.town.phase') || 1;
+    const gold = gm.get_currency() || 0;
+    const campName = phase >= 2 ? 'Refugee Camp (Upgraded)' : 'Refugee Camp';
+
+    this.dom.campName.textContent = campName;
+    this.dom.gold.textContent = `💰 ${gold}`;
+    this.dom.bg.src = phase >= 2 ? 'assets/town_wooden_shacks.svg' : 'assets/town_refugee_camp.svg';
+
+    if (this._lastRunStats) {
+      this.dom.runStats.textContent = `⏱ ${this._lastRunStats.time}  Lv${this._lastRunStats.level}  ☠ ${this._lastRunStats.kills}`;
+    }
+
+    // Update unlocked NPCs
+    for (const key in NPC_DATA) {
+      const npc = NPC_DATA[key];
+      if (npc.unlockCondition) {
+        npc.unlocked = !!gm.get_flag(npc.unlockCondition);
+      }
+    }
+  }
+
+  _renderNPCs() {
+    const area = this.dom.npcArea;
+    area.innerHTML = '';
+    const phase = this.game.gameManager.get('persistent.town.phase') || 1;
+    const gold = this.game.gameManager.get_currency() || 0;
+
+    // Upgrade card (only in phase 1)
+    if (phase === 1) {
+      const canAfford = gold >= 100;
+      const upgradeCard = document.createElement('div');
+      upgradeCard.className = 'upgrade-card' + (canAfford ? '' : ' disabled');
+      upgradeCard.innerHTML = `
+        <span class="upgrade-label">🔨 Upgrade Camp — Build Wooden Shacks</span>
+        <span class="upgrade-cost">${canAfford ? '100g' : 'Need 100g'}</span>
+      `;
+      if (canAfford) {
+        upgradeCard.addEventListener('click', () => {
+          this.game.audioManager.playMenuSound('select');
+          this.game.gameManager.spend_currency(100, 'camp_upgrade');
+          this.game.gameManager.set_flag('town_camp_upgraded', true);
+          this.game.gameManager.set('persistent.town.phase', 2);
+          NPC_DATA.cute_girl.unlocked = true;
+          this._updateDisplay();
+          this._renderNPCs();
+        });
+      }
+      area.appendChild(upgradeCard);
+    }
+
+    // NPC cards
+    for (const key in NPC_DATA) {
+      const npc = NPC_DATA[key];
+      const card = document.createElement('div');
+      card.className = 'npc-card' + (npc.unlocked ? '' : ' locked');
+
+      if (npc.unlocked) {
+        card.innerHTML = `
+          <img class="npc-portrait" src="${npc.portrait}" alt="${npc.name}" />
+          <div class="npc-info">
+            <div class="npc-name">${npc.name}</div>
+            <div class="npc-greeting">"${npc.greeting.substring(0, 60)}${npc.greeting.length > 60 ? '...' : ''}"</div>
+            <div class="npc-action">▸ Talk</div>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          this.game.audioManager.playMenuSound('select');
+          this._openDialogue(npc);
+        });
+      } else {
+        card.innerHTML = `
+          <img class="npc-portrait" src="${npc.portrait}" alt="${npc.name}" style="filter: grayscale(1);" />
+          <div class="npc-info">
+            <div class="npc-name">${npc.name}</div>
+            <div class="npc-lock-text">🔒 ${npc.unlockCondition === 'town_camp_upgraded' ? 'Upgrade the camp to unlock' : 'Locked'}</div>
+          </div>
+        `;
+      }
+      area.appendChild(card);
+    }
+  }
+
+  _openDialogue(npc) {
+    this.dom.dialoguePortrait.src = npc.portrait;
+    this.dom.dialogueName.textContent = npc.name;
+    this.dom.dialogueChoices.style.display = 'none';
+    this.dom.dialogueContinue.style.display = 'none';
+    this.dom.dialogueOverlay.classList.add('active');
+
+    // Show greeting with typewriter
+    this._typewriteText(npc.greeting, () => {
+      this._showChoices(npc);
+    });
+  }
+
+  _showChoices(npc) {
+    this.dom.dialogueChoices.innerHTML = '';
+    this.dom.dialogueChoices.style.display = 'flex';
+
+    for (const topic of npc.topics) {
+      const btn = document.createElement('button');
+      btn.className = 'dialogue-choice';
+      btn.textContent = topic.text;
+      btn.addEventListener('click', () => {
+        this.game.audioManager.playMenuSound('select');
+        if (topic.close) {
+          this.dom.dialogueOverlay.classList.remove('active');
+          return;
+        }
+        // Set flag if defined
+        if (topic.flag) {
+          this.game.gameManager.set_flag(topic.flag, true);
+        }
+        // Add affection
+        if (topic.affection > 0) {
+          const key = `affection_${npc.id}`;
+          this.game.gameManager.add_counter(key, topic.affection);
+        }
+        // Show response
+        this.dom.dialogueChoices.style.display = 'none';
+        this._typewriteText(topic.response, () => {
+          this.dom.dialogueContinue.style.display = 'block';
+          this.dom.dialogueContinue.onclick = () => {
+            this.game.audioManager.playMenuSound('select');
+            this.dom.dialogueContinue.style.display = 'none';
+            this._showChoices(npc);
+          };
+        });
+      });
+      this.dom.dialogueChoices.appendChild(btn);
+    }
+  }
+
+  _typewriteText(text, onComplete) {
+    if (this._typewriterTimer) {
+      clearInterval(this._typewriterTimer);
+      this._typewriterTimer = null;
+    }
+    this.dom.dialogueText.textContent = '';
+    let i = 0;
+    this._typewriterTimer = setInterval(() => {
+      if (i < text.length) {
+        this.dom.dialogueText.textContent += text[i];
+        i++;
+      } else {
+        clearInterval(this._typewriterTimer);
+        this._typewriterTimer = null;
+        if (onComplete) onComplete();
+      }
+    }, 25);
   }
 }
 
