@@ -665,7 +665,7 @@
   <div id="dialogue-overlay">
     <div id="dialogue-box">
       <div id="dialogue-header">
-        <img id="dialogue-portrait" src="" alt="" />
+        <div id="dialogue-portrait"></div>
         <div>
           <div id="dialogue-name"></div>
           <div id="dialogue-text"></div>
@@ -5611,6 +5611,12 @@ class Game {
 // TOWN SYSTEM — Post-combat hub screen
 // ============================================================
 
+
+const SVG_PORTRAITS = {
+  'old_man': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">   <defs>     <linearGradient id="oldManSkin" x1="0" y1="0" x2="0" y2="1">       <stop offset="0%" stop-color="#D4A574"/>       <stop offset="100%" stop-color="#C49464"/>     </linearGradient>   </defs>    <!-- Background circle -->   <circle cx="60" cy="60" r="56" fill="#1A1A2E" stroke="#333355" stroke-width="2"/>    <!-- Neck -->   <rect x="48" y="82" width="24" height="12" fill="url(#oldManSkin)"/>    <!-- Shirt collar -->   <path d="M38 88 Q48 82 60 85 Q72 82 82 88 L82 100 L38 100 Z" fill="#4A3A2A"/>   <path d="M50 85 L55 92" stroke="#3A2A1A" stroke-width="0.5"/>   <path d="M70 85 L65 92" stroke="#3A2A1A" stroke-width="0.5"/>    <!-- Face shape -->   <ellipse cx="60" cy="58" rx="26" ry="30" fill="url(#oldManSkin)"/>    <!-- Ears -->   <ellipse cx="34" cy="58" rx="5" ry="8" fill="#C49464"/>   <ellipse cx="86" cy="58" rx="5" ry="8" fill="#C49464"/>    <!-- Hair (white/gray, receding) -->   <path d="M36 42 Q40 25 60 22 Q80 25 84 42 Q82 35 75 32 Q60 28 45 32 Q38 35 36 42" fill="#CCCCCC"/>   <!-- Side hair -->   <path d="M36 42 Q34 50 35 58" fill="none" stroke="#CCCCCC" stroke-width="3"/>   <path d="M84 42 Q86 50 85 58" fill="none" stroke="#CCCCCC" stroke-width="3"/>    <!-- Wrinkles -->   <path d="M44 48 Q50 46 56 48" fill="none" stroke="#B08050" stroke-width="0.5" opacity="0.6"/>   <path d="M64 48 Q70 46 76 48" fill="none" stroke="#B08050" stroke-width="0.5" opacity="0.6"/>   <path d="M42 55 Q50 53 58 55" fill="none" stroke="#B08050" stroke-width="0.4" opacity="0.4"/>    <!-- Eyes (tired, kind) -->   <ellipse cx="48" cy="52" rx="5" ry="3.5" fill="#FFF"/>   <circle cx="48" cy="52" r="2.5" fill="#5A3A1A"/>   <circle cx="48" cy="51.5" r="1" fill="#1A1A1A"/>   <circle cx="47" cy="51" r="0.5" fill="#FFF" opacity="0.7"/>    <ellipse cx="72" cy="52" rx="5" ry="3.5" fill="#FFF"/>   <circle cx="72" cy="52" r="2.5" fill="#5A3A1A"/>   <circle cx="72" cy="51.5" r="1" fill="#1A1A1A"/>   <circle cx="71" cy="51" r="0.5" fill="#FFF" opacity="0.7"/>    <!-- Eyebrows (bushy, gray) -->   <path d="M42 46 Q48 43 54 46" fill="none" stroke="#AAAAAA" stroke-width="2" stroke-linecap="round"/>   <path d="M66 46 Q72 43 78 46" fill="none" stroke="#AAAAAA" stroke-width="2" stroke-linecap="round"/>    <!-- Nose -->   <path d="M58 55 Q60 62 62 55" fill="none" stroke="#B08050" stroke-width="1.5" stroke-linecap="round"/>    <!-- Mouth (slight smile) -->   <path d="M50 68 Q60 74 70 68" fill="none" stroke="#8B5E3C" stroke-width="1.5" stroke-linecap="round"/>    <!-- Beard (short, gray) -->   <path d="M42 72 Q45 80 50 82" fill="none" stroke="#BBBBBB" stroke-width="1.5" opacity="0.7"/>   <path d="M48 74 Q50 82 52 84" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.6"/>   <path d="M55 76 Q58 84 60 85" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.5"/>   <path d="M65 76 Q62 84 60 85" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.5"/>   <path d="M72 74 Q70 82 68 84" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.6"/>   <path d="M78 72 Q75 80 70 82" fill="none" stroke="#BBBBBB" stroke-width="1.5" opacity="0.7"/>    <!-- Scar on forehead -->   <line x1="52" y1="38" x2="58" y2="42" stroke="#B08050" stroke-width="0.8" opacity="0.5"/> </svg>',
+  'cute_girl': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">   <defs>     <linearGradient id="girlSkin" x1="0" y1="0" x2="0" y2="1">       <stop offset="0%" stop-color="#FFE0C8"/>       <stop offset="100%" stop-color="#F5D0B0"/>     </linearGradient>     <linearGradient id="girlHair" x1="0" y1="0" x2="0" y2="1">       <stop offset="0%" stop-color="#4A2020"/>       <stop offset="100%" stop-color="#3A1515"/>     </linearGradient>   </defs>    <!-- Background circle -->   <circle cx="60" cy="60" r="56" fill="#2A1A2E" stroke="#553355" stroke-width="2"/>    <!-- Hair (long, dark brown, behind body) -->   <path d="M30 45 Q28 60 32 80 Q35 95 40 100" fill="url(#girlHair)" stroke="none"/>   <path d="M90 45 Q92 60 88 80 Q85 95 80 100" fill="url(#girlHair)" stroke="none"/>    <!-- Neck -->   <rect x="50" y="82" width="20" height="10" fill="url(#girlSkin)"/>    <!-- Dress/clothing -->   <path d="M35 90 Q50 84 60 87 Q70 84 85 90 L88 110 L32 110 Z" fill="#6B3A5A"/>   <path d="M45 90 L50 100" stroke="#5A2A4A" stroke-width="0.5" opacity="0.5"/>   <path d="M60 88 L60 105" stroke="#5A2A4A" stroke-width="0.5" opacity="0.5"/>   <path d="M75 90 L70 100" stroke="#5A2A4A" stroke-width="0.5" opacity="0.5"/>   <!-- Collar detail -->   <path d="M50 87 Q55 83 60 86 Q65 83 70 87" fill="none" stroke="#8B5A7A" stroke-width="1"/>    <!-- Face -->   <ellipse cx="60" cy="56" rx="24" ry="28" fill="url(#girlSkin)"/>    <!-- Ears (small, with earrings) -->   <ellipse cx="36" cy="56" rx="4" ry="6" fill="#F5D0B0"/>   <circle cx="36" cy="62" r="2" fill="#FFD700" opacity="0.8"/>   <ellipse cx="84" cy="56" rx="4" ry="6" fill="#F5D0B0"/>   <circle cx="84" cy="62" r="2" fill="#FFD700" opacity="0.8"/>    <!-- Hair (bangs and sides) -->   <path d="M36 38 Q40 22 60 20 Q80 22 84 38 Q82 30 75 27 Q60 22 45 27 Q38 30 36 38" fill="url(#girlHair)"/>   <!-- Side bangs -->   <path d="M36 38 Q32 48 34 58 Q35 50 38 42" fill="url(#girlHair)"/>   <path d="M84 38 Q88 48 86 58 Q85 50 82 42" fill="url(#girlHair)"/>   <!-- Hair shine -->   <path d="M48 26 Q55 23 62 26" fill="none" stroke="#6A4040" stroke-width="1" opacity="0.4"/>    <!-- Eyes (big, cute, brown) -->   <!-- Left eye -->   <ellipse cx="48" cy="52" rx="6" ry="5" fill="#FFF"/>   <circle cx="48" cy="52" r="3.5" fill="#6B3A1A"/>   <circle cx="48" cy="51" r="2" fill="#3A1A0A"/>   <circle cx="46.5" cy="50" r="1.2" fill="#FFF" opacity="0.8"/>   <circle cx="49" cy="53" r="0.6" fill="#FFF" opacity="0.5"/>   <!-- Eyelashes -->   <path d="M42 48 Q45 46 48 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>   <path d="M48 48 Q51 46 54 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>    <!-- Right eye -->   <ellipse cx="72" cy="52" rx="6" ry="5" fill="#FFF"/>   <circle cx="72" cy="52" r="3.5" fill="#6B3A1A"/>   <circle cx="72" cy="51" r="2" fill="#3A1A0A"/>   <circle cx="70.5" cy="50" r="1.2" fill="#FFF" opacity="0.8"/>   <circle cx="73" cy="53" r="0.6" fill="#FFF" opacity="0.5"/>   <!-- Eyelashes -->   <path d="M66 48 Q69 46 72 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>   <path d="M72 48 Q75 46 78 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>    <!-- Eyebrows (thin, arched) -->   <path d="M42 44 Q48 41 54 44" fill="none" stroke="#4A2020" stroke-width="1.2" stroke-linecap="round"/>   <path d="M66 44 Q72 41 78 44" fill="none" stroke="#4A2020" stroke-width="1.2" stroke-linecap="round"/>    <!-- Blush -->   <ellipse cx="40" cy="60" rx="5" ry="3" fill="#FFB0A0" opacity="0.3"/>   <ellipse cx="80" cy="60" rx="5" ry="3" fill="#FFB0A0" opacity="0.3"/>    <!-- Nose (small, cute) -->   <path d="M59 58 Q60 61 61 58" fill="none" stroke="#D4A080" stroke-width="1" stroke-linecap="round"/>    <!-- Mouth (small smile) -->   <path d="M53 67 Q57 71 60 70 Q63 71 67 67" fill="none" stroke="#CC7766" stroke-width="1.5" stroke-linecap="round"/>   <!-- Lip shine -->   <path d="M56 68 Q58 67 60 68" fill="none" fill="#FFB0A0" opacity="0.3"/>    <!-- Hair accessory (small flower) -->   <circle cx="78" cy="35" r="3" fill="#FF8888"/>   <circle cx="78" cy="35" r="1.5" fill="#FFAAAA"/>   <path d="M75 35 L78 32 L81 35 L78 38 Z" fill="#FF6666" opacity="0.6"/> </svg>'
+};
+
 const NPC_DATA = {
   old_man: {
     id: 'old_man',
@@ -5794,8 +5800,10 @@ class TownScreen {
       card.className = 'npc-card' + (npc.unlocked ? '' : ' locked');
 
       if (npc.unlocked) {
+        const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
+        const svgWithClass = svgHtml.replace('<svg ', '<svg class="npc-portrait" ');
         card.innerHTML = `
-          <img class="npc-portrait" src="${npc.portrait}" alt="${npc.name}" />
+          ${svgWithClass}
           <div class="npc-info">
             <div class="npc-name">${npc.name}</div>
             <div class="npc-greeting">"${npc.greeting.substring(0, 60)}${npc.greeting.length > 60 ? '...' : ''}"</div>
@@ -5807,8 +5815,10 @@ class TownScreen {
           this._openDialogue(npc);
         });
       } else {
+        const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
+        const svgWithClass = svgHtml.replace('<svg ', '<svg class="npc-portrait" style="filter: grayscale(1);" ');
         card.innerHTML = `
-          <img class="npc-portrait" src="${npc.portrait}" alt="${npc.name}" style="filter: grayscale(1);" />
+          ${svgWithClass}
           <div class="npc-info">
             <div class="npc-name">${npc.name}</div>
             <div class="npc-lock-text">🔒 ${npc.unlockCondition === 'town_camp_upgraded' ? 'Upgrade the camp to unlock' : 'Locked'}</div>
@@ -5820,7 +5830,12 @@ class TownScreen {
   }
 
   _openDialogue(npc) {
-    this.dom.dialoguePortrait.src = npc.portrait;
+    // Use inline SVG for reliable rendering
+    const svgHtml = SVG_PORTRAITS[npc.id] || '';
+    if (svgHtml) {
+      const styled = svgHtml.replace('<svg ', '<svg style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(255,215,0,0.2);flex-shrink:0;" ');
+      this.dom.dialoguePortrait.innerHTML = styled;
+    }
     this.dom.dialogueName.textContent = npc.name;
     this.dom.dialogueChoices.style.display = 'none';
     this.dom.dialogueContinue.style.display = 'none';
@@ -5832,7 +5847,7 @@ class TownScreen {
     });
   }
 
-  _showChoices(npc) {
+    _showChoices(npc) {
     this.dom.dialogueChoices.innerHTML = '';
     this.dom.dialogueChoices.style.display = 'flex';
 

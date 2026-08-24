@@ -321,6 +321,281 @@
     }
     .settings-danger:hover { background: rgba(204, 68, 68, 0.1); }
 
+
+    /* === TOWN SCREEN === */
+    #town-screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      background: #0A0A1A;
+      z-index: 95;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+    }
+    #town-screen.active { display: flex; }
+    #town-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.85;
+      transition: opacity 0.5s;
+    }
+    #town-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 26, 0.45);
+    }
+    #town-topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(10, 10, 26, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255, 215, 0, 0.12);
+    }
+    #town-topbar .camp-name {
+      font-size: 1.1rem;
+      color: #FFD700;
+      font-family: Georgia, serif;
+      font-weight: 600;
+    }
+    #town-topbar .stats {
+      display: flex;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+    #town-topbar .stats span { white-space: nowrap; }
+    #town-npc-area {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 20px;
+      overflow-y: auto;
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .npc-card {
+      display: flex;
+      gap: 14px;
+      padding: 14px;
+      background: rgba(20, 18, 30, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 215, 0, 0.1);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .npc-card:hover {
+      border-color: rgba(255, 215, 0, 0.3);
+      transform: scale(1.01);
+    }
+    .npc-card.locked {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .npc-card.locked:hover {
+      border-color: rgba(255, 215, 0, 0.1);
+      transform: none;
+    }
+    .npc-portrait {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .npc-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .npc-name {
+      font-size: 1rem;
+      color: #E0D0C0;
+      font-family: Georgia, serif;
+      font-weight: 600;
+    }
+    .npc-greeting {
+      font-size: 0.85rem;
+      color: #888;
+      font-style: italic;
+      line-height: 1.3;
+    }
+    .npc-action {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      color: #FFD700;
+    }
+    .npc-lock-text {
+      font-size: 0.8rem;
+      color: #666;
+      font-style: italic;
+    }
+    /* Upgrade card */
+    .upgrade-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(30, 25, 15, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .upgrade-card:hover {
+      border-color: rgba(255, 170, 0, 0.4);
+      transform: scale(1.01);
+    }
+    .upgrade-card.disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .upgrade-card.disabled:hover {
+      border-color: rgba(255, 170, 0, 0.2);
+      transform: none;
+    }
+    .upgrade-label {
+      font-size: 0.95rem;
+      color: #FFAA44;
+      font-family: Georgia, serif;
+    }
+    .upgrade-cost {
+      font-size: 0.85rem;
+      color: #FFD700;
+    }
+    #town-bottombar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 14px 20px;
+      background: rgba(10, 10, 26, 0.85);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(255, 215, 0, 0.12);
+    }
+    .town-btn {
+      padding: 10px 24px;
+      font-size: 0.95rem;
+      color: #FFD700;
+      background: transparent;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: Georgia, serif;
+      transition: all 0.15s;
+    }
+    .town-btn:hover {
+      background: rgba(255, 215, 0, 0.08);
+      border-color: rgba(255, 215, 0, 0.5);
+    }
+    .town-btn.primary {
+      background: rgba(255, 215, 0, 0.1);
+      border-color: rgba(255, 215, 0, 0.4);
+    }
+    /* Dialogue overlay */
+    #dialogue-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 96;
+      padding: 20px;
+    }
+    #dialogue-overlay.active { display: flex; }
+    #dialogue-box {
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+      background: rgba(15, 12, 25, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    #dialogue-header {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    #dialogue-portrait {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    #dialogue-name {
+      font-size: 1.1rem;
+      color: #FFD700;
+      font-family: Georgia, serif;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    #dialogue-text {
+      font-size: 0.9rem;
+      color: #E0D0C0;
+      line-height: 1.5;
+      min-height: 40px;
+      font-family: Georgia, serif;
+    }
+    #dialogue-choices {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .dialogue-choice {
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      color: #CCC;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      font-family: Georgia, serif;
+      transition: all 0.15s;
+    }
+    .dialogue-choice:hover {
+      background: rgba(255, 215, 0, 0.06);
+      border-color: rgba(255, 215, 0, 0.2);
+      color: #FFD700;
+    }
+    #dialogue-continue {
+      display: none;
+      margin-top: 12px;
+      padding: 8px 20px;
+      font-size: 0.85rem;
+      color: #FFD700;
+      background: transparent;
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: Georgia, serif;
+      transition: all 0.15s;
+    }
+    #dialogue-continue:hover {
+      background: rgba(255, 215, 0, 0.08);
+    }
+
   </style>
 </head>
 <body>
@@ -351,6 +626,9 @@
         <div class="menu-item" data-action="settings" data-index="3">
           <span class="menu-arrow">▶</span> Settings
         </div>
+        <div class="menu-item" data-action="test-town" data-index="4" style="border-top: 1px solid rgba(255,255,255,0.06); margin-top: 4px; padding-top: 12px;">
+          <span class="menu-arrow">▶</span> <span style="color:#FF9100;">Test Town</span> <span style="font-size:0.7rem;color:#666;margin-left:auto;">+100g</span>
+        </div>
       </div>
       <div id="title-info">
         <span id="info-version">v0.2.0</span>
@@ -363,6 +641,40 @@
     </div>
   </div>
   <div id="title-tooltip"></div>
+
+
+  <!-- Town Screen -->
+  <div id="town-screen">
+    <img id="town-bg" src="assets/town_refugee_camp.svg" alt="" />
+    <div id="town-overlay"></div>
+    <div id="town-topbar">
+      <span class="camp-name" id="town-camp-name">Refugee Camp</span>
+      <div class="stats">
+        <span id="town-gold">💰 0</span>
+        <span id="town-run-stats">—</span>
+      </div>
+    </div>
+    <div id="town-npc-area"></div>
+    <div id="town-bottombar">
+      <button class="town-btn primary" id="town-fight">Return to Combat</button>
+      <button class="town-btn" id="town-title">Return to Title</button>
+    </div>
+  </div>
+
+  <!-- Dialogue Overlay -->
+  <div id="dialogue-overlay">
+    <div id="dialogue-box">
+      <div id="dialogue-header">
+        <div id="dialogue-portrait"></div>
+        <div>
+          <div id="dialogue-name"></div>
+          <div id="dialogue-text"></div>
+        </div>
+      </div>
+      <div id="dialogue-choices"></div>
+      <button id="dialogue-continue">Continue</button>
+    </div>
+  </div>
 
   <!-- Settings Screen -->
   <div id="settings-screen">
@@ -531,7 +843,8 @@ class GameState {
       levelUp: ['playing'],
       bossIntro: ['playing'],
       gameOver: ['endScreen'],
-      endScreen: ['menu', 'playing'],
+      endScreen: ['town', 'menu', 'playing'],
+      town: ['combat', 'title', 'town'],
     };
   }
 
@@ -556,6 +869,7 @@ class GameState {
   isLevelUp() { return this.state === 'levelUp'; }
   isGameOver() { return this.state === 'gameOver'; }
   isEndScreen() { return this.state === 'endScreen'; }
+  isTown() { return this.state === 'town'; }
   isBossIntro() { return this.state === 'bossIntro'; }
 
   triggerGameOver(result, stats) {
@@ -1677,6 +1991,7 @@ class WeaponSystem {
     this._fireW1(player, dt);
     this._fireW2(player, dt);
     this._fireW3(player, dt);
+    this._updateW3Pulses(dt);
   }
 
   _fireW1(player, dt) {
@@ -4094,6 +4409,7 @@ class TitleMenu {
       { action: 'characters', locked: true },
       { action: 'stages', locked: true },
       { action: 'settings', locked: false },
+      { action: 'test-town', locked: false },
     ];
     this.dom = {
       screen: document.getElementById('title-screen'),
@@ -4204,6 +4520,9 @@ class TitleMenu {
         break;
       case 'settings':
         this.game._showSettings();
+        break;
+      case 'test-town':
+        this.game._testTown();
         break;
     }
   }
@@ -4656,6 +4975,7 @@ class Game {
     this.titleBGM = new TitleBGM(this.audioManager.ctx, this.audioManager.musicGain);
     this.titleBGM.init();
     this.titleMenu = new TitleMenu(this);
+    this.townScreen = new TownScreen(this);
 
     // Show title screen (audio unlocks on first user gesture)
     this.gameState.setState('title');
@@ -5009,6 +5329,21 @@ class Game {
   // TITLE SCREEN INTEGRATION
   // ═══════════════════════════════════════════════
 
+  _testTown() {
+    // Debug: go directly to town with 100 gold
+    this.titleMenu.hide();
+    this.titleBGM.stop();
+    this.audioManager.resume();
+    if (this.gameManager) {
+      this.gameManager.add_currency(100, 'debug');
+      this.gameManager.set('persistent.town.phase', 1);
+      this.gameManager.set_flag('town_camp_upgraded', false);
+      NPC_DATA.cute_girl.unlocked = false;
+    }
+    this.gameState.setState('town');
+    this.townScreen.show({ time: '4:32', level: 8, kills: 20, gold: 100 });
+  }
+
   _startFromTitle() {
     this.titleMenu.hide();
     this.titleBGM.fadeOut(1.5);
@@ -5126,26 +5461,10 @@ class Game {
   }
 
   _showGameOverReturnOption() {
-    // Add a "Return to Title" button to the end screen
-    const endScreen = document.getElementById('end-screen');
-    if (!endScreen) {
-      // Create minimal end screen overlay if UIManager doesn't make one
-      const overlay = document.createElement('div');
-      overlay.id = 'end-screen';
-      overlay.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,26,0.9);z-index:98;font-family:Segoe UI,system-ui,sans-serif;';
-      overlay.innerHTML = '<div style="color:#FFD700;font-size:1.5rem;margin-bottom:20px;font-family:Georgia,serif;">Run Complete</div><div id="end-stats" style="color:#aaa;margin-bottom:24px;text-align:center;"></div><div id="return-to-title" style="padding:12px 32px;color:#FFD700;border:1px solid rgba(255,215,0,0.3);border-radius:8px;cursor:pointer;font-size:1rem;transition:background 0.15s;">Return to Title</div>';
-      document.body.appendChild(overlay);
-      const stats = this._getStats();
-      document.getElementById('end-stats').innerHTML = `Time: ${stats.time}<br>Level: ${stats.level}<br>Kills: ${stats.kills}<br>Gold: ${stats.gold}`;
-      document.getElementById('return-to-title').onclick = () => {
-        overlay.remove();
-        this.audioManager.playMenuSound('select');
-        this._returnToTitle();
-      };
-      document.getElementById('return-to-title').onmouseover = () => {
-        this.audioManager.playMenuSound('hover');
-      };
-    }
+    // Transition to town screen after a brief delay
+    const stats = this._getStats();
+    this.gameState.setState('town');
+    this.townScreen.show(stats);
   }
 
   render(interp) {
@@ -5284,6 +5603,305 @@ class Game {
       kills: this.entityManager.getCount('enemy'),
       gold: this.gameManager ? this.gameManager.get_resource('gold') : 0,
     };
+  }
+}
+
+
+// ============================================================
+// TOWN SYSTEM — Post-combat hub screen
+// ============================================================
+
+
+const SVG_PORTRAITS = {
+  'old_man': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">   <defs>     <linearGradient id="oldManSkin" x1="0" y1="0" x2="0" y2="1">       <stop offset="0%" stop-color="#D4A574"/>       <stop offset="100%" stop-color="#C49464"/>     </linearGradient>   </defs>    <!-- Background circle -->   <circle cx="60" cy="60" r="56" fill="#1A1A2E" stroke="#333355" stroke-width="2"/>    <!-- Neck -->   <rect x="48" y="82" width="24" height="12" fill="url(#oldManSkin)"/>    <!-- Shirt collar -->   <path d="M38 88 Q48 82 60 85 Q72 82 82 88 L82 100 L38 100 Z" fill="#4A3A2A"/>   <path d="M50 85 L55 92" stroke="#3A2A1A" stroke-width="0.5"/>   <path d="M70 85 L65 92" stroke="#3A2A1A" stroke-width="0.5"/>    <!-- Face shape -->   <ellipse cx="60" cy="58" rx="26" ry="30" fill="url(#oldManSkin)"/>    <!-- Ears -->   <ellipse cx="34" cy="58" rx="5" ry="8" fill="#C49464"/>   <ellipse cx="86" cy="58" rx="5" ry="8" fill="#C49464"/>    <!-- Hair (white/gray, receding) -->   <path d="M36 42 Q40 25 60 22 Q80 25 84 42 Q82 35 75 32 Q60 28 45 32 Q38 35 36 42" fill="#CCCCCC"/>   <!-- Side hair -->   <path d="M36 42 Q34 50 35 58" fill="none" stroke="#CCCCCC" stroke-width="3"/>   <path d="M84 42 Q86 50 85 58" fill="none" stroke="#CCCCCC" stroke-width="3"/>    <!-- Wrinkles -->   <path d="M44 48 Q50 46 56 48" fill="none" stroke="#B08050" stroke-width="0.5" opacity="0.6"/>   <path d="M64 48 Q70 46 76 48" fill="none" stroke="#B08050" stroke-width="0.5" opacity="0.6"/>   <path d="M42 55 Q50 53 58 55" fill="none" stroke="#B08050" stroke-width="0.4" opacity="0.4"/>    <!-- Eyes (tired, kind) -->   <ellipse cx="48" cy="52" rx="5" ry="3.5" fill="#FFF"/>   <circle cx="48" cy="52" r="2.5" fill="#5A3A1A"/>   <circle cx="48" cy="51.5" r="1" fill="#1A1A1A"/>   <circle cx="47" cy="51" r="0.5" fill="#FFF" opacity="0.7"/>    <ellipse cx="72" cy="52" rx="5" ry="3.5" fill="#FFF"/>   <circle cx="72" cy="52" r="2.5" fill="#5A3A1A"/>   <circle cx="72" cy="51.5" r="1" fill="#1A1A1A"/>   <circle cx="71" cy="51" r="0.5" fill="#FFF" opacity="0.7"/>    <!-- Eyebrows (bushy, gray) -->   <path d="M42 46 Q48 43 54 46" fill="none" stroke="#AAAAAA" stroke-width="2" stroke-linecap="round"/>   <path d="M66 46 Q72 43 78 46" fill="none" stroke="#AAAAAA" stroke-width="2" stroke-linecap="round"/>    <!-- Nose -->   <path d="M58 55 Q60 62 62 55" fill="none" stroke="#B08050" stroke-width="1.5" stroke-linecap="round"/>    <!-- Mouth (slight smile) -->   <path d="M50 68 Q60 74 70 68" fill="none" stroke="#8B5E3C" stroke-width="1.5" stroke-linecap="round"/>    <!-- Beard (short, gray) -->   <path d="M42 72 Q45 80 50 82" fill="none" stroke="#BBBBBB" stroke-width="1.5" opacity="0.7"/>   <path d="M48 74 Q50 82 52 84" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.6"/>   <path d="M55 76 Q58 84 60 85" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.5"/>   <path d="M65 76 Q62 84 60 85" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.5"/>   <path d="M72 74 Q70 82 68 84" fill="none" stroke="#BBBBBB" stroke-width="1" opacity="0.6"/>   <path d="M78 72 Q75 80 70 82" fill="none" stroke="#BBBBBB" stroke-width="1.5" opacity="0.7"/>    <!-- Scar on forehead -->   <line x1="52" y1="38" x2="58" y2="42" stroke="#B08050" stroke-width="0.8" opacity="0.5"/> </svg>',
+  'cute_girl': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">   <defs>     <linearGradient id="girlSkin" x1="0" y1="0" x2="0" y2="1">       <stop offset="0%" stop-color="#FFE0C8"/>       <stop offset="100%" stop-color="#F5D0B0"/>     </linearGradient>     <linearGradient id="girlHair" x1="0" y1="0" x2="0" y2="1">       <stop offset="0%" stop-color="#4A2020"/>       <stop offset="100%" stop-color="#3A1515"/>     </linearGradient>   </defs>    <!-- Background circle -->   <circle cx="60" cy="60" r="56" fill="#2A1A2E" stroke="#553355" stroke-width="2"/>    <!-- Hair (long, dark brown, behind body) -->   <path d="M30 45 Q28 60 32 80 Q35 95 40 100" fill="url(#girlHair)" stroke="none"/>   <path d="M90 45 Q92 60 88 80 Q85 95 80 100" fill="url(#girlHair)" stroke="none"/>    <!-- Neck -->   <rect x="50" y="82" width="20" height="10" fill="url(#girlSkin)"/>    <!-- Dress/clothing -->   <path d="M35 90 Q50 84 60 87 Q70 84 85 90 L88 110 L32 110 Z" fill="#6B3A5A"/>   <path d="M45 90 L50 100" stroke="#5A2A4A" stroke-width="0.5" opacity="0.5"/>   <path d="M60 88 L60 105" stroke="#5A2A4A" stroke-width="0.5" opacity="0.5"/>   <path d="M75 90 L70 100" stroke="#5A2A4A" stroke-width="0.5" opacity="0.5"/>   <!-- Collar detail -->   <path d="M50 87 Q55 83 60 86 Q65 83 70 87" fill="none" stroke="#8B5A7A" stroke-width="1"/>    <!-- Face -->   <ellipse cx="60" cy="56" rx="24" ry="28" fill="url(#girlSkin)"/>    <!-- Ears (small, with earrings) -->   <ellipse cx="36" cy="56" rx="4" ry="6" fill="#F5D0B0"/>   <circle cx="36" cy="62" r="2" fill="#FFD700" opacity="0.8"/>   <ellipse cx="84" cy="56" rx="4" ry="6" fill="#F5D0B0"/>   <circle cx="84" cy="62" r="2" fill="#FFD700" opacity="0.8"/>    <!-- Hair (bangs and sides) -->   <path d="M36 38 Q40 22 60 20 Q80 22 84 38 Q82 30 75 27 Q60 22 45 27 Q38 30 36 38" fill="url(#girlHair)"/>   <!-- Side bangs -->   <path d="M36 38 Q32 48 34 58 Q35 50 38 42" fill="url(#girlHair)"/>   <path d="M84 38 Q88 48 86 58 Q85 50 82 42" fill="url(#girlHair)"/>   <!-- Hair shine -->   <path d="M48 26 Q55 23 62 26" fill="none" stroke="#6A4040" stroke-width="1" opacity="0.4"/>    <!-- Eyes (big, cute, brown) -->   <!-- Left eye -->   <ellipse cx="48" cy="52" rx="6" ry="5" fill="#FFF"/>   <circle cx="48" cy="52" r="3.5" fill="#6B3A1A"/>   <circle cx="48" cy="51" r="2" fill="#3A1A0A"/>   <circle cx="46.5" cy="50" r="1.2" fill="#FFF" opacity="0.8"/>   <circle cx="49" cy="53" r="0.6" fill="#FFF" opacity="0.5"/>   <!-- Eyelashes -->   <path d="M42 48 Q45 46 48 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>   <path d="M48 48 Q51 46 54 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>    <!-- Right eye -->   <ellipse cx="72" cy="52" rx="6" ry="5" fill="#FFF"/>   <circle cx="72" cy="52" r="3.5" fill="#6B3A1A"/>   <circle cx="72" cy="51" r="2" fill="#3A1A0A"/>   <circle cx="70.5" cy="50" r="1.2" fill="#FFF" opacity="0.8"/>   <circle cx="73" cy="53" r="0.6" fill="#FFF" opacity="0.5"/>   <!-- Eyelashes -->   <path d="M66 48 Q69 46 72 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>   <path d="M72 48 Q75 46 78 48" fill="none" stroke="#2A1008" stroke-width="1" stroke-linecap="round"/>    <!-- Eyebrows (thin, arched) -->   <path d="M42 44 Q48 41 54 44" fill="none" stroke="#4A2020" stroke-width="1.2" stroke-linecap="round"/>   <path d="M66 44 Q72 41 78 44" fill="none" stroke="#4A2020" stroke-width="1.2" stroke-linecap="round"/>    <!-- Blush -->   <ellipse cx="40" cy="60" rx="5" ry="3" fill="#FFB0A0" opacity="0.3"/>   <ellipse cx="80" cy="60" rx="5" ry="3" fill="#FFB0A0" opacity="0.3"/>    <!-- Nose (small, cute) -->   <path d="M59 58 Q60 61 61 58" fill="none" stroke="#D4A080" stroke-width="1" stroke-linecap="round"/>    <!-- Mouth (small smile) -->   <path d="M53 67 Q57 71 60 70 Q63 71 67 67" fill="none" stroke="#CC7766" stroke-width="1.5" stroke-linecap="round"/>   <!-- Lip shine -->   <path d="M56 68 Q58 67 60 68" fill="none" fill="#FFB0A0" opacity="0.3"/>    <!-- Hair accessory (small flower) -->   <circle cx="78" cy="35" r="3" fill="#FF8888"/>   <circle cx="78" cy="35" r="1.5" fill="#FFAAAA"/>   <path d="M75 35 L78 32 L81 35 L78 38 Z" fill="#FF6666" opacity="0.6"/> </svg>'
+};
+
+const NPC_DATA = {
+  old_man: {
+    id: 'old_man',
+    name: 'Elder Rowan',
+    portrait: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib2xkTWFuU2tpbiIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRDRBNTc0Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI0M0OTQ2NCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CgogIDwhLS0gQmFja2dyb3VuZCBjaXJjbGUgLS0+CiAgPGNpcmNsZSBjeD0iNjAiIGN5PSI2MCIgcj0iNTYiIGZpbGw9IiMxQTFBMkUiIHN0cm9rZT0iIzMzMzM1NSIgc3Ryb2tlLXdpZHRoPSIyIi8+CgogIDwhLS0gTmVjayAtLT4KICA8cmVjdCB4PSI0OCIgeT0iODIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIxMiIgZmlsbD0idXJsKCNvbGRNYW5Ta2luKSIvPgoKICA8IS0tIFNoaXJ0IGNvbGxhciAtLT4KICA8cGF0aCBkPSJNMzggODggUTQ4IDgyIDYwIDg1IFE3MiA4MiA4MiA4OCBMODIgMTAwIEwzOCAxMDAgWiIgZmlsbD0iIzRBM0EyQSIvPgogIDxwYXRoIGQ9Ik01MCA4NSBMNTUgOTIiIHN0cm9rZT0iIzNBMkExQSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz4KICA8cGF0aCBkPSJNNzAgODUgTDY1IDkyIiBzdHJva2U9IiMzQTJBMUEiIHN0cm9rZS13aWR0aD0iMC41Ii8+CgogIDwhLS0gRmFjZSBzaGFwZSAtLT4KICA8ZWxsaXBzZSBjeD0iNjAiIGN5PSI1OCIgcng9IjI2IiByeT0iMzAiIGZpbGw9InVybCgjb2xkTWFuU2tpbikiLz4KCiAgPCEtLSBFYXJzIC0tPgogIDxlbGxpcHNlIGN4PSIzNCIgY3k9IjU4IiByeD0iNSIgcnk9IjgiIGZpbGw9IiNDNDk0NjQiLz4KICA8ZWxsaXBzZSBjeD0iODYiIGN5PSI1OCIgcng9IjUiIHJ5PSI4IiBmaWxsPSIjQzQ5NDY0Ii8+CgogIDwhLS0gSGFpciAod2hpdGUvZ3JheSwgcmVjZWRpbmcpIC0tPgogIDxwYXRoIGQ9Ik0zNiA0MiBRNDAgMjUgNjAgMjIgUTgwIDI1IDg0IDQyIFE4MiAzNSA3NSAzMiBRNjAgMjggNDUgMzIgUTM4IDM1IDM2IDQyIiBmaWxsPSIjQ0NDQ0NDIi8+CiAgPCEtLSBTaWRlIGhhaXIgLS0+CiAgPHBhdGggZD0iTTM2IDQyIFEzNCA1MCAzNSA1OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQ0NDQ0NDIiBzdHJva2Utd2lkdGg9IjMiLz4KICA8cGF0aCBkPSJNODQgNDIgUTg2IDUwIDg1IDU4IiBmaWxsPSJub25lIiBzdHJva2U9IiNDQ0NDQ0MiIHN0cm9rZS13aWR0aD0iMyIvPgoKICA8IS0tIFdyaW5rbGVzIC0tPgogIDxwYXRoIGQ9Ik00NCA0OCBRNTAgNDYgNTYgNDgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0IwODA1MCIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuNiIvPgogIDxwYXRoIGQ9Ik02NCA0OCBRNzAgNDYgNzYgNDgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0IwODA1MCIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuNiIvPgogIDxwYXRoIGQ9Ik00MiA1NSBRNTAgNTMgNTggNTUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0IwODA1MCIgc3Ryb2tlLXdpZHRoPSIwLjQiIG9wYWNpdHk9IjAuNCIvPgoKICA8IS0tIEV5ZXMgKHRpcmVkLCBraW5kKSAtLT4KICA8ZWxsaXBzZSBjeD0iNDgiIGN5PSI1MiIgcng9IjUiIHJ5PSIzLjUiIGZpbGw9IiNGRkYiLz4KICA8Y2lyY2xlIGN4PSI0OCIgY3k9IjUyIiByPSIyLjUiIGZpbGw9IiM1QTNBMUEiLz4KICA8Y2lyY2xlIGN4PSI0OCIgY3k9IjUxLjUiIHI9IjEiIGZpbGw9IiMxQTFBMUEiLz4KICA8Y2lyY2xlIGN4PSI0NyIgY3k9IjUxIiByPSIwLjUiIGZpbGw9IiNGRkYiIG9wYWNpdHk9IjAuNyIvPgoKICA8ZWxsaXBzZSBjeD0iNzIiIGN5PSI1MiIgcng9IjUiIHJ5PSIzLjUiIGZpbGw9IiNGRkYiLz4KICA8Y2lyY2xlIGN4PSI3MiIgY3k9IjUyIiByPSIyLjUiIGZpbGw9IiM1QTNBMUEiLz4KICA8Y2lyY2xlIGN4PSI3MiIgY3k9IjUxLjUiIHI9IjEiIGZpbGw9IiMxQTFBMUEiLz4KICA8Y2lyY2xlIGN4PSI3MSIgY3k9IjUxIiByPSIwLjUiIGZpbGw9IiNGRkYiIG9wYWNpdHk9IjAuNyIvPgoKICA8IS0tIEV5ZWJyb3dzIChidXNoeSwgZ3JheSkgLS0+CiAgPHBhdGggZD0iTTQyIDQ2IFE0OCA0MyA1NCA0NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQUFBQUFBIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik02NiA0NiBRNzIgNDMgNzggNDYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0FBQUFBQSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgPCEtLSBOb3NlIC0tPgogIDxwYXRoIGQ9Ik01OCA1NSBRNjAgNjIgNjIgNTUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0IwODA1MCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICA8IS0tIE1vdXRoIChzbGlnaHQgc21pbGUpIC0tPgogIDxwYXRoIGQ9Ik01MCA2OCBRNjAgNzQgNzAgNjgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzhCNUUzQyIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICA8IS0tIEJlYXJkIChzaG9ydCwgZ3JheSkgLS0+CiAgPHBhdGggZD0iTTQyIDcyIFE0NSA4MCA1MCA4MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQkJCQkJCIiBzdHJva2Utd2lkdGg9IjEuNSIgb3BhY2l0eT0iMC43Ii8+CiAgPHBhdGggZD0iTTQ4IDc0IFE1MCA4MiA1MiA4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQkJCQkJCIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNiIvPgogIDxwYXRoIGQ9Ik01NSA3NiBRNTggODQgNjAgODUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0JCQkJCQiIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjUiLz4KICA8cGF0aCBkPSJNNjUgNzYgUTYyIDg0IDYwIDg1IiBmaWxsPSJub25lIiBzdHJva2U9IiNCQkJCQkIiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC41Ii8+CiAgPHBhdGggZD0iTTcyIDc0IFE3MCA4MiA2OCA4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQkJCQkJCIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNiIvPgogIDxwYXRoIGQ9Ik03OCA3MiBRNzUgODAgNzAgODIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0JCQkJCQiIgc3Ryb2tlLXdpZHRoPSIxLjUiIG9wYWNpdHk9IjAuNyIvPgoKICA8IS0tIFNjYXIgb24gZm9yZWhlYWQgLS0+CiAgPGxpbmUgeDE9IjUyIiB5MT0iMzgiIHgyPSI1OCIgeTI9IjQyIiBzdHJva2U9IiNCMDgwNTAiIHN0cm9rZS13aWR0aD0iMC44IiBvcGFjaXR5PSIwLjUiLz4KPC9zdmc+Cg==',
+    unlocked: true,
+    greeting: "Welcome back, traveler. The road has been dangerous, but we're alive.",
+    topics: [
+      {
+        id: 'about_camp',
+        text: 'Tell me about the camp.',
+        response: "We were farmers, merchants, refugees... The Gravekeeper's rise drove us here. These tents are all we have left. But you — you fight. That gives us hope.",
+        affection: 0,
+      },
+      {
+        id: 'about_graveyard',
+        text: 'Have you seen anything strange?',
+        response: "The graveyard to the east... The dead don't rest easy there. Something ancient keeps them rising. Be careful if you go back.",
+        affection: 0,
+        flag: 'graveyard_warning',
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  },
+  cute_girl: {
+    id: 'cute_girl',
+    name: 'Lina',
+    portrait: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ2lybFNraW4iIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0ZGRTBDOCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNGNUQwQjAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImdpcmxIYWlyIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM0QTIwMjAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjM0ExNTE1Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KCiAgPCEtLSBCYWNrZ3JvdW5kIGNpcmNsZSAtLT4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI1NiIgZmlsbD0iIzJBMUEyRSIgc3Ryb2tlPSIjNTUzMzU1IiBzdHJva2Utd2lkdGg9IjIiLz4KCiAgPCEtLSBIYWlyIChsb25nLCBkYXJrIGJyb3duLCBiZWhpbmQgYm9keSkgLS0+CiAgPHBhdGggZD0iTTMwIDQ1IFEyOCA2MCAzMiA4MCBRMzUgOTUgNDAgMTAwIiBmaWxsPSJ1cmwoI2dpcmxIYWlyKSIgc3Ryb2tlPSJub25lIi8+CiAgPHBhdGggZD0iTTkwIDQ1IFE5MiA2MCA4OCA4MCBRODUgOTUgODAgMTAwIiBmaWxsPSJ1cmwoI2dpcmxIYWlyKSIgc3Ryb2tlPSJub25lIi8+CgogIDwhLS0gTmVjayAtLT4KICA8cmVjdCB4PSI1MCIgeT0iODIiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMCIgZmlsbD0idXJsKCNnaXJsU2tpbikiLz4KCiAgPCEtLSBEcmVzcy9jbG90aGluZyAtLT4KICA8cGF0aCBkPSJNMzUgOTAgUTUwIDg0IDYwIDg3IFE3MCA4NCA4NSA5MCBMODggMTEwIEwzMiAxMTAgWiIgZmlsbD0iIzZCM0E1QSIvPgogIDxwYXRoIGQ9Ik00NSA5MCBMNTAgMTAwIiBzdHJva2U9IiM1QTJBNEEiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjUiLz4KICA8cGF0aCBkPSJNNjAgODggTDYwIDEwNSIgc3Ryb2tlPSIjNUEyQTRBIiBzdHJva2Utd2lkdGg9IjAuNSIgb3BhY2l0eT0iMC41Ii8+CiAgPHBhdGggZD0iTTc1IDkwIEw3MCAxMDAiIHN0cm9rZT0iIzVBMkE0QSIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuNSIvPgogIDwhLS0gQ29sbGFyIGRldGFpbCAtLT4KICA8cGF0aCBkPSJNNTAgODcgUTU1IDgzIDYwIDg2IFE2NSA4MyA3MCA4NyIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOEI1QTdBIiBzdHJva2Utd2lkdGg9IjEiLz4KCiAgPCEtLSBGYWNlIC0tPgogIDxlbGxpcHNlIGN4PSI2MCIgY3k9IjU2IiByeD0iMjQiIHJ5PSIyOCIgZmlsbD0idXJsKCNnaXJsU2tpbikiLz4KCiAgPCEtLSBFYXJzIChzbWFsbCwgd2l0aCBlYXJyaW5ncykgLS0+CiAgPGVsbGlwc2UgY3g9IjM2IiBjeT0iNTYiIHJ4PSI0IiByeT0iNiIgZmlsbD0iI0Y1RDBCMCIvPgogIDxjaXJjbGUgY3g9IjM2IiBjeT0iNjIiIHI9IjIiIGZpbGw9IiNGRkQ3MDAiIG9wYWNpdHk9IjAuOCIvPgogIDxlbGxpcHNlIGN4PSI4NCIgY3k9IjU2IiByeD0iNCIgcnk9IjYiIGZpbGw9IiNGNUQwQjAiLz4KICA8Y2lyY2xlIGN4PSI4NCIgY3k9IjYyIiByPSIyIiBmaWxsPSIjRkZENzAwIiBvcGFjaXR5PSIwLjgiLz4KCiAgPCEtLSBIYWlyIChiYW5ncyBhbmQgc2lkZXMpIC0tPgogIDxwYXRoIGQ9Ik0zNiAzOCBRNDAgMjIgNjAgMjAgUTgwIDIyIDg0IDM4IFE4MiAzMCA3NSAyNyBRNjAgMjIgNDUgMjcgUTM4IDMwIDM2IDM4IiBmaWxsPSJ1cmwoI2dpcmxIYWlyKSIvPgogIDwhLS0gU2lkZSBiYW5ncyAtLT4KICA8cGF0aCBkPSJNMzYgMzggUTMyIDQ4IDM0IDU4IFEzNSA1MCAzOCA0MiIgZmlsbD0idXJsKCNnaXJsSGFpcikiLz4KICA8cGF0aCBkPSJNODQgMzggUTg4IDQ4IDg2IDU4IFE4NSA1MCA4MiA0MiIgZmlsbD0idXJsKCNnaXJsSGFpcikiLz4KICA8IS0tIEhhaXIgc2hpbmUgLS0+CiAgPHBhdGggZD0iTTQ4IDI2IFE1NSAyMyA2MiAyNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNkE0MDQwIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNCIvPgoKICA8IS0tIEV5ZXMgKGJpZywgY3V0ZSwgYnJvd24pIC0tPgogIDwhLS0gTGVmdCBleWUgLS0+CiAgPGVsbGlwc2UgY3g9IjQ4IiBjeT0iNTIiIHJ4PSI2IiByeT0iNSIgZmlsbD0iI0ZGRiIvPgogIDxjaXJjbGUgY3g9IjQ4IiBjeT0iNTIiIHI9IjMuNSIgZmlsbD0iIzZCM0ExQSIvPgogIDxjaXJjbGUgY3g9IjQ4IiBjeT0iNTEiIHI9IjIiIGZpbGw9IiMzQTFBMEEiLz4KICA8Y2lyY2xlIGN4PSI0Ni41IiBjeT0iNTAiIHI9IjEuMiIgZmlsbD0iI0ZGRiIgb3BhY2l0eT0iMC44Ii8+CiAgPGNpcmNsZSBjeD0iNDkiIGN5PSI1MyIgcj0iMC42IiBmaWxsPSIjRkZGIiBvcGFjaXR5PSIwLjUiLz4KICA8IS0tIEV5ZWxhc2hlcyAtLT4KICA8cGF0aCBkPSJNNDIgNDggUTQ1IDQ2IDQ4IDQ4IiBmaWxsPSJub25lIiBzdHJva2U9IiMyQTEwMDgiIHN0cm9rZS13aWR0aD0iMSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTQ4IDQ4IFE1MSA0NiA1NCA0OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMkExMDA4IiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICA8IS0tIFJpZ2h0IGV5ZSAtLT4KICA8ZWxsaXBzZSBjeD0iNzIiIGN5PSI1MiIgcng9IjYiIHJ5PSI1IiBmaWxsPSIjRkZGIi8+CiAgPGNpcmNsZSBjeD0iNzIiIGN5PSI1MiIgcj0iMy41IiBmaWxsPSIjNkIzQTFBIi8+CiAgPGNpcmNsZSBjeD0iNzIiIGN5PSI1MSIgcj0iMiIgZmlsbD0iIzNBMUEwQSIvPgogIDxjaXJjbGUgY3g9IjcwLjUiIGN5PSI1MCIgcj0iMS4yIiBmaWxsPSIjRkZGIiBvcGFjaXR5PSIwLjgiLz4KICA8Y2lyY2xlIGN4PSI3MyIgY3k9IjUzIiByPSIwLjYiIGZpbGw9IiNGRkYiIG9wYWNpdHk9IjAuNSIvPgogIDwhLS0gRXllbGFzaGVzIC0tPgogIDxwYXRoIGQ9Ik02NiA0OCBRNjkgNDYgNzIgNDgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJBMTAwOCIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNDggUTc1IDQ2IDc4IDQ4IiBmaWxsPSJub25lIiBzdHJva2U9IiMyQTEwMDgiIHN0cm9rZS13aWR0aD0iMSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CgogIDwhLS0gRXllYnJvd3MgKHRoaW4sIGFyY2hlZCkgLS0+CiAgPHBhdGggZD0iTTQyIDQ0IFE0OCA0MSA1NCA0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNEEyMDIwIiBzdHJva2Utd2lkdGg9IjEuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTY2IDQ0IFE3MiA0MSA3OCA0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNEEyMDIwIiBzdHJva2Utd2lkdGg9IjEuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CgogIDwhLS0gQmx1c2ggLS0+CiAgPGVsbGlwc2UgY3g9IjQwIiBjeT0iNjAiIHJ4PSI1IiByeT0iMyIgZmlsbD0iI0ZGQjBBMCIgb3BhY2l0eT0iMC4zIi8+CiAgPGVsbGlwc2UgY3g9IjgwIiBjeT0iNjAiIHJ4PSI1IiByeT0iMyIgZmlsbD0iI0ZGQjBBMCIgb3BhY2l0eT0iMC4zIi8+CgogIDwhLS0gTm9zZSAoc21hbGwsIGN1dGUpIC0tPgogIDxwYXRoIGQ9Ik01OSA1OCBRNjAgNjEgNjEgNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Q0QTA4MCIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgPCEtLSBNb3V0aCAoc21hbGwgc21pbGUpIC0tPgogIDxwYXRoIGQ9Ik01MyA2NyBRNTcgNzEgNjAgNzAgUTYzIDcxIDY3IDY3IiBmaWxsPSJub25lIiBzdHJva2U9IiNDQzc3NjYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8IS0tIExpcCBzaGluZSAtLT4KICA8cGF0aCBkPSJNNTYgNjggUTU4IDY3IDYwIDY4IiBmaWxsPSJub25lIiBmaWxsPSIjRkZCMEEwIiBvcGFjaXR5PSIwLjMiLz4KCiAgPCEtLSBIYWlyIGFjY2Vzc29yeSAoc21hbGwgZmxvd2VyKSAtLT4KICA8Y2lyY2xlIGN4PSI3OCIgY3k9IjM1IiByPSIzIiBmaWxsPSIjRkY4ODg4Ii8+CiAgPGNpcmNsZSBjeD0iNzgiIGN5PSIzNSIgcj0iMS41IiBmaWxsPSIjRkZBQUFBIi8+CiAgPHBhdGggZD0iTTc1IDM1IEw3OCAzMiBMODEgMzUgTDc4IDM4IFoiIGZpbGw9IiNGRjY2NjYiIG9wYWNpdHk9IjAuNiIvPgo8L3N2Zz4K',
+    unlocked: false,
+    unlockCondition: 'town_camp_upgraded',
+    greeting: "Oh! You fixed up the camp! I'm... I'm Lina. Thank you for making this place safer.",
+    topics: [
+      {
+        id: 'about_herself',
+        text: 'How did you end up here?',
+        response: "I was a baker's daughter in the city. When the dead started walking, we fled. My family... I don't know if they made it. But I'm grateful to be alive.",
+        affection: 1,
+      },
+      {
+        id: 'help',
+        text: 'Is there anything I can do to help?',
+        response: "If you could clear the graveyard, maybe we could rebuild the city road. People would start coming back. Please... be careful out there.",
+        affection: 1,
+        flag: 'lina_quest_hint',
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  }
+};
+
+class TownScreen {
+  constructor(game) {
+    this.game = game;
+    this.dom = {
+      screen: document.getElementById('town-screen'),
+      bg: document.getElementById('town-bg'),
+      campName: document.getElementById('town-camp-name'),
+      gold: document.getElementById('town-gold'),
+      runStats: document.getElementById('town-run-stats'),
+      npcArea: document.getElementById('town-npc-area'),
+      fightBtn: document.getElementById('town-fight'),
+      titleBtn: document.getElementById('town-title'),
+      dialogueOverlay: document.getElementById('dialogue-overlay'),
+      dialoguePortrait: document.getElementById('dialogue-portrait'),
+      dialogueName: document.getElementById('dialogue-name'),
+      dialogueText: document.getElementById('dialogue-text'),
+      dialogueChoices: document.getElementById('dialogue-choices'),
+      dialogueContinue: document.getElementById('dialogue-continue'),
+    };
+    this._typewriterTimer = null;
+    this._lastRunStats = null;
+    this._setupEvents();
+  }
+
+  _setupEvents() {
+    this.dom.fightBtn.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this.hide();
+      this.game.startGame();
+    });
+    this.dom.titleBtn.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this.hide();
+      this.game._returnToTitle();
+    });
+    this.dom.dialogueOverlay.addEventListener('click', (e) => {
+      // Skip typewriter on click
+      if (this._typewriterTimer && e.target === this.dom.dialogueText) {
+        clearInterval(this._typewriterTimer);
+        this._typewriterTimer = null;
+      }
+    });
+    this.dom.dialogueContinue.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this.dom.dialogueOverlay.classList.remove('active');
+    });
+  }
+
+  show(runStats) {
+    this._lastRunStats = runStats;
+    this.dom.screen.classList.add('active');
+    this._updateDisplay();
+    this._renderNPCs();
+  }
+
+  hide() {
+    this.dom.screen.classList.remove('active');
+    this.dom.dialogueOverlay.classList.remove('active');
+    if (this._typewriterTimer) {
+      clearInterval(this._typewriterTimer);
+      this._typewriterTimer = null;
+    }
+  }
+
+  _updateDisplay() {
+    const gm = this.game.gameManager;
+    const phase = gm.get('persistent.town.phase') || 1;
+    const gold = gm.get_currency() || 0;
+    const campName = phase >= 2 ? 'Refugee Camp (Upgraded)' : 'Refugee Camp';
+
+    this.dom.campName.textContent = campName;
+    this.dom.gold.textContent = `💰 ${gold}`;
+    this.dom.bg.src = phase >= 2 ? 'assets/town_wooden_shacks.svg' : 'assets/town_refugee_camp.svg';
+
+    if (this._lastRunStats) {
+      this.dom.runStats.textContent = `⏱ ${this._lastRunStats.time}  Lv${this._lastRunStats.level}  ☠ ${this._lastRunStats.kills}`;
+    }
+
+    // Update unlocked NPCs
+    for (const key in NPC_DATA) {
+      const npc = NPC_DATA[key];
+      if (npc.unlockCondition) {
+        npc.unlocked = !!gm.get_flag(npc.unlockCondition);
+      }
+    }
+  }
+
+  _renderNPCs() {
+    const area = this.dom.npcArea;
+    area.innerHTML = '';
+    const phase = this.game.gameManager.get('persistent.town.phase') || 1;
+    const gold = this.game.gameManager.get_currency() || 0;
+
+    // Upgrade card (only in phase 1)
+    if (phase === 1) {
+      const canAfford = gold >= 100;
+      const upgradeCard = document.createElement('div');
+      upgradeCard.className = 'upgrade-card' + (canAfford ? '' : ' disabled');
+      upgradeCard.innerHTML = `
+        <span class="upgrade-label">🔨 Upgrade Camp — Build Wooden Shacks</span>
+        <span class="upgrade-cost">${canAfford ? '100g' : 'Need 100g'}</span>
+      `;
+      if (canAfford) {
+        upgradeCard.addEventListener('click', () => {
+          this.game.audioManager.playMenuSound('select');
+          this.game.gameManager.spend_currency(100, 'camp_upgrade');
+          this.game.gameManager.set_flag('town_camp_upgraded', true);
+          this.game.gameManager.set('persistent.town.phase', 2);
+          NPC_DATA.cute_girl.unlocked = true;
+          this._updateDisplay();
+          this._renderNPCs();
+        });
+      }
+      area.appendChild(upgradeCard);
+    }
+
+    // NPC cards
+    for (const key in NPC_DATA) {
+      const npc = NPC_DATA[key];
+      const card = document.createElement('div');
+      card.className = 'npc-card' + (npc.unlocked ? '' : ' locked');
+
+      if (npc.unlocked) {
+        const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
+        const svgWithClass = svgHtml.replace('<svg ', '<svg class="npc-portrait" ');
+        card.innerHTML = `
+          ${svgWithClass}
+          <div class="npc-info">
+            <div class="npc-name">${npc.name}</div>
+            <div class="npc-greeting">"${npc.greeting.substring(0, 60)}${npc.greeting.length > 60 ? '...' : ''}"</div>
+            <div class="npc-action">▸ Talk</div>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          this.game.audioManager.playMenuSound('select');
+          this._openDialogue(npc);
+        });
+      } else {
+        const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
+        const svgWithClass = svgHtml.replace('<svg ', '<svg class="npc-portrait" style="filter: grayscale(1);" ');
+        card.innerHTML = `
+          ${svgWithClass}
+          <div class="npc-info">
+            <div class="npc-name">${npc.name}</div>
+            <div class="npc-lock-text">🔒 ${npc.unlockCondition === 'town_camp_upgraded' ? 'Upgrade the camp to unlock' : 'Locked'}</div>
+          </div>
+        `;
+      }
+      area.appendChild(card);
+    }
+  }
+
+  _openDialogue(npc) {
+    // Use inline SVG for reliable rendering
+    const svgHtml = SVG_PORTRAITS[npc.id] || '';
+    if (svgHtml) {
+      const styled = svgHtml.replace('<svg ', '<svg style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(255,215,0,0.2);flex-shrink:0;" ');
+      this.dom.dialoguePortrait.innerHTML = styled;
+    }
+    this.dom.dialogueName.textContent = npc.name;
+    this.dom.dialogueChoices.style.display = 'none';
+    this.dom.dialogueContinue.style.display = 'none';
+    this.dom.dialogueOverlay.classList.add('active');
+
+    // Show greeting with typewriter
+    this._typewriteText(npc.greeting, () => {
+      this._showChoices(npc);
+    });
+  }
+
+    _showChoices(npc) {
+    this.dom.dialogueChoices.innerHTML = '';
+    this.dom.dialogueChoices.style.display = 'flex';
+
+    for (const topic of npc.topics) {
+      const btn = document.createElement('button');
+      btn.className = 'dialogue-choice';
+      btn.textContent = topic.text;
+      btn.addEventListener('click', () => {
+        this.game.audioManager.playMenuSound('select');
+        if (topic.close) {
+          this.dom.dialogueOverlay.classList.remove('active');
+          return;
+        }
+        // Set flag if defined
+        if (topic.flag) {
+          this.game.gameManager.set_flag(topic.flag, true);
+        }
+        // Add affection
+        if (topic.affection > 0) {
+          const key = `affection_${npc.id}`;
+          this.game.gameManager.add_counter(key, topic.affection);
+        }
+        // Show response
+        this.dom.dialogueChoices.style.display = 'none';
+        this._typewriteText(topic.response, () => {
+          this.dom.dialogueContinue.style.display = 'block';
+          this.dom.dialogueContinue.onclick = () => {
+            this.game.audioManager.playMenuSound('select');
+            this.dom.dialogueContinue.style.display = 'none';
+            this._showChoices(npc);
+          };
+        });
+      });
+      this.dom.dialogueChoices.appendChild(btn);
+    }
+  }
+
+  _typewriteText(text, onComplete) {
+    if (this._typewriterTimer) {
+      clearInterval(this._typewriterTimer);
+      this._typewriterTimer = null;
+    }
+    this.dom.dialogueText.textContent = '';
+    let i = 0;
+    this._typewriterTimer = setInterval(() => {
+      if (i < text.length) {
+        this.dom.dialogueText.textContent += text[i];
+        i++;
+      } else {
+        clearInterval(this._typewriterTimer);
+        this._typewriterTimer = null;
+        if (onComplete) onComplete();
+      }
+    }, 25);
   }
 }
 
