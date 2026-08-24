@@ -4,7 +4,7 @@
 > **Date:** August 23, 2026
 > **Related:** `game_frame.md` (game framework), `11_svg_asset_spec.md` (assets), `12_codebase_map.md` (engine map)
 > **Platform:** Web (mobile-first), playable on desktop and mobile browsers
-> **Orientation:** Portrait-primary, landscape-enhanced
+> **Orientation:** Portrait-only
 
 ---
 
@@ -1013,43 +1013,70 @@ Toast auto-dismisses after 3 seconds. No blocking modal.
 
 ---
 
-## 18. Open Questions
+## 18. Design Decisions (Answered)
 
-### Q1: Weapon Selection — Shared Cooldown on Start?
+### Q1: Starting Weapons — DECIDED
 
-If a player picks 3 offensive weapons, should all 3 be ready at the start of a run, or should only W1 be active and others unlock at certain time/level thresholds?
+**Multiple weapons from the start.** Players choose a character type that comes with a specific weapon set (3 weapons). All 3 active immediately. Weapons start at reduced base stats (~60%) to allow progression while keeping the same mechanics. Power spikes at Lv4 and Lv7 still apply.
 
-**Recommendation:** All 3 active from the start. The player earned the right to choose them. Cooldowns provide natural pacing.
+**Character weapon sets:**
+| Character | W1 | W2 | W3 | Theme |
+|---|---|---|---|---|
+| Survivor (default) | Projectile | Orbit | Area | Balanced |
+| Berserker | Melee Sweep | Spin Attack | Ground Pound | Aggression |
+| Mage | Chain Lightning | Orbital Spells | AoE Blast | Magic |
+| Ranger | Multi-Shot | Traps | Bombardment | Ranged |
+| Support | Healing Pulse | Shield Wave | Buff Aura | Teamplay |
 
-### Q2: Weapon Pool Size Scaling
+### Q2: 20+ Weapons Grid — DECIDED
 
-As more weapons are added through NPCs, factions, and crafting, the weapon selection grid could get large (20+ weapons). Should we paginate, use a scrollable grid, or filter by type?
+**Category tabs with sub-filters.** Tab system: All | Default | Suggested | Favorites | then type sub-filters: Melee | Ranged | Magic | Support.
 
-**Recommendation:** Scrollable grid with type filters (Projectile, Orbit, Area, Summon, Buff, etc.) at the top. Max visible: 4×3 grid on mobile, 6×4 on desktop.
+- **Default:** Character's starting set (highlighted)
+- **Suggested:** Weapons recommended for the next stage
+- **Favorites:** Player-pinned (long-press to favorite)
+- **Type filters:** Melee/Ranged/Magic/Support sub-tabs
 
-### Q3: Companion Weapon Display in Combat
+Grid: 4 columns mobile, 6 columns desktop. Scrollable. Android fully supported (standard Material Design tabs + RecyclerView pattern).
 
-When NPCs are companions in combat, should their weapons show in the weapon bar alongside the player's?
+### Q3: NPC Companion Weapons — DECIDED
 
-**Recommendation:** No. The weapon bar shows only the player's 3 weapons. NPC companions have a small indicator (icon + auto-attack animation) but don't clutter the HUD.
+**NPC weapons show in the weapon bar.** NPC weapons appear as smaller icons with colored NPC border. Bar becomes: `[PW1] [PW2] [PW3] [NPC1] [NPC2]`.
 
-### Q4: Estate Quest Notifications
+**NPC level scaling:** NPCs auto-level to match the player's current level. Stats scale at reduced rate (10-50% of player damage depending on trust tier). No manual NPC upgrade management — they stay relevant throughout the run.
 
-How much should the game notify the player about estate quests? If they have 3 families each generating quests, that's a lot of notifications.
+### Q4: Estate Quest Notifications — DECIDED
 
-**Recommendation:** Badge count only. Don't push notifications. The player sees "5 new" on the Journal badge and checks when ready. No pop-ups mid-combat.
+**Cap at 3 visible estate quests.** Additional quests queued, appear as current ones complete.
 
-### Q5: Skill Tree Navigation on Mobile
+**"Visit All Estates" option:** After every 5 runs, a free prompt lets the player check all families in one visit — summary cards per estate, bulk needs addressing. Prevents neglect feeling.
 
-A 5-branch tree with 50+ nodes is hard to navigate on a small screen. Should we use a radial layout, a vertical scrolling tree, or branch-by-branch tabs?
+Badge on Journal tab shows count. No combat pop-ups. Estate quests in Journal under "Family" tab.
 
-**Recommendation:** Branch tabs (as shown above). Each branch is a vertical scrolling tree. Tap a branch tab to switch. This keeps each branch manageable (~10-12 nodes visible at once).
+### Q5: Skill Tree Navigation — DECIDED
 
-### Q6: Inventory Capacity
+**Three navigation modes:**
+1. **Suggested (Default):** Highlights recommended next nodes with glow effect. Tap to select, confirm to unlock.
+2. **Randomize:** Shuffles visual layout for discovery. Same data, different arrangement.
+3. **List:** Vertical list of all nodes sorted by branch and cost. For readers over spatial navigators.
 
-Should the inventory be unlimited (like Vampire Survivors) or grid-based with a cap (like classic RPGs)?
+**Interactions:** Mobile: tap + confirm, drag to pan, pinch to zoom. Desktop: click + confirm, scroll to pan, wheel to zoom. Branch tabs at top switch between 5 branches.
 
-**Recommendation:** Soft cap. Start with 20 slots. Expand via Town buildings (Warehouse upgrade). Equipment is separate from consumables. Resources are unlimited (tracked as counters, not slots).
+### Q6: Inventory — DECIDED
+
+**Grid with cap + gift/surplus system.**
+- **Starting capacity:** 24 slots (6×4 mobile)
+- **Expansion:** Warehouse upgrades +8 slots/level (max 48)
+- **Equipment slots:** Separate (Weapon, Armor, Accessory, Relic)
+- **Resources:** Counters, not slots
+
+**Gift system:** When full or holding low-level items:
+- **Gift to estates:** Wife/children use them → affection + dialogue
+- **Blacksmith:** Recycles weapons → materials
+- **Market:** Sells items → gold
+- **Surplus quests:** Auto-generated ("Blacksmith needs 3 iron swords")
+
+Long-press item → Equip, Gift, Drop, Study. Drag to estate slot for direct gifting.
 
 ### Q7: Portrait vs Landscape for Combat
 

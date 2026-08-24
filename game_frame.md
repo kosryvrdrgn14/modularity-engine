@@ -1490,7 +1490,9 @@ The town uses wood, stone, herbs, and gold. But the combat engine only generates
 Items can be earned, bought, and found. But there's no inventory screen to manage equipment and consumables.
 - **Action:** Design an inventory UI module (grid-based or list-based) accessible from the town.
 
-**Gap 5: No equipment system in the combat engine.**
+**Gap 5: Inventory gift/surplus system.** Players can gift unneeded items to estates (affection + dialogue), Blacksmith (recycling → materials), Market (selling → gold), or Library (studying → skill XP). An algorithm generates surplus quests ("Blacksmith needs 3 iron swords") based on high-stock or low-level items. Max 3 estate quests visible at once, with a "Visit All Estates" prompt every 5 runs.
+
+**Gap 5b: No equipment system in the combat engine.**
 The combat engine has a player with base stats but no equipment slots. If the Blacksmith sells swords and armor, the combat engine needs to read equipment from the store and apply bonuses.
 - **Action:** Extend `store.inventory.equipment` with stat modifiers that the combat engine reads during player creation.
 
@@ -1573,7 +1575,7 @@ Options: (a) Seamless transition (camera zooms into the stage). (b) Loading scre
 - **Recommendation:** (c) World map. It provides a natural place to select stages, view quest objectives, and check intel. Also future-proofs for multiple regions.
 
 **Q3: How should NPC combat companions work?** (RESOLVED)
-NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. They provide supplementary damage, in-combat dialogue flavor, and build补ning. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
+NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. NPC weapons show in the weapon bar as smaller icons with colored NPC border. NPCs auto-level to match the player's current level, scaling at 10-50% of player damage depending on trust tier. No manual NPC upgrade management. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
 
 **Q4: Should there be a "prestige" or "new game+" system?**
 When the player completes all content, should they be able to restart with bonuses? Or is the game "done" at that point?
