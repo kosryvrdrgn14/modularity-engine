@@ -3409,19 +3409,20 @@ class TelegraphSystem {
       case 'rectangle': {
         ctx.translate(t.x, t.y); ctx.rotate(t.angle);
         const w = t.width * scale, h = t.height * scale;
-        // Draw from origin forward (not centered) — telegraph shows where boss WILL go
+        // Rect extends from origin forward along local X-axis (charge direction)
         if (!v.outlineOnly) {
           ctx.fillStyle = v.fillColor.replace(/[\d.]+\)$/, flicker + ')');
-          ctx.fillRect(-w/2, 0, w, h);
+          ctx.fillRect(0, -w/2, h, w);
         }
         ctx.strokeStyle = v.strokeColor; ctx.lineWidth = v.strokeWidth;
-        ctx.strokeRect(-w/2, 0, w, h);
+        ctx.strokeRect(0, -w/2, h, w);
+        // Chevrons point forward (right = charge direction)
         if (v.chevrons && v.chevronCount > 0) {
-          ctx.strokeStyle = v.chevronColor; ctx.lineWidth = 2.5;
+          ctx.strokeStyle = v.chevronColor || v.strokeColor; ctx.lineWidth = 2.5;
           const spacing = h / (v.chevronCount + 1);
           for (let i = 1; i <= v.chevronCount; i++) {
-            const cy = i * spacing;
-            ctx.beginPath(); ctx.moveTo(-6, cy - 6); ctx.lineTo(0, cy); ctx.lineTo(-6, cy + 6); ctx.stroke();
+            const cx = i * spacing;
+            ctx.beginPath(); ctx.moveTo(cx - 6, -6); ctx.lineTo(cx, 0); ctx.lineTo(cx - 6, 6); ctx.stroke();
           }
         }
         break;
