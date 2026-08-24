@@ -2090,18 +2090,16 @@ class CompanionSystem {
       ctx.ellipse(s.x, s.y + sz * 0.2, sz * 0.55, sz * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // --- Green bandana/scarf ---
-      ctx.fillStyle = '#2D8B4E';
+      // --- Thin green collar (subtle, not frog-like) ---
+      ctx.strokeStyle = '#2D8B4E';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.ellipse(s.x, s.y + sz * 0.15, sz * 0.85, sz * 0.22, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Bandana knot (small triangle below)
-      ctx.fillStyle = '#238B45';
+      ctx.ellipse(s.x, s.y + sz * 0.18, sz * 0.65, sz * 0.12, 0, 0.3, Math.PI - 0.3);
+      ctx.stroke();
+      // Small gold tag
+      ctx.fillStyle = '#FFD700';
       ctx.beginPath();
-      ctx.moveTo(s.x - 2, s.y + sz * 0.25);
-      ctx.lineTo(s.x + 2, s.y + sz * 0.25);
-      ctx.lineTo(s.x, s.y + sz * 0.45);
-      ctx.closePath();
+      ctx.arc(s.x, s.y + sz * 0.3, 1.5, 0, Math.PI * 2);
       ctx.fill();
 
       // --- Face ---
