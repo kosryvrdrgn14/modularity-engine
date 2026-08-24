@@ -1,0 +1,450 @@
+{
+  "version": 1,
+  "_comment": "Central ID registry. Every entity in the game MUST have an entry here. IDs are snake_case with type prefixes. See id_system.md for naming rules.",
+
+  "entities": {
+
+    "character_survivor": {
+      "type": "character",
+      "file": "content/characters.json",
+      "display_name": "Survivor",
+      "description": "Default playable character. Balanced weapon set.",
+      "references": []
+    },
+
+    "weapon_projectile": {
+      "type": "weapon",
+      "file": "content/weapons.json",
+      "display_name": "Projectile",
+      "description": "Fires bullets toward nearest enemy. W1 for Survivor.",
+      "references": ["character_survivor.start_weapon"]
+    },
+    "weapon_orbit": {
+      "type": "weapon",
+      "file": "content/weapons.json",
+      "display_name": "Orbit",
+      "description": "Spheres orbit the player, damaging enemies on contact.",
+      "references": ["character_survivor.start_weapon"]
+    },
+    "weapon_area_pulse": {
+      "type": "weapon",
+      "file": "content/weapons.json",
+      "display_name": "Area",
+      "description": "Periodic AoE pulse centered on the player.",
+      "references": ["character_survivor.start_weapon"]
+    },
+
+    "enemy_zombie": {
+      "type": "enemy",
+      "file": "content/enemies.json",
+      "display_name": "Zombie",
+      "description": "Basic melee enemy. Chases player slowly.",
+      "references": ["stage_graveyard.waves"]
+    },
+    "enemy_bat": {
+      "type": "enemy",
+      "file": "content/enemies.json",
+      "display_name": "Bat",
+      "description": "Fast erratic flier. Low HP.",
+      "references": ["stage_graveyard.waves"]
+    },
+    "enemy_skeleton": {
+      "type": "enemy",
+      "file": "content/enemies.json",
+      "display_name": "Skeleton",
+      "description": "Medium melee enemy. Higher HP than zombie.",
+      "references": ["stage_graveyard.waves"]
+    },
+    "enemy_ghost": {
+      "type": "enemy",
+      "file": "content/enemies.json",
+      "display_name": "Ghost",
+      "description": "Alternates between wandering and chasing.",
+      "references": ["stage_graveyard.waves"]
+    },
+    "enemy_caster": {
+      "type": "enemy",
+      "file": "content/enemies.json",
+      "display_name": "Caster",
+      "description": "Ranged enemy. Maintains distance and fires projectiles.",
+      "references": ["stage_graveyard.waves"]
+    },
+    "enemy_boss_gravekeeper": {
+      "type": "enemy",
+      "file": "content/enemies.json",
+      "display_name": "The Gravekeeper",
+      "description": "Stage 1 boss. Charge + ground pound attacks.",
+      "references": ["stage_graveyard.boss_config"]
+    },
+
+    "stage_graveyard": {
+      "type": "stage",
+      "file": "content/stages.json",
+      "display_name": "The Graveyard",
+      "description": "Starting stage. Gothic horror theme. 5-minute timer.",
+      "references": []
+    },
+    "stage_forest": {
+      "type": "stage",
+      "file": "content/stages.json",
+      "display_name": "The Dark Forest",
+      "description": "Second stage. Poison zones and treant enemies.",
+      "references": []
+    },
+    "stage_cave": {
+      "type": "stage",
+      "file": "content/stages.json",
+      "display_name": "The Crystal Cavern",
+      "description": "Third stage. Falling debris and lava hazards.",
+      "references": []
+    },
+
+    "pickup_xp_small": {
+      "type": "pickup",
+      "file": "content/pickups.json",
+      "display_name": "Small XP Gem",
+      "description": "Grants 1 XP. Dropped by most enemies.",
+      "references": ["enemy_zombie.drops", "enemy_bat.drops"]
+    },
+    "pickup_xp_large": {
+      "type": "pickup",
+      "file": "content/pickups.json",
+      "display_name": "Large XP Gem",
+      "description": "Grants 5 XP. Dropped by stronger enemies.",
+      "references": ["enemy_skeleton.drops"]
+    },
+    "pickup_gold_coin": {
+      "type": "pickup",
+      "file": "content/pickups.json",
+      "display_name": "Gold Coin",
+      "description": "Grants 1 gold. Dropped by all enemies.",
+      "references": ["enemy_zombie.drops", "enemy_bat.drops", "enemy_skeleton.drops"]
+    },
+    "pickup_health_potion": {
+      "type": "pickup",
+      "file": "content/pickups.json",
+      "display_name": "Health Potion",
+      "description": "Restores 20 HP. Rare drop.",
+      "references": []
+    },
+    "pickup_magnet": {
+      "type": "pickup",
+      "file": "content/pickups.json",
+      "display_name": "Magnet",
+      "description": "Attracts all nearby pickups for 10 seconds.",
+      "references": ["enemy_bat.drops.power_up_table"]
+    },
+    "pickup_screen_wipe": {
+      "type": "pickup",
+      "file": "content/pickups.json",
+      "display_name": "Screen Wipe",
+      "description": "Destroys all enemies on screen. Very rare.",
+      "references": ["enemy_skeleton.drops.power_up_table"]
+    },
+    "pickup_weapon_level_up": {
+      "type": "pickup",
+      "file": "content/pickups.json",
+      "display_name": "Weapon Level-Up",
+      "description": "Upgrades lowest-level active weapon by 1 level.",
+      "references": ["enemy_boss_gravekeeper.drops.power_up_table"]
+    },
+
+    "skill_combat_damage_1": {
+      "type": "skill",
+      "file": "content/skills.json",
+      "display_name": "+15% Damage",
+      "description": "Increases all weapon damage by 15%.",
+      "references": []
+    },
+    "skill_combat_speed_1": {
+      "type": "skill",
+      "file": "content/skills.json",
+      "display_name": "+10% Move Speed",
+      "description": "Increases player movement speed by 10%.",
+      "references": []
+    },
+    "skill_town_warehouse_1": {
+      "type": "skill",
+      "file": "content/skills.json",
+      "display_name": "+8 Inventory Slots",
+      "description": "Expands inventory capacity by 8 slots.",
+      "references": []
+    },
+
+    "building_campfire": {
+      "type": "building",
+      "file": "content/buildings.json",
+      "display_name": "Campfire",
+      "description": "Starter building. Heals between runs.",
+      "references": []
+    },
+    "building_blacksmith": {
+      "type": "building",
+      "file": "content/buildings.json",
+      "display_name": "Blacksmith",
+      "description": "Craft and upgrade weapons.",
+      "references": ["npc_blacksmith.location"]
+    },
+    "building_market": {
+      "type": "building",
+      "file": "content/buildings.json",
+      "display_name": "Market",
+      "description": "Buy and sell items.",
+      "references": []
+    },
+
+    "npc_blacksmith": {
+      "type": "npc",
+      "file": "content/npcs.json",
+      "display_name": "Gareth",
+      "description": "The Blacksmith. Forge Brotherhood member.",
+      "references": ["building_blacksmith.npc"]
+    },
+    "npc_apprentice_ani": {
+      "type": "npc",
+      "file": "content/npcs.json",
+      "display_name": "Ani",
+      "description": "Apprentice. Dead weight companion (10% damage).",
+      "references": []
+    },
+
+    "faction_wanderers_guild": {
+      "type": "faction",
+      "file": "content/factions.json",
+      "display_name": "Wanderer's Guild",
+      "description": "General adventurer faction.",
+      "references": []
+    },
+    "faction_shadow_covenant": {
+      "type": "faction",
+      "file": "content/factions.json",
+      "display_name": "Shadow Covenant",
+      "description": "Stealth and magic faction.",
+      "references": []
+    },
+    "faction_forge_brotherhood": {
+      "type": "faction",
+      "file": "content/factions.json",
+      "display_name": "Forge Brotherhood",
+      "description": "Crafting and combat faction.",
+      "references": ["npc_blacksmith.faction"]
+    },
+
+    "quest_main_001_awakening": {
+      "type": "quest",
+      "file": "content/quests.json",
+      "display_name": "The Awakening",
+      "description": "Tutorial quest. Survive first combat run.",
+      "references": []
+    },
+    "quest_side_gareth_iron": {
+      "type": "quest",
+      "file": "content/quests.json",
+      "display_name": "Gareth Needs Iron",
+      "description": "Bring 10 iron ore to the Blacksmith.",
+      "references": ["npc_blacksmith.requests"]
+    },
+
+    "dialogue_blacksmith_intro": {
+      "type": "dialogue",
+      "file": "content/dialogue.json",
+      "display_name": "Meet the Blacksmith",
+      "description": "First meeting with Gareth.",
+      "references": ["npc_blacksmith.first_meeting"]
+    },
+    "dialogue_blacksmith_intro_n1": {
+      "type": "dialogue_node",
+      "file": "content/dialogue.json",
+      "display_name": "Opening line",
+      "references": ["dialogue_blacksmith_intro.nodes"]
+    },
+    "dialogue_blacksmith_intro_n2a": {
+      "type": "dialogue_node",
+      "file": "content/dialogue.json",
+      "display_name": "Friendly response branch",
+      "references": ["dialogue_blacksmith_intro_n1.choices"]
+    },
+    "dialogue_blacksmith_intro_n2b": {
+      "type": "dialogue_node",
+      "file": "content/dialogue.json",
+      "display_name": "Neutral response branch",
+      "references": ["dialogue_blacksmith_intro_n1.choices"]
+    },
+
+    "item_iron_sword": {
+      "type": "item",
+      "file": "content/items.json",
+      "display_name": "Iron Sword",
+      "description": "Basic melee weapon. Sold by Blacksmith at trust 1.",
+      "references": ["npc_blacksmith.shop"]
+    },
+    "item_steel_armor": {
+      "type": "item",
+      "file": "content/items.json",
+      "display_name": "Steel Armor",
+      "description": "Medium armor. Sold by Blacksmith at trust 3.",
+      "references": ["npc_blacksmith.shop"]
+    },
+    "item_legendary_blade": {
+      "type": "item",
+      "file": "content/items.json",
+      "display_name": "Soulreaver",
+      "description": "Legendary weapon. Sold by Blacksmith at trust 5.",
+      "references": ["npc_blacksmith.shop"]
+    },
+
+    "estate_gareth": {
+      "type": "estate",
+      "file": "content/estates.json",
+      "display_name": "Gareth's Homestead",
+      "description": "Estate for the Blacksmith family.",
+      "references": ["npc_blacksmith.marriage"]
+    },
+
+    "telegraph_boss_charge_lane": {
+      "type": "telegraph",
+      "file": "content/mechanics.json",
+      "display_name": "Boss Charge Lane",
+      "description": "Directional rectangle warning for boss charge.",
+      "references": ["enemy_boss_gravekeeper.attacks.charge"]
+    },
+    "telegraph_ground_pound_circle": {
+      "type": "telegraph",
+      "file": "content/mechanics.json",
+      "display_name": "Ground Pound Circle",
+      "description": "Circular AoE warning for ground pound.",
+      "references": ["enemy_boss_gravekeeper.attacks.ground_pound"]
+    },
+    "telegraph_falling_debris": {
+      "type": "telegraph",
+      "file": "content/mechanics.json",
+      "display_name": "Falling Debris",
+      "description": "Circle warning for falling rocks.",
+      "references": ["stage_event_falling_stalactites.telegraph"]
+    },
+    "telegraph_lava_pool": {
+      "type": "telegraph",
+      "file": "content/mechanics.json",
+      "display_name": "Lava Pool",
+      "description": "Circle warning for lava formation.",
+      "references": ["stage_event_lava_eruption.telegraph"]
+    },
+    "telegraph_caster_bolt": {
+      "type": "telegraph",
+      "file": "content/mechanics.json",
+      "display_name": "Caster Bolt Path",
+      "description": "Line warning for caster projectile.",
+      "references": ["enemy_caster.attacks.bolt"]
+    },
+    "telegraph_laser_beam": {
+      "type": "telegraph",
+      "file": "content/mechanics.json",
+      "display_name": "Laser Beam",
+      "description": "Narrow line warning for beam attack.",
+      "references": []
+    },
+
+    "stage_event_falling_stalactites": {
+      "type": "stage_event",
+      "file": "content/mechanics.json",
+      "display_name": "Falling Stalactites",
+      "description": "Periodic stalactite drops in Crystal Cavern.",
+      "references": ["stage_cave.environmental_events"]
+    },
+    "stage_event_lava_eruption": {
+      "type": "stage_event",
+      "file": "content/mechanics.json",
+      "display_name": "Lava Eruption",
+      "description": "Lava pool formation in Crystal Cavern.",
+      "references": ["stage_cave.environmental_events"]
+    },
+
+    "attack_charge": {
+      "type": "attack",
+      "file": "content/mechanics.json",
+      "display_name": "Charge",
+      "description": "Boss directional charge attack.",
+      "references": ["enemy_boss_gravekeeper.attacks"]
+    },
+    "attack_ground_pound": {
+      "type": "attack",
+      "file": "content/mechanics.json",
+      "display_name": "Ground Pound",
+      "description": "Boss circular AoE attack.",
+      "references": ["enemy_boss_gravekeeper.attacks"]
+    },
+    "attack_bolt": {
+      "type": "attack",
+      "file": "content/mechanics.json",
+      "display_name": "Bolt",
+      "description": "Caster ranged projectile attack.",
+      "references": ["enemy_caster.attacks"]
+    },
+
+    "audio_boss_charge_warn": {
+      "type": "audio",
+      "file": "content/audio_config.json",
+      "display_name": "Boss Charge Warning",
+      "description": "Rising tone before boss charge.",
+      "references": ["telegraph_boss_charge_lane.windup_sound"]
+    },
+    "audio_boss_intro": {
+      "type": "audio",
+      "file": "content/audio_config.json",
+      "display_name": "Boss Introduction",
+      "description": "Dramatic chord for boss intro sequence.",
+      "references": ["enemy_boss_gravekeeper.intro.sound"]
+    },
+    "audio_level_up": {
+      "type": "audio",
+      "file": "content/audio_config.json",
+      "display_name": "Level Up",
+      "description": "Arpeggio on player level up.",
+      "references": []
+    },
+    "audio_coin_pickup": {
+      "type": "audio",
+      "file": "content/audio_config.json",
+      "display_name": "Coin Pickup",
+      "description": "Short chime when collecting gold.",
+      "references": ["pickup_gold_coin.sound"]
+    },
+
+    "flag_boss_1_defeated": {
+      "type": "flag",
+      "file": "save data",
+      "display_name": "Boss 1 Defeated",
+      "description": "Set when Gravekeeper is defeated.",
+      "references": ["enemy_boss_gravekeeper.on_death"]
+    },
+    "flag_met_npc_blacksmith": {
+      "type": "flag",
+      "file": "save data",
+      "display_name": "Met the Blacksmith",
+      "description": "Set after first dialogue with Gareth.",
+      "references": ["dialogue_blacksmith_intro.on_complete"]
+    },
+
+    "counter_total_kills": {
+      "type": "counter",
+      "file": "save data",
+      "display_name": "Total Kills",
+      "description": "Lifetime enemy kill count.",
+      "references": ["combat_session.end"]
+    },
+    "counter_total_runs": {
+      "type": "counter",
+      "file": "save data",
+      "display_name": "Total Runs",
+      "description": "Lifetime combat run count.",
+      "references": ["combat_session.end"]
+    },
+    "counter_affection_npc_blacksmith": {
+      "type": "counter",
+      "file": "save data",
+      "display_name": "Blacksmith Affection",
+      "description": "Gareth's relationship level.",
+      "references": ["dialogue_blacksmith_intro.choices"]
+    }
+  }
+}

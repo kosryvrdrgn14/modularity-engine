@@ -431,6 +431,12 @@ In Godot, the manifest maps to `preload()` calls or resource paths. The same JSO
 | Magnet | `"magnet"` | ✅ OK |
 | Weapon Level-Up | `"weapon_levelup"` | ✅ OK |
 
+### Central ID Registry
+
+All entity IDs are defined in `content/id_registry.json` — the single source of truth. Before creating any new content JSON file, check the registry for existing IDs and add new ones following the naming rules in `id_system.md`.
+
+**61 IDs registered** across 20 entity types: character, weapon, enemy, stage, pickup, skill, building, npc, faction, quest, dialogue, dialogue_node, item, estate, telegraph, stage_event, attack, audio, flag, counter.
+
 ### Field Name Convention
 
 | Location | Convention | Example |
