@@ -64,7 +64,7 @@ IDLE → FOLLOW → ATTACK_RUN → GROWL → RETURN → FOLLOW
 | State | Description | Duration |
 |---|---|---|
 | **IDLE** | Spawns near player at combat start | Instant |
-| **FOLLOW** | Trails 16–32px behind player with slight random offset | Continuous |
+| **FOLLOW** | Trails 16–32px behind player with slight random offset, collects nearby loot | Continuous |
 | **ATTACK_RUN** | Rushes toward nearest enemy within detection range | Until reaching target |
 | **GROWL** | Stops at target, emits cone AoE attack | ~0.3s (wind-up + release) |
 | **RETURN** | Runs back to follow position behind player | Until back in range |
@@ -214,6 +214,7 @@ When the Dog attacks, show:
 - **Primary target:** Red damage number (e.g., "-18")
 - **Secondary targets:** Smaller red damage numbers (e.g., "-9")
 - **Kill:** Gold "+Xg" text if the Dog gets the killing blow
+- **Loot collected:** Small blue "+X" for XP, gold "+Xg" for gold (when Dog picks up loot)
 
 ---
 
@@ -332,6 +333,7 @@ Companions render **after the player but before enemies** so they appear "in fro
 | All enemies dead (end of wave) | Dog returns to FOLLOW |
 | Player dies | Dog despawns with player |
 | Dog's target goes off-screen (>300px) | Dog returns to FOLLOW, picks new target next cooldown |
+| Loot near Dog (40px) | Dog passively collects it and delivers to player totals |
 | Multiple companions active | Each runs independently, no interaction between them |
 | Companion slot empty | No entity spawned, weapon slot still functions normally |
 | Boss fight | Dog can attack boss, but boss's contact damage can "scare" the Dog back (forces return state) |
@@ -393,15 +395,25 @@ Future companions might include:
 
 ---
 
-## 11. Open Questions
+## 11. Design Decisions (Confirmed)
 
-1. **Should the Dog's growl also apply a brief slow effect (snare)?** This would make it more utility-focused. Recommendation: No for v1 — keep it pure damage. Add utility companions later.
+| # | Question | Decision | Rationale |
+|---|---|---|---|
+| 1 | Slow effect on growl? | **No** for v1 | Keep it pure damage. Utility companions (slow, snare, buff) can be added later as upgrade options or new companion types. |
+| 2 | Auto loot pickup? | **Yes** — 40px range | Acts as a mini extension of player looting range. Dog passively collects gold/XP within 40px and brings it to the player. Not tied to the growl attack. |
+| 3 | Scale with player damage stat? | **No** initially | Companion damage is self-contained. Test first, worry about long-term balance later. Prevents exponential scaling issues. |
+| 4 | Dog only if petted? | **Yes** | Dog joins party only if player chose "Pet the dog" in dialogue. Walking away means no Dog in combat. Simple, clear consequence for player choice. |
 
-2. **Should the Dog drop loot when enemies die near it?** The original brief mentioned "fetches loot." Recommendation: Yes — Dog automatically picks up gold/XP within 40px and brings it to the player. This is a passive ability, not tied to the attack.
+### Loot Pickup (Passive)
 
-3. **Should companion damage scale with player's damage upgrade stat?** Recommendation: No — companion damage is self-contained. This keeps the upgrade system clean and prevents exponential scaling.
-
-4. **What happens if the player has the Dog but hasn't pet it (walked away in dialogue)?** The Dog should not appear in combat. Only petted companions are active.
+The Dog has a passive loot collection radius of **40px** from its current position:
+- Any gold coins or XP gems within 40px are instantly attracted to the Dog
+- The Dog then delivers them to the player (they add to the player's totals)
+- This works in all states (FOLLOW, ATTACK_RUN, RETURN) — the Dog is always collecting
+- Visual: loot items fly toward the Dog sprite with a short magnet-like animation
+- Audio: soft chime when loot is collected (same as player pickup, slightly quieter)
+- This makes the Dog useful even when not attacking — it extends the player's effective looting range
+| 5 | Future upgrades? | **TBD** | Slow effect, larger cone, faster loot pickup, etc. can be added as companion-specific upgrade trees in a later version. |
 
 ---
 
