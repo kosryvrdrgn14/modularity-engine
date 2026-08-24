@@ -14,7 +14,7 @@ export default function Game() {
     <div className="w-full h-screen overflow-hidden bg-black">
       <iframe
         ref={iframeRef}
-        src="/game.html"
+        src="/game2.html"
         className="w-full h-full border-0"
         title="Modularity Engine Game"
         allow="autoplay; fullscreen"
