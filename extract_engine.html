@@ -2003,6 +2003,18 @@ _updateBGM() {
   <strong>Gap 10: No background music support.</strong> The AudioManager has no <code>playMusic()</code> or <code>stopMusic()</code> methods. The <code>musicGain</code> node is created but never used. <strong>Action:</strong> Add BGM playback methods during Phase 4 audio refactor.
 </div>
 
+<div class="gap">
+  <strong>Gap 11: Boss telegraph is hardcoded, not data-driven.</strong> The boss charge warning zone (<code>Renderer._drawBossWarningZone()</code> L1926-1975) and the charge state machine (<code>MovementSystem._moveBoss()</code> L1145-1205) are entirely hardcoded. Changing windup duration, charge speed, warning zone size, or adding new attack patterns requires editing engine JavaScript. External JSON cannot define new telegraph shapes or attack timings. <strong>Action:</strong> Implement a data-driven <code>TelegraphSystem</code> that reads attack definitions from enemy JSON. See <code>13_telegraph_and_boss_intro.md</code>.
+</div>
+
+<div class="gap">
+  <strong>Gap 12: No boss introduction sequence.</strong> When the Gravekeeper spawns at 4:00, gameplay continues uninterrupted. No dramatic pause, no name card, no visual introduction. The stage data defines <code>bossConfig.announcement[]</code> (L437-439) with timed text events, but these are never rendered. <strong>Action:</strong> Implement a boss intro system: pause game &rarr; show overlay (boss image + name + subtitle) &rarr; resume. Also implement the announcement system for pre-boss tension text. See <code>13_telegraph_and_boss_intro.md</code>.
+</div>
+
+<div class="gap">
+  <strong>Gap 13: No stage environmental hazard telegraphs.</strong> Stages cannot define environmental events (falling debris, lava pools, trap activations) that telegraph before dealing damage. The <code>mechanics.json</code> spec mentions stage events but there is no system to trigger, render, or resolve them. <strong>Action:</strong> The TelegraphSystem should support stage-triggered telegraphs with position randomization and persistent hazard zones after resolution. See <code>13_telegraph_and_boss_intro.md</code>.
+</div>
+
 <h3>Identified Conflicts</h3>
 
 <div class="conflict">
@@ -2079,7 +2091,7 @@ _updateBGM() {
   <tr><td>5</td><td><code>content/pickups.json</code></td><td>~70</td><td>Pickup definitions + visual + behavior + sound</td><td>PickupSystem, LevelingSystem</td></tr>
   <tr><td>6</td><td><code>content/leveling.json</code></td><td>~40</td><td>XP curve + passive upgrade pool</td><td>LevelingSystem</td></tr>
   <tr><td>7</td><td><code>content/upgrades.json</code></td><td>~30</td><td>Level-up upgrade option definitions</td><td>Game._showUpgradeOptions()</td></tr>
-  <tr><td>8</td><td><code>content/mechanics.json</code></td><td>~80</td><td>Movement patterns, stage events, buffs/debuffs</td><td>MovementSystem, Renderer, DamageSystem</td></tr>
+  <tr><td>8</td><td><code>content/mechanics.json</code></td><td>~200</td><td>Movement patterns, telegraph templates (6 shapes), enemy attacks, stage environmental events, buffs/debuffs</td><td>TelegraphSystem, MovementSystem, Renderer, DamageSystem</td></tr>
   <tr><td>9</td><td><code>content/audio_config.json</code></td><td>~120</td><td>Sound event → synth parameter mapping</td><td>AudioManager</td></tr>
   <tr><td>10</td><td><code>content/ui_config.json</code></td><td>~80</td><td>UI text, colors, layout config</td><td>UIManager, Renderer, FloatingTextSystem</td></tr>
   <tr><td>11-24</td><td><code>assets/*.svg</code></td><td>14 files</td><td>Visual assets for all entities and pickups</td><td>Renderer (via asset map)</td></tr>

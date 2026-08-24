@@ -1446,7 +1446,7 @@ npcModule.onCombatEnd(result);      // Updates NPC reactions ("I heard you fough
 | 5 | `content/pickups.json` | Pickup definitions + behavior + sound | ~70 lines | Combat Module |
 | 6 | `content/leveling.json` | XP curve + passive upgrade pool | ~40 lines | Combat Module |
 | 7 | `content/upgrades.json` | Level-up upgrade option definitions | ~30 lines | Combat Module |
-| 8 | `content/mechanics.json` | Movement patterns, telegraphs, buffs/debuffs | ~80 lines | Combat Module |
+| 8 | `content/mechanics.json` | Movement patterns, telegraph templates (6 shapes), enemy attacks, stage environmental events, buffs/debuffs | ~200 lines | Combat Module, TelegraphSystem |
 | 9 | `content/audio_config.json` | Sound event → synth parameter mapping | ~120 lines | Audio Manager |
 | 10 | `content/ui_config.json` | UI text, colors, layout config | ~80 lines | UI Manager |
 | 11 | `content/npcs.json` | NPC definitions: dialogue, trust, shops, requests, combat companions | ~300 lines | NPC Module, Combat Module |
@@ -1534,6 +1534,8 @@ A Tier 1 Homestead costs the player ~10g/run in upkeep until upgraded. If the pl
 **Gap 15: Multiple wives = multiple self-sustaining households.**
 A player with 3 wives has 3 estates covering 3 families. Each family is self-sufficient, but the initial investment (building 3 Tier 3+ estates) is massive.
 - **Action:** This is intentional and balanced by design. The player spends significant gold and resources upfront to build each estate. The payoff is that all 3 families are cared for without further gold drain. The player's gold stays focused on their own progression — equipment, town, skill tree. Multiple families are a prestige achievement, not a gold generator.
+
+**Gap 16: TelegraphSystem and BossIntroSystem not yet designed.** The combat engine's boss telegraph is hardcoded (warning zone in `Renderer._drawBossWarningZone()`) and bosses spawn without introduction sequences. External content files cannot define new telegraph shapes, attack timings, or boss intro animations. The stage data's `bossConfig.announcement[]` is never rendered. **Action:** See `13_telegraph_and_boss_intro.md` for the full design of: (a) a data-driven TelegraphSystem supporting 6 shape types (rectangle, circle, cone, line, ring, cross), (b) a boss introduction sequence with pause/overlay/resume, (c) stage environmental event telegraphs (falling debris, lava pools), and (d) the announcement system for pre-boss tension text.
 
 ### Identified Conflicts
 
