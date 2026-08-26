@@ -235,5 +235,167 @@
       "shape": "circle",
       "color": "#FF9100"
     }
+  },
+  {
+    "id": "w4_flame_wave",
+    "name": "Flame Wave",
+    "type": "cone",
+    "targeting": "nearest",
+    "unlockLevel": 1,
+    "orbDamageCooldown": 0,
+    "statsPerLevel": [
+      {
+        "level": 1,
+        "damage": 20,
+        "cooldown": 0.8,
+        "coneAngle": 60,
+        "coneRange": 60
+      },
+      {
+        "level": 2,
+        "damage": 28,
+        "cooldown": 0.7,
+        "coneAngle": 60,
+        "coneRange": 65
+      },
+      {
+        "level": 3,
+        "damage": 36,
+        "cooldown": 0.6,
+        "coneAngle": 60,
+        "coneRange": 70
+      },
+      {
+        "level": 4,
+        "damage": 45,
+        "cooldown": 0.5,
+        "coneAngle": 70,
+        "coneRange": 80
+      },
+      {
+        "level": 5,
+        "damage": 50,
+        "cooldown": 0.48,
+        "coneAngle": 70,
+        "coneRange": 82
+      },
+      {
+        "level": 6,
+        "damage": 54,
+        "cooldown": 0.46,
+        "coneAngle": 70,
+        "coneRange": 84
+      },
+      {
+        "level": 7,
+        "damage": 58,
+        "cooldown": 0.45,
+        "coneAngle": 75,
+        "coneRange": 85
+      }
+    ],
+    "powerSpikes": {
+      "level4": {
+        "name": "Inferno",
+        "description": "Burns enemies for 3s",
+        "statModifiers": {
+          "burnDuration": 3,
+          "burnDamage": 5
+        }
+      },
+      "level7": {
+        "name": "Explosion",
+        "description": "Kills explode in small AoE",
+        "statModifiers": {
+          "explodeRadius": 40,
+          "explodeDamage": 15
+        }
+      }
+    },
+    "visual": {
+      "shape": "cone",
+      "color": "#FF4500"
+    }
+  },
+  {
+    "id": "w5_arcane_bolt",
+    "name": "Arcane Bolt",
+    "type": "chain",
+    "targeting": "nearest",
+    "unlockLevel": 1,
+    "orbDamageCooldown": 0,
+    "statsPerLevel": [
+      {
+        "level": 1,
+        "damage": 5,
+        "cooldown": 2.0,
+        "chainCount": 0,
+        "chainRange": 80
+      },
+      {
+        "level": 2,
+        "damage": 7,
+        "cooldown": 1.9,
+        "chainCount": 0,
+        "chainRange": 80
+      },
+      {
+        "level": 3,
+        "damage": 10,
+        "cooldown": 1.8,
+        "chainCount": 0,
+        "chainRange": 80
+      },
+      {
+        "level": 4,
+        "damage": 14,
+        "cooldown": 1.6,
+        "chainCount": 1,
+        "chainRange": 80
+      },
+      {
+        "level": 5,
+        "damage": 22,
+        "cooldown": 1.3,
+        "chainCount": 2,
+        "chainRange": 90
+      },
+      {
+        "level": 6,
+        "damage": 35,
+        "cooldown": 1.0,
+        "chainCount": 3,
+        "chainRange": 100
+      },
+      {
+        "level": 7,
+        "damage": 55,
+        "cooldown": 0.7,
+        "chainCount": 5,
+        "chainRange": 120
+      }
+    ],
+    "powerSpikes": {
+      "level4": {
+        "name": "Chain Lightning",
+        "description": "Bolt chains to 1 enemy",
+        "statModifiers": {
+          "chainCount": 1
+        }
+      },
+      "level7": {
+        "name": "Arcane Storm",
+        "description": "Chains to 5, slows 50%",
+        "statModifiers": {
+          "chainCount": 5,
+          "slowAmount": 0.5,
+          "slowDuration": 2
+        }
+      }
+    },
+    "visual": {
+      "shape": "diamond",
+      "color": "#9C27B0"
+    }
   }
 ]
