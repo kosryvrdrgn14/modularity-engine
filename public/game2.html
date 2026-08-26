@@ -1774,6 +1774,7 @@ class CompanionSystem {
   constructor(entityManager, eventBus) {
     this.entityManager = entityManager;
     this.eventBus = eventBus;
+    this._activeCount = 0;
     this.companions = [];
   }
 
@@ -2050,6 +2051,8 @@ class CompanionSystem {
       c._attackRunTimer = 0;
     }
   }
+
+  getActiveCount() { return this._activeCount; }
 
   render(ctx, camera) {
     for (const c of this.companions) {
@@ -3217,10 +3220,27 @@ class PickupSystem {
       }
     }
 
-    // Drop power-ups
+    // Drop power-ups (with gacha protection)
     const drops = enemy.enemyData.drops.powerUpTable;
     for (const drop of drops) {
-      if (Math.random() < drop.chance) {
+      // Gacha protection: ramp chance based on clears without this drop type
+      let dropChance = drop.chance;
+      if (this.gameManager && drop.chance < 1.0) {
+        const stageId = 'stage_graveyard'; // current stage
+        const pityKey = 'gacha_' + drop.type;
+        const pityCounters = this.gameManager.store?.farming?.pityCounters || {};
+        const pityCount = pityCounters[pityKey] || 0;
+
+        // Gacha ramp: 1% → 5% → 15% → 25% → 50% → 75% → 99%
+        const gachaRamp = [0.01, 0.05, 0.15, 0.25, 0.50, 0.75, 0.99];
+        const rampIndex = Math.min(pityCount, gachaRamp.length - 1);
+        const gachaBonus = gachaRamp[rampIndex];
+
+        // Use higher of base chance or gacha ramp
+        dropChance = Math.max(drop.chance, gachaBonus);
+      }
+
+      if (Math.random() < dropChance) {
         this.entityManager.create('pickup', {
           x: data.position.x,
           y: data.position.y,
@@ -3228,7 +3248,22 @@ class PickupSystem {
           visual: this._getPowerUpVisual(drop.type),
           isPowerUp: true,
         });
+        // Reset pity counter on successful drop
+        if (this.gameManager) {
+          const pityKey = 'gacha_' + drop.type;
+          if (!this.gameManager.store.farming) this.gameManager.store.farming = { pityCounters: {} };
+          if (!this.gameManager.store.farming.pityCounters) this.gameManager.store.farming.pityCounters = {};
+          this.gameManager.store.farming.pityCounters[pityKey] = 0;
+        }
         break;
+      } else {
+        // Increment pity counter on failed drop
+        if (this.gameManager && drop.chance < 1.0) {
+          const pityKey = 'gacha_' + drop.type;
+          if (!this.gameManager.store.farming) this.gameManager.store.farming = { pityCounters: {} };
+          if (!this.gameManager.store.farming.pityCounters) this.gameManager.store.farming.pityCounters = {};
+          this.gameManager.store.farming.pityCounters[pityKey] = (this.gameManager.store.farming.pityCounters[pityKey] || 0) + 1;
+        }
       }
     }
   }
@@ -4161,6 +4196,10 @@ class UIManager {
 
   showEndScreen(result, stats) {
     this.endScreen = { result, stats };
+    // Ensure stars are included
+    if (stats && !stats.stars && result && result.stars) {
+      this.endScreen.stats.stars = result.stars;
+    }
   }
 
   hideEndScreen() {
@@ -4240,11 +4279,48 @@ class UIManager {
       ctx.fillText(`Level: ${stats.level || 1}`, w / 2, h / 2 + 40);
       ctx.fillText(`Kills: ${stats.kills || 0}`, w / 2, h / 2 + 70);
       ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, h / 2 + 100);
+
+      // Display stars
+      if (stats.stars) {
+        const starCount = stats.stars.three ? 3 : stats.stars.two ? 2 : stats.stars.one ? 1 : 0;
+        const starY = h / 2 + 140;
+        const starSize = 24;
+        const starSpacing = 40;
+        const startX = w / 2 - (starCount * starSpacing) / 2;
+
+        for (let i = 0; i < 3; i++) {
+          const sx = w / 2 - (3 * starSpacing) / 2 + i * starSpacing + starSpacing / 2;
+          const filled = i < starCount;
+
+          // Star shape
+          ctx.save();
+          ctx.translate(sx, starY);
+          ctx.beginPath();
+          for (let j = 0; j < 5; j++) {
+            const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2;
+            const r = filled ? starSize / 2 : starSize / 2 - 2;
+            ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+          }
+          ctx.closePath();
+          ctx.fillStyle = filled ? '#FFD700' : '#333';
+          ctx.fill();
+          ctx.strokeStyle = filled ? '#FFA500' : '#555';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Star label
+        const labels = { 0: '', 1: '★ Completed', 2: '★★ Mastered', 3: '★★★ MASTERY!' };
+        ctx.fillStyle = starCount === 3 ? '#FFD700' : starCount === 2 ? '#4FC3F7' : '#CCC';
+        ctx.font = starCount === 3 ? 'bold 18px monospace' : '14px monospace';
+        ctx.fillText(labels[starCount] || '', w / 2, starY + starSize + 10);
+      }
     }
 
     ctx.fillStyle = '#666';
     ctx.font = '14px monospace';
-    ctx.fillText('Click to restart', w / 2, h / 2 + 150);
+    ctx.fillText('Click to restart', w / 2, h / 2 + 190);
   }
 }
 
@@ -5580,7 +5656,7 @@ class GameManager {
       persistent: {
         currency: 0,
         player: { level: 1, xp: 0, total_gold: 0, base_stats: { max_health: 100, move_speed: 200, damage_multiplier: 1.0, speed_multiplier: 1.0 } },
-        combat: { unlocked_weapons: ["w1_projectile"], weapon_levels: {}, best_run: null, run_history: [] },
+        combat: { unlocked_weapons: ["w1_projectile"], weapon_levels: {}, best_run: null, run_history: [], stars: {} },
         skills: { unlocked: [], skill_points: 0 },
         town: { level: 1, population: 0, popCap: 5, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 }, workers: { farmers: 0, miners: 0, builders: 0, idle: 0 } },
         npcs: { met: [], relationships: {}, companions: [], companionStatus: {} },
@@ -5940,6 +6016,105 @@ class GameManager {
 }
 
 
+
+// ============================================================
+// STAR SYSTEM — Evaluate stage performance stars (1★/2★/3★)
+// ============================================================
+
+class StarSystem {
+  constructor(gameManager) {
+    this.gameManager = gameManager;
+  }
+
+  evaluate(result) {
+    const stars = { one: false, two: false, three: false };
+    if (!result || !result.stage_completed) return stars;
+
+    // 1★: Always awarded on completion
+    stars.one = true;
+
+    // 2★: Meet at least 2 of 4 thresholds
+    const t = result.time_survived || 0;
+    const k = result.kills || 0;
+    const lv = result.player_level || 1;
+    const g = result.gold_earned || 0;
+    let met = 0;
+    if (k >= 250) met++;
+    if (t <= 240 || result.boss_defeated) met++;
+    if (lv >= 13) met++;
+    if (g >= 600) met++;
+    if (met >= 2) stars.two = true;
+
+    // 3★: Meet at least 1 "hard" condition + 1 additional
+    const hardConditions = [];
+    const addConditions = [];
+
+    // Hard (mutually exclusive)
+    if (result.damage_taken === 0) hardConditions.push('no_hit');
+    const wEnd = result.weapon_levels_end || {};
+    const activeWeapons = Object.values(wEnd).filter(l => l > 0).length;
+    if (activeWeapons <= 1) hardConditions.push('starter_only');
+    if (lv <= 8) hardConditions.push('underleveled');
+    if (result.companions_used === 0) hardConditions.push('solo');
+
+    // Additional
+    const allMaxed = Object.values(wEnd).length >= 3 && Object.values(wEnd).every(l => l >= 7);
+    if (allMaxed) addConditions.push('all_maxed');
+    if (result.boss_kill_time && result.boss_kill_time < 15) addConditions.push('speed_kill');
+    if (result.pickups_collected === 0) addConditions.push('itemless');
+
+    if (hardConditions.length >= 1 && addConditions.length >= 1) stars.three = true;
+
+    return stars;
+  }
+}
+
+// ============================================================
+// FRENZY SYSTEM — Post-3★ chaos mode
+// ============================================================
+
+class FrenzySystem {
+  constructor(gameManager, starSystem) {
+    this.gameManager = gameManager;
+    this.starSystem = starSystem;
+  }
+
+  isUnlocked(stageId) {
+    const best = this.gameManager.get('persistent.combat.best_run');
+    if (!best || best.stageId !== stageId) return false;
+    return best.stars && best.stars.three;
+  }
+
+  getModifiers() {
+    return {
+      enemyHpMultiplier: 0.7,
+      goldMultiplier: 1.5,
+      xpMultiplier: 1.2,
+      rareDropBonus: 0.1,
+    };
+  }
+}
+
+// ============================================================
+// GACHA PROTECTION — Per-stage-clear rare drop ramp
+// ============================================================
+
+class GachaProtection {
+  static RAMP = [0.01, 0.05, 0.15, 0.25, 0.50, 0.75, 0.99];
+
+  static getDropChance(clearsWithoutDrop) {
+    const idx = Math.min(clearsWithoutDrop, GachaProtection.RAMP.length - 1);
+    return GachaProtection.RAMP[idx];
+  }
+
+  static rollForDrop(clearsWithoutDrop) {
+    const chance = GachaProtection.getDropChance(clearsWithoutDrop);
+    const rolled = Math.random();
+    return { dropped: rolled < chance, chance: chance, roll: rolled };
+  }
+}
+
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
@@ -5970,6 +6145,8 @@ class Game {
     this.companionSystem = new CompanionSystem(this.entityManager, this.eventBus);
     this.gameManager = new GameManager(this.eventBus);
     this.gameManager.init();
+    this.starSystem = new StarSystem(this.gameManager);
+    this.frenzySystem = new FrenzySystem(this.gameManager, this.starSystem);
     this._queuedBossIntro = null;
     this.introOverlay = null;
     this.announcements = [];
@@ -5984,6 +6161,8 @@ class Game {
 
     this.gameTime = 0;
     this.player = null;
+    this._sessionDamageTaken = 0;
+    this._sessionPickupsCollected = 0;
   }
 
   resizeCanvas() {
@@ -6127,6 +6306,7 @@ class Game {
     });
 
     this.eventBus.on('damage', (data) => {
+      if (data.entity === this.player) this._sessionDamageTaken = (this._sessionDamageTaken || 0) + (data.amount || 1);
       if (data.entity === this.player && data.entity.hp <= 0) {
         this.gameState.triggerGameOver('defeat', this._getStats());
         this._handleGameOver();
@@ -6161,6 +6341,7 @@ class Game {
     });
 
     this.eventBus.on('pickup', (data) => {
+      this._sessionPickupsCollected = (this._sessionPickupsCollected || 0) + 1;
       if (data.pickup.pickupData?.id === 'magnet') {
         this.eventBus.emit('magnetActivate', { player: data.player });
       }
@@ -6538,8 +6719,21 @@ class Game {
         boss_defeated: result === 'victory',
         weapons_used: Object.keys(this.weaponSystem.weaponLevels).filter(k => this.weaponSystem.weaponLevels[k] > 0),
         weapon_levels_end: { ...this.weaponSystem.weaponLevels },
+        damage_taken: this._sessionDamageTaken || 0,
+        companions_used: this.companionSystem ? this.companionSystem.getActiveCount() : 0,
+        pickups_collected: this._sessionPickupsCollected || 0,
       });
+      // Evaluate stars before saving
+      if (this.starSystem) {
+        combatResult.stars = this.starSystem.evaluate(combatResult);
+      }
+      // Increment gacha clear counter for this stage
+      if (combatResult.stage_completed) {
+        this.gameManager.incrementClearCount(combatResult.stageId);
+      }
       this.gameManager.end_session(combatResult);
+      // Merge stars into stats for UI display
+      if (combatResult.stars) stats.stars = combatResult.stars;
     }
     
     // Show end screen with result and stats
