@@ -1,14 +1,53 @@
 # NPC Dialogue System — Reusable Template
 
-> **Version:** 1.0
+> **Version:** 2.0 (Design Decisions Locked)
 > **Extracted from:** `game2.html` TownScreen system
-> **Last Updated:** 2026-08-24
+> **Last Updated:** 2026-08-26
 
 ---
 
 ## Overview
 
-The dialogue system supports typewriter text, branching choices, NPC portraits, affection tracking, flag-based unlocks, and nested response loops. Each NPC follows the same data structure.
+The dialogue system supports typewriter text, branching choices, NPC portraits, affection tracking, flag-based unlocks, nested response loops, and **affection tier-based dialogue**. Each NPC follows the same data structure.
+
+### Design Decisions Referenced
+- D1 (3 companion slots), D5 (1:1 binding) — companion dialogue in combat
+- D6 (mythology factions) — NPC personality and faction ties
+
+---
+
+## Affection Tier Dialogue Patterns
+
+Dialogue changes based on the NPC's affection tier with the player.
+
+### Tier-Based Greeting Pool
+
+```javascript
+const GREETINGS = {
+  0: ["What do you need?"],                    // Stranger
+  1: ["Oh, it's you again."],                  // Interest
+  2: ["Welcome back! I was hoping you'd visit."], // Respect
+  3: ["There you are! I have so much to tell you."], // Trust
+  4: ["My love! Come, sit with me."]           // Claim (married)
+};
+```
+
+### Tier-Based Response Templates
+
+| Tier | Gift Received | Quest Complete | Random Chat |
+|---|---|---|---|
+| 0 (Stranger) | "Thank you." | "Appreciated." | "..." |
+| 1 (Interest) | "Oh, how thoughtful." | "Thanks for your help." | "Nice weather today." |
+| 2 (Respect) | "You really know what I like!" | "I knew I could count on you." | "Tell me about your adventures." |
+| 3 (Trust) | "This means the world to me." | "You always keep your promises." | "I feel safe with you." |
+| 4 (Claim) | "You spoil me. I love it." | "My hero, as always." | "I'm so happy we're together." |
+
+### Why Tier-Based Dialogue
+
+- **Rewards investment** — higher tiers feel more personal
+- **Motivates progression** — players want to hear new lines
+- **Creates emotional connection** — NPC personality evolves with relationship
+- **Low content cost** — template-based, not unique per NPC
 
 ---
 
@@ -296,3 +335,61 @@ If locked:
 4. **Affection Persistence** — Stored in `GameManager` counters via `add_counter('affection_' + npc.id, amount)`.
 
 5. **Unlock Persistence** — Stored in `GameManager` flags via `set_flag(unlockCondition, true)`.
+
+
+---
+
+## Gift Response Templates
+
+Each NPC has gift preferences that affect affection gain and dialogue.
+
+### Gift Preference Structure
+
+```javascript
+const NPC_GIFTS = {
+  npc_id: {
+    loved: ["luxury", "personal"],     // 2× affection bonus
+    liked: ["quality"],                 // 1× affection (standard)
+    neutral: ["basic"],                 // 0.5× affection
+    disliked: []                        // 0× affection (no gain)
+  }
+};
+```
+
+### Gift Response Dialogue by Preference
+
+```javascript
+const GIFT_RESPONSES = {
+  loved: [
+    "This is... exactly what I wanted. How did you know?",
+    "I can't believe you found this! You're incredible.",
+    "My heart is so full right now. Thank you."
+  ],
+  liked: [
+    "Thank you. This is very thoughtful of you.",
+    "Oh, nice! I was just thinking about this.",
+    "You have good taste. Thank you."
+  ],
+  neutral: [
+    "How nice. Thank you.",
+    "That's... thoughtful. Thanks.",
+    "Appreciated."
+  ],
+  disliked: [
+    "Oh. Um... thank you, I suppose.",
+    "That's very kind, but I'm not really sure what to do with this.",
+    "Thanks. I'll... find a use for it."
+  ]
+};
+```
+
+### Why Gift Preferences Matter
+
+- **Choice** — players must learn NPC personalities to maximize affection
+- **Replayability** — different NPCs prefer different gifts
+- **Gold sink** — luxury gifts are expensive but worth it for loved NPCs
+- **Personality expression** — preferences reveal character traits
+
+---
+
+*End of dialogue_template.md — Version 2.0 (Design Decisions Locked)*

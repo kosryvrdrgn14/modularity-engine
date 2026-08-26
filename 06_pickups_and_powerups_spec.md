@@ -1,8 +1,9 @@
 # Modularity Engine — Pickups & Power-Ups Specification
 
-> **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-20
+> **Version:** 2.0 (Design Decisions Locked)
+> **Last Updated:** 2026-08-26
 > **Status:** Spec
+> **Design Decisions:** D3 (stage tiers)
 > **Canonical Sources:** `vs_prog.md` Drop Economy + Power-Up Drop Schedule + Magnet Interaction Rules (all values), `vs_colors.md` Pickup Visuals + Power-Up Visuals, `01_engine_architecture.md` (engine systems)
 
 ---
@@ -239,7 +240,52 @@ Each enemy rolls drops independently on death. The roll order is:
 
 ---
 
-## 6. Magnet Interaction Rules
+## 6. Soft-Pity Drop System
+
+Power-up drops use a soft-pity system to prevent extreme bad luck.
+
+### Pity Counters
+
+Each drop type has its own independent pity counter. The counter increments with each kill that doesn't produce that drop type, and resets when the drop is produced.
+
+| Drop Type | Base Chance | Pity Ramp | Max Chance |
+|---|---|---|---|
+| Weapon Level-Up | 1% | +2% per kill | 20% |
+| Screen Wipe | 2% | +3% per kill | 30% |
+| Magnet | 5% | +5% per kill | 50% |
+
+### Pity Algorithm
+
+```
+function rollDrop(enemy, dropType):
+    baseChance = dropTable[enemy.type][dropType]
+    pityCount = enemy.pityCounters[dropType]
+    pityBonus = pityCount * pityRamp[dropType]
+    finalChance = min(baseChance + pityBonus, maxChance)
+    
+    if random() < finalChance:
+        enemy.pityCounters[dropType] = 0
+        return dropType
+    else:
+        enemy.pityCounters[dropType] += 1
+        return null
+```
+
+### Pity Carry-Over
+
+Pity counters persist across runs. If a player goes 15 kills without a weapon up, the pity bonus carries to the next run. This ensures long-term bad luck is impossible.
+
+### Why Soft-Pity
+
+| Problem | Solution |
+|---|---|
+| Player goes 50 kills with no drop | Pity ensures a drop by ~20 kills |
+| Drop feels too frequent | Base chance is still low (1-5%) |
+| Different drop types compete | Each has its own counter |
+
+---
+
+## 7. Magnet Interaction Rules
 
 From `vs_prog.md` Magnet Interaction Rules section and `01_engine_architecture.md` §19.
 
@@ -298,7 +344,7 @@ function updateMagnet(pickups, player, dt):
 
 ---
 
-## 7. Pickup Collection Rules
+## 8. Pickup Collection Rules
 
 ### Collection Methods
 
@@ -333,7 +379,7 @@ From `01_engine_architecture.md` §12.
 
 ---
 
-## 8. Pickup Visual Summary
+## 9. Pickup Visual Summary
 
 All visuals from `vs_colors.md` Pickup Visuals + Power-Up Visuals sections.
 
@@ -362,7 +408,7 @@ All visuals from `vs_colors.md` Pickup Visuals + Power-Up Visuals sections.
 
 ---
 
-## 9. Cross-Reference Summary
+## 10. Cross-Reference Summary
 
 | Section | References |
 |---|---|
@@ -384,4 +430,4 @@ All visuals from `vs_colors.md` Pickup Visuals + Power-Up Visuals sections.
 
 ---
 
-*End of 06_pickups_and_powerups_spec.md — Version 1*
+*End of 06_pickups_and_powerups_spec.md — Version 2.0 (Design Decisions Locked)*

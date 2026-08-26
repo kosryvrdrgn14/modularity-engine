@@ -1,8 +1,9 @@
 # Modularity Engine — UI & HUD Specification
 
-> **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-20
+> **Version:** 2.0 (Design Decisions Locked)
+> **Last Updated:** 2026-08-26
 > **Status:** Spec
+> **Design Decisions:** D3 (stage tiers), D5 (1:1 companion binding), D9 (unified location hierarchy)
 > **Canonical Sources:** `vs_plan.md` Prompt 8 (layout + screens), `vs_colors.md` Damage Numbers + Visual Hierarchy Rules, `01_engine_architecture.md` (end states), `07_leveling_system_spec.md` (level-up screen), `04_enemies_spec.md` (boss health bar)
 
 ---
@@ -16,7 +17,11 @@
 5. [Pause Menu](#5-pause-menu)
 6. [Mini UI Elements](#6-mini-ui-elements)
 7. [Responsive Layout](#7-responsive-layout)
-8. [Draw Order](#8-draw-order)
+8. [Stage Select](#8-stage-select-screen)
+10. [Companion Management](#9-companion-management-overlay)
+11. [Farming Slots](#10-farming-slot-manager)
+12. [Bottom Action Bar](#11-bottom-action-bar)
+13. [Draw Order](#12-z-order-draw-order)
 9. [Cross-Reference Summary](#9-cross-reference-summary)
 
 ---
@@ -398,7 +403,126 @@ All damage numbers have a 1px black text shadow for readability against any back
 
 ---
 
-## 8. Z-Order (Draw Order)
+## 8. Stage Select Screen
+
+### Stage List
+
+```
+┌─────────────────────────────────────────────────┐
+│  🗺 Select Stage                                │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  💀 The Graveyard  ★★★                         │
+│  Best: 3:45 | Clears: 12 | Tier: Standard (5m) │
+│  [▶ Play]  [🌾 Auto-Clear]                     │
+│                                                 │
+│  🌲 Whispering Forest  ★★☆                     │
+│  Best: 4:12 | Clears: 3 | Tier: Standard (5m)  │
+│  [▶ Play]                                      │
+│                                                 │
+│  🔒 Cursed Library — Complete "First Lessons"  │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+### Stage Tier Indicator
+
+| Tier | Badge | Color |
+|---|---|---|
+| Quick (3min) | ⚡ Quick | Green |
+| Standard (5min) | ⚔ Standard | Blue |
+| Highlight (10min) | 👑 Highlight | Gold |
+
+---
+
+## 9. Companion Management Overlay
+
+Accessed from the Party button in the bottom action bar.
+
+```
+┌─────────────────────────────────────────────────┐
+│  🐕 Party Management                    ✕      │
+├─────────────────────────────────────────────────┤
+│  COMPANION SLOTS (1:1 with weapons)            │
+│                                                 │
+│  [1] 🐕 Dog → W1 (Projectile) Lv.3            │
+│      Damage: 18 | Cooldown: 8.0s               │
+│      [Remove]                                   │
+│                                                 │
+│  [2] ⚔️ Empty → W2 (Orbit)                     │
+│      [Assign Companion]                         │
+│                                                 │
+│  [3] 🔒 Empty → W3 (Area) — Unlock at Lv.6    │
+│                                                 │
+├─────────────────────────────────────────────────┤
+│  AVAILABLE COMPANIONS                           │
+│  🐕 Dog (Available)         [Assign to Slot 1] │
+│  🧙 Apprentice Ani (Locked) — Complete quest   │
+└─────────────────────────────────────────────────┘
+```
+
+### Companion Status Display
+
+| Status | Icon | Color |
+|---|---|---|
+| Available | ✅ | Green |
+| Deployed | ⚔️ | Blue |
+| Locked | 🔒 | Gray |
+| Story Unavailable | ❌ | Red |
+| Resting | 😴 | Yellow |
+
+---
+
+## 10. Farming Slot Manager
+
+Accessed from the Farming button or Auto-Clear on stage select.
+
+```
+┌─────────────────────────────────────────────────┐
+│  🌾 Farming Slots                    ⚙ Settings │
+├─────────────────────────────────────────────────┤
+│  Slot 1: 🐕 Dog → Graveyard ★★★               │
+│  [Running: 2:34 remaining]  [Collect] [Cancel]  │
+│                                                 │
+│  Slot 2: ⚔️ Veteran → Forest ★★★              │
+│  [Running: 4:12 remaining]  [Collect] [Cancel]  │
+│                                                 │
+│  Slot 3: 🔒 Unlock at Town Level 5             │
+│                                                 │
+├─────────────────────────────────────────────────┤
+│  📋 Saved Plans                                 │
+│  ├── Herb Grinding (Graveyard + Dog)            │
+│  ├── Ore Farming (Quarry + Veteran)             │
+│  └── + New Plan                                 │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## 11. Bottom Action Bar (Town/Location Screens)
+
+Persistent bottom bar visible in all location screens:
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│         [Location content above]                │
+│                                                 │
+├─────────────────────────────────────────────────┤
+│  ⚔ Combat   🐕 Party   🛒 Shop   ⚙ Debug     │
+└─────────────────────────────────────────────────┘
+```
+
+| Button | Action | Opens |
+|---|---|---|
+| ⚔ Combat | Enter stage select | Stage Select Screen |
+| 🐕 Party | Manage companions | Companion Overlay |
+| 🛒 Shop | Global item shop | Shop Overlay |
+| ⚙ Debug | Debug tools dropdown | Debug Menu |
+
+---
+
+## 12. Z-Order (Draw Order)
 
 From `vs_colors.md` Visual Hierarchy Rules.
 
@@ -433,4 +557,4 @@ From `vs_colors.md` Visual Hierarchy Rules.
 
 ---
 
-*End of 08_ui_hud_spec.md — Version 1*
+*End of 08_ui_hud_spec.md — Version 2.0 (Design Decisions Locked)*

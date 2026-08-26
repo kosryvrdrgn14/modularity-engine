@@ -1,7 +1,7 @@
 # Game Manager Specification
 
-> **Version:** 1.0
-> **Date:** August 24, 2026
+> **Version:** 2.0 (Design Decisions Locked)
+> **Date:** August 26, 2026
 > **Related:** `game_frame.md` (centralized store design), `extract_engine.html` (engine extraction), `13_telegraph_and_boss_intro.md`
 > **Implements:** Centralized data store, resource tracking, combat session results, module event bus
 
@@ -80,6 +80,84 @@ Every feature module reads from and writes to the Game Manager. No module owns p
 ---
 
 ## 3. Save Data Schema
+
+### Updated Save Structure (Multi-Region)
+
+The save file now includes a `world` object for cross-region state and expanded `town` state:
+
+```json
+{
+  "version": "0.5.0",
+  "world": {
+    "currentRegion": "town",
+    "currentLocation": "trade_district",
+    "locationHistory": ["town:city_root", "town:trade_district"],
+    "regionIndex": 0,
+    "regionUnlocks": {
+      "town": true,
+      "graveyard": true,
+      "forest": false
+    },
+    "locationUnlocks": {
+      "town:trade_district": true,
+      "graveyard:cemetery": true
+    }
+  },
+  "player": { ... },
+  "combat": {
+    "unlockedWeapons": ["w1_projectile"],
+    "weaponLevels": {},
+    "lastRunStats": null,
+    "bestRunStats": null
+  },
+  "npcs": {
+    "met": [],
+    "relationships": {},
+    "companions": { "1": "dog", "2": null, "3": null },
+    "companionStatus": {
+      "dog": { "status": "available", "affection": 15 }
+    }
+  },
+  "town": {
+    "level": 2,
+    "buildings": {},
+    "resources": { "gold": 150, "wood": 20, "stone": 10, "herbs": 5, "ore": 0 },
+    "workers": { "farmers": 1, "miners": 0, "builders": 0, "idle": 2 },
+    "population": 5,
+    "popCap": 10
+  },
+  "farming": {
+    "slots": [
+      { "id": 1, "stageId": "graveyard", "unitType": "companion", "unitId": "dog", "status": "running", "timer": 154 },
+      { "id": 2, "stageId": null, "unitType": null, "status": "idle" },
+      { "id": 3, "stageId": null, "status": "locked" }
+    ],
+    "plans": [],
+    "pityCounters": { "weaponUp": 12, "screenWipe": 5, "magnet": 0 }
+  },
+  "estates": [],
+  "family": { "wives": [], "children": [], "familyTree": {} },
+  "factions": { ... },
+  "quests": { ... },
+  "unlocks": { ... },
+  "flags": {}
+}
+```
+
+### Key Changes from v1.0
+
+| Section | Change | Reason |
+|---|---|---|
+| `world` | **NEW** — cross-region state | D9: unified location hierarchy |
+| `npcs.companions` | Changed from array to `{slot: npcId}` map | D1/D5: 3 fixed slots, 1:1 binding |
+| `npcs.companionStatus` | **NEW** — per-companion status | Track available/deployed/locked/resting |
+| `farming` | **NEW** — auto-clear state | 23_auto_clear_farming_spec.md |
+| `farming.pityCounters` | **NEW** — cross-run pity | Soft-pity persists across runs |
+| `town` | Removed `currentLocation` (now in `world`) | Separated cross-region from town-specific |
+
+---
+
+## 4. Save Data Schema (Original)
 
 ```javascript
 const DEFAULT_SAVE = {

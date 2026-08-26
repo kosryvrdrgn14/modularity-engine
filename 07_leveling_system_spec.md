@@ -1,8 +1,9 @@
 # Modularity Engine — Leveling System Specification
 
-> **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-20
+> **Version:** 2.0 (Design Decisions Locked)
+> **Last Updated:** 2026-08-26
 > **Status:** Spec
+> **Design Decisions:** D3 (stage tiers), D5 (1:1 companion binding)
 > **Canonical Sources:** `vs_prog.md` Experience Curve + Upgrade Pool Composition + Passive Stat Boosts (all values), `01_engine_architecture.md` (engine systems)
 
 ---
@@ -106,7 +107,50 @@ From `vs_prog.md` Expected Level Milestones section.
 
 ---
 
-## 5. Level-Up Flow
+## 5. XP Scaling by Stage Tier (D3)
+
+XP curves scale differently depending on stage length.
+
+### Quick Stage (3min)
+
+| Property | Multiplier | Rationale |
+|---|---|---|
+| XP to next level | 0.8× | Faster leveling for short runs |
+| Expected max level | 8-10 | Fewer level-ups but faster |
+| Level-up frequency | Every 4-6 seconds | Quick dopamine hits |
+| Upgrade pool | Same as Standard | Same choices, faster access |
+
+### Standard Stage (5min)
+
+| Property | Multiplier | Rationale |
+|---|---|---|
+| XP to next level | 1.0× | Baseline (current values) |
+| Expected max level | 12-13 | Standard progression |
+| Level-up frequency | Every 5-10 seconds | Balanced pacing |
+| Upgrade pool | Full pool | All options available |
+
+### Highlight Stage (10min)
+
+| Property | Multiplier | Rationale |
+|---|---|---|
+| XP to next level | 1.0× | More time = more XP naturally |
+| Expected max level | 16-20 | Extended progression |
+| Level-up frequency | Every 6-12 seconds | Slower but more total |
+| Upgrade pool | Full pool + rare options | Access to rare upgrades earlier |
+
+### Implementation
+
+```javascript
+const stageXP_multipliers = {
+  quick:     { xpToNext: 0.8, maxLevel: 10 },
+  standard:  { xpToNext: 1.0, maxLevel: 13 },
+  highlight: { xpToNext: 1.0, maxLevel: 20 }
+};
+```
+
+---
+
+## 6. Level-Up Flow
 
 ### Trigger
 
@@ -169,7 +213,7 @@ function processXPGain(player, xpGained):
 
 ---
 
-## 6. Upgrade Pool Rules
+## 7. Upgrade Pool Rules
 
 From `vs_prog.md` Upgrade Pool Composition section.
 
@@ -238,7 +282,7 @@ Options are selected using weighted random sampling without replacement:
 
 ---
 
-## 7. Passive Stat Boosts
+## 8. Passive Stat Boosts
 
 From `vs_prog.md` Passive Stat Boosts section.
 
@@ -295,7 +339,7 @@ See `01_engine_architecture.md` §7 for damage formula: `max(1, rawDamage - defe
 
 ---
 
-## 8. Expected Upgrade Distribution
+## 9. Expected Upgrade Distribution
 
 From `vs_prog.md` Expected Upgrade Distribution section.
 
@@ -330,7 +374,7 @@ In a typical 5-minute run with 12–13 level-ups:
 
 ---
 
-## 9. Level-Up Visual Design
+## 10. Level-Up Visual Design
 
 From `vs_plan.md` Prompt 7 — Section 4: Visual Design.
 
@@ -378,10 +422,13 @@ From `vs_plan.md` Prompt 7 — Section 4: Visual Design.
 
 ---
 
-## 10. Cross-Reference Summary
+## 11. Cross-Reference Summary
 
 | Section | References |
 |---|---|
+| Stage XP scaling | `05_stages_spec.md` §13 (3/5/10min tiers, D3) |
+| Companion upgrades | `20_companion_combat_spec.md` (1:1 binding, D5) |
+| Weapon unlock schedule | `03_weapons_spec.md` §2 (companion pairing) |
 | XP table | `vs_prog.md` Experience Curve — XP Table (source of truth) |
 | XP formula | `vs_prog.md` Experience Curve — XP Curve Formula |
 | Level milestones | `vs_prog.md` Experience Curve — Expected Level Milestones |
@@ -397,4 +444,4 @@ From `vs_plan.md` Prompt 7 — Section 4: Visual Design.
 
 ---
 
-*End of 07_leveling_system_spec.md — Version 1*
+*End of 07_leveling_system_spec.md — Version 2.0 (Design Decisions Locked)*

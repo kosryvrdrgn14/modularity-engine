@@ -32,6 +32,19 @@
 
 ---
 
+## v0.6.0 — Supporting Specs Updated (Phase 5)
+**Date:** August 26, 2026
+**Status:** 5 supporting specs updated
+
+### Updated Files
+- **07_leveling_system_spec.md** — Added XP scaling by stage tier (3min/5min/10min), v2.0
+- **06_pickups_and_powerups_spec.md** — Added soft-pity drop system with cross-run persistence, v2.0
+- **08_ui_hud_spec.md** — Added Stage Select, Companion Management, Farming Slots, Bottom Action Bar UI designs, v2.0
+- **14_game_manager.md** — Added world state, farming state, pity counters to save schema, v2.0
+- **dialogue_template.md** — Added affection tier dialogue patterns, gift preference system, v2.0
+
+---
+
 ## v0.5.0 — New System Specs (Phase 4)
 **Date:** August 26, 2026
 **Status:** 7 new spec files created
