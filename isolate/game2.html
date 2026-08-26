@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Modularity Engine v0.2.0</title>
+  <title>Modularity Engine v0.3.0</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { 
@@ -776,7 +776,7 @@
   <canvas id="game-canvas"></canvas>
   <div id="loading-screen">
     <h1>MODULARITY ENGINE</h1>
-    <div style="font-size: 12px; color: #666; margin-bottom: 20px;">v0.2.0</div>
+    <div style="font-size: 12px; color: #666; margin-bottom: 20px;">v0.3.0</div>
     <div id="loading-bar"><div id="loading-fill"></div></div>
     <div id="loading-status">Loading...</div>
   </div>
@@ -805,7 +805,7 @@
         </div>
       </div>
       <div id="title-info">
-        <span id="info-version">v0.2.0</span>
+        <span id="info-version">v0.3.0</span>
         <span>│</span>
         <span id="info-best-run">Best: --:-- Lv--</span>
         <span>│</span>
@@ -6812,85 +6812,6 @@ class TownScreen {
   }
 
 
-  // ---- Dog dialogue (triggered after Lina) ----
-  _showDogDialogue() {
-    const gm = this.game.gameManager;
-    if (gm.has_companion('dog')) return;
-
-    const dogSvg = SVG_PORTRAITS['dog'] || '';
-    if (dogSvg) {
-      this._dogPortrait.innerHTML = dogSvg.replace('<svg ', '<svg style="width:52px;height:52px;border-radius:50%;border:2px solid rgba(139,90,43,0.4);" ');
-    }
-
-    this._dogDialogue.classList.add('active');
-    this._dogText.textContent = '';
-    this._dogChoices.style.display = 'none';
-
-    const greetings = ['Woof! *tail wag*', '*sniff sniff* ...Woof!', 'Arf! *happy dance*'];
-    const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-
-    this._typewriteText(greeting, () => {
-      this._dogChoices.style.display = 'flex';
-      this._dogChoices.innerHTML = '';
-
-      const petBtn = document.createElement('button');
-      petBtn.className = 'dog-choice';
-      petBtn.textContent = '🐕 Pet the dog';
-      petBtn.addEventListener('click', () => {
-        this.game.audioManager.playMenuSound('select');
-        this._dogDialogue.classList.remove('active');
-        gm.add_companion('dog');
-        this._showCompanionNotification('Dog', 'Has joined your party!');
-        this._renderCompanionSlots();
-      });
-
-      const ignoreBtn = document.createElement('button');
-      ignoreBtn.className = 'dog-choice ignore';
-      ignoreBtn.textContent = 'Walk away';
-      ignoreBtn.addEventListener('click', () => {
-        this.game.audioManager.playMenuSound('back');
-        this._dogDialogue.classList.remove('active');
-      });
-
-      this._dogChoices.appendChild(petBtn);
-      this._dogChoices.appendChild(ignoreBtn);
-    });
-  }
-
-  _showCompanionNotification(name, desc) {
-    const titleEl = this._notifEl.querySelector('.notif-title');
-    const descEl = this._notifEl.querySelector('.notif-desc');
-    titleEl.textContent = name + ' has joined the party!';
-    descEl.textContent = desc || '';
-    this._notifEl.classList.add('active');
-    this.game.audioManager.playMenuSound('powerup');
-    setTimeout(() => { this._notifEl.classList.remove('active'); }, 2500);
-  }
-
-  _renderCompanionSlots() {
-    const gm = this.game.gameManager;
-    const companions = gm.get_companions();
-    const companionData = {
-      dog: { name: 'Dog', svg: SVG_PORTRAITS['dog'] || '' }
-    };
-    for (let i = 0; i < 3; i++) {
-      const slot = this._companionSlots[i];
-      if (!slot) continue;
-      if (i < companions.length) {
-        const data = companionData[companions[i]];
-        slot.className = 'companion-slot filled';
-        if (data && data.svg) {
-          slot.innerHTML = data.svg.replace('<svg ', '<svg style="width:48px;height:48px;" ') +
-            '<div class="companion-name">' + data.name + '</div>';
-        } else {
-          slot.innerHTML = '<span class="empty-icon">?</span>';
-        }
-      } else {
-        slot.className = 'companion-slot';
-        slot.innerHTML = '<span class="empty-icon">+</span>';
-      }
-    }
-  }
   _typewriteText(text, onComplete) {
     if (this._typewriterTimer) {
       clearInterval(this._typewriterTimer);
