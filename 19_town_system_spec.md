@@ -1,5 +1,7 @@
 # Town System Specification
 
+> **⚠️ Partially Superseded:** Navigation system, location hierarchy, and NPC placement are now defined in `22_city_builder_location_system.md`. This spec remains valid for the **dialogue system** (§4) and **NPC data structure** (§5).
+>
 > **Game Version:** v0.2.0+
 > **Date:** August 24, 2026
 > **Parent:** `17_implementation_roadmap.md` Steps 7-9
@@ -314,7 +316,7 @@ NPC_DATA: {
 if (gameManager.get_currency() >= 100) {
   gameManager.spend_currency(100, 'camp_upgrade');
   gameManager.set_flag('town_camp_upgraded', true);
-  gameManager.set('persistent.town.phase', 2);
+  gameManager.set('persistent.town.level', 2);
   // Unlock Lina
   NPC_DATA.cute_girl.unlocked = true;
   // Update background to wooden shacks
@@ -331,7 +333,7 @@ Combat End
   → Player sees gold in town top bar
   → Can spend 100g to upgrade camp
   → persistent.currency -= 100
-  → town.phase = 2
+  → town.level = 2
 ```
 
 ---
@@ -341,7 +343,7 @@ Combat End
 ### Step 1: Town Screen HTML/CSS (30 min)
 
 - Add `#town-screen` div to game2.html (after title screen)
-- Background image container (loads SVG based on town.phase)
+- Background image container (loads SVG based on town.level)
 - Top bar: camp name, gold, run stats
 - NPC area: scrollable list of available NPCs
 - Bottom bar: "Return to Combat" and "Return to Title" buttons

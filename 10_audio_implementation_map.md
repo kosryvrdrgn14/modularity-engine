@@ -4,7 +4,7 @@
 > **Spec Version:** 1.2 (`09_audio_spec.md`)
 > **Last Updated:** 2026-08-21
 > **Status:** Implementation Complete — All sounds wired and synthesized
-> **Purpose:** Exact line-by-line mapping of where every sound fires in `game.html`, what triggers it, and what the AudioManager needs to do.
+> **Purpose:** Exact line-by-line mapping of where every sound fires in `game2.html`, what triggers it, and what the AudioManager needs to do.
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 1. AudioManager Integration Point
 
-The `AudioManager` is a **full implementation** at **line 2137** of `game.html`.
+The `AudioManager` is a **full implementation** at **line 2137** of `game2.html`.
 
 ### Current Implementation
 

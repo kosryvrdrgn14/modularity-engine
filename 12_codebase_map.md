@@ -1,7 +1,7 @@
 # Modularity Engine — Codebase Map
 
 > **Game Version:** v0.2.0+  
-> **File:** `public/game.html` (single-file HTML5 game, 3403 lines)  
+> **File:** `public/game2.html` (single-file HTML5 game, 3403 lines)  
 > **Purpose:** Complete structural map for navigating the codebase during SVG graphics replacement and future development.  
 > **Last Updated:** August 21, 2026
 
@@ -25,7 +25,7 @@
 ## 1. File Structure Overview
 
 ```
-public/game.html (3403 lines)
+public/game2.html (3403 lines)
 ├── L1-6       HTML <head>, meta tags
 ├── L7-87      CSS styles (canvas, loading-screen, start-overlay)
 ├── L88-100    HTML body (canvas, loading-screen, start-overlay)

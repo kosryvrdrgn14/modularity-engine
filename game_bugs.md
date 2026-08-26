@@ -54,10 +54,10 @@
 | 40 | game._spawnBoss() is undefined — method lives on SpawnSystem, not Game | 🔴 Critical | ✅ Fixed | User report |
 | 41 | Telegraph rectangle drawn 90° off — fillRect draws along local Y-axis after ctx.rotate | 🔴 Critical | ✅ Fixed | User report |
 | 42 | Boss charges at player instead of telegraph direction — _chargeDir recalculated at charge start instead of locked to telegraph angle | 🔴 Critical | ✅ Fixed | User report |
-| 43 | Duplicate _showDogDialogue/companion methods — two identical definitions from Python bulk insert | 🟡 Low | ⚠️ Open | Code review |
+| 43 | Duplicate _showDogDialogue/companion methods — two identical definitions from Python bulk insert | 🟡 Low | ✅ Fixed | Removed 79 duplicate lines |
 | — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
 
-**Total: 43 bugs found, 42 fixed, 1 open**
+**Total: 43 bugs found, 43 fixed, 0 open**
 
 ---
 

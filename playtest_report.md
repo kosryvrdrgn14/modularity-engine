@@ -100,7 +100,7 @@ These are expected — the game falls back to embedded data successfully.
 
 To manually verify the game:
 
-1. **Open `game.html` in a browser** (download from Freebuff or use local server)
+1. **Open `game2.html` in a browser** (download from Freebuff or use local server)
 2. **Wait for loading screen** to disappear
 3. **Click anywhere** to move the golden square (player)
 4. **Wait 5 seconds** for enemies to spawn (green squares)
@@ -116,7 +116,7 @@ To manually verify the game:
 
 | File | Purpose |
 |---|---|
-| `game.html` | The playable game (single HTML file) |
+| `game2.html` | The playable game (single HTML file) |
 | `test_game.js` | Automated Playwright test |
 | `test_game_debug.js` | Debug test with console output |
 | `screenshots/*.png` | 13 screenshots from automated playtest |

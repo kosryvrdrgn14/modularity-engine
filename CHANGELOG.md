@@ -77,7 +77,7 @@
 **Status:** Playable prototype (30 bugs fixed, audio gaps resolved)
 
 ### Audio Preparation (v0.2.0+)
-- 7 implementation gaps resolved in game.html for audio system
+- 7 implementation gaps resolved in game2.html for audio system
 - `weaponFire` event added to W1 projectile creation
 - `bossCharge` event detection via state transition tracking
 - AudioManager gains `setPlayer()` for distance-based audio

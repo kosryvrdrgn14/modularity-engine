@@ -153,7 +153,13 @@ The entire player state lives in one JSON object:
   },
 
   "town": {
-    "phase": 1,
+    "level": 1,
+    "name": "Refugee Camp",
+    "currentLocation": "city_root",
+    "locationHistory": ["city_root"],
+    "locationUnlocks": {
+      "city_root": true
+    },
     "population": 0,
     "popCap": 5,
     "buildings": {},
@@ -233,7 +239,7 @@ The entire player state lives in one JSON object:
 | `player` | Core | Base stats that modify all features. Combat uses `baseStats`, town uses `totalGold`. |
 | `combat` | Combat Engine | What weapons are unlocked, last run results. Only the combat engine writes to `weaponLevels`. |
 | `skills` | Skill Tree | Permanent upgrades. Only the skill tree writes to `unlocked[]`. |
-| `town` | City Builder | Buildings, resources, upgrades. Only the city builder writes here. |
+| `town` | City Builder | Level, location navigation, buildings, resources, upgrades. Only the city builder writes here. See `22_city_builder_location_system.md` for full location hierarchy. |
 | `npcs` | NPC System | Relationship data, dialogue history. Only the NPC system writes here. |
 | `factions` | Faction System | Reputation values. Only the faction system writes here. |
 | `quests` | Quest System | Active/completed quests. Only the quest system writes here. |
@@ -373,6 +379,8 @@ If combat were the core, every other feature would be an "add-on" to combat. But
 ---
 
 ## 5. City Builder / Town Hub
+
+> **Detailed design:** See `22_city_builder_location_system.md` for the full location hierarchy (City → Districts → Sub-Districts → Buildings), navigation system (breadcrumb + back + side menu), NPC placement, unlock system, ambient sounds, and implementation phases.
 
 ### Why a Town Hub
 
