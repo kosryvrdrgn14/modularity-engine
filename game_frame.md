@@ -381,6 +381,9 @@ If combat were the core, every other feature would be an "add-on" to combat. But
 
 ## 5. City Builder / Town Hub
 
+**Q2c: Is there a separate world map?** (RESOLVED — D9 DECIDED)
+No separate world map. The city/town navigation interface is reused for ALL areas. The location hierarchy (City → Districts → Sub-Districts → Buildings) is data-driven — the same system represents the town, the Graveyard region, the Forest, etc. Players swipe left/right between regions at the root level. See `22_city_builder_location_system.md` for full design.
+
 > **Detailed design:** See `22_city_builder_location_system.md` for the full location hierarchy (City → Districts → Sub-Districts → Buildings), navigation system (breadcrumb + back + side menu), NPC placement, unlock system, ambient sounds, and implementation phases.
 
 ### Why a Town Hub
@@ -1629,6 +1632,9 @@ Options: (a) Silent protagonist with text-only narration. (b) Narrator with occa
 Options: (a) Seamless transition (camera zooms into the stage). (b) Loading screen with lore text. (c) World map as an intermediate screen.
 - **DECIDED:** No separate world map. Reuse the city/town navigation interface for all areas. The location hierarchy (City → Districts → Sub-Districts → Buildings) is data-driven — the same system represents the town, the Graveyard region, the Forest, etc. Each area has its own location tree, NPCs, backgrounds, and ambient sounds. The player navigates between areas using the same breadcrumb + back + side menu interface. This eliminates a separate world map screen and keeps the UX consistent.
 
+**Q2b: What are the stage length tiers?** (RESOLVED — D3 DECIDED)
+Three stage tiers: 3min (quick grind), 5min (baseline story), 10min (highlight story). Frontloaded weapons work well for 3min but scale poorly for 10min. Scaling weapons are weak at start but excel at 10min. 5min is a mix. See `05_stages_spec.md` §13 for full scaling details.
+
 **Q3: How should NPC combat companions work?** (RESOLVED — D1/D2/D5)
 NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. 3 companion slots, each bound 1:1 to a weapon slot (W1=C1, W2=C2, W3=C3). Companions buff and evolve their paired weapon. NPC weapons show in the weapon bar as smaller icons with colored NPC border. NPCs auto-level to match the player's current level, scaling at 10-50% of player damage depending on trust tier. No manual NPC upgrade management. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
 
@@ -1686,6 +1692,25 @@ If we add a new stage, NPC, or building in a future version, how does it integra
 ---
 
 ## Appendix A2: Endgame Sandbox Mode
+
+The sandbox is an endgame mode for build testing and theorycrafting. It reuses ALL existing assets (stages, enemies, weapons, companions) with customizable difficulty. Players can:
+- Set weapon/companion levels freely
+- Adjust enemy HP/damage/spawn rate (0.5× to 3×)
+- See real-time damage numbers and DPS counters
+- Compare builds side-by-side
+- Track personal records
+
+See `30_endgame_sandbox_spec.md` for full design.
+
+---
+
+## Appendix A3: Grand Bazaar Shop
+
+The Grand Bazaar is the game's single shop, accessible from the town screen. It has 4 tabs: Combat Consumables, Companion & Adventurer, Estate & Productivity, and Gifts & Romance. Items unlock based on town level. Prices are scaled to the economy (25-15,000g range).
+
+See `31_grand_bazaar_spec.md` for full design.
+
+---
 
 The sandbox is an endgame mode for build testing and theorycrafting. It reuses ALL existing assets (stages, enemies, weapons, companions) with customizable difficulty. Players can:
 - Set weapon/companion levels freely

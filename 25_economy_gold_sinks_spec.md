@@ -305,3 +305,7 @@ Materials: Abundant from Tier 3-5 estates
 ---
 
 *Economy & Gold Sinks Spec v0.1.0 — August 26, 2026*
+
+
+---
+*See `31_grand_bazaar_spec.md` for the full shop item catalog and pricing.*
