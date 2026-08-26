@@ -1,10 +1,13 @@
 # Town System Specification
 
-> **⚠️ Partially Superseded:** Navigation system, location hierarchy, and NPC placement are now defined in `22_city_builder_location_system.md`. This spec remains valid for the **dialogue system** (§4) and **NPC data structure** (§5).
+> **⚠️ Largely Superseded:** Navigation, location hierarchy, NPC placement, and multi-region swipe are now defined in `22_city_builder_location_system.md` (v0.2.0). This spec remains valid **only** for:
+> - **§4 Dialogue System** — typewriter text, choice buttons, NPC portrait display
+> - **§5 NPC Data Structure** — dialogue trees, trust levels, request format
+> - **§8 Assets Created** — SVG file references
 >
-> **Game Version:** v0.2.0+
-> **Date:** August 24, 2026
-> **Parent:** `17_implementation_roadmap.md` Steps 7-9
+> **Game Version:** v0.4.0+
+> **Date:** August 26, 2026
+> **Design Decisions:** D9 (unified location hierarchy, no separate world map)
 > **Assets:** 4 SVGs created (`town_refugee_camp.svg`, `town_wooden_shacks.svg`, `npc_old_man.svg`, `npc_cute_girl.svg`)
 
 ---

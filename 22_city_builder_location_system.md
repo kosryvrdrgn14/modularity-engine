@@ -1,24 +1,25 @@
 # Location Hierarchy & Navigation System (Reusable for Town + World)
 
-> **Game Version:** v0.3.0+  
+> **Game Version:** v0.4.0+  
 > **Date:** August 26, 2026  
 > **Parent:** `game_frame.md` §5 (City Builder / Town Hub)  
 > **Predecessor:** `19_town_system_spec.md` (flat town screen)  
-> **Status:** Design Document — Awaiting Review
+> **Status:** Spec
+> **Design Decisions:** D9 (unified location hierarchy for all areas)
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#1-overview)
+1. [Overview](#1-overview) — including Multi-Location Architecture (D9)
 2. [Location Hierarchy](#2-location-hierarchy)
-3. [Navigation System](#3-navigation-system)
+3. [Navigation System](#3-navigation-system) — breadcrumb, back, side menu, **swipe between regions**
 4. [Location Data Schema](#4-location-data-schema)
 5. [NPC Placement & Overflow](#5-npc-placement--overflow)
 6. [Unlock System](#6-unlock-system)
 7. [Visual Design](#7-visual-design)
 8. [Ambient Sound System](#8-ambient-sound-system)
-9. [Save Data Structure](#9-save-data-structure)
+9. [Save Data Structure](#9-save-data-structure) — multi-region state
 10. [Implementation Phases](#10-implementation-phases)
 11. [Gaps, Conflicts & Open Questions](#11-gaps-conflicts--open-questions)
 
@@ -32,7 +33,32 @@ The current town screen (`19_town_system_spec.md`) is a **flat single-screen** w
 
 ### What This Is
 
-A **hierarchical location navigation system** that lets the player explore a growing city. The city expands from a small camp to a full city through upgrades, quests, and reputation. Each location can have NPCs, buildings, shops, and quest triggers.
+A **hierarchical location navigation system** that lets the player explore ALL areas — the town, world regions, dungeons, and more. The same navigation interface is reused everywhere; only the data changes. The city expands from a small camp to a full city, while world regions (Graveyard, Forest, etc.) unlock through quests and reputation.
+
+### Multi-Location Architecture (D9)
+
+The player can swipe left/right between **major areas** (regions). Each region has its own location hierarchy, NPCs, backgrounds, and ambient sounds.
+
+```
+[Swipeable Regions]
+◄── Town ──►  ◄── Graveyard ──►  ◄── Forest ──►
+    │              │                  │
+    ▼              ▼                  ▼
+[Location Tree]  [Location Tree]   [Location Tree]
+```
+
+**Swipe behavior:**
+- Horizontal swipe at the **root level** of any region switches to the next/previous unlocked region
+- A page indicator (dots) shows which region you're on
+- Swipe only works at the root — inside a district, swiping does nothing (use breadcrumb/back instead)
+- New regions unlock via quests, reputation, or story progression
+- Locked regions show as `🔒 Region Name` with unlock requirement
+
+**Why swipe for regions:**
+- Fastest way to move between major areas on mobile
+- Familiar pattern (like home screen pages)
+- Doesn't clutter the UI with extra buttons
+- Works alongside breadcrumb and side menu
 
 ### Design Principles
 
@@ -41,7 +67,7 @@ A **hierarchical location navigation system** that lets the player explore a gro
 | **Rule of 3** | Max 3 items displayed per level (3 districts, 3 sub-districts, 3 buildings). Prevents UI clutter on mobile and keeps choices meaningful. Expandable later if needed. |
 | **Flexible depth** | Districts can have buildings directly (small town) OR sub-districts then buildings (large city). Same data structure, different depth. |
 | **Easy to add content** | Adding a new district, building, or NPC assignment is one JSON entry. No engine changes needed. |
-| **Quick access** | Three navigation methods: breadcrumb trail, back button, and a side menu for power users. |
+| **Quick access** | Four navigation methods: breadcrumb trail, back button, side menu, and swipe between regions. |
 | **NPC overflow via scroll** | If more than 3 NPCs are in a location, scroll to see the rest. Priority system shows quest-relevant NPCs first. |
 
 ---
@@ -217,6 +243,44 @@ A `☰` hamburger button at the top-right opens a slide-out side panel. Swipe le
              │ BUILDING │
              └──────────┘
 ```
+
+#### 3d. Swipe Navigation Between Regions (D9)
+
+Horizontal swipe at the root level switches between major areas:
+
+```
+┌─────────────────────────────────────────────────┐
+│  🏕 Refugee Camp              💰 150 Gold       │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│         [Location content here]                 │
+│                                                 │
+├─────────────────────────────────────────────────┤
+│           ● ○ ○                                 │
+│         Town  Graveyard  Forest                 │
+└─────────────────────────────────────────────────┘
+```
+
+**Swipe Rules:**
+- Only works at the **root level** of a region (when breadcrumb shows just the region name)
+- Inside districts/sub-districts/buildings → swipe does nothing (use back/breadcrumb)
+- Swipe left = next unlocked region, swipe right = previous unlocked region
+- Page indicator dots show position: filled = current, empty = other unlocked, locked = 🔒
+- Minimum swipe distance: 50px (prevents accidental swipes)
+- Swipe animation: 0.3s horizontal slide transition
+- Ambient sound crossfades on region change
+
+**Region List (ordered):**
+
+| Order | Region | Unlock Condition | Background |
+|---|---|---|---|
+| 1 | Town | Start of game | Camp/shacks/city SVGs |
+| 2 | Graveyard | Complete: "The Awakening" quest | Tombstones, fog |
+| 3 | Forest | Reputation: Friendly with Wanderers' Guild | Trees, foliage |
+| 4 | Cursed Library | Complete: "First Lessons" quest | Books, arcane |
+| 5 | Demon Citadel | Reputation: Honored with 2 factions | Dark fortress |
+
+New regions are added to this list as content expands. The swipe navigation automatically supports them.
 
 ### Where Dialogue Happens
 
@@ -711,15 +775,36 @@ When the player navigates between locations:
 
 ## 9. Save Data Structure
 
-### Town State in Save File
+### World State in Save File (Multi-Region)
 
 ```json
 {
+  "world": {
+    "currentRegion": "town",
+    "currentLocation": "trade_district",
+    "locationHistory": ["town:city_root", "town:trade_district"],
+    "regionIndex": 0,
+
+    "regionUnlocks": {
+      "town": true,
+      "graveyard": true,
+      "forest": false,
+      "cursed_library": false,
+      "demon_citadel": false
+    },
+
+    "locationUnlocks": {
+      "town:trade_district": true,
+      "town:residential": true,
+      "town:wilderness": false,
+      "graveyard:cemetery": true,
+      "graveyard:crypt": false
+    }
+  },
+
   "town": {
     "level": 2,
     "name": "Refugee Camp",
-    "currentLocation": "trade_district",
-    "locationHistory": ["city_root", "trade_district"],
 
     "buildings": {
       "market": { "level": 1, "built": true },
@@ -743,32 +828,32 @@ When the player navigates between locations:
     },
 
     "population": 5,
-    "popCap": 10,
-
-    "locationUnlocks": {
-      "trade_district": true,
-      "residential": true,
-      "wilderness": false,
-      "market_square": true,
-      "market": true,
-      "blacksmith": true,
-      "tavern": false
-    }
+    "popCap": 10
   }
 }
 ```
 
-### Why `locationUnlocks` Is a Flat Map
+### Why Separate `world` and `town`
 
-Instead of re-evaluating unlock conditions every time the player enters town, we cache the results. When a flag changes, quest completes, or town levels up, we re-evaluate all locations and update `locationUnlocks`. This:
-- Makes rendering fast (just check `locationUnlocks[id]`)
+- `world` tracks cross-region state: which regions are unlocked, current region/location, navigation history
+- `town` tracks town-specific state: level, buildings, resources, workers
+- Other regions (graveyard, forest, etc.) will have their own state objects as needed
+- `locationUnlocks` uses `region:location` keys to avoid ID collisions across regions
+
+### Why `locationUnlocks` Uses `region:location` Keys
+
+Instead of re-evaluating unlock conditions every time the player enters a region, we cache the results. When a flag changes, quest completes, or town levels up, we re-evaluate all locations and update `locationUnlocks`. The `region:location` format prevents ID collisions (e.g., `town:blacksmith` vs `graveyard:altar`).
+
+- Makes rendering fast (just check `locationUnlocks["region:location"]`)
 - Allows the engine to show/hide locations without knowing unlock logic
 - Is easy to debug (dump the object to see what's unlocked)
 
-### `currentLocation` and `locationHistory`
+### `currentRegion` and `currentLocation`
 
-- `currentLocation` — where the player is right now (for resume after save/load)
-- `locationHistory` — breadcrumb trail (last 5 locations, for back navigation)
+- `currentRegion` — which region the player is in (for resume after save/load)
+- `currentLocation` — which specific location within the region
+- `regionIndex` — which page the swipe indicator shows (0-based)
+- `locationHistory` — breadcrumb trail (last 5 locations, for back navigation). Format: `"region:location"`
 - Both reset to `city_root` on new game
 
 ---
@@ -891,6 +976,14 @@ With 27+ locations, the side menu tree could be very long. On mobile, this requi
   - **"Show All" toggle:** Experienced players can tap to expand the full location tree with collapsible sections. Districts collapse by default; tapping expands.
   - Side swipe left/right to navigate between side menu pages if needed.
 
+**Gap 6: Swipe navigation conflict with in-app gestures.** (NEW)
+Mobile browsers and apps often use swipe gestures for back navigation, menu opening, or scrolling. Our swipe-left/right between regions could conflict with these.
+- **Action:** Use a minimum swipe distance of 50px and require horizontal movement > vertical movement (1.5:1 ratio). Only activate at root level (breadcrumb shows single region name). Add a small visual affordance (page dots) to indicate swipeability.
+
+**Gap 7: Region-specific save data.** (NEW)
+Each region may need its own state (e.g., Graveyard has a "crypt unlocked" flag, Forest has "herbs gathered" counter). The current save structure only has `town` state.
+- **Action:** Add a `regions: { [regionId]: { ... } }` object to the save file. Each region stores its own flags and state. The `world` object tracks cross-region state.
+
 **Gap 5: NPC assignment conflicts.**
 If two quests want the same NPC in different locations, there's a conflict. The current override system is last-write-wins.
 - **DECIDED:** Add priority to overrides. Higher-priority overrides win. Also add a `conflictResolution: 'latest' | 'highest_priority' | 'error'` config. For the prototype, use template NPC portraits (base templates with color/hair variations). AI-generated portraits for the final game.
@@ -931,4 +1024,4 @@ Elder Rowan and Lina in `game2.html` have no location assignment. They currently
 
 ---
 
-*City Builder Location Hierarchy & Navigation Spec v0.1.0 — Generated August 26, 2026*
+*Location Hierarchy & Navigation Spec v0.2.0 — Updated August 26, 2026 (D9: multi-region swipe navigation)*
