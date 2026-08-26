@@ -6474,8 +6474,14 @@ class LocationManager {
     const loc = region.locations[locationId];
     if (!loc) return false;
     if (loc.locked && !this.gameManager.get_flag(loc.unlockCondition)) return false;
-    this.locationHistory.push(locationId);
-    if (this.locationHistory.length > 10) this.locationHistory.shift();
+    // If location already in history (breadcrumb click), trim to that point
+    const existingIdx = this.locationHistory.indexOf(locationId);
+    if (existingIdx >= 0) {
+      this.locationHistory = this.locationHistory.slice(0, existingIdx + 1);
+    } else {
+      this.locationHistory.push(locationId);
+      if (this.locationHistory.length > 10) this.locationHistory.shift();
+    }
     this.currentLocationId = locationId;
     if (this.onNavigate) this.onNavigate(loc);
     return true;
