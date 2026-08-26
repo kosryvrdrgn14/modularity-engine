@@ -5676,6 +5676,7 @@ class GameManager {
         plans: [],
         pityCounters: {},
         clearCounters: {},
+        gachaCounters: {},
       },
       flags: {},
       counters: { total_kills: 0, total_runs: 0 },
@@ -5988,6 +5989,25 @@ class GameManager {
   incrementClearCount(stageId) {
     if (!this.store.farming) return;
     this.store.farming.clearCounters[stageId] = (this.store.farming.clearCounters[stageId] || 0) + 1;
+    this._dirty = true;
+  }
+
+  // ── Gacha Protection (per-item, resets on drop) ──────────
+  getGachaCount(itemId) {
+    return this.store.farming?.gachaCounters?.[itemId] || 0;
+  }
+
+  incrementGachaCount(itemId) {
+    if (!this.store.farming) return;
+    if (!this.store.farming.gachaCounters) this.store.farming.gachaCounters = {};
+    this.store.farming.gachaCounters[itemId] = (this.store.farming.gachaCounters[itemId] || 0) + 1;
+    this._dirty = true;
+  }
+
+  resetGachaCount(itemId) {
+    if (!this.store.farming) return;
+    if (!this.store.farming.gachaCounters) this.store.farming.gachaCounters = {};
+    this.store.farming.gachaCounters[itemId] = 0;
     this._dirty = true;
   }
 
@@ -6727,8 +6747,26 @@ class Game {
       if (this.starSystem) {
         combatResult.stars = this.starSystem.evaluate(combatResult);
       }
-      // Increment gacha clear counter for this stage
+      // Gacha protection: roll for rare drops per-item, reset on drop
       if (combatResult.stage_completed) {
+        const rareDropItems = [
+          { id: 'pickup_weapon_level_up', name: 'Weapon Level-Up' },
+          { id: 'screen_wipe', name: 'Screen Wipe' },
+        ];
+        combatResult.rareDrops = [];
+        for (const item of rareDropItems) {
+          const clearsWithout = this.gameManager.getGachaCount(item.id);
+          const roll = GachaProtection.rollForDrop(clearsWithout);
+          if (roll.dropped) {
+            // Drop acquired — reset counter
+            this.gameManager.resetGachaCount(item.id);
+            combatResult.rareDrops.push({ id: item.id, name: item.name, chance: roll.chance });
+          } else {
+            // No drop — increment counter (next clear = higher chance)
+            this.gameManager.incrementGachaCount(item.id);
+          }
+        }
+        // Also increment stage clear counter for tracking
         this.gameManager.incrementClearCount(combatResult.stageId);
       }
       this.gameManager.end_session(combatResult);
