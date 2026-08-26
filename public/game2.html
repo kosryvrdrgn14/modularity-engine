@@ -8619,27 +8619,33 @@ class TownScreen {
     requestAnimationFrame(() => { this._renderLock = false; });
     area.innerHTML = '';
     
-    // NPCs at current location
     const curLoc = this.locationManager.getCurrentLocation();
-    if (curLoc) {
-      const npcs = this.locationManager.getNPCsAtLocation(curLoc.id);
-      for (const npc of npcs) {
-        const card = this._createNPCCard(npc);
-        area.appendChild(card);
-      }
-      // If no NPCs, show the existing upgrade card for phase 1
-      if (npcs.length === 0 && curLoc.id === 'city_root') {
-        this._renderUpgradeCard(area);
-      }
-      if (npcs.length === 0 && curLoc.id !== 'city_root') {
-        const emptyCard = document.createElement('div');
-        emptyCard.className = 'location-card';
-        emptyCard.innerHTML = '<span class="loc-icon">🏕️</span><div class="loc-info"><div class="loc-name">Nothing here yet</div><div class="loc-desc">This location will be populated in future updates</div></div>';
-        area.appendChild(emptyCard);
-      }
+    if (!curLoc) return;
+
+    // 1. Upgrade card at city_root (always show, before NPCs)
+    if (curLoc.id === 'city_root') {
+      this._renderUpgradeCard(area);
     }
 
-    // Location cards (children of current location)
+    // 2. NPCs at current location (including locked ones with upgrade hint)
+    const npcs = this.locationManager.getNPCsAtLocation(curLoc.id);
+    // Also check for locked NPCs that should show as locked
+    for (const key in NPC_DATA) {
+      const npc = NPC_DATA[key];
+      const loc = npc.location || 'city_root';
+      if (loc !== curLoc.id) continue;
+      if (npc.unlocked) continue; // already rendered above
+      if (npcs.includes(npc)) continue;
+      // Show locked NPC with greyed portrait
+      const card = this._createNPCCard(npc, true);
+      area.appendChild(card);
+    }
+    for (const npc of npcs) {
+      const card = this._createNPCCard(npc, false);
+      area.appendChild(card);
+    }
+
+    // 3. Location cards (children)
     const children = this.locationManager.getChildLocations(this.locationManager.currentLocationId);
     for (const child of children) {
       const card = document.createElement('div');
@@ -8648,10 +8654,10 @@ class TownScreen {
         <span class="loc-icon">${child.icon}</span>
         <div class="loc-info">
           <div class="loc-name">${child.name}</div>
-          <div class="loc-desc">${child.locked ? '🔒 ' + (child.desc || 'Locked') : child.desc || ''}</div>
-          ${child.locked ? '<div class="loc-lock">🔒 Locked</div>' : ''}
+          <div class="loc-desc">${child.locked ? '\u{1f512} ' + (child.desc || 'Locked') : child.desc || ''}</div>
+          ${child.locked ? '<div class="loc-lock">\u{1f512} Locked</div>' : ''}
         </div>
-        ${!child.locked ? '<span class="loc-arrow">▸</span>' : ''}
+        ${!child.locked ? '<span class="loc-arrow">\u25b8</span>' : ''}
       `;
       if (!child.locked) {
         card.addEventListener('click', (e) => {
@@ -8662,36 +8668,60 @@ class TownScreen {
       }
       area.appendChild(card);
     }
+
+    // 4. Empty state for locations with no content
+    if (npcs.length === 0 && children.length === 0 && curLoc.id !== 'city_root') {
+      const emptyCard = document.createElement('div');
+      emptyCard.className = 'location-card';
+      emptyCard.innerHTML = '<span class="loc-icon">\u{1f3d5}\ufe0f</span><div class="loc-info"><div class="loc-name">Nothing here yet</div><div class="loc-desc">This location will be populated in future updates</div></div>';
+      area.appendChild(emptyCard);
+    }
   }
 
   // D1: Create NPC card
-  _createNPCCard(npc) {
+  _createNPCCard(npc, isLocked) {
     const card = document.createElement('div');
-    card.className = 'npc-card';
+    card.className = 'npc-card' + (isLocked ? ' locked' : '');
     const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
-    const svgWithClass = svgHtml.replace('<svg ', '<svg class="npc-portrait" ');
-    card.innerHTML = `
-      ${svgWithClass}
-      <div class="npc-info">
-        <div class="npc-name">${npc.name}</div>
-        <div class="npc-greeting">"${(npc.greeting || '').substring(0, 60)}${(npc.greeting || '').length > 60 ? '...' : ''}"</div>
-        <div class="npc-action">▸ Talk</div>
-      </div>
-    `;
-    card.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.game.audioManager?.playMenuSound('select');
-      this._openDialogue(npc);
-    });
+    const svgWithClass = isLocked
+      ? svgHtml.replace('<svg ', '<svg class="npc-portrait" style="filter: grayscale(1); opacity: 0.5;" ')
+      : svgHtml.replace('<svg ', '<svg class="npc-portrait" ');
+
+    if (isLocked) {
+      const condText = npc.unlockCondition === 'town_camp_upgraded'
+        ? 'Upgrade the camp to unlock' : 'Locked';
+      card.innerHTML = `
+        ${svgWithClass}
+        <div class="npc-info">
+          <div class="npc-name">${npc.name}</div>
+          <div class="npc-lock-text" style="color:#886644;font-size:0.8rem;">\u{1f512} ${condText}</div>
+        </div>
+      `;
+    } else {
+      card.innerHTML = `
+        ${svgWithClass}
+        <div class="npc-info">
+          <div class="npc-name">${npc.name}</div>
+          <div class="npc-greeting">\"${(npc.greeting || '').substring(0, 60)}${(npc.greeting || '').length > 60 ? '...' : ''}\"</div>
+          <div class="npc-action">\u25b8 Talk</div>
+        </div>
+      `;
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.game.audioManager?.playMenuSound('select');
+        this._openDialogue(npc);
+      });
+    }
     return card;
   }
+
 
   // D1: Render upgrade card (camp upgrade)
   _renderUpgradeCard(area) {
     const gm = this.game.gameManager;
     const phase = gm.get('persistent.town.phase') || 1;
-    const gold = gm.get_resource() || 0;
-    if (phase > 1) return;
+    const gold = gm.get_currency() || 0;
+    if (phase > 1) return; // Already upgraded
     const canAfford = gold >= 100;
     const upgradeCard = document.createElement('div');
     upgradeCard.className = 'upgrade-card' + (canAfford ? '' : ' disabled');
