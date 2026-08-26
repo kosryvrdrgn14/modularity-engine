@@ -1,9 +1,10 @@
-# Disaster Events Spec
+# Disaster Events Spec (Simplified — Gold Sink Focus)
 
 > **Game Version:** v0.4.0+
 > **Date:** August 26, 2026
-> **Status:** Spec
+> **Status:** Spec — Simplified for balancing later
 > **Design Decisions:** D4 (estates produce materials/quests/unlocks, no gold)
+> **Note:** Disasters are currently a gold sink mechanism. Full disaster system (resolutions, wife network, gratitude) deferred to post-beta balancing.
 > **Depends On:** `27_estate_bloodline_spec.md`, `26_affection_romance_spec.md`, `25_economy_gold_sinks_spec.md`
 
 ---
@@ -24,19 +25,26 @@
 
 Disasters are random events that affect estates and the town. They create urgency, provide gold sinks, and give the wife network a purpose.
 
-### Why Disasters Exist
+### Why Disasters Exist (Simplified)
+
+Disasters are currently a **gold sink mechanism**. When the player accumulates too much gold, disasters provide a gold drain. The full system (resolutions, wife network, gratitude) will be balanced post-beta.
 
 | Purpose | How It Works |
 |---|---|
-| **Gold sink** | Resolving disasters costs gold |
-| **Wife network purpose** | Multiple wives help each other during crises |
+| **Gold sink** | Resolving disasters costs gold (primary purpose) |
 | **Content variety** | Breaks up the "build → wait → upgrade" loop |
-| **Emotional stakes** | "My family is in danger" motivates action |
-| **Quest generation** | Disasters create unique quests |
+| **Future expansion** | Wife network, gratitude, quest generation (post-beta) |
 
 ### Core Principle
 
-> Disasters are **challenges to resolve**, not punishments. The player should feel motivated to act, not frustrated by random losses.
+> Disasters are **gold sinks with flavor**, not full gameplay systems. They drain gold and provide narrative context. Full mechanics deferred to balancing phase.
+
+### Current Scope (v0.6.0)
+
+- Disasters trigger based on town level and estate count
+- Player pays gold to resolve (single resolution type)
+- 3-run cooldown between disasters (prevents stacking)
+- Full disaster system (multiple resolutions, wife network, gratitude) deferred
 
 ---
 
@@ -109,37 +117,30 @@ Disasters **never fire alongside gold-sink quests**. If a quest requires gold sp
 
 ## 4. Resolution Options
 
-### Resolution Types
+### Resolution (Simplified — Gold Only)
 
 | Type | How It Works | Cost |
 |---|---|---|
 | **Gold Payment** | Pay gold to fix immediately | Gold only |
-| **Material Repair** | Spend materials to repair | Materials only |
-| **Combat Resolution** | Defeat enemies to resolve | Time + combat |
-| **Wife Network** | Ask another wife for help | Reduced cost |
-| **Ignore** | Do nothing (consequences persist) | 0 |
+| **Ignore** | Do nothing (consequences persist for 3 runs) | 0 |
 
-### Wife Network Resolution
+*Note: Material repair, combat resolution, and wife network deferred to post-beta balancing.*
 
-When the player has multiple wives, they can ask one wife to help another:
+### Cooldown Rule
 
-| Network Size | Cost Reduction |
-|---|---|
-| 1 wife | 0% (solo resolution) |
-| 2 wives | 25% cost reduction |
-| 3 wives | 50% cost reduction |
+Disasters have a **3-run cooldown** between events. After resolving or ignoring a disaster, no new disaster triggers for 3 runs. This prevents back-to-back disasters from overwhelming the player.
 
-**Example:**
-- Fire at Freya's estate costs 100g, 20 wood
-- With 2 wives: costs 75g, 15 wood
-- With 3 wives: costs 50g, 10 wood
+```javascript
+const DISASTER_COOLDOWN = 3;
+let lastDisasterRun = 0;
 
-### Why Multiple Resolution Types
+function checkDisaster(run) {
+  if (run - lastDisasterRun < DISASTER_COOLDOWN) return false;
+  // ... roll for disaster
+}
+```
 
-- Players choose based on current resources (gold-rich vs. material-rich)
-- Wife network gives purpose to multiple marriages
-- Combat resolution ties back to gameplay
-- "Ignore" option exists for players who don't care about that estate
+*Note: Wife network resolution, material repair, and combat resolution deferred to post-beta balancing.*
 
 ---
 

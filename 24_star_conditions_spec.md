@@ -69,10 +69,10 @@ That's it. If the player finishes the stage by any means, they get 1★.
 
 | # | Condition | Threshold (Standard 5min) | Threshold (Quick 3min) | Threshold (Highlight 10min) | Category |
 |---|---|---|---|---|---|
-| 1 | **Kill Count** | 200+ kills | 120+ kills | 400+ kills | Combat |
-| 2 | **Clear Time** | Under 4:30 | Under 2:45 | Under 9:00 | Speed |
-| 3 | **Level Reached** | Level 12+ | Level 8+ | Level 18+ | Progression |
-| 4 | **Gold Collected** | 500+ gold | 300+ gold | 800+ gold | Economy |
+| 1 | **Kill Count** | 250+ kills | 150+ kills | 500+ kills | Combat |
+| 2 | **Clear Time** | Under 4:00 | Under 2:30 | Under 8:30 | Speed |
+| 3 | **Level Reached** | Level 13+ | Level 9+ | Level 20+ | Progression |
+| 4 | **Gold Collected** | 600+ gold | 350+ gold | 1000+ gold | Economy |
 
 ### Why These 4 Conditions
 
@@ -131,25 +131,58 @@ function check2Star(stageResult, stageTier) {
 | Itemless | Can the player win without power-ups? |
 | Pacifist Segment | Stealth and evasion skills |
 
-### 3★ Evaluation
+### 3★ Evaluation (Mutual Exclusivity Rule)
+
+3★ requires **1 "hard" condition + 1 additional condition**. The hard conditions are mutually exclusive with each other — you can only pick one.
+
+**Hard Conditions (must pick exactly 1):**
+
+| Condition | Description |
+|---|---|
+| No-Hit Run | Take 0 damage entire stage |
+| Solo Run | All 3 companion slots empty |
+| Starter Weapon Only | Only W1 active, no W2/W3 |
+
+**Additional Conditions (pick 1 from remaining):**
+
+| Condition | Description |
+|---|---|
+| Underleveled | Finish at Level 8 or below |
+| All Weapons Maxed | W1/W2/W3 all at Level 7 |
+| Speed Kill | Boss killed in under 15 seconds |
+| Itemless | No power-up pickups collected |
+| Pacifist Segment | Survive first 2 minutes with 0 kills |
 
 ```javascript
-function check3Star(stageResult, stageTier) {
-  const conditions = get3StarConditions(stageTier);
-  let met = 0;
+function check3Star(stageResult) {
+  // Must have exactly 1 hard condition
+  const hardConditions = [
+    stageResult.damageTaken === 0,      // No-hit
+    stageResult.companionsActive === 0, // Solo
+    stageResult.weaponsUnlocked === 1    // Starter only
+  ];
+  const hardMet = hardConditions.filter(Boolean).length;
   
-  if (stageResult.damageTaken === 0) met++;           // No-hit
-  if (stageResult.weaponsUnlocked === 1) met++;       // Starter only
-  if (stageResult.level <= 8) met++;                   // Underleveled
-  if (stageResult.companionsActive === 0) met++;      // Solo
-  if (stageResult.allWeaponsMaxed) met++;              // All maxed
-  if (stageResult.bossKillTime <= 15) met++;           // Speed kill
-  if (stageResult.powerUpsCollected === 0) met++;     // Itemless
-  if (stageResult.zeroKillsFirst2Min) met++;           // Pacifist
+  if (hardMet !== 1) return false; // Must pick exactly 1 hard condition
   
-  return met >= 2; // Need at least 2 out of 8
+  // Must have at least 1 additional condition
+  const additionalConditions = [
+    stageResult.level <= 8,              // Underleveled
+    stageResult.allWeaponsMaxed,         // All maxed
+    stageResult.bossKillTime <= 15,      // Speed kill
+    stageResult.powerUpsCollected === 0, // Itemless
+    stageResult.zeroKillsFirst2Min       // Pacifist
+  ];
+  const additionalMet = additionalConditions.filter(Boolean).length;
+  
+  return additionalMet >= 1; // Need at least 1 additional
 }
 ```
+
+**Why Mutual Exclusivity:**
+- Prevents stacking easy conditions (e.g., Solo + Starter Only are both "don't bring things")
+- Forces the player to prove ONE form of mastery, then prove something else
+- Reduces 3★ achievement rate from ~31% to ~8-12% (within target)
 
 ---
 

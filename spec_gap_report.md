@@ -8,27 +8,36 @@
 
 ## Critical Findings (Fix Before Implementation)
 
-### 🔴 1. Gold Surplus at Endgame (§25 Economy)
+### 🟡 1. Gold Surplus at Endgame (§25 Economy) — DEFERRED
 
 **Simulation Result:**
 ```
 Run 50: 6,595g accumulated
 Total income: 10,470g over 50 runs
 Total spent: 3,875g over 50 runs
-Net surplus: 6,595g
+Net surplus: 6,595g (60% more income than sinks)
 ```
+
+**Gold Bloat Summary:**
+
+| Run | Gold Accumulated | Income/Run | Spent/Run | Status |
+|---|---|---|---|---|
+| 5 | 685g | 190g | 25g | Early — saving |
+| 10 | 1,015g | 200g | 250g | Building phase |
+| 15 | 1,700g | 210g | 25g | Accumulating |
+| 20 | 2,255g | 220g | 25g | Accumulating |
+| 25 | 2,560g | 230g | 625g | Spending spike |
+| 30 | 3,095g | 240g | 425g | Moderate spending |
+| 35 | 3,500g | 250g | 425g | Moderate spending |
+| 40 | 4,355g | 280g | 225g | Accumulating |
+| 45 | 5,440g | 270g | 25g | Surplus growing |
+| 50 | 6,595g | 280g | 25g | Large surplus |
 
 **Problem:** Gold income outpaces sinks by ~60% at endgame. Players will hoard gold with nothing to spend it on.
 
-**Impact:** Economy feels broken. Gold becomes meaningless. No motivation to do combat runs.
+**Status:** DEFERRED — Full gold balance will be tuned post-beta when all sinks are implemented. Current surplus is acceptable for testing.
 
-**Fix Options:**
-- A) Add more gold sinks (cosmetics, estate decorations, respec costs)
-- B) Reduce gold income by 20-30% in late game
-- C) Add gold-based endgame content (legendary items, faction donations)
-- **Recommended:** Option A — add 3-4 new sinks without changing existing balance
-
-**New Sinks to Add:**
+**Future Fixes (when ready):**
 
 | Sink | Cost | Effect | Unlock |
 |---|---|---|---|
@@ -36,6 +45,8 @@ Net surplus: 6,595g
 | Skill Respec | 100/200/400g | Reset skill tree (escalating) | Library Lv3 |
 | Legendary Crafting | 500g + materials | Create unique equipment | Blacksmith Lv3 |
 | Faction Donation | 200-500g | +10-20 reputation | Any faction |
+
+**Key Number to Remember:** At run 50, players have ~6,500g surplus. Any new sink should absorb ~100-200g per run to reduce this to ~2,000-3,000g (healthy range).
 
 ---
 

@@ -657,22 +657,24 @@ The combat engine tells a story through gameplay (surviving, getting stronger). 
 | **Build补ning** | A player weak in AoE can bring an NPC with area attacks. A player lacking single-target can bring a focused attacker. NPCs fill gaps. |
 | **Dead weight as a feature** | Some NPCs are intentionally weak — bringing them is a social cost (affection building, quest requirement) not a combat optimization. This creates interesting tradeoffs. |
 
-#### Party Slot System
+#### Party Slot System (Per-Stage Deployment)
 
-The player has **3 companion slots**, each bound 1:1 to a weapon slot. W1=C1, W2=C2, W3=C3. A companion in slot 1 buffs and evolves weapon 1, slot 2 buffs weapon 2, etc. Companions are always invulnerable — they cannot take damage or die. If a quest needs a protect target, that target is a map asset with HP, not a companion.
+The player has **3 companion slots**, each bound 1:1 to a weapon slot. W1=C1, W2=C2, W3=C3. A companion in slot 1 buffs and evolves weapon 1, slot 2 buffs weapon 2, etc. Companions are always invulnerable — they cannot take damage or die.
+
+**Per-stage deployment:** The player owns N companions (wives, Dog, others) but chooses which 3 to deploy before each stage. Not-deployed wives still provide **50% passive bonus**.
 
 ```
-Party Slots (1:1 with weapons):
-[1] ── W1 (Projectile) ── C1 buffs W1, evolves W1
-[2] ── W2 (Orbit)     ── C2 buffs W2, evolves W2
-[3] ── W3 (Area)      ── C3 buffs W3, evolves W3
+Companion Pool: [Dog, Freya, Isis, Amaterasu] (4 companions)
+Stage Select:   Choose 3 of 4 to deploy
+Deployed:       [1] Freya → W1, [2] Dog → W2, [3] Isis → W3
+Not-deployed:   Amaterasu → 50% passive bonus (wife)
 ```
 
-**Why 3 fixed slots (not expandable):**
-- Simplifies the upgrade path: each companion mirrors its paired weapon's level
-- Reduces UI complexity: 3 slots = clean layout on mobile
-- Balances combat: 3 companions max prevents trivializing encounters
-- Players choose which 3 of their unlocked companions to deploy per stage
+**Why per-stage deployment:**
+- Players aren't punished for having more companions than slots
+- Wives always provide value (50% passive even when not deployed)
+- Players can adapt their party to the stage (e.g., bring Dog for farming, wife for boss)
+- Reduces the "which 3 of my 5 wives do I bring?" anxiety
 
 #### NPC Companion Tiers
 

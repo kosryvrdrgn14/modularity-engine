@@ -136,7 +136,7 @@ If accepted, the remaining run switches to frenzy mode (increased spawns, all en
 
 | Drop Type | Normal | Frenzy |
 |---|---|---|
-| Gold | 1.0× | 1.2× |
+| Gold | 1.0× | 1.5× |
 | XP | 1.0× | 1.0× |
 | Materials | 1.0× | 1.3× |
 | Rare drops | Base rates | 1.5× rates |
@@ -146,7 +146,7 @@ If accepted, the remaining run switches to frenzy mode (increased spawns, all en
 
 | Condition | Bonus |
 |---|---|
-| Complete frenzy stage | +50% gold bonus |
+| Complete frenzy stage | +75% gold bonus |
 | 3★ in frenzy | +1 guaranteed rare drop |
 | No-hit in frenzy | +100% gold bonus (stacks with above) |
 

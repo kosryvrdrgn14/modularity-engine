@@ -21,6 +21,17 @@ The Dog is in **Companion Slot 1** (tied to W1). It is the first companion and s
 
 **Design Philosophy:** Companions are supplementary. They add variety and utility but do not replace player skill or weapon choices. A player who neglects positioning will not be saved by companions. They are a welcome addition, not a crutch.
 
+### Companion Deployment System
+
+The player has **3 companion slots** but may own **N companions** (wives, Dog, others). Deployment is **per-stage** — before entering combat, the player chooses which 3 companions to bring.
+
+**Deployment Rules:**
+- Max 3 companions deployed per stage
+- Deployment is chosen at stage select (before combat starts)
+- Not-deployed wives still provide **50% passive bonus** (reduced from 100%)
+- Not-deployed companions provide **no passive bonus**
+- Player can change deployment between stages freely
+
 ### Companion Status States
 
 Each companion has a status that determines availability:
@@ -28,7 +39,7 @@ Each companion has a status that determines availability:
 | Status | Meaning | Can Deploy? | Source |
 |---|---|---|---|
 | **Available** | Ready to deploy to a slot | ✅ Yes | Default state after recruitment |
-| **Deployed** | Active in a companion slot during combat | N/A (already in) | Assigned to slot 1/2/3 |
+| **Deployed** | Active in a companion slot for this stage | N/A (already in) | Assigned to slot 1/2/3 at stage select |
 | **Locked** | Not yet recruited | ❌ No | NPC not yet met/befriended |
 | **Story Unavailable** | Temporarily unavailable due to quest/story | ❌ No | Quest flag set (e.g., "npc_in_danger") |
 | **Resting** | Recovering after a long combat session | ❌ No (cooldown) | Post-combat rest timer (future feature) |

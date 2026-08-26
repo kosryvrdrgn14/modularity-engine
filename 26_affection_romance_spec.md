@@ -233,12 +233,34 @@ Neutral gift: "How nice. Thank you."
 | **Neutral** | +0 | No gain, no loss |
 | **Wrong** | -1 | Rare, only for clearly insensitive choices |
 
+### Date Templates (Content Reuse)
+
+Instead of 55 unique date scenes, we use **10 reusable templates** with NPC-specific dialogue swaps. This reduces content from 55 scenes to 10 templates × 5 dialogue lines each.
+
+| Template | Setting | Best For |
+|---|---|---|
+| Sunset Walk | Outdoor path | Romantic NPCs |
+| Market Visit | Town market | Shopkeeper NPCs |
+| Training Session | Arena | Combat NPCs |
+| Library Study | Library | Scholar NPCs |
+| Stargazing | Hilltop | Nature NPCs |
+| Cook Together | Tavern kitchen | Food-loving NPCs |
+| Forest Picnic | Forest edge | Wild/ adventurous NPCs |
+| Workshop Visit | Blacksmith | Craft-loving NPCs |
+| Festival Night | Town square | Social NPCs |
+| Quiet Evening | Estate | Married NPCs |
+
+Each template has 5 branching dialogue points. NPC-specific lines swap the personality/flavor text while keeping the structure identical.
+
+**Content reduction:** 55 unique scenes → 10 templates + 50 dialogue swaps = ~60% less content to create.
+
 ### Why VN-Style Dates
 
 - **Emotional investment** — reading dialogue and making choices creates attachment
 - **Personality discovery** — dates reveal NPC backstories and quirks
 - **Replayability** — different choices lead to different outcomes
 - **Low art cost** — static portraits + text, no animation needed
+- **Template reuse** — 10 templates serve 35 NPCs with dialogue swaps
 
 ---
 
@@ -299,17 +321,19 @@ To marry an NPC, the player must satisfy **all** requirements:
 | Trust | +20% damage, +2 dialogue lines, passive aura |
 | Claim (married) | +30% damage, +3 dialogue lines, unique ability |
 
-### Companion Slot Binding
+### Companion Deployment (Per-Stage)
 
-Each wife/companion is bound to a weapon slot (D5):
+The player owns N companions but deploys only 3 per stage. Deployment is chosen at stage select.
 
-| Slot | Weapon | Companion |
+| Slot | Weapon | Companion (player's choice) |
 |---|---|---|
 | 1 | W1 (Projectile) | C1 — buffs W1 |
 | 2 | W2 (Orbit) | C2 — buffs W2 |
 | 3 | W3 (Area) | C3 — buffs W3 |
 
-Players choose which 3 of their unlocked companions to deploy per stage.
+**Not-deployed wives** still provide a **50% passive bonus** — their affection still matters even when not in combat. This prevents the "all slots filled, Dog useless" problem.
+
+**Example:** Player has 3 wives + Dog = 4 companions. Chooses 3 per stage. The 4th stays in town but provides 50% bonus if it's a wife.
 
 ---
 
