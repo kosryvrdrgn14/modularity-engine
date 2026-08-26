@@ -770,6 +770,119 @@
       background: rgba(255, 215, 0, 0.08);
     }
 
+
+    /* D1: Breadcrumb navigation */
+    #town-breadcrumb {
+      position: relative; z-index: 2;
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 20px; font-size: 0.8rem; color: #888;
+      background: rgba(10, 10, 26, 0.7);
+      overflow-x: auto; white-space: nowrap;
+    }
+    #town-breadcrumb .bc-item {
+      cursor: pointer; color: #aaa; transition: color 0.2s;
+    }
+    #town-breadcrumb .bc-item:hover { color: #FFD700; }
+    #town-breadcrumb .bc-item.current { color: #FFD700; font-weight: 600; }
+    #town-breadcrumb .bc-sep { color: #555; margin: 0 2px; }
+    #town-breadcrumb .bc-back {
+      cursor: pointer; color: #FFD700; margin-right: 8px;
+      font-size: 1rem; user-select: none;
+    }
+    #town-breadcrumb .bc-back:active { opacity: 0.6; }
+
+    /* D1: Location cards */
+    .location-card {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,215,0,0.1);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .location-card:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,215,0,0.25); }
+    .location-card:active { transform: scale(0.98); }
+    .location-card .loc-icon { font-size: 1.6rem; flex-shrink: 0; width: 40px; text-align: center; }
+    .location-card .loc-info { flex: 1; }
+    .location-card .loc-name { color: #eee; font-size: 0.95rem; font-weight: 500; }
+    .location-card .loc-desc { color: #888; font-size: 0.78rem; margin-top: 2px; }
+    .location-card .loc-arrow { color: #555; font-size: 1.2rem; }
+    .location-card.locked { opacity: 0.4; pointer-events: none; }
+    .location-card.locked .loc-name { color: #666; }
+    .location-card.locked .loc-desc { color: #555; }
+    .location-card .loc-lock { color: #886644; font-size: 0.75rem; }
+
+    /* D2: Swipe indicator */
+    #town-swipe-indicator {
+      position: relative; z-index: 2;
+      display: flex; justify-content: center; align-items: center; gap: 8px;
+      padding: 6px 0; font-size: 0.75rem; color: #666;
+    }
+    #town-swipe-indicator .swipe-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #333; transition: all 0.3s;
+    }
+    #town-swipe-indicator .swipe-dot.active { background: #FFD700; }
+    #town-swipe-indicator .swipe-label { color: #888; font-size: 0.7rem; }
+
+    /* D3: Shop overlay */
+    #shop-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      display: none; flex-direction: column;
+      background: rgba(10,10,26,0.95);
+      backdrop-filter: blur(8px);
+    }
+    #shop-overlay.active { display: flex; }
+    #shop-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 20px; border-bottom: 1px solid rgba(255,215,0,0.12);
+    }
+    #shop-header .shop-title { color: #FFD700; font-size: 1.1rem; font-family: Georgia, serif; }
+    #shop-header .shop-close { color: #888; cursor: pointer; font-size: 1.3rem; }
+    #shop-tabs {
+      display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .shop-tab {
+      flex: 1; padding: 10px; text-align: center; font-size: 0.8rem;
+      color: #888; cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .shop-tab.active { color: #FFD700; border-bottom-color: #FFD700; }
+    .shop-tab:hover { color: #ccc; }
+    #shop-items {
+      flex: 1; overflow-y: auto; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .shop-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .shop-item:hover { background: rgba(255,255,255,0.08); }
+    .shop-item.cant-afford { opacity: 0.4; pointer-events: none; }
+    .shop-item .item-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .shop-item .item-info { flex: 1; }
+    .shop-item .item-name { color: #eee; font-size: 0.9rem; }
+    .shop-item .item-desc { color: #888; font-size: 0.75rem; margin-top: 2px; }
+    .shop-item .item-cost { color: #FFD700; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+
+    /* D4: Bottom action bar */
+    #town-actionbar {
+      position: relative; z-index: 2;
+      display: flex; gap: 0; border-top: 1px solid rgba(255,215,0,0.1);
+      background: rgba(10,10,26,0.9);
+    }
+    .actionbar-btn {
+      flex: 1; padding: 10px 4px; text-align: center;
+      color: #aaa; cursor: pointer; transition: all 0.2s;
+      border: none; background: none; font-family: inherit;
+    }
+    .actionbar-btn:hover { color: #FFD700; background: rgba(255,215,0,0.05); }
+    .actionbar-btn .ab-icon { font-size: 1.2rem; display: block; }
+    .actionbar-btn .ab-label { font-size: 0.65rem; margin-top: 2px; }
+    .actionbar-btn.active { color: #FFD700; }
+
   </style>
 </head>
 <body>
@@ -828,6 +941,7 @@
         <span id="town-run-stats">—</span>
       </div>
     </div>
+    <div id="town-breadcrumb"></div>
     <div id="town-npc-area"></div>
     <div id="town-companions">
       <div class="section-label">Companions</div>
@@ -843,9 +957,17 @@
         <div class="dog-choices" id="dog-dialogue-choices"></div>
       </div>
     </div>
-    <div id="town-bottombar">
-      <button class="town-btn primary" id="town-fight">Return to Combat</button>
-      <button class="town-btn" id="town-title">Return to Title</button>
+    <div id="town-swipe-indicator">
+      <div class="swipe-dot active" data-region="0"></div>
+      <div class="swipe-dot" data-region="1"></div>
+      <div class="swipe-dot" data-region="2"></div>
+      <span class="swipe-label" id="swipe-region-name">Town</span>
+    </div>
+    <div id="town-actionbar">
+      <button class="actionbar-btn" id="ab-fight"><span class="ab-icon">⚔️</span><span class="ab-label">Combat</span></button>
+      <button class="actionbar-btn" id="ab-party"><span class="ab-icon">🐕</span><span class="ab-label">Party</span></button>
+      <button class="actionbar-btn" id="ab-shop"><span class="ab-icon">🛒</span><span class="ab-label">Shop</span></button>
+      <button class="actionbar-btn" id="ab-title"><span class="ab-icon">📜</span><span class="ab-label">Title</span></button>
     </div>
   </div>
 
@@ -6241,6 +6363,333 @@ class GachaProtection {
 }
 
 
+
+// ============================================================
+// LOCATION MANAGER — Hierarchical navigation (D1/D2)
+// ============================================================
+
+const LOCATION_TREE = {
+  regions: [
+    {
+      id: 'town', name: 'Town', icon: '🏕️',
+      locations: {
+        city_root: {
+          id: 'city_root', name: 'Refugee Camp', icon: '🔥',
+          desc: 'A small camp with campfires and tents',
+          background: 'assets/town_refugee_camp.svg',
+          ambient: null,
+          children: ['trade_district', 'residential', 'wilderness'],
+        },
+        trade_district: {
+          id: 'trade_district', name: 'Trade District', icon: '🏪',
+          desc: 'Merchants and craftsmen',
+          background: 'assets/town_refugee_camp.svg',
+          children: ['blacksmith', 'tavern'],
+        },
+        residential: {
+          id: 'residential', name: 'Residential', icon: '⛺',
+          desc: 'Where refugees sleep',
+          background: 'assets/town_refugee_camp.svg',
+          children: [],
+        },
+        wilderness: {
+          id: 'wilderness', name: 'Wilderness', icon: '🌲',
+          desc: 'The outskirts of camp',
+          background: 'assets/town_refugee_camp.svg',
+          locked: true, unlockCondition: 'town_camp_upgraded',
+          children: [],
+        },
+        blacksmith: {
+          id: 'blacksmith', name: 'Blacksmith', icon: '🔨',
+          desc: 'Forge weapons and armor',
+          background: 'assets/town_refugee_camp.svg',
+          children: [],
+        },
+        tavern: {
+          id: 'tavern', name: 'Tavern', icon: '🍺',
+          desc: 'Rest and hear rumors',
+          background: 'assets/town_refugee_camp.svg',
+          children: [],
+        },
+      },
+    },
+    {
+      id: 'graveyard', name: 'Graveyard', icon: '⚰️',
+      locations: {
+        graveyard_entrance: {
+          id: 'graveyard_entrance', name: 'Cemetery Gate', icon: '🚪',
+          desc: 'The entrance to the old graveyard',
+          background: 'assets/town_refugee_camp.svg',
+          children: ['cemetery', 'crypt'],
+        },
+        cemetery: {
+          id: 'cemetery', name: 'Cemetery', icon: '🪦',
+          desc: 'Rows of weathered tombstones',
+          background: 'assets/town_refugee_camp.svg',
+          children: [],
+        },
+        crypt: {
+          id: 'crypt', name: 'Crypt', icon: '💀',
+          desc: 'Dark passages below',
+          background: 'assets/town_refugee_camp.svg',
+          locked: true, unlockCondition: 'graveyard_warning',
+          children: [],
+        },
+      },
+    },
+    {
+      id: 'forest', name: 'Forest', icon: '🌳',
+      locations: {
+        forest_edge: {
+          id: 'forest_edge', name: 'Forest Edge', icon: '🌿',
+          desc: 'Where the trees begin',
+          background: 'assets/town_refugee_camp.svg',
+          locked: true, unlockCondition: 'town_forest_unlocked',
+          children: ['deep_woods'],
+        },
+        deep_woods: {
+          id: 'deep_woods', name: 'Deep Woods', icon: '🌑',
+          desc: 'Ancient and untamed',
+          background: 'assets/town_refugee_camp.svg',
+          locked: true, unlockCondition: 'town_forest_unlocked',
+          children: [],
+        },
+      },
+    },
+  ],
+};
+
+class LocationManager {
+  constructor(gameManager) {
+    this.gameManager = gameManager;
+    this.currentRegionIndex = 0;
+    this.currentLocationId = 'city_root';
+    this.locationHistory = ['city_root'];
+    this.onNavigate = null; // callback
+  }
+
+  getCurrentRegion() {
+    return LOCATION_TREE.regions[this.currentRegionIndex] || LOCATION_TREE.regions[0];
+  }
+
+  getCurrentLocation() {
+    const region = this.getCurrentRegion();
+    return region.locations[this.currentLocationId] || null;
+  }
+
+  getRegions() { return LOCATION_TREE.regions; }
+
+  getRegionCount() { return LOCATION_TREE.regions.length; }
+
+  navigateTo(locationId) {
+    const region = this.getCurrentRegion();
+    const loc = region.locations[locationId];
+    if (!loc) return false;
+    if (loc.locked && !this.gameManager.get_flag(loc.unlockCondition)) return false;
+    this.locationHistory.push(locationId);
+    if (this.locationHistory.length > 10) this.locationHistory.shift();
+    this.currentLocationId = locationId;
+    if (this.onNavigate) this.onNavigate(loc);
+    return true;
+  }
+
+  goBack() {
+    if (this.locationHistory.length <= 1) return false;
+    this.locationHistory.pop();
+    this.currentLocationId = this.locationHistory[this.locationHistory.length - 1];
+    const loc = this.getCurrentLocation();
+    if (this.onNavigate) this.onNavigate(loc);
+    return true;
+  }
+
+  canGoBack() { return this.locationHistory.length > 1; }
+
+  isRoot() { return this.locationHistory.length <= 1; }
+
+  switchRegion(index) {
+    if (index < 0 || index >= LOCATION_TREE.regions.length) return false;
+    this.currentRegionIndex = index;
+    this.currentLocationId = LOCATION_TREE.regions[index].locations[
+      Object.keys(LOCATION_TREE.regions[index].locations)[0]
+    ]?.id || 'city_root';
+    this.locationHistory = [this.currentLocationId];
+    const loc = this.getCurrentLocation();
+    if (this.onNavigate) this.onNavigate(loc);
+    return true;
+  }
+
+  getChildLocations(locationId) {
+    const region = this.getCurrentRegion();
+    const loc = region.locations[locationId];
+    if (!loc || !loc.children) return [];
+    return loc.children.map(cid => {
+      const child = region.locations[cid];
+      if (!child) return null;
+      const isUnlocked = !child.locked || this.gameManager.get_flag(child.unlockCondition);
+      return { ...child, locked: !isUnlocked };
+    }).filter(Boolean);
+  }
+
+  getNPCsAtLocation(locationId) {
+    // Filter NPCs by their assigned location (default: city_root)
+    const npcs = [];
+    for (const key in NPC_DATA) {
+      const npc = NPC_DATA[key];
+      const loc = npc.location || 'city_root';
+      if (loc === locationId && npc.unlocked) npcs.push(npc);
+    }
+    return npcs;
+  }
+}
+
+// ============================================================
+// SHOP SYSTEM — Grand Bazaar (D3)
+// ============================================================
+
+const SHOP_DATA = {
+  combat: [
+    { id: 'health_potion', name: 'Health Potion', icon: '🧪', desc: 'Restores 30 HP instantly', cost: 50, effect: 'heal_30' },
+    { id: 'damage_charm', name: 'Damage Charm', icon: '🔥', desc: '+20% damage for 1 stage', cost: 150, effect: 'buff_damage' },
+    { id: 'speed_scroll', name: 'Speed Scroll', icon: '💨', desc: '+30% move speed for 1 stage', cost: 120, effect: 'buff_speed' },
+    { id: 'shield_talisman', name: 'Shield Talisman', icon: '🛡️', desc: 'Block next 3 hits taken', cost: 200, effect: 'shield_3' },
+    { id: 'xp_crystal', name: 'XP Crystal', icon: '💎', desc: '+50 XP instantly', cost: 100, effect: 'xp_50' },
+    { id: 'gold_finding_charm', name: 'Gold Finder', icon: '🪙', desc: '+25% gold for 1 stage', cost: 180, effect: 'buff_gold' },
+    { id: 'boss_compass', name: 'Boss Compass', icon: '🧭', desc: 'Reveals boss spawn timer', cost: 75, effect: 'boss_reveal' },
+  ],
+  companion: [
+    { id: 'treat_basic', name: 'Basic Treat', icon: '🍖', desc: '+5% companion damage for 1 stage', cost: 80, effect: 'companion_dmg_5' },
+    { id: 'treat_premium', name: 'Premium Treat', icon: '🥩', desc: '+15% companion damage for 1 stage', cost: 250, effect: 'companion_dmg_15' },
+    { id: 'training_manual', name: 'Training Manual', icon: '📖', desc: 'Companion cooldown -10% for 1 stage', cost: 200, effect: 'companion_cd_10' },
+    { id: 'companion_collar', name: 'Enchanted Collar', icon: '📿', desc: 'Companion loot range +50% for 1 stage', cost: 160, effect: 'companion_loot_50' },
+  ],
+  estate: [
+    { id: 'fertilizer', name: 'Fertilizer', icon: '🌱', desc: 'Estate output +25% for 3 runs', cost: 300, effect: 'estate_boost_25' },
+    { id: 'tool_set', name: 'Tool Set', icon: '⚒️', desc: 'Estate output +50% for 1 run', cost: 400, effect: 'estate_boost_50' },
+    { id: 'work_permit', name: 'Work Permit', icon: '📋', desc: 'Instantly complete 1 estate task', cost: 500, effect: 'estate_complete' },
+  ],
+  gifts: [
+    { id: 'flowers', name: 'Wildflowers', icon: '🌸', desc: 'A simple gift. +2 affection', cost: 50, affection: 2 },
+    { id: 'ribbon', name: 'Silk Ribbon', icon: '🎀', desc: 'A fine gift. +5 affection', cost: 200, affection: 5 },
+    { id: 'gemstone', name: 'Gemstone', icon: '💎', desc: 'A precious gift. +10 affection', cost: 500, affection: 10 },
+    { id: 'jewelry', name: 'Handmade Jewelry', icon: '💍', desc: 'An intimate gift. +20 affection', cost: 1200, affection: 20 },
+  ],
+};
+
+class ShopSystem {
+  constructor(gameManager, eventBus) {
+    this.gameManager = gameManager;
+    this.eventBus = eventBus;
+    this.currentTab = 'combat';
+    this._setupUI();
+  }
+
+  _setupUI() {
+    const overlay = document.getElementById('shop-overlay');
+    const closeBtn = document.getElementById('shop-close');
+    const tabs = document.querySelectorAll('.shop-tab');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.currentTab = tab.dataset.tab;
+        this.renderItems();
+      });
+    });
+  }
+
+  open() {
+    document.getElementById('shop-overlay').classList.add('active');
+    this.renderItems();
+  }
+
+  close() {
+    document.getElementById('shop-overlay').classList.remove('active');
+  }
+
+  renderItems() {
+    const container = document.getElementById('shop-items');
+    if (!container) return;
+    container.innerHTML = '';
+    const items = SHOP_DATA[this.currentTab] || [];
+    const gold = this.gameManager.get_resource('gold') || 0;
+
+    for (const item of items) {
+      const canAfford = gold >= item.cost;
+      const card = document.createElement('div');
+      card.className = 'shop-item' + (canAfford ? '' : ' cant-afford');
+      card.innerHTML = `
+        <span class="item-icon">${item.icon}</span>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-desc">${item.desc}</div>
+        </div>
+        <span class="item-cost">💰 ${item.cost}</span>
+      `;
+      if (canAfford) {
+        card.addEventListener('click', () => this.buy(item));
+      }
+      container.appendChild(card);
+    }
+  }
+
+  buy(item) {
+    if (!this.gameManager.spend_currency(item.cost, 'shop_' + item.id)) return;
+    this.eventBus.emit('shopPurchase', { item });
+    // Apply effect
+    if (item.effect === 'heal_30' || item.effect?.startsWith('heal_')) {
+      // Will be applied in combat via event
+    } else if (item.effect === 'xp_50') {
+      this.gameManager.add_xp(50);
+    }
+    // Store in inventory
+    this.gameManager._addToInventory({ id: item.id, count: 1 });
+    this.renderItems();
+  }
+}
+
+
+
+// ============================================================
+// DISASTER SYSTEM — Simplified gold sink (D5)
+// ============================================================
+
+const DISASTER_EVENTS = [
+  { id: 'rat_infestation', name: '🐀 Rat Infestation', desc: 'Rats are eating the food stores!', goldCost: 80, runCooldown: 3 },
+  { id: 'bandit_raid', name: '🗡️ Bandit Raid', desc: 'Bandits are attacking the outer tents!', goldCost: 150, runCooldown: 3 },
+  { id: 'plague_scare', name: '🤢 Plague Scare', desc: 'Someone is showing symptoms. Quarantine needed.', goldCost: 200, runCooldown: 3 },
+  { id: 'fire_outbreak', name: '🔥 Fire!', desc: 'A campfire spread to the tents!', goldCost: 120, runCooldown: 3 },
+  { id: 'water_contamination', name: '💧 Water Contamination', desc: 'The well water looks dirty.', goldCost: 100, runCooldown: 3 },
+];
+
+class DisasterSystem {
+  constructor(gameManager, eventBus) {
+    this.gameManager = gameManager;
+    this.eventBus = eventBus;
+    this._lastDisasterRun = 0;
+    this._cooldown = 3; // runs between disasters
+  }
+
+  // Called at end of each combat run
+  checkForDisaster(runNumber) {
+    if (runNumber - this._lastDisasterRun < this._cooldown) return null;
+    // 20% chance per eligible run
+    if (Math.random() > 0.2) return null;
+    
+    const disaster = DISASTER_EVENTS[Math.floor(Math.random() * DISASTER_EVENTS.length)];
+    this._lastDisasterRun = runNumber;
+    return disaster;
+  }
+
+  resolve(disaster, gold) {
+    if (gold >= disaster.goldCost) {
+      this.gameManager.spend_currency(disaster.goldCost, 'disaster_' + disaster.id);
+      return { resolved: true, cost: disaster.goldCost };
+    }
+    return { resolved: false, cost: disaster.goldCost };
+  }
+}
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
@@ -6320,6 +6769,15 @@ class Game {
     this.levelingSystem.init();
     this.pickupSystem.setGameManager(this.gameManager);
     this.audioManager.init();
+
+    // D1: Location Manager (for town navigation)
+    this.locationManager = new LocationManager(this.gameManager);
+
+    // D3: Shop System
+    this.shopSystem = new ShopSystem(this.gameManager, this.eventBus);
+
+    // D5: Disaster System
+    this.disasterSystem = new DisasterSystem(this.gameManager, this.eventBus);
 
     // Connect telegraph system to renderer
     this.renderer._telegraphSystem = this.telegraphSystem;
@@ -6839,6 +7297,14 @@ class Game {
         this.gameManager.recallCompanion(id);
       }
     }
+    // D5: Check for disaster event
+    if (this.disasterSystem) {
+      const runs = this.gameManager.get('counters.total_runs') || 0;
+      const disaster = this.disasterSystem.checkForDisaster(runs);
+      if (disaster) {
+        this._pendingDisaster = disaster;
+      }
+    }
     // Pause the game loop
     this.gameLoop.paused = true;
     this.inputManager._isPaused = true;
@@ -7156,19 +7622,79 @@ class TownScreen {
     this._dogText = document.getElementById('dog-dialogue-text');
     this._dogChoices = document.getElementById('dog-dialogue-choices');
     this._notifEl = document.getElementById('companion-notification');
+    this._breadcrumb = document.getElementById('town-breadcrumb');
+    this._swipeIndicator = document.getElementById('town-swipe-indicator');
+    this._regionName = document.getElementById('swipe-region-name');
+    
+    // D1: Location Manager
+    this.locationManager = new LocationManager(this.game.gameManager);
+    this.locationManager.onNavigate = (loc) => this._onLocationNavigate(loc);
+    
+    // D3: Shop System
+    this.shopSystem = new ShopSystem(this.game.gameManager, this.game.eventBus);
+    
+    // D2: Swipe state
+    this._swipeStartX = 0;
+    this._swipeStartY = 0;
+    this._swipeActive = false;
+    
     this._setupEvents();
   }
 
   _setupEvents() {
-    this.dom.fightBtn.addEventListener('click', () => {
+    // Action bar buttons
+    const fightBtn = document.getElementById('ab-fight');
+    const partyBtn = document.getElementById('ab-party');
+    const shopBtn = document.getElementById('ab-shop');
+    const titleBtn = document.getElementById('ab-title');
+    if (fightBtn) fightBtn.addEventListener('click', () => {
       this.game.audioManager.playMenuSound('select');
       this.hide();
       this.game.startGame();
     });
-    this.dom.titleBtn.addEventListener('click', () => {
+    if (titleBtn) titleBtn.addEventListener('click', () => {
       this.game.audioManager.playMenuSound('select');
       this.hide();
       this.game._returnToTitle();
+    });
+    if (shopBtn) shopBtn.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this.shopSystem.open();
+    });
+    if (partyBtn) partyBtn.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      // Party management — show companion slots (already visible)
+    });
+
+    // D2: Swipe gestures on town screen
+    const screen = this.dom.screen;
+    screen.addEventListener('touchstart', (e) => {
+      if (!this.locationManager.isRoot()) return;
+      this._swipeStartX = e.touches[0].clientX;
+      this._swipeStartY = e.touches[0].clientY;
+      this._swipeActive = true;
+    }, { passive: true });
+    screen.addEventListener('touchend', (e) => {
+      if (!this._swipeActive) return;
+      this._swipeActive = false;
+      const dx = e.changedTouches[0].clientX - this._swipeStartX;
+      const dy = e.changedTouches[0].clientY - this._swipeStartY;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx > 0) this._swipePrevRegion();
+        else this._swipeNextRegion();
+      }
+    }, { passive: true });
+
+    // Breadcrumb back button delegated
+    this._breadcrumb.addEventListener('click', (e) => {
+      if (e.target.classList.contains('bc-back')) {
+        this.game.audioManager.playMenuSound('back');
+        this.locationManager.goBack();
+      } else if (e.target.classList.contains('bc-item') && !e.target.classList.contains('current')) {
+        this.game.audioManager.playMenuSound('select');
+        const locId = e.target.dataset.locId;
+        if (locId) this.locationManager.navigateTo(locId);
+      }
     });
     this.dom.dialogueOverlay.addEventListener('click', (e) => {
       // Skip typewriter on click
@@ -7184,9 +7710,13 @@ class TownScreen {
   show(runStats) {
     this._lastRunStats = runStats;
     this.dom.screen.classList.add('active');
+    // Reset to current region root
+    this.locationManager.locationHistory = [this.locationManager.currentLocationId];
     this._updateDisplay();
-    this._renderNPCs();
+    this._renderBreadcrumb();
+    this._renderLocationCards();
     this._renderCompanionSlots();
+    this._updateSwipeIndicator();
   }
 
   hide() {
@@ -7220,6 +7750,15 @@ class TownScreen {
       if (npc.unlockCondition) {
         npc.unlocked = !!gm.get_flag(npc.unlockCondition);
       }
+    }
+    // Update background from current location
+    const curLoc = this.locationManager.getCurrentLocation();
+    if (curLoc && curLoc.background) {
+      this.dom.bg.src = curLoc.background;
+    }
+    // Update camp name from current location
+    if (curLoc) {
+      this.dom.campName.textContent = curLoc.name;
     }
   }
 
@@ -7436,6 +7975,190 @@ class TownScreen {
   }
 
 
+  // D1: Render breadcrumb navigation
+  _renderBreadcrumb() {
+    const bc = this._breadcrumb;
+    if (!bc) return;
+    bc.innerHTML = '';
+    
+    // Back button
+    if (this.locationManager.canGoBack()) {
+      const back = document.createElement('span');
+      back.className = 'bc-back';
+      back.textContent = '◀ ';
+      bc.appendChild(back);
+    }
+
+    // History as breadcrumb items
+    const history = this.locationManager.locationHistory;
+    const region = this.locationManager.getCurrentRegion();
+    for (let i = 0; i < history.length; i++) {
+      const locId = history[i];
+      const loc = region.locations[locId];
+      if (!loc) continue;
+      if (i > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'bc-sep';
+        sep.textContent = ' › ';
+        bc.appendChild(sep);
+      }
+      const item = document.createElement('span');
+      item.className = 'bc-item' + (i === history.length - 1 ? ' current' : '');
+      item.textContent = loc.name;
+      item.dataset.locId = locId;
+      bc.appendChild(item);
+    }
+  }
+
+  // D1: Render location cards for current location's children
+  _renderLocationCards() {
+    const area = this.dom.npcArea;
+    area.innerHTML = '';
+    
+    // NPCs at current location
+    const curLoc = this.locationManager.getCurrentLocation();
+    if (curLoc) {
+      const npcs = this.locationManager.getNPCsAtLocation(curLoc.id);
+      for (const npc of npcs) {
+        const card = this._createNPCCard(npc);
+        area.appendChild(card);
+      }
+      // If no NPCs, show the existing upgrade card for phase 1
+      if (npcs.length === 0 && curLoc.id === 'city_root') {
+        this._renderUpgradeCard(area);
+      }
+      if (npcs.length === 0 && curLoc.id !== 'city_root') {
+        const emptyCard = document.createElement('div');
+        emptyCard.className = 'location-card';
+        emptyCard.innerHTML = '<span class="loc-icon">🏕️</span><div class="loc-info"><div class="loc-name">Nothing here yet</div><div class="loc-desc">This location will be populated in future updates</div></div>';
+        area.appendChild(emptyCard);
+      }
+    }
+
+    // Location cards (children of current location)
+    const children = this.locationManager.getChildLocations(this.locationManager.currentLocationId);
+    for (const child of children) {
+      const card = document.createElement('div');
+      card.className = 'location-card' + (child.locked ? ' locked' : '');
+      card.innerHTML = `
+        <span class="loc-icon">${child.icon}</span>
+        <div class="loc-info">
+          <div class="loc-name">${child.name}</div>
+          <div class="loc-desc">${child.locked ? '🔒 ' + (child.desc || 'Locked') : child.desc || ''}</div>
+          ${child.locked ? '<div class="loc-lock">🔒 Locked</div>' : ''}
+        </div>
+        ${!child.locked ? '<span class="loc-arrow">▸</span>' : ''}
+      `;
+      if (!child.locked) {
+        card.addEventListener('click', () => {
+          this.game.audioManager.playMenuSound('select');
+          this.locationManager.navigateTo(child.id);
+        });
+      }
+      area.appendChild(card);
+    }
+  }
+
+  // D1: Create NPC card
+  _createNPCCard(npc) {
+    const card = document.createElement('div');
+    card.className = 'npc-card';
+    const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
+    const svgWithClass = svgHtml.replace('<svg ', '<svg class="npc-portrait" ');
+    card.innerHTML = `
+      ${svgWithClass}
+      <div class="npc-info">
+        <div class="npc-name">${npc.name}</div>
+        <div class="npc-greeting">"${(npc.greeting || '').substring(0, 60)}${(npc.greeting || '').length > 60 ? '...' : ''}"</div>
+        <div class="npc-action">▸ Talk</div>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this._openDialogue(npc);
+    });
+    return card;
+  }
+
+  // D1: Render upgrade card (camp upgrade)
+  _renderUpgradeCard(area) {
+    const gm = this.game.gameManager;
+    const phase = gm.get('persistent.town.phase') || 1;
+    const gold = gm.get_resource() || 0;
+    if (phase > 1) return;
+    const canAfford = gold >= 100;
+    const upgradeCard = document.createElement('div');
+    upgradeCard.className = 'upgrade-card' + (canAfford ? '' : ' disabled');
+    upgradeCard.innerHTML = `
+      <span class="upgrade-label">🔨 Upgrade Camp — Build Wooden Shacks</span>
+      <span class="upgrade-cost">${canAfford ? '100g' : 'Need 100g'}</span>
+    `;
+    if (canAfford) {
+      upgradeCard.addEventListener('click', () => {
+        this.game.audioManager.playMenuSound('select');
+        gm.spend_currency(100, 'camp_upgrade');
+        gm.set_flag('town_camp_upgraded', true);
+        gm.set('persistent.town.phase', 2);
+        NPC_DATA.cute_girl.unlocked = true;
+        this._updateDisplay();
+        this._renderLocationCards();
+      });
+    }
+    area.appendChild(upgradeCard);
+  }
+
+  // D2: Swipe to next/prev region
+  _swipeNextRegion() {
+    const idx = this.locationManager.currentRegionIndex;
+    if (idx < this.locationManager.getRegionCount() - 1) {
+      this.game.audioManager.playMenuSound('select');
+      this.locationManager.switchRegion(idx + 1);
+      this._renderBreadcrumb();
+      this._renderLocationCards();
+      this._updateSwipeIndicator();
+      this._updateDisplay();
+    }
+  }
+
+  _swipePrevRegion() {
+    const idx = this.locationManager.currentRegionIndex;
+    if (idx > 0) {
+      this.game.audioManager.playMenuSound('select');
+      this.locationManager.switchRegion(idx - 1);
+      this._renderBreadcrumb();
+      this._renderLocationCards();
+      this._updateSwipeIndicator();
+      this._updateDisplay();
+    }
+  }
+
+  // D2: Update swipe indicator dots
+  _updateSwipeIndicator() {
+    if (!this._swipeIndicator) return;
+    const dots = this._swipeIndicator.querySelectorAll('.swipe-dot');
+    const regions = this.locationManager.getRegions();
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.locationManager.currentRegionIndex);
+      dot.style.display = i < regions.length ? '' : 'none';
+      if (regions[i]) dot.title = regions[i].name;
+    });
+    if (this._regionName) {
+      this._regionName.textContent = regions[this.locationManager.currentRegionIndex]?.name || '';
+    }
+  }
+
+  // D1: Called when location changes
+  _onLocationNavigate(loc) {
+    this._renderBreadcrumb();
+    this._renderLocationCards();
+    this._updateDisplay();
+  }
+
+  // Override _renderNPCs to use location system
+  _renderNPCs() {
+    this._renderLocationCards();
+  }
+
   _typewriteText(text, onComplete) {
     if (this._typewriterTimer) {
       clearInterval(this._typewriterTimer);
@@ -7480,6 +8203,22 @@ window.skipToBoss = () => {
 game.init().catch(console.error);
 
 </script>
+
+
+  <!-- D3: Shop Overlay -->
+  <div id="shop-overlay">
+    <div id="shop-header">
+      <span class="shop-title">🛒 Grand Bazaar</span>
+      <span class="shop-close" id="shop-close">✕</span>
+    </div>
+    <div id="shop-tabs">
+      <div class="shop-tab active" data-tab="combat">⚔️ Combat</div>
+      <div class="shop-tab" data-tab="companion">🐕 Companion</div>
+      <div class="shop-tab" data-tab="estate">🏗️ Estate</div>
+      <div class="shop-tab" data-tab="gifts">💝 Gifts</div>
+    </div>
+    <div id="shop-items"></div>
+  </div>
 
   <!-- Companion Notification -->
   <div id="companion-notification">
