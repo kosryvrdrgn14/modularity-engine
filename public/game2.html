@@ -6929,11 +6929,15 @@ class EstateSystem {
   collectProduction(wifeId) {
     const estate = this.getEstate(wifeId);
     if (!estate) return null;
+    // E3: Production scales with wife affection tier
+    const affection = this.gameManager.get_counter('affection_' + wifeId) || 0;
+    const tierBonus = 1 + Math.floor(affection / 30) * 0.25; // +25% per tier
     const produced = {};
     for (const [mat, amount] of Object.entries(estate.production)) {
-      if (amount > 0) {
-        this.gameManager.add_resource(mat, amount);
-        produced[mat] = amount;
+      const scaled = Math.round(amount * tierBonus);
+      if (scaled > 0) {
+        this.gameManager.add_resource(mat, scaled);
+        produced[mat] = scaled;
       }
     }
     return produced;
@@ -7713,6 +7717,14 @@ class Game {
       this.gameManager.end_session(combatResult);
       // Merge stars into stats for UI display
       if (combatResult.stars) stats.stars = combatResult.stars;
+      // E1: Unlock farming slot 3 on 3★ clear
+      if (combatResult.stars?.three && this.gameManager) {
+        const slots = this.gameManager.store.farming?.slots;
+        if (slots && slots[2]?.status === 'locked') {
+          slots[2].status = 'idle';
+          this.gameManager._dirty = true;
+        }
+      }
       // B4: Check if frenzy is unlocked
       if (this.frenzySystem && combatResult.stars?.three) {
         stats.frenzyUnlocked = true;
@@ -8127,6 +8139,16 @@ class TownScreen {
       this._showDisasterNotification(d);
       this.game._pendingDisaster = null;
     }
+    // E3: Auto-collect estate production on town visit
+    if (this.game.estateSystem) {
+      const estates = this.game.estateSystem.getEstates();
+      for (const estate of estates) {
+        const produced = this.game.estateSystem.collectProduction(estate.wifeId);
+        if (produced && Object.values(produced).some(v => v > 0)) {
+          this._showEstateProduction(estate, produced);
+        }
+      }
+    }
   }
 
 
@@ -8172,8 +8194,10 @@ class TownScreen {
         if (topic.flag) {
           this.game.gameManager.set_flag(topic.flag, true);
         }
-        // Add affection
-        if (topic.affection > 0) {
+        // E2: Add affection via AffectionSystem
+        if (topic.affection > 0 && this.game.affectionSystem) {
+          this.game.affectionSystem.addAffection(npc.id, topic.affection);
+        } else if (topic.affection > 0) {
           const key = `affection_${npc.id}`;
           this.game.gameManager.add_counter(key, topic.affection);
         }
@@ -8499,7 +8523,8 @@ class TownScreen {
   // E1: Render farming slots UI
   _renderFarmingSlots() {
     const area = this.dom.npcArea;
-    // Don't override if we're at a child location
+    if (!area) return;
+    // Don't render farming at child locations — only at root
     if (!this.locationManager.isRoot()) return;
 
     const farmingDiv = document.createElement('div');
@@ -8606,6 +8631,18 @@ class TownScreen {
       this._renderFarmingSlots();
       this._updateDisplay();
     }
+  }
+
+  // E3: Show estate production notification
+  _showEstateProduction(estate, produced) {
+    const notif = this._notifEl;
+    if (!notif) return;
+    const titleEl = notif.querySelector('.notif-title');
+    const descEl = notif.querySelector('.notif-desc');
+    titleEl.textContent = `🏠 ${estate.name} produced:`;
+    descEl.textContent = Object.entries(produced).map(([k,v]) => `${k}: +${v}`).join(' | ');
+    notif.classList.add('active');
+    setTimeout(() => notif.classList.remove('active'), 3000);
   }
 
   _typewriteText(text, onComplete) {
