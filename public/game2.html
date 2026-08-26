@@ -323,17 +323,187 @@
 
 
     /* === TOWN SCREEN === */
-    #town-screen {
-      position: fixed;
-      inset: 0;
-      display: none;
-      flex-direction: column;
-      background: #0A0A1A;
-      z-index: 95;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      overflow: hidden;
+    /* ============================================================
+       ZONE 1: TOP HEADER
+       ============================================================ */
+    #town-header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(10, 10, 26, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255, 215, 0, 0.12);
+      flex-shrink: 0;
     }
-    #town-screen.active { display: flex; }
+    .town-hdr-btn {
+      background: none;
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      color: #FFD700;
+      font-size: 1rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .town-hdr-btn:active { opacity: 0.7; }
+    .town-hdr-icon { font-size: 1.2rem; }
+    #town-header .camp-name {
+      font-size: 1rem;
+      color: #FFD700;
+      font-family: Georgia, serif;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .town-hdr-spacer { flex: 1; }
+    .town-resources {
+      display: flex;
+      gap: 8px;
+    }
+    .res-chip {
+      font-size: 0.75rem;
+      color: #bbb;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .town-hdr-meta {
+      margin-left: 4px;
+    }
+
+    /* ============================================================
+       ZONE 2 & 4: SLIDE-IN PANELS
+       ============================================================ */
+    .town-panel {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 280px;
+      z-index: 8;
+      background: rgba(12, 12, 24, 0.97);
+      backdrop-filter: blur(12px);
+      overflow-y: auto;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 12px;
+      padding-bottom: 80px;
+    }
+    #town-left-panel {
+      left: 0;
+      border-right: 1px solid rgba(255, 215, 0, 0.08);
+      transform: translateX(-100%);
+    }
+    #town-right-panel {
+      right: 0;
+      border-left: 1px solid rgba(255, 215, 0, 0.08);
+      transform: translateX(100%);
+    }
+    #town-left-panel.open { transform: translateX(0); }
+    #town-right-panel.open { transform: translateX(0); }
+
+    .panel-section {
+      margin-bottom: 16px;
+    }
+    .panel-section-title {
+      font-size: 0.8rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      padding-left: 4px;
+    }
+    .panel-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(20, 18, 30, 0.8);
+      border: 1px solid rgba(255, 215, 0, 0.08);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .panel-card:active {
+      background: rgba(30, 28, 44, 0.9);
+      border-color: rgba(255, 215, 0, 0.2);
+    }
+    .panel-card-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .panel-card-info { flex: 1; min-width: 0; }
+    .panel-card-name {
+      font-size: 0.85rem;
+      color: #e0e0e0;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .panel-card-desc {
+      font-size: 0.72rem;
+      color: #777;
+      margin-top: 2px;
+    }
+    .panel-card-badge {
+      font-size: 0.65rem;
+      background: rgba(79, 195, 247, 0.15);
+      color: #4FC3F7;
+      padding: 2px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .panel-card-badge.gold { background: rgba(255, 215, 0, 0.15); color: #FFD700; }
+    .panel-card-badge.red { background: rgba(244, 67, 54, 0.15); color: #EF5350; }
+    .panel-card-badge.green { background: rgba(76, 175, 80, 0.15); color: #66BB6A; }
+    .panel-card.locked {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .panel-card.current {
+      border-color: rgba(255, 215, 0, 0.25);
+      background: rgba(255, 215, 0, 0.05);
+    }
+    .panel-combat-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #8B0000, #CC0000);
+      color: #FFD700;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+    }
+    .panel-combat-btn:active { opacity: 0.8; transform: scale(0.98); }
+    .panel-sandbox-btn {
+      width: 100%;
+      padding: 10px;
+      background: rgba(30, 30, 50, 0.8);
+      color: #aaa;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .panel-sandbox-btn:active { background: rgba(40, 40, 60, 0.9); }
+    .panel-cta {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* ============================================================
+       ZONE 3: CENTER STAGE
+       ============================================================ */
+    #town-center {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
     #town-bg {
       position: absolute;
       inset: 0;
@@ -346,45 +516,177 @@
     #town-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(10, 10, 26, 0.45);
+      background: rgba(10, 10, 26, 0.35);
     }
-    #town-topbar {
-      position: relative;
-      z-index: 2;
+    #town-breadcrumb {
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      right: 12px;
+      z-index: 3;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 12px 20px;
-      background: rgba(10, 10, 26, 0.85);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid rgba(255, 215, 0, 0.12);
+      gap: 4px;
+      font-size: 0.75rem;
+      color: #888;
+      flex-wrap: wrap;
     }
-    #town-topbar .camp-name {
-      font-size: 1.1rem;
-      color: #FFD700;
-      font-family: Georgia, serif;
-      font-weight: 600;
-    }
-    #town-topbar .stats {
-      display: flex;
-      gap: 16px;
-      font-size: 0.85rem;
-      color: #aaa;
-    }
-    #town-topbar .stats span { white-space: nowrap; }
     #town-npc-area {
-      position: relative;
+      position: absolute;
+      inset: 36px 12px 80px 12px;
       z-index: 2;
-      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      padding: 20px;
+      gap: 10px;
       overflow-y: auto;
-      max-width: 600px;
-      width: 100%;
+      max-width: 500px;
       margin: 0 auto;
     }
+    #town-companions-center {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      display: flex;
+      gap: 12px;
+    }
+    .companion-slot {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(20, 18, 30, 0.8);
+      border: 2px solid rgba(255, 215, 0, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      overflow: hidden;
+    }
+    .companion-slot:active { border-color: rgba(255, 215, 0, 0.4); }
+    .companion-slot .empty-icon {
+      color: #555;
+      font-size: 1.2rem;
+    }
+    .companion-slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    #town-swipe-indicator {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      color: #666;
+    }
+    .swipe-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #444;
+      transition: background 0.3s;
+    }
+    .swipe-dot.active { background: #FFD700; }
+
+    /* ============================================================
+       ZONE 5: BOTTOM DOCK
+       ============================================================ */
+    #town-dock {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 6px 8px;
+      padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+      background: rgba(10, 10, 26, 0.95);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(255, 215, 0, 0.1);
+      flex-shrink: 0;
+    }
+    .dock-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 12px;
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dock-tab.active { color: #FFD700; }
+    .dock-tab:active { opacity: 0.7; }
+    .dock-icon { font-size: 1.2rem; }
+    .dock-label { font-size: 0.65rem; }
+    .dock-badge {
+      position: absolute;
+      top: 0;
+      right: 4px;
+      min-width: 14px;
+      height: 14px;
+      background: #EF5350;
+      color: #fff;
+      font-size: 0.55rem;
+      font-weight: 700;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+    }
+    .dock-combat {
+      background: linear-gradient(135deg, rgba(139,0,0,0.3), rgba(204,0,0,0.3));
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: 10px;
+      padding: 4px 14px;
+    }
+
+    /* ============================================================
+       TOWN SCREEN ROOT
+       ============================================================ */
+    #town-screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      background: #0A0A1A;
+      z-index: 95;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+    }
+    #town-screen.active { display: flex; }
+
+    /* Panel overlay backdrop (mobile) */
+    .panel-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 7;
+      display: none;
+    }
+    .panel-backdrop.active { display: block; }
+
+    /* NPC cards in center area */
+    .npc-card {
+      display: flex;
+      gap: 14px;
+      padding: 14px;
+      background: rgba(20, 18, 30, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 215, 0, 0.1);
+      border-radius: 10px;
     .npc-card {
       display: flex;
       gap: 14px;
@@ -838,21 +1140,7 @@
     .shop-item .item-desc { color: #888; font-size: 0.75rem; margin-top: 2px; }
     .shop-item .item-cost { color: #FFD700; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
 
-    /* D4: Bottom action bar */
-    #town-actionbar {
-      position: relative; z-index: 2;
-      display: flex; gap: 0; border-top: 1px solid rgba(255,215,0,0.1);
-      background: rgba(10,10,26,0.9);
-    }
-    .actionbar-btn {
-      flex: 1; padding: 10px 4px; text-align: center;
-      color: #aaa; cursor: pointer; transition: all 0.2s;
-      border: none; background: none; font-family: inherit;
-    }
-    .actionbar-btn:hover { color: #FFD700; background: rgba(255,215,0,0.05); }
-    .actionbar-btn .ab-icon { font-size: 1.2rem; display: block; }
-    .actionbar-btn .ab-label { font-size: 0.65rem; margin-top: 2px; }
-    .actionbar-btn.active { color: #FFD700; }
+
 
 
     /* E1: Farming section */
@@ -918,43 +1206,102 @@
 
   <!-- Town Screen -->
   <div id="town-screen">
-    <img id="town-bg" src="assets/town_refugee_camp.svg" alt="" />
-    <div id="town-overlay"></div>
-    <div id="town-topbar">
+    <!-- Zone 1: Top Header -->
+    <div id="town-header">
+      <button id="town-back" class="town-hdr-btn" style="display:none;">◀</button>
+      <span class="town-hdr-icon" id="town-location-icon">🏕️</span>
       <span class="camp-name" id="town-camp-name">Refugee Camp</span>
-      <div class="stats">
-        <span id="town-gold">💰 0</span>
-        <span id="town-run-stats">—</span>
+      <div class="town-hdr-spacer"></div>
+      <div class="town-resources">
+        <span class="res-chip" id="town-gold">💰 0</span>
+        <span class="res-chip" id="town-wood">🪵 0</span>
+        <span class="res-chip" id="town-stone">🪨 0</span>
+      </div>
+      <div class="town-hdr-meta">
+        <span class="res-chip" id="town-run-stats">⚔Lv1</span>
       </div>
     </div>
-    <div id="town-breadcrumb"></div>
-    <div id="town-npc-area"></div>
-    <div id="town-companions">
-      <div class="section-label">Companions</div>
-      <div class="companion-slot" id="companion-slot-0"><span class="empty-icon">+</span></div>
-      <div class="companion-slot" id="companion-slot-1"><span class="empty-icon">+</span></div>
-      <div class="companion-slot" id="companion-slot-2"><span class="empty-icon">+</span></div>
-    </div>
-    <div id="dog-dialogue">
-      <div id="dog-dialogue-portrait" class="dog-portrait"></div>
-      <div class="dog-content">
-        <div class="dog-name">???</div>
-        <div class="dog-text" id="dog-dialogue-text"></div>
-        <div class="dog-choices" id="dog-dialogue-choices"></div>
+
+    <!-- Zone 2: Left Panel (Social & Progress) -->
+    <div id="town-left-panel">
+      <div class="panel-section">
+        <div class="panel-section-title">📋 Priority Quests</div>
+        <div id="panel-quests"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">👥 Residents</div>
+        <div id="panel-npcs"></div>
+      </div>
+      <div class="panel-section" id="panel-camp-upgrade-section" style="display:none;">
+        <div class="panel-section-title">🏕️ Camp</div>
+        <div id="panel-camp-upgrade"></div>
+      </div>
+      <div class="panel-section" id="panel-companion-status">
+        <div class="panel-section-title">🐕 Companions</div>
+        <div id="panel-companions"></div>
+      </div>
+      <div class="panel-cta">
+        <button id="panel-enter-combat" class="panel-combat-btn">⚔️ Enter Combat</button>
       </div>
     </div>
-    <div id="town-swipe-indicator">
-      <div class="swipe-dot active" data-region="0"></div>
-      <div class="swipe-dot" data-region="1"></div>
-      <div class="swipe-dot" data-region="2"></div>
-      <span class="swipe-label" id="swipe-region-name">Town</span>
+
+    <!-- Zone 3: Center Stage -->
+    <div id="town-center">
+      <div class="panel-backdrop" id="panel-backdrop"></div>
+      <img id="town-bg" src="assets/town_refugee_camp.svg" alt="" />
+      <div id="town-overlay"></div>
+      <div id="town-breadcrumb"></div>
+      <div id="town-npc-area"></div>
+      <div id="town-companions-center">
+        <div class="companion-slot" id="companion-slot-0"><span class="empty-icon">+</span></div>
+        <div class="companion-slot" id="companion-slot-1"><span class="empty-icon">+</span></div>
+        <div class="companion-slot" id="companion-slot-2"><span class="empty-icon">+</span></div>
+      </div>
+      <div id="town-swipe-indicator">
+        <div class="swipe-dot active" data-region="0"></div>
+        <div class="swipe-dot" data-region="1"></div>
+        <div class="swipe-dot" data-region="2"></div>
+        <span class="swipe-label" id="swipe-region-name">Town</span>
+      </div>
+      <div id="dog-dialogue">
+        <div id="dog-dialogue-portrait" class="dog-portrait"></div>
+        <div class="dog-content">
+          <div class="dog-name">???</div>
+          <div class="dog-text" id="dog-dialogue-text"></div>
+          <div class="dog-choices" id="dog-dialogue-choices"></div>
+        </div>
+      </div>
     </div>
-    <div id="town-actionbar">
-      <button class="actionbar-btn" id="ab-fight"><span class="ab-icon">⚔️</span><span class="ab-label">Combat</span></button>
-      <button class="actionbar-btn" id="ab-party"><span class="ab-icon">🐕</span><span class="ab-label">Party</span></button>
-      <button class="actionbar-btn" id="ab-shop"><span class="ab-icon">🛒</span><span class="ab-label">Shop</span></button>
-      <button class="actionbar-btn" id="ab-title"><span class="ab-icon">📜</span><span class="ab-label">Title</span></button>
-      <button class="actionbar-btn" id="ab-sandbox"><span class="ab-icon">🔬</span><span class="ab-label">Sandbox</span></button>
+
+    <!-- Zone 4: Right Panel (Infrastructure & Systems) -->
+    <div id="town-right-panel">
+      <div class="panel-section">
+        <div class="panel-section-title">📍 Locations</div>
+        <div id="panel-locations"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">🌾 Auto-Clear Farming</div>
+        <div id="panel-farming"></div>
+      </div>
+      <div class="panel-section" id="panel-events-section" style="display:none;">
+        <div class="panel-section-title">⚠️ Pending Events</div>
+        <div id="panel-events"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">🔬 Debug</div>
+        <div id="panel-sandbox">
+          <button class="panel-sandbox-btn" id="panel-open-sandbox">🔬 Sandbox Mode</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone 5: Bottom Dock -->
+    <div id="town-dock">
+      <button class="dock-tab active" id="dock-map"><span class="dock-icon">🗺️</span><span class="dock-label">Map</span></button>
+      <button class="dock-tab" id="dock-social"><span class="dock-icon">👥</span><span class="dock-label">NPCs</span><span class="dock-badge" id="dock-social-badge" style="display:none;">0</span></button>
+      <button class="dock-tab" id="dock-systems"><span class="dock-icon">📋</span><span class="dock-label">Systems</span><span class="dock-badge" id="dock-systems-badge" style="display:none;">0</span></button>
+      <button class="dock-tab" id="dock-shop"><span class="dock-icon">🛒</span><span class="dock-label">Shop</span></button>
+      <button class="dock-tab dock-combat" id="dock-combat"><span class="dock-icon">⚔️</span><span class="dock-label">Fight</span></button>
     </div>
   </div>
 
@@ -8275,30 +8622,43 @@ class TownScreen {
   }
 
   _setupEvents() {
-    // Action bar buttons
-    const fightBtn = document.getElementById('ab-fight');
-    const partyBtn = document.getElementById('ab-party');
-    const shopBtn = document.getElementById('ab-shop');
-    const titleBtn = document.getElementById('ab-title');
-    if (fightBtn) fightBtn.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
+    // Bottom dock tab switching
+    this._activePanel = null;
+    const dockTabs = ['map', 'social', 'systems', 'shop', 'combat'];
+    for (const key of dockTabs) {
+      const btn = document.getElementById('dock-' + key);
+      if (btn) btn.addEventListener('click', () => this._switchDockTab(key));
+    }
+
+    // Panel close on backdrop click
+    const backdrop = document.getElementById('panel-backdrop');
+    if (backdrop) backdrop.addEventListener('click', () => this._closePanels());
+
+    // Left panel CTA: Enter Combat
+    const panelCombat = document.getElementById('panel-enter-combat');
+    if (panelCombat) panelCombat.addEventListener('click', () => {
+      this.game.audioManager?.playMenuSound('select');
       this.hide();
       this.game.startGame();
     });
-    if (titleBtn) titleBtn.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
-      this.hide();
-      this.game._returnToTitle();
-    });
-    const sandboxBtn = document.getElementById('ab-sandbox');
-    if (sandboxBtn) sandboxBtn.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
+
+    // Right panel: Sandbox
+    const panelSandbox = document.getElementById('panel-open-sandbox');
+    if (panelSandbox) panelSandbox.addEventListener('click', () => {
+      this.game.audioManager?.playMenuSound('select');
       this._openSandbox();
     });
-    if (shopBtn) shopBtn.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
-      this.shopSystem.open();
+
+    // Back button
+    const backBtn = document.getElementById('town-back');
+    if (backBtn) backBtn.addEventListener('click', () => {
+      this.game.audioManager?.playMenuSound('back');
+      this.locationManager.goBack();
+      this._updateDisplay();
+      this._renderBreadcrumb();
+      this._renderLocationCards();
     });
+
     if (partyBtn) partyBtn.addEventListener('click', () => {
       this.game.audioManager.playMenuSound('select');
       // Party management — show companion slots (already visible)
@@ -8352,6 +8712,8 @@ class TownScreen {
     this.locationManager.locationHistory = [this.locationManager.currentLocationId];
     this._updateDisplay();
     this._renderBreadcrumb();
+    this._renderLeftPanel();
+    this._renderRightPanel();
     this._renderLocationCards();
     this._renderFarmingSlotsButton();
     this._renderCompanionSlots();
@@ -8581,6 +8943,195 @@ class TownScreen {
     }
   }
 
+
+  // Dock tab switching
+  _switchDockTab(tab) {
+    this.game.audioManager?.playMenuSound('select');
+
+    // Update active tab
+    document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
+    const btn = document.getElementById('dock-' + tab);
+    if (btn) btn.classList.add('active');
+
+    const leftPanel = document.getElementById('town-left-panel');
+    const rightPanel = document.getElementById('town-right-panel');
+    const backdrop = document.getElementById('panel-backdrop');
+
+    if (tab === 'map') {
+      // Close all panels
+      leftPanel?.classList.remove('open');
+      rightPanel?.classList.remove('open');
+      backdrop?.classList.remove('active');
+      this._activePanel = null;
+    } else if (tab === 'social') {
+      // Toggle left panel
+      if (this._activePanel === 'left') {
+        leftPanel?.classList.remove('open');
+        backdrop?.classList.remove('active');
+        this._activePanel = null;
+      } else {
+        leftPanel?.classList.add('open');
+        rightPanel?.classList.remove('open');
+        backdrop?.classList.add('active');
+        this._activePanel = 'left';
+        this._renderLeftPanel();
+      }
+    } else if (tab === 'systems') {
+      // Toggle right panel
+      if (this._activePanel === 'right') {
+        rightPanel?.classList.remove('open');
+        backdrop?.classList.remove('active');
+        this._activePanel = null;
+      } else {
+        rightPanel?.classList.add('open');
+        leftPanel?.classList.remove('open');
+        backdrop?.classList.add('active');
+        this._activePanel = 'right';
+        this._renderRightPanel();
+      }
+    } else if (tab === 'shop') {
+      // Open shop overlay
+      this.game.audioManager?.playMenuSound('select');
+      this._openShopOverlay();
+    } else if (tab === 'combat') {
+      // Start combat
+      this.game.audioManager?.playMenuSound('select');
+      this.game.startGame();
+    }
+  }
+
+  _closePanels() {
+    document.getElementById('town-left-panel')?.classList.remove('open');
+    document.getElementById('town-right-panel')?.classList.remove('open');
+    document.getElementById('panel-backdrop')?.classList.remove('active');
+    this._activePanel = null;
+    document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('dock-map')?.classList.add('active');
+  }
+
+  // Render left panel content
+  _renderLeftPanel() {
+    const questArea = document.getElementById('panel-quests');
+    const npcArea = document.getElementById('panel-npcs');
+    const compArea = document.getElementById('panel-companions');
+    if (!questArea || !npcArea) return;
+
+    // Quests (priority)
+    questArea.innerHTML = '';
+    const pinnedQuest = '<div class="panel-card"><span class="panel-card-icon">⚔️</span><div class="panel-card-info"><div class="panel-card-name">Clear the Graveyard</div><div class="panel-card-desc">Survive and defeat the boss</div></div><span class="panel-card-badge gold">Active</span></div>';
+    questArea.innerHTML = pinnedQuest;
+
+    // NPCs at current location
+    npcArea.innerHTML = '';
+    const npcs = this.locationManager?.getCurrentNPCs() || [];
+    for (const npc of npcs.slice(0, 3)) {
+      const svg = SVG_PORTRAITS[npc.id] || '<div style="width:36px;height:36px;border-radius:50%;background:#333;"></div>';
+      const svgSmall = svg.replace('<svg ', '<svg style="width:36px;height:36px;" ');
+      const locked = npc.locked && !this.game.gameManager?.get_flag(npc.unlockCondition);
+      const card = document.createElement('div');
+      card.className = 'panel-card' + (locked ? ' locked' : '');
+      card.innerHTML = `<span class="panel-card-icon">${svgSmall}</span><div class="panel-card-info"><div class="panel-card-name">${npc.name}</div><div class="panel-card-desc">${locked ? '🔒 Locked' : '💬 Tap to talk'}</div></div>`;
+      if (!locked) {
+        card.addEventListener('click', () => {
+          this._closePanels();
+          this._openDialogue(npc);
+        });
+      }
+      npcArea.appendChild(card);
+    }
+
+    // Companion status
+    if (compArea) {
+      compArea.innerHTML = '';
+      const companions = this.game.companionSystem?.companions || [];
+      for (const [id, comp] of Object.entries(companions)) {
+        const status = this.game.gameManager?.getCompanionDeployStatus(id) || 'available';
+        const card = document.createElement('div');
+        card.className = 'panel-card';
+        card.innerHTML = `<span class="panel-card-icon">🐕</span><div class="panel-card-info"><div class="panel-card-name">${comp.name || id}</div><div class="panel-card-desc">Status: ${status}</div></div><span class="panel-card-badge ${status === 'deployed_combat' ? 'green' : ''}">${status}</span>`;
+        compArea.appendChild(card);
+      }
+      if (Object.keys(companions).length === 0) {
+        compArea.innerHTML = '<div class="panel-card locked"><span class="panel-card-icon">🐕</span><div class="panel-card-info"><div class="panel-card-name">No companions</div><div class="panel-card-desc">Pet the dog at camp to recruit</div></div></div>';
+      }
+    }
+  }
+
+  // Render right panel content
+  _renderRightPanel() {
+    const locArea = document.getElementById('panel-locations');
+    const farmArea = document.getElementById('panel-farming');
+    if (!locArea) return;
+
+    // Locations
+    locArea.innerHTML = '';
+    const region = this.locationManager?.getCurrentRegion();
+    const children = this.locationManager?.getChildLocations() || [];
+    const currentId = this.locationManager?.currentLocationId;
+
+    // Current location
+    const curCard = document.createElement('div');
+    curCard.className = 'panel-card current';
+    curCard.innerHTML = '<span class="panel-card-icon">📍</span><div class="panel-card-info"><div class="panel-card-name">Current Location</div></div><span class="panel-card-badge">●</span>';
+    locArea.appendChild(curCard);
+
+    // Child locations
+    for (const child of children) {
+      const locked = child.locked && !this.game.gameManager?.get_flag(child.unlockCondition);
+      const card = document.createElement('div');
+      card.className = 'panel-card' + (locked ? ' locked' : '');
+      card.innerHTML = `<span class="panel-card-icon">${child.icon || '📍'}</span><div class="panel-card-info"><div class="panel-card-name">${child.name}</div><div class="panel-card-desc">${locked ? '🔒 Locked' : child.desc || 'Tap to visit'}</div></div>`;
+      if (!locked) {
+        card.addEventListener('click', () => {
+          this.locationManager.navigateTo(child.id);
+          this._closePanels();
+          this._updateDisplay();
+          this._renderBreadcrumb();
+          this._renderLocationCards();
+        });
+      }
+      locArea.appendChild(card);
+    }
+
+    // Farming
+    if (farmArea) {
+      farmArea.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        const status = this.game.farmingSystem?.getSlotStatus(i + 1);
+        const label = ['🐕 Companion', '⚔️ Adventurer', '🔄 Flexible'][i];
+        const card = document.createElement('div');
+        card.className = 'panel-card' + (status?.status === 'locked' ? ' locked' : '');
+        if (status?.status === 'running') {
+          const pct = Math.round(status.progress * 100);
+          card.innerHTML = `<span class="panel-card-icon">⏳</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">${pct}% complete</div></div><span class="panel-card-badge">Running</span>`;
+        } else if (status?.status === 'complete') {
+          card.innerHTML = `<span class="panel-card-icon">✅</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">Loot ready!</div></div><span class="panel-card-badge green">Collect</span>`;
+          card.addEventListener('click', () => {
+            this._collectFarmingSlot(i + 1);
+            this._renderRightPanel();
+          });
+        } else if (status?.status === 'idle') {
+          card.innerHTML = `<span class="panel-card-icon">${label.split(' ')[0]}</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">Tap to assign</div></div>`;
+          card.addEventListener('click', () => {
+            this._assignFarmingSlot(i + 1);
+            this._renderRightPanel();
+          });
+        } else {
+          card.innerHTML = `<span class="panel-card-icon">🔒</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">Complete 3★ to unlock</div></div>`;
+        }
+        farmArea.appendChild(card);
+      }
+    }
+  }
+
+  // Open shop overlay (reused)
+  _openShopOverlay() {
+    // Delegate to existing shop logic
+    const overlay = document.getElementById('shop-overlay');
+    if (overlay) {
+      overlay.classList.add('active');
+    }
+  }
 
   // D1: Render breadcrumb navigation
   _renderBreadcrumb() {
