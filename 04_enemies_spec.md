@@ -1,8 +1,9 @@
 # Modularity Engine — Enemies Specification
 
-> **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-20
+> **Version:** 2.0 (Design Decisions Locked)
+> **Last Updated:** 2026-08-26
 > **Status:** Spec
+> **Design Decisions:** D3 (stage tiers), D5 (companion-weapon binding)
 > **Canonical Sources:** `vs_prog.md` Enemy Spawn Details + Boss Encounter (all values), `vs_colors.md` Enemy Visuals + Boss Visual, `01_engine_architecture.md` (engine systems)
 
 ---
@@ -524,7 +525,110 @@ xp_value(t) = base_xp × (1 + 0.05 × floor(t / 60))
 
 ---
 
-## 9. Enemy Behavior Algorithms
+## 9. Enemy Scaling by Stage Tier (D3)
+
+Enemies scale differently depending on the stage length tier. This ensures each tier feels distinct.
+
+### Quick Stage (3min) — Enemies
+
+| Property | Multiplier | Rationale |
+|---|---|---|
+| Enemy HP | 0.8× | Faster clears for quick grind |
+| Enemy Damage | 0.9× | Slightly forgiving |
+| Spawn Rate | 1.5× | More enemies, faster pace |
+| Max Enemies | 0.8× of Standard | Smaller arena density |
+| Boss | None | Too short for boss fight |
+| Gold Drops | 0.8× | Shorter run = less gold |
+| XP Drops | 1.2× | Faster leveling |
+
+### Standard Stage (5min) — Enemies
+
+| Property | Multiplier | Rationale |
+|---|---|---|
+| Enemy HP | 1.0× | Baseline |
+| Enemy Damage | 1.0× | Baseline |
+| Spawn Rate | 1.0× | Baseline |
+| Max Enemies | Baseline (200) | Standard cap |
+| Boss | Yes (at 4:00) | Standard boss fight |
+| Gold Drops | 1.0× | Baseline |
+| XP Drops | 1.0× | Baseline |
+
+### Highlight Stage (10min) — Enemies
+
+| Property | Multiplier | Rationale |
+|---|---|---|
+| Enemy HP | 1.3× | Tougher enemies for longer run |
+| Enemy Damage | 1.2× | More dangerous |
+| Spawn Rate | 0.8× early, 1.2× late | Gradual escalation |
+| Max Enemies | 1.2× of Standard | More enemies on screen |
+| Boss | Yes (at 8:00) + mid-boss at 5:00 | Two boss encounters |
+| Gold Drops | 1.5× | Longer run = more gold |
+| XP Drops | 1.0× | More time = more XP naturally |
+
+### Scaling Implementation
+
+Scaling is applied at spawn time via a `stageMultiplier` object passed to the spawn system:
+
+```javascript
+const stageMultipliers = {
+  quick:    { hp: 0.8, damage: 0.9, spawnRate: 1.5, maxEnemies: 0.8, gold: 0.8, xp: 1.2 },
+  standard: { hp: 1.0, damage: 1.0, spawnRate: 1.0, maxEnemies: 1.0, gold: 1.0, xp: 1.0 },
+  highlight:{ hp: 1.3, damage: 1.2, spawnRate: 1.0, maxEnemies: 1.2, gold: 1.5, xp: 1.0 }
+};
+```
+
+---
+
+## 10. Soft-Pity Drop System (Goal Doc)
+
+Power-up drops use a soft-pity system to prevent extreme bad luck.
+
+### How It Works
+
+| Drop Type | Base Chance | Pity Counter | Pity Ramp | Max Chance |
+|---|---|---|---|---|
+| Weapon Level-Up | 1% | Resets on drop | +2% per kill without drop | 20% |
+| Screen Wipe | 2% | Resets on drop | +3% per kill without drop | 30% |
+| Magnet | 5% | Resets on drop | +5% per kill without drop | 50% |
+
+### Pity Algorithm
+
+```
+function rollDrop(enemy, dropType):
+    baseChance = dropTable[enemy.type][dropType]
+    pityCount = enemy.pityCounters[dropType]  // kills since last drop of this type
+    pityBonus = pityCount * pityRamp[dropType]
+    finalChance = min(baseChance + pityBonus, maxChance[dropType])
+    
+    if random() < finalChance:
+        enemy.pityCounters[dropType] = 0  // reset
+        return dropType
+    else:
+        enemy.pityCounters[dropType] += 1
+        return null
+```
+
+### Why Soft-Pity
+
+| Problem | Solution |
+|---|---|
+| Player goes 50 kills with no power-up | Pity counter ensures a drop by ~20 kills |
+| Drop feels too frequent | Base chance is still low (1-5%) — pity only kicks in after many kills |
+| Different drop types compete | Each type has its own pity counter — weapon up pity doesn't affect magnet pity |
+
+### Speed-Run Rare Drops
+
+Stages completed under a target time award bonus rare drops:
+
+| Time Under Target | Bonus |
+|---|---|
+| Under 3★ time | +1 guaranteed rare drop |
+| Under 2★ time | +50% gold bonus |
+| Under 1★ time | No bonus (just completion) |
+
+---
+
+## 11. Enemy Behavior Algorithms
 
 Detailed movement algorithms for each behavior type.
 
@@ -754,7 +858,7 @@ Scaling is applied at spawn time — existing enemies are not retroactively buff
 
 ---
 
-## 11. Cross-Reference Summary
+## 12. Cross-Reference Summary
 
 | Section | References |
 |---|---|
@@ -773,7 +877,10 @@ Scaling is applied at spawn time — existing enemies are not retroactively buff
 | Spawn rules & wave timeline | `05_stages_spec.md` |
 | JSON schema | `10_json_schemas.md` enemies.json |
 | Sound effects | `09_audio_spec.md` per-enemy hit/kill sounds |
+| Stage scaling | `05_stages_spec.md` §13 (3/5/10min tiers, D3) |
+| Soft-pity drops | `06_pickups_and_powerups_spec.md` §8 |
+| Companion interactions | `20_companion_combat_spec.md` (enemy-companion collision) |
 
 ---
 
-*End of 04_enemies_spec.md — Version 1*
+*End of 04_enemies_spec.md — Version 2.0 (Design Decisions Locked)*

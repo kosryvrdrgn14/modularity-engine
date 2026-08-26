@@ -1,7 +1,8 @@
 # Companion System — Engine Integration Analysis
 
-**Version:** 0.3.0 (Prototype)
-**Status:** Analysis
+**Version:** 0.4.0 (Design Decisions Locked)
+**Status:** Spec
+**Design Decisions:** D1 (3 slots), D2 (invulnerable), D5 (1:1 binding)
 **Specs Cross-Referenced:** `01_engine_architecture.md`, `03_weapons_spec.md`, `04_enemies_spec.md`, `20_companion_combat_spec.md`
 
 ---
@@ -13,6 +14,34 @@
 ```typescript
 type EntityType = 'player' | 'enemy' | 'projectile' | 'orb' | 'pickup' | 'obstacle' | 'boss'
 ```
+
+### 1:1 Weapon-Companion Binding (D5)
+
+The engine reads `store.npcs.companions` (3 slots, each bound to a weapon) and creates companion entities. Each companion:
+- Buffs its paired weapon (damage, cooldown, special effects)
+- Auto-levels with the weapon (no separate upgrade system)
+- Emits attacks from its own position (not the player's)
+
+**Data flow:**
+```
+store.npcs.companions = { 1: 'dog', 2: null, 3: null }
+store.combat.weaponLevels = { w1: 3, w2: 0, w3: 0 }
+
+→ Companion 1 (Dog) created with:
+  - slot: 1
+  - weaponSlot: 'w1'
+  - level: 3 (mirrors W1 level)
+  - damage: COMPANION_DATA['dog'].damage[3]
+  - cooldown: COMPANION_DATA['dog'].cooldown[3]
+```
+
+**Engine changes needed:**
+1. Add `'companion'` to EntityType union
+2. Add COMPANION collision layer (0b100000)
+3. Add CompanionSystem class with state machine
+4. Update CollisionSystem for companion-enemy cone detection
+5. Update Renderer for companion sprites + cone effects
+6. Update DamageSystem for companion damage (no `stats.damage` multiplier)
 
 ### Entity Pools Currently Allocated
 

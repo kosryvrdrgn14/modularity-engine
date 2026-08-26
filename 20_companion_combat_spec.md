@@ -1,7 +1,8 @@
 # Companion NPC Combat Spec
 
-**Version:** 0.3.0 (Prototype)
-**Status:** Design — Pending Review
+**Version:** 0.4.0 (Design Decisions Locked)
+**Status:** Spec
+**Design Decisions:** D1 (3 slots), D2 (always invulnerable), D5 (1:1 binding)
 **Related Files:** `03_weapons_spec.md`, `04_enemies_spec.md`, `19_town_system_spec.md`, `dialogue_template.md`
 
 ---
@@ -19,6 +20,34 @@ Companions are NPC allies that fight alongside the player in combat. They have t
 The Dog is in **Companion Slot 1** (tied to W1). It is the first companion and serves as the prototype for the entire companion system.
 
 **Design Philosophy:** Companions are supplementary. They add variety and utility but do not replace player skill or weapon choices. A player who neglects positioning will not be saved by companions. They are a welcome addition, not a crutch.
+
+### Companion Status States
+
+Each companion has a status that determines availability:
+
+| Status | Meaning | Can Deploy? | Source |
+|---|---|---|---|
+| **Available** | Ready to deploy to a slot | ✅ Yes | Default state after recruitment |
+| **Deployed** | Active in a companion slot during combat | N/A (already in) | Assigned to slot 1/2/3 |
+| **Locked** | Not yet recruited | ❌ No | NPC not yet met/befriended |
+| **Story Unavailable** | Temporarily unavailable due to quest/story | ❌ No | Quest flag set (e.g., "npc_in_danger") |
+| **Resting** | Recovering after a long combat session | ❌ No (cooldown) | Post-combat rest timer (future feature) |
+
+**Why status states matter:**
+- Prevents deploying companions that haven't been recruited
+- Allows quests to temporarily remove companions (story tension)
+- Future-proofs for cooldown/rest mechanics
+- Clear UI feedback on why a companion can't be deployed
+
+### Invulnerability Rule (D2 DECIDED)
+
+Companions are **always invulnerable**. They cannot:
+- Take damage from enemies
+- Be targeted by enemy projectiles
+- Die or be knocked out
+- Be affected by status effects (stun, slow, etc.)
+
+If a quest needs a protect target, that target is a **map asset with HP**, not a companion. This keeps companion management simple and the player's focus on their own survival.
 
 ---
 
