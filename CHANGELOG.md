@@ -32,6 +32,24 @@
 
 ---
 
+## v0.5.0 — New System Specs (Phase 4)
+**Date:** August 26, 2026
+**Status:** 7 new spec files created
+
+### New Spec Files
+- **23_auto_clear_farming_spec.md** — Auto-clear system for 3★ stages (3 farming slots, hired adventurers, companion lockouts, named plans)
+- **24_star_conditions_spec.md** — 1★/2★/3★ system with condition pools, auto-clear eligibility, stage-specific conditions
+- **25_economy_gold_sinks_spec.md** — Gold income (combat+quests+events), 3 sink categories (combat/gifts/management), resource separation
+- **26_affection_romance_spec.md** — 50-55 NPC roster, 4-step tier chain (Interest→Respect→Trust→Claim), gift system, VN dates, marriage
+- **27_estate_bloodline_spec.md** — 5-tier estate system, material production (no gold), children, bloodline bonuses, wife network
+- **28_disaster_events_spec.md** — Random estate/town disasters, 3 resolution types, wife network aid, gratitude content
+- **29_frenzy_mode_spec.md** — Post-3★ alternate playstyle, max spawns, better drops, clean run compatible
+
+### Design Decisions Referenced
+- D1 (3 companion slots), D3 (stage tiers), D4 (no gold from estates), D5 (1:1 binding), D6 (mythology factions), D8 (3 gold sources)
+
+---
+
 ## v0.3.0 — City Builder Navigation & Location System
 **Date:** August 26, 2026
 **Status:** Design document complete, awaiting review
