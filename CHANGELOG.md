@@ -2,6 +2,24 @@
 
 ---
 
+## v0.3.0 — City Builder Navigation & Location System
+**Date:** August 26, 2026
+**Status:** Design document complete, awaiting review
+
+### New Design Documents
+- **22_city_builder_location_system.md** — Hierarchical city navigation with 4-level depth:
+  - City → Districts → Sub-Districts → Buildings
+  - Breadcrumb trail + back button + side menu (3 navigation methods)
+  - Rule of 3: max 3 items per level, scroll for overflow
+  - NPC placement with priority sorting and quest indicators
+  - Two-gate unlock system: town level + NPC/quest gates
+  - Locked locations show unlock requirements
+  - Flat location index for fast runtime lookups
+  - 5 implementation phases defined (~635 lines total)
+  - 10 gaps/conflicts/questions identified for review
+
+---
+
 ## v0.2.5 — Companion, Town & Polish
 **Date:** August 24, 2026
 **Status:** Full game loop with town, companion, and debug tools
