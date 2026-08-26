@@ -877,12 +877,12 @@ Instead of re-evaluating unlock conditions every time the player enters town, we
 - **Action:** Define town XP curve: e.g., each building built = 1 town XP, level up at 2/5/10/18/30.
 
 **Gap 2: Background art volume.**
-27 possible locations × 1 SVG each = 27 SVGs. This is significant art work.
-- **Action:** Every location gets its own background by design. To manage volume: locations that share a visual theme can reference the same SVG file. Start with the 5-6 locations needed for the prototype (root, 2 districts, 2 buildings) and add more as the city expands.
+40 locations × 1 SVG each = 40 SVGs at full unlock.
+- **DECIDED:** Use base template backgrounds for the prototype. AI-generated images for the final game. Every location gets its own background by design, but many can share the same template (e.g., Market Square + Market share the forge theme). Actual unique backgrounds needed: ~15-20 templates. Progressive unlock means the player only sees 4-13 locations in early game.
 
 **Gap 3: No building upgrade UI defined.**
 Buildings have levels (1-3) but there's no spec for how the player upgrades them. The camp upgrade (100g) exists, but the Blacksmith upgrade, Market upgrade, etc. have no UI.
-- **Action:** Each building card shows its current level and upgrade cost. Tapping the building opens its function screen (shop, forge, etc.) with an upgrade button.
+- **DECIDED:** Each building card shows its current level and upgrade cost. Tapping the building opens its function screen (shop, forge, etc.) with an upgrade button. Progressive unlock means buildings appear gradually — not all 27 at once.
 
 **Gap 4: Side menu tree could be overwhelming at end-game.**
 With 27+ locations, the side menu tree could be very long. On mobile, this requires a lot of scrolling.
@@ -893,7 +893,7 @@ With 27+ locations, the side menu tree could be very long. On mobile, this requi
 
 **Gap 5: NPC assignment conflicts.**
 If two quests want the same NPC in different locations, there's a conflict. The current override system is last-write-wins.
-- **Action:** Add priority to overrides. Higher-priority overrides win. Also add a `conflictResolution: 'latest' | 'highest_priority' | 'error'` config.
+- **DECIDED:** Add priority to overrides. Higher-priority overrides win. Also add a `conflictResolution: 'latest' | 'highest_priority' | 'error'` config. For the prototype, use template NPC portraits (base templates with color/hair variations). AI-generated portraits for the final game.
 
 ### Identified Conflicts
 
