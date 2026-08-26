@@ -854,6 +854,17 @@
     .actionbar-btn .ab-label { font-size: 0.65rem; margin-top: 2px; }
     .actionbar-btn.active { color: #FFD700; }
 
+
+    /* E1: Farming section */
+    .farming-section {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 12px;
+    }
+    .farming-section .section-label {
+      padding: 0 4px;
+    }
+
   </style>
 </head>
 <body>
@@ -5832,6 +5843,7 @@ class GameManager {
         clearCounters: {},
         gachaCounters: {},
       },
+      estates: [],
       flags: {},
       counters: { total_kills: 0, total_runs: 0 },
     };
@@ -6661,6 +6673,352 @@ class DisasterSystem {
   }
 }
 
+
+// ============================================================
+// FARMING SYSTEM — Auto-Clear (Rule of 3)
+// ============================================================
+
+const FARMING_CONFIG = {
+  maxSlots: 3,
+  slotTypes: ['companion', 'adventurer', 'flexible'],
+  slotLabels: ['🐕 Companion', '⚔️ Adventurer', '🔄 Flexible'],
+  baseCompletionTime: 120, // 2 minutes base (real-time, background)
+  lootMultiplier: 0.6, // auto-clear gives 60% of manual run loot
+  materialYield: {
+    wood: { min: 2, max: 5 },
+    stone: { min: 1, max: 3 },
+    herbs: { min: 0, max: 2 },
+    ore: { min: 0, max: 1 },
+  },
+};
+
+class FarmingSystem {
+  constructor(gameManager, eventBus) {
+    this.gameManager = gameManager;
+    this.eventBus = eventBus;
+    this._checkInterval = 5; // check every 5 seconds
+    this._timer = 0;
+  }
+
+  update(dt) {
+    this._timer += dt;
+    if (this._timer < this._checkInterval) return;
+    this._timer = 0;
+
+    const slots = this.gameManager.store.farming?.slots || [];
+    for (const slot of slots) {
+      if (slot.status !== 'running') continue;
+      slot.timer += this._checkInterval;
+      if (slot.timer >= slot.completionTime) {
+        this._completeSlot(slot);
+      }
+    }
+  }
+
+  assignSlot(slotId, stageId, unitType, unitId) {
+    const slot = this.gameManager.getFarmingSlot(slotId);
+    if (!slot || slot.status === 'locked') return false;
+    if (slot.status === 'running') return false; // already running
+
+    // C2: One-place-only lockout
+    if (unitType === 'companion') {
+      const deployStatus = this.gameManager.getCompanionDeployStatus(unitId);
+      if (deployStatus === 'deployed_combat') return false;
+      this.gameManager.deployCompanionAutoClear(unitId);
+    }
+
+    slot.stageId = stageId;
+    slot.unitType = unitType;
+    slot.unitId = unitId;
+    slot.status = 'running';
+    slot.timer = 0;
+    slot.completionTime = FARMING_CONFIG.baseCompletionTime;
+    slot.loot = null;
+    this.gameManager._dirty = true;
+    return true;
+  }
+
+  collectSlot(slotId) {
+    const slot = this.gameManager.getFarmingSlot(slotId);
+    if (!slot || slot.status !== 'complete') return null;
+
+    const loot = slot.loot || this._generateLoot(slot);
+
+    // Apply loot to player
+    if (loot.gold) this.gameManager.add_resource('gold', loot.gold);
+    if (loot.xp) this.gameManager.add_xp(loot.xp);
+    for (const [mat, amount] of Object.entries(loot.materials || {})) {
+      if (amount > 0) this.gameManager.add_resource(mat, amount);
+    }
+
+    // Release companion lockout
+    if (slot.unitType === 'companion' && slot.unitId) {
+      this.gameManager.recallCompanion(slot.unitId);
+    }
+
+    // Reset slot
+    slot.status = 'idle';
+    slot.stageId = null;
+    slot.unitType = null;
+    slot.unitId = null;
+    slot.timer = 0;
+    slot.loot = null;
+    this.gameManager._dirty = true;
+
+    return loot;
+  }
+
+  _completeSlot(slot) {
+    slot.loot = this._generateLoot(slot);
+    slot.status = 'complete';
+    this.gameManager._dirty = true;
+    this.eventBus.emit('farmingComplete', { slotId: slot.id, loot: slot.loot });
+  }
+
+  _generateLoot(slot) {
+    const mult = FARMING_CONFIG.lootMultiplier;
+    const stage = slot.stageId || 'stage_graveyard';
+    const clearCount = this.gameManager.getClearCount(stage);
+
+    // Base loot scales with clear count
+    const gold = Math.round((10 + clearCount * 2) * mult);
+    const xp = Math.round((5 + clearCount) * mult);
+    const materials = {};
+    for (const [mat, range] of Object.entries(FARMING_CONFIG.materialYield)) {
+      const base = range.min + Math.random() * (range.max - range.min);
+      materials[mat] = Math.round(base * mult * (1 + clearCount * 0.1));
+    }
+
+    return { gold, xp, materials, stageId: stage };
+  }
+
+  getSlotStatus(slotId) {
+    const slot = this.gameManager.getFarmingSlot(slotId);
+    if (!slot) return null;
+    return {
+      id: slot.id,
+      status: slot.status,
+      progress: slot.status === 'running' ? Math.min(1, slot.timer / (slot.completionTime || 1)) : 0,
+      timeRemaining: slot.status === 'running' ? Math.max(0, (slot.completionTime || 0) - slot.timer) : 0,
+      stageId: slot.stageId,
+      unitType: slot.unitType,
+      unitId: slot.unitId,
+      loot: slot.loot,
+    };
+  }
+}
+
+
+
+// ============================================================
+// AFFECTION SYSTEM — NPC relationship tracking (E2)
+// ============================================================
+
+const AFFECTION_TIERS = [
+  { name: 'Stranger', min: 0, color: '#888' },
+  { name: 'Interest', min: 10, color: '#8BC34A' },
+  { name: 'Respect', min: 30, color: '#4FC3F7' },
+  { name: 'Trust', min: 60, color: '#FFD700' },
+  { name: 'Claim', min: 100, color: '#FF6B6B' },
+];
+
+class AffectionSystem {
+  constructor(gameManager) {
+    this.gameManager = gameManager;
+  }
+
+  getAffection(npcId) {
+    return this.gameManager.get_counter('affection_' + npcId) || 0;
+  }
+
+  addAffection(npcId, amount) {
+    this.gameManager.add_counter('affection_' + npcId, amount);
+    return this.getAffection(npcId);
+  }
+
+  getTier(npcId) {
+    const aff = this.getAffection(npcId);
+    let tier = AFFECTION_TIERS[0];
+    for (const t of AFFECTION_TIERS) {
+      if (aff >= t.min) tier = t;
+    }
+    return tier;
+  }
+
+  getTierIndex(npcId) {
+    const aff = this.getAffection(npcId);
+    let idx = 0;
+    for (let i = 0; i < AFFECTION_TIERS.length; i++) {
+      if (aff >= AFFECTION_TIERS[i].min) idx = i;
+    }
+    return idx;
+  }
+
+  canDate(npcId) {
+    return this.getTierIndex(npcId) >= 2; // Respect+
+  }
+
+  canMarry(npcId) {
+    return this.getTierIndex(npcId) >= 4; // Claim
+  }
+}
+
+// ============================================================
+// ESTATE SYSTEM — Family homes + material production (E3)
+// ============================================================
+
+const ESTATE_TIERS = [
+  { name: 'Homestead', level: 1, cost: { gold: 200 }, production: { wood: 1, stone: 0 }, questSlots: 0 },
+  { name: 'Cottage', level: 2, cost: { gold: 500, wood: 20 }, production: { wood: 2, stone: 1 }, questSlots: 1 },
+  { name: 'Manor', level: 3, cost: { gold: 1500, wood: 50, stone: 30 }, production: { wood: 3, stone: 2, herbs: 1 }, questSlots: 2 },
+  { name: 'Keep', level: 4, cost: { gold: 5000, wood: 100, stone: 80 }, production: { wood: 5, stone: 4, herbs: 2, ore: 1 }, questSlots: 3 },
+  { name: 'Dynasty', level: 5, cost: { gold: 15000, wood: 200, stone: 150 }, production: { wood: 8, stone: 6, herbs: 3, ore: 2 }, questSlots: 5 },
+];
+
+class EstateSystem {
+  constructor(gameManager) {
+    this.gameManager = gameManager;
+  }
+
+  getEstates() {
+    return this.gameManager.store.estates || [];
+  }
+
+  getEstate(wifeId) {
+    return this.getEstates().find(e => e.wifeId === wifeId);
+  }
+
+  createEstate(wifeId, tier) {
+    if (!this.gameManager.store.estates) this.gameManager.store.estates = [];
+    const tierData = ESTATE_TIERS[tier - 1];
+    if (!tierData) return false;
+
+    const estate = {
+      wifeId,
+      tier: tier,
+      name: tierData.name,
+      production: { ...tierData.production },
+      questSlots: tierData.questSlots,
+      activeQuests: [],
+      children: [],
+    };
+    this.gameManager.store.estates.push(estate);
+    this.gameManager._dirty = true;
+    return estate;
+  }
+
+  upgradeEstate(wifeId) {
+    const estate = this.getEstate(wifeId);
+    if (!estate) return false;
+    if (estate.tier >= ESTATE_TIERS.length) return false;
+
+    const nextTier = ESTATE_TIERS[estate.tier]; // tier is 1-indexed
+    // Check resources
+    if (!this.gameManager.has_resource('gold', nextTier.cost.gold)) return false;
+
+    // Spend resources
+    this.gameManager.spend_currency(nextTier.cost.gold, 'estate_upgrade');
+    estate.tier = nextTier.level;
+    estate.name = nextTier.name;
+    estate.production = { ...nextTier.production };
+    estate.questSlots = nextTier.questSlots;
+    this.gameManager._dirty = true;
+    return true;
+  }
+
+  collectProduction(wifeId) {
+    const estate = this.getEstate(wifeId);
+    if (!estate) return null;
+    const produced = {};
+    for (const [mat, amount] of Object.entries(estate.production)) {
+      if (amount > 0) {
+        this.gameManager.add_resource(mat, amount);
+        produced[mat] = amount;
+      }
+    }
+    return produced;
+  }
+}
+
+// ============================================================
+// CHILDREN SYSTEM — Growth + Legacy Companions (E4)
+// ============================================================
+
+const CHILD_GROWTH_STAGES = ['Infant', 'Toddler', 'Child', 'Adolescent', 'Adult'];
+const CHILD_GROWTH_THRESHOLD = 10; // runs per growth stage
+
+class ChildrenSystem {
+  constructor(gameManager) {
+    this.gameManager = gameManager;
+  }
+
+  getChildren(wifeId) {
+    const estates = this.gameManager.store.estates || [];
+    const estate = estates.find(e => e.wifeId === wifeId);
+    return estate?.children || [];
+  }
+
+  addChild(wifeId, name) {
+    const estates = this.gameManager.store.estates || [];
+    const estate = estates.find(e => e.wifeId === wifeId);
+    if (!estate) return false;
+    if (!estate.children) estate.children = [];
+
+    const child = {
+      name: name || 'Child',
+      growthStage: 0, // index into CHILD_GROWTH_STAGES
+      runsLived: 0,
+      path: null, // null = undecided, 'companion' or 'manager'
+      companionData: null, // set when path = companion
+    };
+    estate.children.push(child);
+    this.gameManager._dirty = true;
+    return child;
+  }
+
+  growChildren() {
+    // Called after each combat run
+    const estates = this.gameManager.store.estates || [];
+    for (const estate of estates) {
+      if (!estate.children) continue;
+      for (const child of estate.children) {
+        child.runsLived++;
+        if (child.runsLived >= CHILD_GROWTH_THRESHOLD && child.growthStage < CHILD_GROWTH_STAGES.length - 1) {
+          child.growthStage++;
+          child.runsLived = 0;
+        }
+      }
+    }
+    this.gameManager._dirty = true;
+  }
+
+  getGrowthStage(child) {
+    return CHILD_GROWTH_STAGES[child.growthStage] || 'Unknown';
+  }
+
+  isAdult(child) {
+    return child.growthStage >= CHILD_GROWTH_STAGES.length - 1;
+  }
+
+  assignPath(child, path) {
+    if (!this.isAdult(child)) return false;
+    child.path = path;
+    if (path === 'companion') {
+      // Generate legacy companion data based on parent's mythology
+      child.companionData = {
+        id: 'child_' + child.name.toLowerCase(),
+        name: child.name,
+        slot: 0, // assigned when deployed
+        pairedWeapon: null,
+        isLegacy: true,
+      };
+    }
+    this.gameManager._dirty = true;
+    return true;
+  }
+}
+
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
@@ -6740,6 +7098,14 @@ class Game {
     this.levelingSystem.init();
     this.pickupSystem.setGameManager(this.gameManager);
     this.audioManager.init();
+
+    // E1: Farming System (auto-clear)
+    this.farmingSystem = new FarmingSystem(this.gameManager, this.eventBus);
+
+    // E2-E4: Progression systems
+    this.affectionSystem = new AffectionSystem(this.gameManager);
+    this.estateSystem = new EstateSystem(this.gameManager);
+    this.childrenSystem = new ChildrenSystem(this.gameManager);
 
     // D5: Disaster System (used in _handleGameOver)
     this.disasterSystem = new DisasterSystem(this.gameManager, this.eventBus);
@@ -7000,6 +7366,9 @@ class Game {
     this.telegraphSystem.update(dt);
     this.movementSystem.update(dt);
     this.companionSystem.update(dt, this.player, this.entityManager.getActive('enemy'));
+
+    // E1: Update farming system (background completion)
+    if (this.farmingSystem) this.farmingSystem.update(dt);
     this.weaponSystem.update(dt);
     this.collisionSystem.update();
     this.damageSystem.update(dt);
@@ -7282,6 +7651,8 @@ class Game {
         this.gameManager.recallCompanion(id);
       }
     }
+    // E4: Grow children after each run
+    if (this.childrenSystem) this.childrenSystem.growChildren();
     // D5: Check for disaster event
     if (this.disasterSystem) {
       const runs = this.gameManager.get('counters.total_runs') || 0;
@@ -7704,6 +8075,7 @@ class TownScreen {
     this._updateDisplay();
     this._renderBreadcrumb();
     this._renderLocationCards();
+    this._renderFarmingSlots();
     this._renderCompanionSlots();
     this._updateSwipeIndicator();
   }
@@ -8122,6 +8494,118 @@ class TownScreen {
     }
     // Insert at top
     area.insertBefore(card, area.firstChild);
+  }
+
+  // E1: Render farming slots UI
+  _renderFarmingSlots() {
+    const area = this.dom.npcArea;
+    // Don't override if we're at a child location
+    if (!this.locationManager.isRoot()) return;
+
+    const farmingDiv = document.createElement('div');
+    farmingDiv.className = 'farming-section';
+    farmingDiv.innerHTML = '<div class="section-label" style="color:#FFD700;font-size:0.85rem;margin-bottom:8px;">📋 Auto-Clear Farming</div>';
+
+    for (let i = 0; i < 3; i++) {
+      const status = this.game.farmingSystem?.getSlotStatus(i + 1);
+      const slotEl = document.createElement('div');
+      slotEl.className = 'location-card' + (status?.status === 'locked' ? ' locked' : '');
+      
+      if (status?.status === 'locked') {
+        slotEl.innerHTML = '<span class="loc-icon">🔒</span><div class="loc-info"><div class="loc-name">Locked Slot</div><div class="loc-desc">Complete 3★ on a stage to unlock</div></div>';
+      } else if (status?.status === 'idle') {
+        slotEl.innerHTML = `<span class="loc-icon">${FARMING_CONFIG.slotLabels[i].split(' ')[0]}</span>
+          <div class="loc-info">
+            <div class="loc-name">${FARMING_CONFIG.slotLabels[i]}</div>
+            <div class="loc-desc">Tap to assign a stage</div>
+          </div>
+          <span class="loc-arrow">▸</span>`;
+        slotEl.addEventListener('click', () => {
+          this.game.audioManager.playMenuSound('select');
+          this._assignFarmingSlot(i + 1);
+        });
+      } else if (status?.status === 'running') {
+        const pct = Math.round(status.progress * 100);
+        const mins = Math.floor(status.timeRemaining / 60);
+        const secs = Math.floor(status.timeRemaining % 60);
+        slotEl.innerHTML = `<span class="loc-icon">⏳</span>
+          <div class="loc-info">
+            <div class="loc-name">${status.stageId || 'Stage'} — ${status.unitId || 'Unit'}</div>
+            <div class="loc-desc">${pct}% complete — ${mins}:${String(secs).padStart(2, '0')} remaining</div>
+          </div>`;
+        slotEl.style.borderColor = 'rgba(255, 215, 0, 0.2)';
+      } else if (status?.status === 'complete') {
+        slotEl.innerHTML = `<span class="loc-icon">✅</span>
+          <div class="loc-info">
+            <div class="loc-name" style="color: #4FC3F7;">Loot Ready!</div>
+            <div class="loc-desc">Tap to collect rewards</div>
+          </div>
+          <span class="loc-arrow" style="color: #4FC3F7;">💰 Collect</span>`;
+        slotEl.style.borderColor = 'rgba(79, 195, 247, 0.3)';
+        slotEl.addEventListener('click', () => {
+          this.game.audioManager.playMenuSound('powerup');
+          this._collectFarmingSlot(i + 1);
+        });
+      }
+      farmingDiv.appendChild(slotEl);
+    }
+    area.appendChild(farmingDiv);
+  }
+
+  _assignFarmingSlot(slotId) {
+    // For now, auto-assign to the first available stage
+    // In full implementation, show a stage picker
+    const stageId = 'stage_graveyard';
+    const companions = this.game.gameManager.get_companions();
+    const slotType = FARMING_CONFIG.slotTypes[slotId - 1];
+    let unitType = slotType;
+    let unitId = null;
+
+    if (slotType === 'companion' && companions.length > 0) {
+      // Find first available companion
+      for (const cid of companions) {
+        if (this.game.gameManager.getCompanionDeployStatus(cid) === 'available') {
+          unitId = cid;
+          unitType = 'companion';
+          break;
+        }
+      }
+    } else if (slotType === 'adventurer') {
+      unitType = 'adventurer';
+      unitId = 'hired_' + slotId;
+    } else {
+      unitType = 'flexible';
+      unitId = companions.find(c => this.game.gameManager.getCompanionDeployStatus(c) === 'available') || 'hired_flex';
+    }
+
+    if (!unitId) {
+      // No available unit — show notification
+      return;
+    }
+
+    const success = this.game.farmingSystem?.assignSlot(slotId, stageId, unitType, unitId);
+    if (success) {
+      this._renderFarmingSlots();
+      this._renderCompanionSlots();
+    }
+  }
+
+  _collectFarmingSlot(slotId) {
+    const loot = this.game.farmingSystem?.collectSlot(slotId);
+    if (loot) {
+      // Show loot notification
+      const notif = this._notifEl;
+      if (notif) {
+        const titleEl = notif.querySelector('.notif-title');
+        const descEl = notif.querySelector('.notif-desc');
+        titleEl.textContent = '💰 Farming Loot Collected!';
+        descEl.textContent = `Gold: ${loot.gold} | XP: ${loot.xp} | Materials: ${Object.entries(loot.materials).map(([k,v]) => k + ':' + v).join(', ')}`;
+        notif.classList.add('active');
+        setTimeout(() => notif.classList.remove('active'), 3000);
+      }
+      this._renderFarmingSlots();
+      this._updateDisplay();
+    }
   }
 
   _typewriteText(text, onComplete) {
