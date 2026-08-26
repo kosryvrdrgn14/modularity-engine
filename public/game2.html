@@ -2453,8 +2453,8 @@ class SpawnSystem {
     this.entityManager.create('enemy', {
       x: px + Math.cos(angle) * dist,
       y: py + Math.sin(angle) * dist,
-      hp: selected.stats.hp,
-      damage: selected.stats.damage,
+      hp: Math.round(selected.stats.hp * (this._tierHpMult || 1.0)),
+      damage: Math.round(selected.stats.damage * (this._tierHpMult || 1.0)),
       speed: selected.stats.speed,
       size: selected.stats.size,
       enemyData: selected,
@@ -6927,6 +6927,24 @@ class Game {
     this.pickupSystem.reset();
     this.levelingSystem.reset();
     this.weaponSystem.reset();
+
+    // B1: Apply weapon loadout from current stage tier
+    const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
+    const stageData = this.dataManager.stages;
+    const loadout = stageData?.weaponLoadouts?.[stageTier];
+    this._currentStageWeapons = loadout ? loadout.weapons : ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    for (const wid of this._currentStageWeapons) {
+      this.weaponSystem.unlockWeapon(wid);
+    }
+
+    // B3: Apply tier multipliers to spawn system
+    const tierMults = stageData?.tierMultipliers?.[stageTier];
+    if (this.spawnSystem) {
+      this.spawnSystem._tierHpMult = tierMults?.hp || 1.0;
+      this.spawnSystem._tierGoldMult = tierMults?.gold || 1.0;
+      this.spawnSystem._tierXpMult = tierMults?.xp || 1.0;
+      this.spawnSystem._tierSpawnRateMult = tierMults?.spawnRate || 1.0;
+    }
     this.companionSystem.companions = [];
     this.gameTime = 0;
 
@@ -7115,7 +7133,7 @@ class Game {
   }
 
   _applyWeaponLevelUp() {
-    const weaponIds = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const weaponIds = this._currentStageWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     // Find the lowest-level active weapon (prioritize upgrading what's unlocked)
     let bestWeapon = null;
     let bestLevel = Infinity;
@@ -7324,6 +7342,11 @@ class Game {
       this.gameManager.end_session(combatResult);
       // Merge stars into stats for UI display
       if (combatResult.stars) stats.stars = combatResult.stars;
+      // B4: Check if frenzy is unlocked
+      if (this.frenzySystem && combatResult.stars?.three) {
+        stats.frenzyUnlocked = true;
+        stats.frenzyAvailable = this.frenzySystem.isUnlocked(combatResult.stageId);
+      }
     }
     
     // Show end screen with result and stats
@@ -7391,17 +7414,13 @@ class Game {
   _checkWeaponUnlocks() {
     const level = this.levelingSystem.level;
     const weapons = this.dataManager.weapons;
-    console.log(`[WeaponUnlock] Checking at level ${level}, weapons count: ${weapons ? weapons.length : 'null'}`);
-    if (!weapons || !Array.isArray(weapons)) {
-      console.error('[WeaponUnlock] weapons is not an array:', weapons);
-      return;
-    }
+    if (!weapons || !Array.isArray(weapons)) return;
     for (const weapon of weapons) {
-      console.log(`[WeaponUnlock] ${weapon.id}: unlockLevel=${weapon.unlockLevel}, currentLevel=${this.weaponSystem.weaponLevels[weapon.id] || 0}`);
+      // Only unlock weapons in the current stage loadout
+      if (!this._currentStageWeapons?.includes(weapon.id)) continue;
       if (weapon.unlockLevel && level >= weapon.unlockLevel) {
         if (!this.weaponSystem.weaponLevels[weapon.id]) {
-          console.log(`[WeaponUnlock] UNLOCKING ${weapon.id}!`);
-          this.weaponSystem.unlockWeapon(weapon.id);
+            this.weaponSystem.unlockWeapon(weapon.id);
           this.eventBus.emit('weaponUnlock', { weaponId: weapon.id, name: weapon.name });
         }
       }
@@ -7411,55 +7430,58 @@ class Game {
   _showUpgradeOptions() {
     if (this.gameState.isLevelUp() && this.uiManager.levelUpOptions) return;
   
-    // Build upgrade pool: stat upgrades + weapon upgrades for active weapons
+    // Build upgrade pool: stat upgrades + weapon upgrades for ACTIVE weapons only
     const upgrades = [
       {
         name: 'Damage Up',
         desc: '+15% base damage',
-        apply: (game) => {
-          if (game.player) {
-            if (!game.player.damageMultiplier) game.player.damageMultiplier = 1;
-            game.player.damageMultiplier *= 1.15;
+        apply: (g) => {
+          if (g.player) {
+            if (!g.player.damageMultiplier) g.player.damageMultiplier = 1;
+            g.player.damageMultiplier *= 1.15;
           }
         },
       },
       {
         name: 'Speed Up',
         desc: '+10% move speed',
-        apply: (game) => {
-          if (game.player) {
-            if (!game.player.speedMultiplier) game.player.speedMultiplier = 1;
-            game.player.speedMultiplier *= 1.10;
-            game.player.speed = (game.player.stats?.moveSpeed || 200) * game.player.speedMultiplier;
+        apply: (g) => {
+          if (g.player) {
+            if (!g.player.speedMultiplier) g.player.speedMultiplier = 1;
+            g.player.speedMultiplier *= 1.10;
+            g.player.speed = (g.player.stats?.moveSpeed || 200) * g.player.speedMultiplier;
           }
         },
       },
       {
         name: 'Health Up',
         desc: '+20 max HP & heal',
-        apply: (game) => {
-          if (game.player) {
-            game.player.maxHp += 20;
-            game.player.hp = Math.min(game.player.hp + 20, game.player.maxHp);
+        apply: (g) => {
+          if (g.player) {
+            g.player.maxHp += 20;
+            g.player.hp = Math.min(g.player.hp + 20, g.player.maxHp);
           }
         },
       },
     ];
 
-    // Add weapon upgrades for each unlocked weapon (max level 7)
-    const weaponIds = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
-    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area' };
-    for (const wid of weaponIds) {
-      const wLevel = game.weaponSystem.weaponLevels[wid] || 0;
+    // Add weapon upgrades ONLY for weapons in the current stage loadout
+    const activeWeaponIds = this._currentStageWeapons || Object.keys(this.weaponSystem.weaponLevels).filter(wid => this.weaponSystem.weaponLevels[wid] > 0);
+    const weaponNames = {
+      w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area',
+      w4_flame_wave: 'Flame Wave', w5_arcane_bolt: 'Arcane Bolt',
+    };
+    for (const wid of activeWeaponIds) {
+      const wLevel = this.weaponSystem.weaponLevels[wid] || 0;
       if (wLevel > 0 && wLevel < 7) {
-        const wData = game.dataManager.weapons.find(w => w.id === wid);
-        const nextStats = wData?.statsPerLevel?.[wLevel]; // next level's stats
-        const desc = nextStats ? `Lv ${wLevel} → ${wLevel + 1}` : `Upgrade ${weaponNames[wid]}`;
+        const wData = this.dataManager.weapons?.find(w => w.id === wid);
+        const nextStats = wData?.statsPerLevel?.[wLevel];
+        const desc = nextStats ? `Lv ${wLevel} \u2192 ${wLevel + 1}` : `Upgrade ${weaponNames[wid] || wid}`;
         upgrades.push({
-          name: `${weaponNames[wid]} Up`,
+          name: `${weaponNames[wid] || wid} Up`,
           desc: desc,
-          apply: (game) => {
-            game.weaponSystem.levelUp(wid);
+          apply: (g) => {
+            g.weaponSystem.levelUp(wid);
           },
         });
       }
