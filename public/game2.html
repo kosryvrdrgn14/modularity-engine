@@ -8201,7 +8201,7 @@ class TownScreen {
         this.game.audioManager.playMenuSound('back');
         this.locationManager.goBack();
       } else if (e.target.classList.contains('bc-item') && !e.target.classList.contains('current')) {
-        this.game.audioManager.playMenuSound('select');
+        this.game.audioManager?.playMenuSound('select');
         const locId = e.target.dataset.locId;
         if (locId) this.locationManager.navigateTo(locId);
       }
@@ -8292,6 +8292,7 @@ class TownScreen {
 
 
   _openDialogue(npc) {
+    if (!npc || !npc.topics) return;
     this._lastDialogueNpcId = npc.id;
     // Use inline SVG for reliable rendering
     const svgHtml = SVG_PORTRAITS[npc.id] || '';
@@ -8299,13 +8300,13 @@ class TownScreen {
       const styled = svgHtml.replace('<svg ', '<svg style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(255,215,0,0.2);flex-shrink:0;" ');
       this.dom.dialoguePortrait.innerHTML = styled;
     }
-    this.dom.dialogueName.textContent = npc.name;
+    this.dom.dialogueName.textContent = npc.name || 'Unknown';
     this.dom.dialogueChoices.style.display = 'none';
     this.dom.dialogueContinue.style.display = 'none';
     this.dom.dialogueOverlay.classList.add('active');
 
-    // Show greeting with typewriter
-    this._typewriteText(npc.greeting, () => {
+    // Show greeting with typewriter, then show choices
+    this._typewriteText(npc.greeting || '...', () => {
       this._showChoices(npc);
     });
   }
@@ -8341,14 +8342,26 @@ class TownScreen {
         }
         // Show response
         this.dom.dialogueChoices.style.display = 'none';
-        this._typewriteText(topic.response, () => {
-          this.dom.dialogueContinue.style.display = 'block';
-          this.dom.dialogueContinue.onclick = () => {
-            this.game.audioManager.playMenuSound('select');
-            this.dom.dialogueContinue.style.display = 'none';
-            this._showChoices(npc);
-          };
-        });
+        if (topic.response) {
+          this._typewriteText(topic.response, () => {
+            this.dom.dialogueContinue.style.display = 'block';
+            this.dom.dialogueContinue.onclick = () => {
+              this.game.audioManager?.playMenuSound('select');
+              this.dom.dialogueContinue.style.display = 'none';
+              this._showChoices(npc);
+            };
+          });
+        } else {
+          // Null response — just show continue or close
+          this._typewriteText('', () => {
+            this.dom.dialogueContinue.style.display = 'block';
+            this.dom.dialogueContinue.onclick = () => {
+              this.game.audioManager?.playMenuSound('select');
+              this.dom.dialogueContinue.style.display = 'none';
+              this._showChoices(npc);
+            };
+          });
+        }
       });
       this.dom.dialogueChoices.appendChild(btn);
     }
@@ -8909,6 +8922,12 @@ class TownScreen {
     if (this._typewriterTimer) {
       clearInterval(this._typewriterTimer);
       this._typewriterTimer = null;
+    }
+    // Guard: handle null/undefined text
+    if (!text) {
+      this.dom.dialogueText.textContent = '';
+      if (onComplete) onComplete();
+      return;
     }
     this.dom.dialogueText.textContent = '';
     let i = 0;

@@ -306,6 +306,17 @@ Corrected `_showChoices` indentation to 2 spaces, matching all other class metho
 - [ ] Run `node -e "new Function(html.match(/<script>([\s\S]*)<\/script>/)[1])"` to verify parse
 - [ ] Check that callback chains (`_typewriteText` → `onComplete` → `_showChoices`) resolve correctly
 
+### Regression (August 26, 2026)
+Bug recurred during Phase D-E code insertions. Same symptom: greeting shows but choices never appear.
+
+**Regression fix:** Added defensive guards to dialogue system:
+- `_typewriteText`: handles null/undefined text gracefully (calls onComplete immediately)
+- `_showChoices`: guards against null `topic.response` before calling typewriteText
+- `_openDialogue`: guards against missing npc/topics/greeting
+- Added optional chaining (`?.`) to all `audioManager` calls in dialogue
+
+**Root cause pattern:** Python-based code insertion can corrupt method boundaries or introduce null references. The defensive guards prevent any single null/missing value from breaking the entire dialogue chain.
+
 ---
 
 ## Bug #36 — W3 Area Pulse Never Fires
