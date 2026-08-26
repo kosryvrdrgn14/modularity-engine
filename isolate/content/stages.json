@@ -1,0 +1,238 @@
+{
+  "id": "stage_graveyard",
+  "name": "The Graveyard",
+  "theme": "Gothic horror",
+  "tier": "standard",
+  "duration": 300,
+  "background": {
+    "baseColor": "#1A1A2E",
+    "gridColor": "#16213E",
+    "gridSize": 50
+  },
+  "spawnConfig": {
+    "minDistance": 400,
+    "maxDistance": 600,
+    "maxEnemies": 200,
+    "baseSpawnRate": 0.8,
+    "spawnRateCap": 3.0
+  },
+  "waves": [
+    {
+      "time": "0:00-0:30",
+      "enemyTypes": [
+        "zombie"
+      ],
+      "spawnRate": 0.8,
+      "compositionWeights": {
+        "zombie": 1.0
+      },
+      "maxEnemies": 25
+    },
+    {
+      "time": "0:30-1:00",
+      "enemyTypes": [
+        "zombie"
+      ],
+      "spawnRate": 1.2,
+      "compositionWeights": {
+        "zombie": 1.0
+      },
+      "maxEnemies": 40
+    },
+    {
+      "time": "1:00-1:30",
+      "enemyTypes": [
+        "zombie",
+        "bat"
+      ],
+      "spawnRate": 1.5,
+      "compositionWeights": {
+        "zombie": 0.55,
+        "bat": 0.45
+      },
+      "maxEnemies": 60
+    },
+    {
+      "time": "1:30-2:00",
+      "enemyTypes": [
+        "zombie",
+        "bat"
+      ],
+      "spawnRate": 1.8,
+      "compositionWeights": {
+        "zombie": 0.55,
+        "bat": 0.45
+      },
+      "maxEnemies": 80
+    },
+    {
+      "time": "2:00-2:30",
+      "enemyTypes": [
+        "zombie",
+        "bat",
+        "skeleton"
+      ],
+      "spawnRate": 2.0,
+      "compositionWeights": {
+        "zombie": 0.4,
+        "bat": 0.35,
+        "skeleton": 0.25
+      },
+      "maxEnemies": 100
+    },
+    {
+      "time": "2:30-3:00",
+      "enemyTypes": [
+        "zombie",
+        "bat",
+        "skeleton",
+        "ghost"
+      ],
+      "spawnRate": 2.2,
+      "compositionWeights": {
+        "zombie": 0.3,
+        "bat": 0.3,
+        "skeleton": 0.25,
+        "ghost": 0.15
+      },
+      "maxEnemies": 120
+    },
+    {
+      "time": "3:00-3:30",
+      "enemyTypes": [
+        "zombie",
+        "bat",
+        "skeleton",
+        "ghost",
+        "caster"
+      ],
+      "spawnRate": 2.5,
+      "compositionWeights": {
+        "zombie": 0.25,
+        "bat": 0.25,
+        "skeleton": 0.2,
+        "ghost": 0.15,
+        "caster": 0.15
+      },
+      "maxEnemies": 150
+    },
+    {
+      "time": "3:30-4:00",
+      "enemyTypes": [
+        "zombie",
+        "bat",
+        "skeleton",
+        "ghost",
+        "caster"
+      ],
+      "spawnRate": 3.0,
+      "compositionWeights": {
+        "zombie": 0.2,
+        "bat": 0.25,
+        "skeleton": 0.2,
+        "ghost": 0.15,
+        "caster": 0.2
+      },
+      "maxEnemies": 180
+    },
+    {
+      "time": "4:00-4:30",
+      "enemyTypes": [
+        "zombie",
+        "bat",
+        "skeleton",
+        "ghost",
+        "caster"
+      ],
+      "spawnRate": 2.0,
+      "maxEnemies": 150
+    },
+    {
+      "time": "4:30-5:00",
+      "enemyTypes": [
+        "zombie",
+        "bat",
+        "skeleton",
+        "ghost",
+        "caster"
+      ],
+      "spawnRate": 1.5,
+      "maxEnemies": 120
+    }
+  ],
+  "bossConfig": {
+    "enemyId": "boss_gravekeeper",
+    "spawnTime": "4:00",
+    "announcement": [
+      {
+        "time": 230,
+        "text": "Something stirs in the darkness...",
+        "type": "text"
+      },
+      {
+        "time": 235,
+        "text": "The Gravekeeper rises!",
+        "type": "shake"
+      },
+      {
+        "time": 240,
+        "type": "boss_spawn"
+      }
+    ]
+  },
+  "weaponLoadouts": {
+    "quick": {
+      "duration": 180,
+      "weapons": [
+        "w1_projectile",
+        "w4_flame_wave",
+        "weapon_area_pulse"
+      ],
+      "description": "Frontloaded for fast clears"
+    },
+    "standard": {
+      "duration": 300,
+      "weapons": [
+        "w1_projectile",
+        "w2_orbit",
+        "weapon_area_pulse"
+      ],
+      "description": "Balanced for standard play"
+    },
+    "highlight": {
+      "duration": 600,
+      "weapons": [
+        "w1_projectile",
+        "w5_arcane_bolt",
+        "weapon_area_pulse"
+      ],
+      "description": "Scaling for extended runs"
+    }
+  },
+  "tierMultipliers": {
+    "quick": {
+      "hp": 0.8,
+      "damage": 0.9,
+      "spawnRate": 1.5,
+      "maxEnemies": 0.8,
+      "gold": 0.8,
+      "xp": 1.2
+    },
+    "standard": {
+      "hp": 1.0,
+      "damage": 1.0,
+      "spawnRate": 1.0,
+      "maxEnemies": 1.0,
+      "gold": 1.0,
+      "xp": 1.0
+    },
+    "highlight": {
+      "hp": 1.3,
+      "damage": 1.2,
+      "spawnRate": 1.0,
+      "maxEnemies": 1.2,
+      "gold": 1.5,
+      "xp": 1.0
+    }
+  }
+}
