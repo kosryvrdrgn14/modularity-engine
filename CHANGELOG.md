@@ -32,6 +32,25 @@
 
 ---
 
+## v0.8.0 — Grand Bazaar Shop System
+**Date:** August 26, 2026
+**Status:** Shop spec created (adjusted from Gemini draft)
+
+### New Spec Files
+- **31_grand_bazaar_spec.md** — Single shop with 4 tabs: Combat Consumables, Companion/Adventurer, Estate/Productivity, Gifts/Romance
+  - Price tiers scaled to economy (25-15,000g range)
+  - Town level gates item availability
+  - ~20 items across 4 tabs
+  - UI design with tab navigation and buy confirmation
+
+### Adjustments from Gemini Draft
+- Removed: Mana system, equipment system, marriage ring, auto-clear expansion, school supplies, crafting catalysts
+- Rescaled: Prices from 250,000g max to 15,000g max (matches our economy)
+- Added: Productivity boosts, adventurer upgrades, estate boosts
+- Kept: Gift system, combat consumables, shop escalation
+
+---
+
 ## v0.7.0 — Design Refinements + Endgame Sandbox
 **Date:** August 26, 2026
 **Status:** Refinements applied, sandbox spec created
