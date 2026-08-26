@@ -1778,13 +1778,23 @@ class CompanionSystem {
     this.companions = [];
   }
 
-  init(companionIds, player) {
+  init(companionIds, player, weaponSystem) {
     this.companions = [];
+    this.weaponSystem = weaponSystem;
+    // Build slot map: slot index -> companion id
+    this.slotMap = {};
+    for (const id of companionIds) {
+      const data = COMPANION_DATA[id];
+      if (!data) continue;
+      this.slotMap[data.slot] = id;
+    }
     for (const id of companionIds) {
       const data = COMPANION_DATA[id];
       if (!data) continue;
       const level = 1; // Start at level 1
       const levelStats = data.statsPerLevel[level - 1];
+      // C1: Get weapon buff from paired weapon
+      const weaponBuff = this._getWeaponBuff(data.pairedWeapon);
       const companion = this.entityManager.create('companion', {
         x: player.x,
         y: player.y + data.followDistance,
@@ -1796,8 +1806,10 @@ class CompanionSystem {
         target: null,
         coneAngle: data.coneAngle,
         coneRange: data.coneRange,
-        primaryDamage: levelStats.primaryDamage,
-        secondaryDamage: levelStats.secondaryDamage,
+        primaryDamage: Math.round(levelStats.primaryDamage * weaponBuff),
+        secondaryDamage: Math.round(levelStats.secondaryDamage * weaponBuff),
+        pairedWeapon: data.pairedWeapon,
+        weaponBuff: weaponBuff,
         detectionRange: data.detectionRange,
         maxChaseRange: data.maxChaseRange,
         followDistance: data.followDistance,
@@ -1805,6 +1817,7 @@ class CompanionSystem {
         attackSpeedMultiplier: data.attackSpeedMultiplier,
         hitCooldown: data.hitCooldown,
         lootRadius: data.lootRadius,
+        companionLevel: 1,
         _growlTimer: 0,
         _growlEffect: null,
         _attackRunTimer: 0,
@@ -1903,6 +1916,54 @@ class CompanionSystem {
       // Passive loot collection
       this._collectNearbyLoot(c, player);
     }
+  }
+
+  // C1: Get damage multiplier from paired weapon level
+  _getWeaponBuff(weaponId) {
+    if (!this.weaponSystem) return 1.0;
+    const wl = this.weaponSystem.getWeaponLevel(weaponId);
+    // Each weapon level adds 8% damage to paired companion
+    return 1.0 + (wl * 0.08);
+  }
+
+  // C1: Refresh all companion weapon buffs (call on weapon level up)
+  refreshWeaponBuffs() {
+    for (const c of this.companions) {
+      if (!c.active || !c.pairedWeapon) continue;
+      const buff = this._getWeaponBuff(c.pairedWeapon);
+      c.weaponBuff = buff;
+      // Reapply to damage using base stats from COMPANION_DATA
+      const data = COMPANION_DATA[c.companionId];
+      if (data) {
+        const lvl = Math.min(c.companionLevel || 1, data.statsPerLevel.length);
+        const base = data.statsPerLevel[lvl - 1];
+        c.primaryDamage = Math.round(base.primaryDamage * buff);
+        c.secondaryDamage = Math.round(base.secondaryDamage * buff);
+      }
+    }
+  }
+
+  // C2/C3: Get status of a companion
+  getCompanionStatus(companionId) {
+    // Check if deployed in this combat
+    if (this.companions.some(c => c.companionId === companionId && c.active)) {
+      return 'deployed_combat';
+    }
+    return 'available';
+  }
+
+  // C2: Check if companion is available for deployment
+  isCompanionAvailable(companionId, gameManager) {
+    // Check if already deployed in combat
+    if (this.companions.some(c => c.companionId === companionId && c.active)) {
+      return false; // Already in this combat
+    }
+    // Check if in auto-clear (from gameManager status)
+    const status = gameManager?.getCompanionDeployStatus(companionId);
+    if (status === 'autoclear') return false;
+    // Check if locked/story unavailable
+    if (status === 'locked' || status === 'story_unavailable') return false;
+    return true;
   }
 
   _updateFollow(c, player, dt) {
@@ -5825,6 +5886,51 @@ class GameManager {
   }
   get_companion_count() { return (this.store.companions || []).length; }
 
+  // C2/C3: Companion deployment status tracking
+  getCompanionDeployStatus(companionId) {
+    const s = this.store.persistent?.npcs?.companionStatus || {};
+    return s[companionId] || 'available';
+  }
+
+  setCompanionDeployStatus(companionId, status) {
+    if (!this.store.persistent.npcs.companionStatus) {
+      this.store.persistent.npcs.companionStatus = {};
+    }
+    this.store.persistent.npcs.companionStatus[companionId] = status;
+    this._dirty = true;
+  }
+
+  // Mark companion as deployed in combat
+  deployCompanion(companionId) {
+    this.setCompanionDeployStatus(companionId, 'deployed_combat');
+  }
+
+  // Mark companion as deployed in auto-clear
+  deployCompanionAutoClear(companionId) {
+    this.setCompanionDeployStatus(companionId, 'autoclear');
+  }
+
+  // Return companion to available
+  recallCompanion(companionId) {
+    this.setCompanionDeployStatus(companionId, 'available');
+  }
+
+  // Lock companion (story/event)
+  lockCompanion(companionId, reason) {
+    this.setCompanionDeployStatus(companionId, 'locked');
+  }
+
+  // Get all companions with their statuses
+  getCompanionRoster() {
+    const companions = this.get_companions();
+    return companions.map(id => ({
+      id,
+      status: this.getCompanionDeployStatus(id),
+      slot: COMPANION_DATA[id]?.slot || 0,
+      pairedWeapon: COMPANION_DATA[id]?.pairedWeapon || null,
+    }));
+  }
+
   // ── Player Progress ────────────────────────────
   add_xp(amount) {
     const p = this.store.persistent.player;
@@ -6241,6 +6347,8 @@ class Game {
 
     // Level sync: when W1 upgrades, update Dog's stats
     this.eventBus.on('weaponLevelUp', (data) => {
+      // C1: Refresh companion weapon buffs when weapon levels up
+      if (this.companionSystem) this.companionSystem.refreshWeaponBuffs();
       if (data.weaponId === 'w1_projectile') {
         this.companionSystem.setLevel('dog', data.newLevel);
       }
@@ -6416,7 +6524,11 @@ class Game {
     // Spawn companions from GameManager
     const companionIds = this.gameManager.get_companions();
     if (companionIds && companionIds.length > 0) {
-      this.companionSystem.init(companionIds, this.player);
+      this.companionSystem.init(companionIds, this.player, this.weaponSystem);
+      // C2: Mark companions as deployed in combat
+      for (const id of companionIds) {
+        this.gameManager.deployCompanion(id);
+      }
     }
 
     // GAP 4 FIX: Pass player reference to AudioManager for distance calculations
@@ -6720,6 +6832,13 @@ class Game {
   }
 
   _handleGameOver() {
+    // C2: Recall all companions from combat
+    if (this.gameManager) {
+      const companions = this.gameManager.get_companions();
+      for (const id of companions) {
+        this.gameManager.recallCompanion(id);
+      }
+    }
     // Pause the game loop
     this.gameLoop.paused = true;
     this.inputManager._isPaused = true;
