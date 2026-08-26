@@ -8606,6 +8606,11 @@ class TownScreen {
   // D1: Render location cards for current location's children
   _renderLocationCards() {
     const area = this.dom.npcArea;
+    if (!area) return;
+    // Prevent double-render within same frame
+    if (this._renderLock) return;
+    this._renderLock = true;
+    requestAnimationFrame(() => { this._renderLock = false; });
     area.innerHTML = '';
     
     // NPCs at current location
@@ -8643,8 +8648,9 @@ class TownScreen {
         ${!child.locked ? '<span class="loc-arrow">▸</span>' : ''}
       `;
       if (!child.locked) {
-        card.addEventListener('click', () => {
-          this.game.audioManager.playMenuSound('select');
+        card.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.game.audioManager?.playMenuSound('select');
           this.locationManager.navigateTo(child.id);
         });
       }
@@ -8666,8 +8672,9 @@ class TownScreen {
         <div class="npc-action">▸ Talk</div>
       </div>
     `;
-    card.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.game.audioManager?.playMenuSound('select');
       this._openDialogue(npc);
     });
     return card;
@@ -8744,6 +8751,10 @@ class TownScreen {
   _onLocationNavigate(loc) {
     this._renderBreadcrumb();
     this._renderLocationCards();
+    if (this.locationManager.isRoot()) {
+      this._renderFarmingSlotsButton();
+      this._renderCompanionSlots();
+    }
     this._updateDisplay();
   }
 
