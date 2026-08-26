@@ -1,0 +1,78 @@
+[
+  {
+    "id": "exp_small",
+    "name": "XP Gem (Small)",
+    "type": "exp_small",
+    "value": 1,
+    "visual": {
+      "shape": "diamond",
+      "color": "#4FC3F7",
+      "size": 8
+    }
+  },
+  {
+    "id": "exp_large",
+    "name": "XP Gem (Large)",
+    "type": "exp_large",
+    "value": 5,
+    "visual": {
+      "shape": "diamond",
+      "color": "#81D4FA",
+      "size": 14
+    }
+  },
+  {
+    "id": "gold_coin",
+    "name": "Gold Coin",
+    "type": "gold",
+    "value": 0,
+    "visual": {
+      "shape": "circle",
+      "color": "#FFD700",
+      "size": 10
+    },
+    "goldValuePerCoin": 1
+  },
+  {
+    "id": "screen_wipe",
+    "name": "Screen Wipe",
+    "type": "screen_wipe",
+    "value": 0,
+    "visual": {
+      "shape": "star",
+      "color": "#00E676",
+      "size": 16
+    },
+    "killsAllEnemies": true,
+    "bossDamage": 200,
+    "bossResistance": 0.8
+  },
+  {
+    "id": "magnet",
+    "name": "Magnet",
+    "type": "magnet",
+    "value": 0,
+    "visual": {
+      "shape": "circle",
+      "color": "#FF4081",
+      "size": 14
+    },
+    "behavior": {
+      "duration": 10,
+      "attractRadius": 350,
+      "attractSpeed": 400,
+      "instantBurstRadius": 150
+    }
+  },
+  {
+    "id": "pickup_weapon_level_up",
+    "name": "Weapon Level-Up",
+    "type": "pickup_weapon_level_up",
+    "value": 0,
+    "visual": {
+      "shape": "triangle",
+      "color": "#FF9100",
+      "size": 16
+    }
+  }
+]

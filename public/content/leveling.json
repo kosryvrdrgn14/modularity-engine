@@ -1,0 +1,61 @@
+{
+  "xpCurve": [
+    {
+      "level": 1,
+      "xpToNext": 5
+    },
+    {
+      "level": 2,
+      "xpToNext": 10
+    },
+    {
+      "level": 3,
+      "xpToNext": 15
+    },
+    {
+      "level": 4,
+      "xpToNext": 22
+    },
+    {
+      "level": 5,
+      "xpToNext": 32
+    },
+    {
+      "level": 6,
+      "xpToNext": 45
+    },
+    {
+      "level": 7,
+      "xpToNext": 60
+    },
+    {
+      "level": 8,
+      "xpToNext": 80
+    },
+    {
+      "level": 9,
+      "xpToNext": 105
+    },
+    {
+      "level": 10,
+      "xpToNext": 135
+    },
+    {
+      "level": 11,
+      "xpToNext": 170
+    },
+    {
+      "level": 12,
+      "xpToNext": 210
+    },
+    {
+      "level": 13,
+      "xpToNext": 260
+    }
+  ],
+  "upgradePool": {
+    "weaponUpgrades": 0.4,
+    "passiveStats": 0.3,
+    "specialAbilities": 0.3
+  }
+}

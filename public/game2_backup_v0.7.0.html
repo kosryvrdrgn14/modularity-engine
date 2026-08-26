@@ -5374,43 +5374,25 @@ class GameManager {
 
   _createDefault() {
     return {
-      save_version: 2,
+      save_version: 1,
       session: {
         current_stage_id: null,
         run_in_progress: false,
         run_data: { time_survived: 0, kills: 0, gold_earned: 0, level_reached: 1 },
-      },
-      world: {
-        currentRegion: "town",
-        currentLocation: "city_root",
-        locationHistory: ["town:city_root"],
-        regionIndex: 0,
-        regionUnlocks: { town: true, graveyard: false, forest: false },
-        locationUnlocks: { "town:city_root": true },
       },
       persistent: {
         currency: 0,
         player: { level: 1, xp: 0, total_gold: 0, base_stats: { max_health: 100, move_speed: 200, damage_multiplier: 1.0, speed_multiplier: 1.0 } },
         combat: { unlocked_weapons: ["w1_projectile"], weapon_levels: {}, best_run: null, run_history: [] },
         skills: { unlocked: [], skill_points: 0 },
-        town: { level: 1, population: 0, popCap: 5, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 }, workers: { farmers: 0, miners: 0, builders: 0, idle: 0 } },
-        npcs: { met: [], relationships: {}, companions: [], companionStatus: {} },
-        factions: { wanderers_guild: { reputation: 0, rank: "unknown" }, shadow_covenant: { reputation: 0, rank: "unknown" }, forge_brotherhood: { reputation: 0, rank: "unknown" } },
+        town: { phase: 1, population: 0, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 } },
+        npcs: { met: [], relationships: {} },
+        factions: { wanderers_guild: { reputation: 0, rank: "unknown" } },
         quests: { active: [], completed: [] },
         unlocks: { stages: ["stage_graveyard"], items: [], features: ["town_basic", "combat_basic"] },
         estates: [],
         family: { wives: [], children: [] },
         inventory: { equipment: { weapon: null, armor: null }, consumables: [], max_slots: 24 },
-      },
-      farming: {
-        slots: [
-          { id: 1, stageId: null, unitType: null, unitId: null, status: "idle", timer: 0 },
-          { id: 2, stageId: null, unitType: null, unitId: null, status: "idle", timer: 0 },
-          { id: 3, stageId: null, unitType: null, unitId: null, status: "locked", timer: 0 },
-        ],
-        plans: [],
-        pityCounters: {},
-        clearCounters: {},
       },
       flags: {},
       counters: { total_kills: 0, total_runs: 0 },
@@ -5418,55 +5400,13 @@ class GameManager {
   }
 
   _migrate(data) {
-    const v = data.save_version || data.version || 0;
+    const v = data.version || 0;
     if (v < 1) {
       data.inventory = data.inventory || {};
       data.inventory.maxSlots = data.inventory.maxSlots || 24;
       data.quests = data.quests || {};
       data.quests.estateQueue = data.quests.estateQueue || [];
-      data.save_version = 1;
-    }
-    if (v < 2) {
-      // Add world state (D9: unified location hierarchy)
-      data.world = data.world || {
-        currentRegion: "town",
-        currentLocation: "city_root",
-        locationHistory: ["town:city_root"],
-        regionIndex: 0,
-        regionUnlocks: { town: true, graveyard: false, forest: false },
-        locationUnlocks: { "town:city_root": true },
-      };
-      // Add farming state
-      data.farming = data.farming || {
-        slots: [
-          { id: 1, stageId: null, unitType: null, unitId: null, status: "idle", timer: 0 },
-          { id: 2, stageId: null, unitType: null, unitId: null, status: "idle", timer: 0 },
-          { id: 3, stageId: null, unitType: null, unitId: null, status: "locked", timer: 0 },
-        ],
-        plans: [],
-        pityCounters: {},
-        clearCounters: {},
-      };
-      // Update town structure
-      if (data.persistent && data.persistent.town) {
-        if (data.persistent.town.phase !== undefined) {
-          data.persistent.town.level = data.persistent.town.phase;
-          delete data.persistent.town.phase;
-        }
-        data.persistent.town.level = data.persistent.town.level || 1;
-        data.persistent.town.popCap = data.persistent.town.popCap || 5;
-        data.persistent.town.workers = data.persistent.town.workers || { farmers: 0, miners: 0, builders: 0, idle: 0 };
-      }
-      // Add companion status
-      if (data.persistent && data.persistent.npcs) {
-        data.persistent.npcs.companionStatus = data.persistent.npcs.companionStatus || {};
-      }
-      // Add missing factions
-      if (data.persistent && data.persistent.factions) {
-        data.persistent.factions.shadow_covenant = data.persistent.factions.shadow_covenant || { reputation: 0, rank: "unknown" };
-        data.persistent.factions.forge_brotherhood = data.persistent.factions.forge_brotherhood || { reputation: 0, rank: "unknown" };
-      }
-      data.save_version = 2;
+      data.version = 1;
     }
     return data;
   }
@@ -5700,30 +5640,6 @@ class GameManager {
 
   getBestRun() {
     return this.store.persistent.combat.best_run;
-  }
-
-  // ── World State ──────────────────────────────
-  getCurrentRegion() { return this.store.world?.currentRegion || "town"; }
-  setCurrentRegion(region) { if (this.store.world) { this.store.world.currentRegion = region; this._dirty = true; } }
-  getCurrentLocation() { return this.store.world?.currentLocation || "city_root"; }
-  setCurrentLocation(loc) { if (this.store.world) { this.store.world.currentLocation = loc; this._dirty = true; } }
-  isRegionUnlocked(region) { return !!this.store.world?.regionUnlocks?.[region]; }
-  unlockRegion(region) { if (this.store.world) { this.store.world.regionUnlocks[region] = true; this._dirty = true; } }
-  isLocationUnlocked(loc) { return !!this.store.world?.locationUnlocks?.[loc]; }
-  unlockLocation(loc) { if (this.store.world) { this.store.world.locationUnlocks[loc] = true; this._dirty = true; } }
-
-  // ── Farming State ──────────────────────────────
-  getFarmingSlot(id) { return this.store.farming?.slots?.find(s => s.id === id); }
-  setFarmingSlot(id, data) {
-    if (!this.store.farming) return;
-    const slot = this.store.farming.slots.find(s => s.id === id);
-    if (slot) { Object.assign(slot, data); this._dirty = true; }
-  }
-  getClearCount(stageId) { return this.store.farming?.clearCounters?.[stageId] || 0; }
-  incrementClearCount(stageId) {
-    if (!this.store.farming) return;
-    this.store.farming.clearCounters[stageId] = (this.store.farming.clearCounters[stageId] || 0) + 1;
-    this._dirty = true;
   }
 
   // ── Save/Load ──────────────────────────────────

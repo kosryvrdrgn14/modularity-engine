@@ -1,0 +1,24 @@
+{
+  "id": "player_default",
+  "name": "The Survivor",
+  "description": "A lone hero fighting through the night.",
+  "stats": {
+    "maxHealth": 100,
+    "moveSpeed": 200,
+    "armor": 0,
+    "pickupRange": 50,
+    "magnetRange": 0,
+    "critChance": 0,
+    "critMultiplier": 1.5
+  },
+  "hitbox": {
+    "width": 20,
+    "height": 20
+  },
+  "startingWeapon": "w1_projectile",
+  "visual": {
+    "shape": "square",
+    "size": 24,
+    "color": "#FFD700"
+  }
+}
