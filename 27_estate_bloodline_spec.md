@@ -268,21 +268,49 @@ When all requirements are met:
 | **Teen** | 30 | Can be assigned as worker (high efficiency) | Assign role |
 | **Adult** | 40 | Becomes companion or manager | Choose path |
 
-### Adult Children
+### Adult Children — Legacy Companions
 
-When a child reaches adulthood, the player chooses:
+When a child reaches adulthood, the player chooses their path. Children are **legacy companions** — they provide weapon evolutions and abilities NOT available with regular NPC companions.
 
-**Path A: Companion**
-- Joins the companion pool
-- Unique abilities based on mother's mythology
-- Stats scale with player level
+**Path A: Legacy Companion**
+- Joins the companion pool as a **legacy unit**
+- Unlocks **Legacy Weapon Evolutions** — unique upgrades only available through children
+- Stats scale with player level + mother's mythology bonuses
 - Takes a companion slot (1:1 with weapons)
+- Has unique combat dialogue reflecting both parents
 
-**Path B: Manager**
+**Path B: Estate Manager**
 - Assigns to an estate to automate functions
 - Increases material output by 25%
 - Generates 1 random quest per 5 runs
 - Frees up the player from manual estate management
+
+### Legacy Weapon Evolutions
+
+Children provide weapon evolutions that regular companions cannot:
+
+| Child's Mother | Weapon | Legacy Evolution | Effect |
+|---|---|---|---|
+| Any melee NPC | W1 (Projectile) | **Homing Shot** | Projectiles track nearest enemy |
+| Any ranged NPC | W2 (Orbit) | **Shield Orbit** | Orbs block 1 enemy projectile per 5s |
+| Any magic NPC | W3 (Area) | **Chain Lightning** | Pulses chain to 2 nearby enemies at 50% |
+| Norse mythology | Any | **Ragnarök** | All weapons gain +20% damage for 10s on boss spawn |
+| Greek mythology | Any | **Olympian Grace** | +15% dodge chance (phase through enemies) |
+| Egyptian mythology | Any | **Sun Blessing** | Regenerate 2 HP/sec in combat |
+| Japanese mythology | Any | **Shadow Step** | +25% move speed for 3s after taking damage |
+| Celtic mythology | Any | **Nature's Wrath** | Area pulses leave poison zones (3s, 5 dmg/tick) |
+| Hindu mythology | Any | **Karma** | Reflect 10% of damage taken back to attacker |
+| Aztec mythology | Any | **Blood Sacrifice** | -10% HP, +30% damage (toggleable) |
+| Slavic mythology | Any | **Frost Armor** | Reduce incoming damage by 15% |
+| Mesopotamian mythology | Any | **Star Power** | Crit chance +15% for 5s after kill |
+
+### Why Legacy Evolutions
+
+- **Unique payoff** — children provide something regular companions can't
+- **Encourages family building** — more children = more evolution options
+- **Build diversity** — different mythology combinations create different builds
+- **Emotional investment** — "My child gave me this power" is more meaningful than "I bought this upgrade"
+- **Endgame content** — legacy evolutions give maxed players new goals
 
 ### Why Children Work
 

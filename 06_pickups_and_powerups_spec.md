@@ -285,7 +285,66 @@ Pity counters persist across runs. If a player goes 15 kills without a weapon up
 
 ---
 
-## 7. Magnet Interaction Rules
+## 7. Gacha Protection — Rare Drop System
+
+Rare drops use a per-STAGE-clear protection system, not per-kill. This ensures predictable supply and prevents frustration.
+
+### How It Works
+
+Each rare drop item has a **clear counter** per stage. The drop chance increases with each clear of that stage without obtaining the item.
+
+| Clears Without Drop | Drop Chance | Notes |
+|---|---|---|
+| 1 | 1% | Base rate — lucky drops happen |
+| 2 | 5% | Slight improvement |
+| 3 | 15% | Noticeably better |
+| 4 | 25% | Quarter chance — getting close |
+| 5 | 50% | Half chance — very likely |
+| 6 | 75% | Almost guaranteed |
+| 7+ | 99% | Virtual guarantee |
+
+### Why Per-Clear, Not Per-Kill
+
+| Per-Kill (old) | Per-Clear (new) |
+|---|---|
+| Resets on every kill | Resets only when item drops |
+| Hard to predict | Predictable: guaranteed by clear 7 |
+| Feels random | Feels fair — bad luck is temporary |
+
+### Drop Table
+
+```json
+{
+  "rare_drops": [
+    {
+      "id": "legendary_blade",
+      "stageId": "graveyard",
+      "baseChance": 0.01,
+      "rampPerClear": [0.01, 0.05, 0.15, 0.25, 0.50, 0.75, 0.99],
+      "maxClears": 7
+    }
+  ]
+}
+```
+
+### Why This System
+
+- **Predictable supply** — designers know items drop within 7 clears
+- **No frustration** — bad luck is capped at 7 runs
+- **Target farming viable** — player can grind a stage knowing the drop is coming
+- **Balanced economy** — rare items have controlled entry rate
+
+### Integration with Soft-Pity
+
+Gacha protection and soft-pity work together:
+- **Soft-pity** (per-kill): Ensures power-ups drop regularly during a run
+- **Gacha protection** (per-clear): Ensures rare items drop within a predictable window
+
+They don't conflict because they operate at different levels (kill vs. stage clear).
+
+---
+
+## 8. Magnet Interaction Rules
 
 From `vs_prog.md` Magnet Interaction Rules section and `01_engine_architecture.md` §19.
 
@@ -344,7 +403,7 @@ function updateMagnet(pickups, player, dt):
 
 ---
 
-## 8. Pickup Collection Rules
+## 9. Pickup Collection Rules
 
 ### Collection Methods
 
@@ -379,7 +438,7 @@ From `01_engine_architecture.md` §12.
 
 ---
 
-## 9. Pickup Visual Summary
+## 10. Pickup Visual Summary
 
 All visuals from `vs_colors.md` Pickup Visuals + Power-Up Visuals sections.
 
@@ -408,7 +467,7 @@ All visuals from `vs_colors.md` Pickup Visuals + Power-Up Visuals sections.
 
 ---
 
-## 10. Cross-Reference Summary
+## 11. Cross-Reference Summary
 
 | Section | References |
 |---|---|

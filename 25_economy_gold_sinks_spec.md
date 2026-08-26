@@ -103,9 +103,11 @@ Gifts that increase affection with NPCs.
 | Ancient Tome | 100g | +4 | Library |
 | Legendary Artifact | 250g | +5 | Faction Shop |
 
-### Category 3: Town Management
+### Category 3: Town Management & Productivity Boosts
 
-Purchases for town growth and automation.
+Purchases for town growth, automation, and **productivity boosts**.
+
+**Core Rule:** Gold can boost the output or progress of certain city/estate functions. This creates a gold sink that feels useful, not punitive.
 
 | Item | Cost | Effect | Unlock |
 |---|---|---|---|
@@ -113,6 +115,36 @@ Purchases for town growth and automation.
 | Hire Manager | 300-500g | Automate town functions | Town Level 3 |
 | Speed Build | 150g | Instant building completion | Town Level 2 |
 | Extra Farming Slot | 200g | +1 auto-clear slot | Town Level 3 |
+
+### Productivity Boosts (Gold → Output)
+
+When quests require large quantities of materials, the player can dump gold into specific NPCs/locations to increase output:
+
+| Boost Target | Cost | Effect | Quest Tie-In |
+|---|---|---|---|
+| **Merchant's Guild** | 50-200g | +50% material trade output for 3 runs | "Deliver 100 wood to the village" |
+| **Blacksmith** | 75-150g | +30% crafting speed for 3 runs | "Forge 50 iron ingots" |
+| **Dwarf Miner Estate** | 100-250g | +40% ore output for 3 runs | "Mine 80 ore for the wall" |
+| **Herb Garden** | 50-100g | +60% herb output for 3 runs | "Gather 60 herbs for the chapel" |
+
+**Why productivity boosts work:**
+- Gold feels useful (not just hoarded)
+- Quests with large material requirements become solvable faster
+- Player chooses which quests to accelerate (not forced)
+- Boosts are temporary (3 runs) — not permanent upgrades
+
+### Quest-Driven Gold Sink Frequency
+
+The frequency of large-material quests scales with the player's gold:
+
+| Gold Held | Quest Frequency | Rationale |
+|---|---|---|
+| < 500g | 1 quest per 10 runs | Low gold = small quests |
+| 500-2000g | 1 quest per 5 runs | Moderate gold = moderate quests |
+| 2000-5000g | 1 quest per 3 runs | High gold = large quests |
+| > 5000g | 1 quest per 2 runs | Surplus gold = frequent large quests |
+
+This ensures there's always a gold sink available when the player is loaded, but it's never forced — the player can ignore the quests if they prefer to save.
 
 ---
 

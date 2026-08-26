@@ -82,21 +82,35 @@ Stage Select Screen
 
 ## 3. Farming Slots
 
-### Slot System
+### Slot System — Rule of 3
 
-The player has **3 farming slots** (expandable via town upgrades).
+The player has **3 farming slots** with specific roles:
 
-| Slot | Source | Notes |
-|---|---|---|
-| Slot 1 | Available from start | Basic farming |
-| Slot 2 | Town Level 3 | Second parallel farm |
-| Slot 3 | Town Level 5 | Maximum farming capacity |
+| Slot | Unit Type | Unlock | Purpose |
+|---|---|---|---|
+| **Slot 1** | Companion only | Start of game | Companion auto-clears with full buffs |
+| **Slot 2** | Adventurer only | Town Level 2 | Hired unit auto-clears at reduced efficiency |
+| **Slot 3** | Flexible (companion OR adventurer) | Town Level 4 | Player's choice — or play manually instead |
+
+**Why this split:**
+- Forces the player to engage with both companion and adventurer systems
+- Slot 3 being flexible lets the player choose: automate with a companion, hire help, or play the stage manually for 3★ attempts
+- Each slot remembers its last assignment (auto-saved)
+
+### Auto-Save Settings
+
+When the player assigns a unit to a slot, the game saves:
+- Stage ID
+- Unit type and ID
+- Farming plan (if any)
+
+Next time the player opens the farming screen, slots show the last configuration. One tap to start — no reassignment needed.
 
 ### Slot Assignment
 
-Each slot can be assigned to:
+Each slot requires:
 1. **A 3★-cleared stage** (required)
-2. **A unit** — either a companion or a hired adventurer
+2. **A unit** — companion (Slot 1/3), adventurer (Slot 2/3), or manual play (Slot 3)
 3. **Optional: A farming plan** (saved configuration)
 
 ### Slot States
@@ -128,16 +142,24 @@ Auto-clear simulates a combat run using the player's current loadout and the sta
 | Player skill | ❌ No | Simulated as "optimal" — no mistakes, good positioning |
 | RNG variance | ✅ Yes | Randomized within expected ranges |
 
-### Simulation Duration
+### Background Completion (No Timer)
 
-```
-simTime = bestClearTime × 1.2
-```
+Auto-clear runs **in the background while the player does other things**. There is no visible timer — the clear completes when the player finishes another activity (town management, dialogue, estate visits, another combat run).
 
-- Uses the player's **best recorded clear time** for that stage
-- Multiplied by 1.2 (20% slower than best — accounts for RNG variance)
-- Minimum: 60 seconds (even fast stages take at least 1 minute)
-- Maximum: stage duration (can't be longer than the stage itself)
+**How it works:**
+1. Player assigns a slot → auto-clear starts silently
+2. Player goes about their business (town, dialogue, combat)
+3. When the player returns to the farming screen, completed slots show loot ready to collect
+4. If the player hasn't done anything else, the auto-clear completes after a minimum of 2 minutes (prevents instant completion)
+
+**Why no timer:**
+- Removes the timegate feeling — player never waits
+- Auto-clear "completes" naturally during other gameplay
+- The player is always doing something productive
+- Loot is collected when they check, not on a countdown
+
+**Minimum completion time:** 2 minutes (prevents abuse of instant farming)
+**Maximum completion time:** Stage duration × 1.2 (same as before, but invisible)
 
 ### Simulation Outcome
 

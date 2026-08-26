@@ -32,17 +32,37 @@ The player has **3 companion slots** but may own **N companions** (wives, Dog, o
 - Not-deployed companions provide **no passive bonus**
 - Player can change deployment between stages freely
 
+### One-Place-Only Rule
+
+A companion can only be in **ONE place** at a time. They cannot be deployed in manual combat AND auto-clearing a stage simultaneously.
+
+| State | Can Deploy to Combat? | Can Assign to Auto-Clear? |
+|---|---|---|
+| **Available** | ✅ Yes | ✅ Yes |
+| **In Manual Combat** | ❌ No (already deployed) | ❌ No |
+| **In Auto-Clear** | ❌ No (busy farming) | ❌ No (already assigned) |
+| **Locked** | ❌ No | ❌ No |
+| **Story Unavailable** | ❌ No | ❌ No |
+| **Resting** | ❌ No | ❌ No |
+
+**Why one-place-only:**
+- Prevents double-dipping (companion buffs manual combat AND auto-clears simultaneously)
+- Creates meaningful choices: "Do I bring Dog to this boss fight, or let him farm herbs?"
+- Simplifies the system: no need to track a companion in multiple places
+- Hired adventurers are NOT affected (they're generic, only exist in auto-clear)
+
 ### Companion Status States
 
 Each companion has a status that determines availability:
 
 | Status | Meaning | Can Deploy? | Source |
 |---|---|---|---|
-| **Available** | Ready to deploy to a slot | ✅ Yes | Default state after recruitment |
-| **Deployed** | Active in a companion slot for this stage | N/A (already in) | Assigned to slot 1/2/3 at stage select |
+| **Available** | Ready to deploy or assign | ✅ Yes | Default state after recruitment |
+| **In Manual Combat** | Active in a companion slot during combat | ❌ No (already in) | Assigned to slot 1/2/3 at stage select |
+| **In Auto-Clear** | Assigned to a farming slot | ❌ No (busy farming) | Assigned to auto-clear slot |
 | **Locked** | Not yet recruited | ❌ No | NPC not yet met/befriended |
-| **Story Unavailable** | Temporarily unavailable due to quest/story | ❌ No | Quest flag set (e.g., "npc_in_danger") |
-| **Resting** | Recovering after a long combat session | ❌ No (cooldown) | Post-combat rest timer (future feature) |
+| **Story Unavailable** | Temporarily unavailable | ❌ No | Quest flag, pregnant, personal quest, raising child |
+| **Resting** | Recovering after combat | ❌ No (cooldown) | Post-combat rest timer (future feature) |
 
 **Why status states matter:**
 - Prevents deploying companions that haven't been recruited

@@ -32,6 +32,38 @@
 
 ---
 
+## v0.7.0 — Design Refinements + Endgame Sandbox
+**Date:** August 26, 2026
+**Status:** Refinements applied, sandbox spec created
+
+### Design Refinements
+- **Auto-clear rule of 3:** Slot 1 = companion, Slot 2 = adventurer, Slot 3 = flexible/manual
+- **Auto-clear background completion:** No visible timer — completes during other gameplay
+- **Companion one-place-only:** Companion can only be in ONE place (combat OR auto-clear, never both)
+- **Gacha protection:** Rare drops ramp from 1% → 99% over 7 clears per stage (predictable supply)
+- **Legacy companions:** Children provide unique weapon evolutions not available with regular companions
+- **Gold productivity boosts:** Gold can boost output of Blacksmith, Miner, Merchant's Guild for quests
+- **Disasters simplified:** Gold sink only, 3-run cooldown, full system deferred to balancing
+
+### New Spec Files
+- **30_endgame_sandbox_spec.md** — Build testing mode with custom difficulty, damage reports, build comparison
+
+### Updated Files
+- `23_auto_clear_farming_spec.md` — Rule-of-3 slots, background completion, auto-save settings
+- `20_companion_combat_spec.md` — One-place-only lockout rule
+- `06_pickups_and_powerups_spec.md` — Gacha protection system
+- `27_estate_bloodline_spec.md` — Legacy companions + weapon evolutions
+- `25_economy_gold_sinks_spec.md` — Productivity boosts + quest-driven sinks
+- `28_disaster_events_spec.md` — Simplified to gold sink with cooldown
+- `game_frame.md` — Sandbox module added, gacha protection noted
+
+### Gold Bloat Reference
+- Run 50 surplus: 6,595g (60% more income than sinks)
+- Target surplus: 2,000-3,000g
+- Fix: Add ~150g/run in new sinks when ready
+
+---
+
 ## v0.6.0 — Supporting Specs Updated (Phase 5)
 **Date:** August 26, 2026
 **Status:** 5 supporting specs updated

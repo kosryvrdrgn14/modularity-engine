@@ -286,6 +286,7 @@ Feature writes:   store.flags.met_blacksmith = true  → "First conversation don
 | 8 | **Unlock System** | `UnlockModule` | `unlocks` | `unlocks` | `unlocks` |
 | 9 | **Inventory** | `InventoryModule` | `inventory` | `inventory`, `combat`, `npcs` | `inventory` |
 | 10 | **Estate & Family** | `EstateModule` | `estates`, `family` | `npcs`, `factions`, `town`, `player.totalGold` | `estates`, `family`, `npcs.relationships`, `factions.reputation` |
+| 11 | **Endgame Sandbox** | `SandboxModule` | None (testing only) | `combat`, `npcs.companions`, `player.baseStats` | None (no persistent writes) |
 
 ### Why These Are Separate Modules
 
@@ -1542,7 +1543,10 @@ The town uses wood, stone, herbs, and gold. **GameManager** now supports multi-r
 Items can be earned, bought, and found. But there's no inventory screen to manage equipment and consumables.
 - **Action:** Design an inventory UI module (grid-based or list-based) accessible from the town.
 
-**Gap 5: Inventory gift/surplus system.** Players can gift unneeded items to estates (affection + dialogue), Blacksmith (recycling → materials), Market (selling → gold), or Library (studying → skill XP). An algorithm generates surplus quests ("Blacksmith needs 3 iron swords") based on high-stock or low-level items. Max 3 estate quests visible at once, with a "Visit All Estates" prompt every 5 runs.
+**Gap 5a: Rare drop gacha protection.** (RESOLVED — §06 Pickups)
+Rare drops use per-STAGE-clear protection: 1% base → ramps to 99% by clear 7. Predictable supply, no frustration.
+
+**Gap 5b: Inventory gift/surplus system.** Players can gift unneeded items to estates (affection + dialogue), Blacksmith (recycling → materials), Market (selling → gold), or Library (studying → skill XP). An algorithm generates surplus quests ("Blacksmith needs 3 iron swords") based on high-stock or low-level items. Max 3 estate quests visible at once, with a "Visit All Estates" prompt every 5 runs.
 
 **Gap 5b: No equipment system in the combat engine.**
 The combat engine has a player with base stats but no equipment slots. If the Blacksmith sells swords and armor, the combat engine needs to read equipment from the store and apply bonuses.
@@ -1678,6 +1682,19 @@ If we add a new stage, NPC, or building in a future version, how does it integra
 | **P4** | Full faction system (all 3) | Remaining 2 factions + conflict system. |
 | **P4** | Equipment & inventory | Equipment slots, stat modifiers, inventory UI. |
 | **P5** | Prestige / New Game+ | Endgame replayability. |
+
+---
+
+## Appendix A2: Endgame Sandbox Mode
+
+The sandbox is an endgame mode for build testing and theorycrafting. It reuses ALL existing assets (stages, enemies, weapons, companions) with customizable difficulty. Players can:
+- Set weapon/companion levels freely
+- Adjust enemy HP/damage/spawn rate (0.5× to 3×)
+- See real-time damage numbers and DPS counters
+- Compare builds side-by-side
+- Track personal records
+
+See `30_endgame_sandbox_spec.md` for full design.
 
 ---
 
