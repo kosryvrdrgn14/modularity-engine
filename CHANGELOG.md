@@ -15,9 +15,10 @@
 - **D6:** Keep 3 core factions. 50-55 wife roster from multiple mythologies expands factions. Some lore-only.
 - **D7:** Skill tree is a placeholder. Game playable without it.
 - **D8:** Gold income: combat + quests + events. No estate income.
+- **D9:** No separate world map. Reuse city/town navigation for all areas. Same interface, different data.
 
 ### Updated Files
-- **game_frame.md** — v0.3.0 → v0.4.0:
+- **game_frame.md** — v0.3.0 → v0.4.0 (D9: world map → unified location hierarchy):
   - Section 6.5: 3 fixed companion slots with 1:1 weapon binding
   - Section 6.5: Combat engine integration updated for binding model
   - Section 7: Faction expansion note added (D6)
@@ -26,7 +27,8 @@
   - Section 14 (Gap 11): Resolved via 1:1 binding (D1/D5)
   - Section 14 (Q3): Resolved with D1/D2/D5
   - Save data: partySlots → 3
-- **spec_update_roadmap.md** — All 8 decisions marked as resolved
+- **22_city_builder_location_system.md** — v0.1.0 → v0.2.0 (renamed, noted as reusable for all areas)
+- **spec_update_roadmap.md** — All 9 decisions marked as resolved
 
 ---
 

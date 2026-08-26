@@ -21,6 +21,7 @@ These decisions affect multiple specs and must be made before any spec updates.
 | D6 | **Faction system: Keep + massive expansion** | game_frame §7 | ✅ DECIDED: Keep 3 core. 50-55 wife roster from multiple mythologies expands factions. Some lore-only. |
 | D7 | **Skill tree: Placeholder** | game_frame §8 | ✅ DECIDED: Keep 5-branch as placeholder. Unlocks/bonuses. Game playable without it. |
 | D8 | **Gold income: Combat + Quests + Events** | economy, combat, estates | ✅ DECIDED: Three gold sources. No estate income. |
+| D9 | **No separate world map** | §22, UI, game_loop | ✅ DECIDED: Reuse city/town navigation for all areas. Same interface, different data. No world map screen. |
 
 **Status:** ✅ ALL DECISIONS RESOLVED (August 26, 2026). Proceed to Phase 1.
 

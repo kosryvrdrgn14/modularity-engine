@@ -313,7 +313,7 @@ The combat engine is **one game mode** — a self-contained module that:
 
 | Current | Framework Version |
 |---|---|
-| Game starts immediately | Game starts after selecting a stage from the world map |
+| Game starts immediately | Game starts after selecting a stage from the location hierarchy (reuse town navigation) |
 | One hardcoded stage | Multiple stages loaded from `stages.json`, gated by `unlocks.stages` |
 | Gold goes nowhere | Gold writes to `store.town.resources.gold` |
 | Stats are per-run only | Base stats from `store.player.baseStats` + skill tree modifiers |
@@ -1619,9 +1619,9 @@ More stages mean more variety but less depth per stage. With 4+ stages, each nee
 Options: (a) Silent protagonist with text-only narration. (b) Narrator with occasional story text between stages. (c) Full dialogue system like a JRPG.
 - **Recommendation:** (a) Silent protagonist with text narration. Simplest to implement, easiest to expand. Narrator text appears at key story moments (start of game, boss encounters, faction milestones).
 
-**Q2: How should the transition between town and combat work?**
+**Q2: How should the transition between town and combat work?** (RESOLVED — Unified Location Hierarchy)
 Options: (a) Seamless transition (camera zooms into the stage). (b) Loading screen with lore text. (c) World map as an intermediate screen.
-- **Recommendation:** (c) World map. It provides a natural place to select stages, view quest objectives, and check intel. Also future-proofs for multiple regions.
+- **DECIDED:** No separate world map. Reuse the city/town navigation interface for all areas. The location hierarchy (City → Districts → Sub-Districts → Buildings) is data-driven — the same system represents the town, the Graveyard region, the Forest, etc. Each area has its own location tree, NPCs, backgrounds, and ambient sounds. The player navigates between areas using the same breadcrumb + back + side menu interface. This eliminates a separate world map screen and keeps the UX consistent.
 
 **Q3: How should NPC combat companions work?** (RESOLVED — D1/D2/D5)
 NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. 3 companion slots, each bound 1:1 to a weapon slot (W1=C1, W2=C2, W3=C3). Companions buff and evolve their paired weapon. NPC weapons show in the weapon bar as smaller icons with colored NPC border. NPCs auto-level to match the player's current level, scaling at 10-50% of player damage depending on trust tier. No manual NPC upgrade management. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
@@ -1641,7 +1641,7 @@ Options: (a) Single JSON in one localStorage key (simple, but hits 5MB limit eve
 
 **Q7: How should the game handle the "first run" experience?**
 The player starts with nothing — no buildings, no NPCs, no quests. The first run should be guided.
-- **Recommendation:** A short scripted tutorial quest chain: "Survive 60 seconds" → "Return to town" → "Build the Blacksmith" → "Talk to Gareth" → "Complete his request" → "Enter the World Map." This naturally introduces all systems.
+- **Recommendation:** A short scripted tutorial quest chain: "Survive 60 seconds" → "Return to town" → "Build the Blacksmith" → "Talk to Gareth" → "Complete his request" → "Explore the Graveyard." This naturally introduces all systems.
 
 **Q8: Should skill tree resets cost resources?**
 If the player wants to try a different build, should they be able to respec? For free or for a cost?
@@ -1687,7 +1687,7 @@ The `extract_engine.html` plan describes how to modularize the combat engine fro
 2. **Content files expand from 10 to 18** — adding NPCs, factions, skills, quests, buildings, items, unlocks, and story
 3. **A centralized store is introduced** — all modules read/write one save file
 4. **The engine's data loading is extended** — it reads `store.player.baseStats` (which includes skill tree bonuses) and writes `store.town.resources.gold` on session end
-5. **New UI modules are needed** — town view, NPC dialogue, skill tree, world map, inventory
+5. **New UI modules are needed** — location view (reused for town/world), NPC dialogue, skill tree, inventory
 
 The extraction plan's Phase 1-5 (externalizing combat data) becomes a prerequisite for this framework's implementation. The combat engine must be modular before it can be wrapped in a CombatModule.
 

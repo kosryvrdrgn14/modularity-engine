@@ -1,4 +1,4 @@
-# City Builder — Location Hierarchy & Navigation System
+# Location Hierarchy & Navigation System (Reusable for Town + World)
 
 > **Game Version:** v0.3.0+  
 > **Date:** August 26, 2026  
