@@ -865,6 +865,10 @@
       padding: 0 4px;
     }
 
+
+    /* F1: Sandbox DPS overlay */
+    #sb-difficulty, #sb-show-dps { accent-color: #FFD700; }
+
   </style>
 </head>
 <body>
@@ -950,6 +954,7 @@
       <button class="actionbar-btn" id="ab-party"><span class="ab-icon">🐕</span><span class="ab-label">Party</span></button>
       <button class="actionbar-btn" id="ab-shop"><span class="ab-icon">🛒</span><span class="ab-label">Shop</span></button>
       <button class="actionbar-btn" id="ab-title"><span class="ab-icon">📜</span><span class="ab-label">Title</span></button>
+      <button class="actionbar-btn" id="ab-sandbox"><span class="ab-icon">🔬</span><span class="ab-label">Sandbox</span></button>
     </div>
   </div>
 
@@ -7023,6 +7028,101 @@ class ChildrenSystem {
 }
 
 
+
+// ============================================================
+// SANDBOX SYSTEM — Endgame build testing (F1)
+// ============================================================
+
+const SANDBOX_DEFAULTS = {
+  difficulty: 1.0,
+  enemyHpMult: 1.0,
+  enemyDamageMult: 1.0,
+  spawnRateMult: 1.0,
+  weaponLevels: { w1_projectile: 7, w2_orbit: 7, weapon_area_pulse: 7 },
+  companionSlots: [],
+  showDps: true,
+  showDamageNumbers: true,
+  timerEnabled: false,
+};
+
+class SandboxSystem {
+  constructor(gameManager, eventBus) {
+    this.gameManager = gameManager;
+    this.eventBus = eventBus;
+    this.config = { ...SANDBOX_DEFAULTS, weaponLevels: { ...SANDBOX_DEFAULTS.weaponLevels } };
+    this.isActive = false;
+    this._dpsTimer = 0;
+    this._dpsWindow = []; // {damage, time} entries
+    this._totalDamage = 0;
+    this._totalKills = 0;
+    this._startTime = 0;
+  }
+
+  activate(config) {
+    this.isActive = true;
+    this.config = { ...SANDBOX_DEFAULTS, ...config };
+    if (config?.weaponLevels) this.config.weaponLevels = { ...config.weaponLevels };
+    this._dpsTimer = 0;
+    this._dpsWindow = [];
+    this._totalDamage = 0;
+    this._totalKills = 0;
+    this._startTime = 0;
+  }
+
+  deactivate() {
+    this.isActive = false;
+    this.config = { ...SANDBOX_DEFAULTS, weaponLevels: { ...SANDBOX_DEFAULTS.weaponLevels } };
+  }
+
+  recordDamage(amount) {
+    if (!this.isActive || !this.config.showDps) return;
+    this._totalDamage += amount;
+    this._dpsWindow.push({ damage: amount, time: this._startTime });
+    // Keep only last 5 seconds of data
+    const cutoff = this._startTime - 5;
+    this._dpsWindow = this._dpsWindow.filter(d => d.time > cutoff);
+  }
+
+  recordKill() {
+    if (!this.isActive) return;
+    this._totalKills++;
+  }
+
+  updateTimer(dt) {
+    if (!this.isActive) return;
+    this._startTime += dt;
+  }
+
+  getDps() {
+    if (this._dpsWindow.length === 0) return 0;
+    const totalDmg = this._dpsWindow.reduce((sum, d) => sum + d.damage, 0);
+    const windowSize = Math.min(this._startTime, 5);
+    return windowSize > 0 ? Math.round(totalDmg / windowSize) : 0;
+  }
+
+  getStats() {
+    return {
+      dps: this.getDps(),
+      totalDamage: this._totalDamage,
+      totalKills: this._totalKills,
+      time: Math.round(this._startTime),
+      avgDamagePerKill: this._totalKills > 0 ? Math.round(this._totalDamage / this._totalKills) : 0,
+    };
+  }
+
+  getReport() {
+    const stats = this.getStats();
+    return {
+      difficulty: this.config.difficulty,
+      weaponLevels: { ...this.config.weaponLevels },
+      companionSlots: [...this.config.companionSlots],
+      stats,
+      timestamp: Date.now(),
+    };
+  }
+}
+
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
@@ -7110,6 +7210,9 @@ class Game {
     this.affectionSystem = new AffectionSystem(this.gameManager);
     this.estateSystem = new EstateSystem(this.gameManager);
     this.childrenSystem = new ChildrenSystem(this.gameManager);
+
+    // F1: Sandbox System
+    this.sandboxSystem = new SandboxSystem(this.gameManager, this.eventBus);
 
     // D5: Disaster System (used in _handleGameOver)
     this.disasterSystem = new DisasterSystem(this.gameManager, this.eventBus);
@@ -7229,6 +7332,10 @@ class Game {
     });
 
     this.eventBus.on('damage', (data) => {
+      // F1: Track sandbox DPS
+      if (this.sandboxSystem?.isActive && data.entity !== this.player) {
+        this.sandboxSystem.recordDamage(data.amount || 1);
+      }
       if (data.entity === this.player) this._sessionDamageTaken = (this._sessionDamageTaken || 0) + (data.amount || 1);
       if (data.entity === this.player && data.entity.hp <= 0) {
         this.gameState.triggerGameOver('defeat', this._getStats());
@@ -7238,6 +7345,10 @@ class Game {
     });
 
     this.eventBus.on('death', (data) => {
+      // F1: Track sandbox kills
+      if (this.sandboxSystem?.isActive && data.type !== 'player') {
+        this.sandboxSystem.recordKill();
+      }
       // GAP 5 FIX: Skip boss deaths here — handled by bossDeath event
       if (data.type === 'boss_gravekeeper') return;
       if (data.entity === this.player) {
@@ -7373,6 +7484,9 @@ class Game {
 
     // E1: Update farming system (background completion)
     if (this.farmingSystem) this.farmingSystem.update(dt);
+
+    // F1: Update sandbox DPS timer
+    if (this.sandboxSystem?.isActive) this.sandboxSystem.updateTimer(dt);
     this.weaponSystem.update(dt);
     this.collisionSystem.update();
     this.damageSystem.update(dt);
@@ -7790,6 +7904,25 @@ class Game {
     this.floatingTextSystem.draw(ctx);
     ctx.restore();
 
+    // F1: Sandbox DPS overlay
+    if (this.sandboxSystem?.isActive && this.sandboxSystem.config.showDps) {
+      const ctx2 = this.renderer.ctx;
+      const dps = this.sandboxSystem.getDps();
+      const stats = this.sandboxSystem.getStats();
+      ctx2.save();
+      ctx2.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx2.fillRect(10, 80, 160, 60);
+      ctx2.fillStyle = '#FFD700';
+      ctx2.font = 'bold 14px monospace';
+      ctx2.textAlign = 'left';
+      ctx2.fillText(`DPS: ${dps}`, 16, 100);
+      ctx2.fillStyle = '#CCC';
+      ctx2.font = '11px monospace';
+      ctx2.fillText(`Total: ${stats.totalDamage}`, 16, 118);
+      ctx2.fillText(`Kills: ${stats.totalKills}  Time: ${stats.time}s`, 16, 134);
+      ctx2.restore();
+    }
+
     // Always render UI (includes end screen overlay when game over)
     this.uiManager.render();
   }
@@ -8028,6 +8161,11 @@ class TownScreen {
       this.game.audioManager.playMenuSound('select');
       this.hide();
       this.game._returnToTitle();
+    });
+    const sandboxBtn = document.getElementById('ab-sandbox');
+    if (sandboxBtn) sandboxBtn.addEventListener('click', () => {
+      this.game.audioManager.playMenuSound('select');
+      this._openSandbox();
     });
     if (shopBtn) shopBtn.addEventListener('click', () => {
       this.game.audioManager.playMenuSound('select');
@@ -8643,6 +8781,128 @@ class TownScreen {
     descEl.textContent = Object.entries(produced).map(([k,v]) => `${k}: +${v}`).join(' | ');
     notif.classList.add('active');
     setTimeout(() => notif.classList.remove('active'), 3000);
+  }
+
+  // F1: Open sandbox config
+  _openSandbox() {
+    const overlay = document.getElementById('shop-overlay');
+    if (!overlay) return;
+    overlay.classList.add('active');
+
+    // Reuse shop overlay as sandbox config
+    const header = document.getElementById('shop-header');
+    if (header) header.querySelector('.shop-title').textContent = '🔬 Sandbox Mode';
+
+    const tabs = document.getElementById('shop-tabs');
+    if (tabs) tabs.style.display = 'none';
+
+    const items = document.getElementById('shop-items');
+    if (!items) return;
+    items.innerHTML = '';
+
+    // Difficulty slider
+    items.innerHTML += `
+      <div class="shop-item">
+        <span class="item-icon">⚔️</span>
+        <div class="item-info">
+          <div class="item-name">Difficulty</div>
+          <div class="item-desc">Enemy HP/Damage multiplier</div>
+          <input type="range" id="sb-difficulty" min="0.5" max="3.0" step="0.1" value="1.0" style="width:100%;margin-top:6px;">
+          <div id="sb-diff-val" style="color:#FFD700;font-size:0.8rem;">1.0×</div>
+        </div>
+      </div>`;
+
+    // Weapon level selectors
+    const weapons = [
+      { id: 'w1_projectile', name: 'Projectile', icon: '🏹' },
+      { id: 'w2_orbit', name: 'Orbit', icon: '🔄' },
+      { id: 'weapon_area_pulse', name: 'Area', icon: '💥' },
+      { id: 'w4_flame_wave', name: 'Flame Wave', icon: '🔥' },
+      { id: 'w5_arcane_bolt', name: 'Arcane Bolt', icon: '⚡' },
+    ];
+    for (const w of weapons) {
+      items.innerHTML += `
+        <div class="shop-item">
+          <span class="item-icon">${w.icon}</span>
+          <div class="item-info">
+            <div class="item-name">${w.name}</div>
+            <div class="item-desc">Level: <span id="sb-wl-${w.id}">7</span>/7</div>
+            <input type="range" id="sb-wl-${w.id}" min="0" max="7" value="7" style="width:100%;margin-top:6px;" data-weapon="${w.id}">
+          </div>
+        </div>`;
+    }
+
+    // Show DPS toggle
+    items.innerHTML += `
+      <div class="shop-item">
+        <span class="item-icon">📊</span>
+        <div class="item-info">
+          <div class="item-name">Show DPS Counter</div>
+          <div class="item-desc">Display real-time DPS during combat</div>
+          <input type="checkbox" id="sb-show-dps" checked style="margin-top:6px;">
+        </div>
+      </div>`;
+
+    // Launch button
+    items.innerHTML += `
+      <div class="shop-item" id="sb-launch" style="border-color:rgba(255,215,0,0.3);cursor:pointer;text-align:center;">
+        <span class="item-icon">🚀</span>
+        <div class="item-info">
+          <div class="item-name" style="color:#FFD700;">Launch Sandbox</div>
+          <div class="item-desc">Start with current settings</div>
+        </div>
+      </div>`;
+
+    // Wire difficulty slider
+    const diffSlider = document.getElementById('sb-difficulty');
+    const diffVal = document.getElementById('sb-diff-val');
+    if (diffSlider) diffSlider.addEventListener('input', () => {
+      diffVal.textContent = parseFloat(diffSlider.value).toFixed(1) + '×';
+    });
+
+    // Wire weapon level sliders
+    for (const w of weapons) {
+      const slider = document.getElementById('sb-wl-' + w.id);
+      const label = document.getElementById('sb-wl-' + w.id);
+      if (slider) slider.addEventListener('input', () => {
+        if (label) label.textContent = slider.value;
+      });
+    }
+
+    // Wire launch
+    const launchBtn = document.getElementById('sb-launch');
+    if (launchBtn) launchBtn.addEventListener('click', () => {
+      const config = {
+        difficulty: parseFloat(document.getElementById('sb-difficulty')?.value || 1.0),
+        enemyHpMult: parseFloat(document.getElementById('sb-difficulty')?.value || 1.0),
+        enemyDamageMult: parseFloat(document.getElementById('sb-difficulty')?.value || 1.0),
+        showDps: document.getElementById('sb-show-dps')?.checked ?? true,
+        weaponLevels: {},
+      };
+      for (const w of weapons) {
+        const lvl = parseInt(document.getElementById('sb-wl-' + w.id)?.value || 7);
+        if (lvl > 0) config.weaponLevels[w.id] = lvl;
+      }
+      this.game.sandboxSystem.activate(config);
+      this.hide();
+      overlay.classList.remove('active');
+      // Restore shop tabs
+      if (tabs) tabs.style.display = '';
+      if (header) header.querySelector('.shop-title').textContent = '🛒 Grand Bazaar';
+      this.game.startGame();
+    });
+
+    // Close handler
+    const closeBtn = document.getElementById('shop-close');
+    if (closeBtn) {
+      const origHandler = closeBtn.onclick;
+      closeBtn.onclick = () => {
+        overlay.classList.remove('active');
+        if (tabs) tabs.style.display = '';
+        if (header) header.querySelector('.shop-title').textContent = '🛒 Grand Bazaar';
+        closeBtn.onclick = origHandler;
+      };
+    }
   }
 
   _typewriteText(text, onComplete) {
