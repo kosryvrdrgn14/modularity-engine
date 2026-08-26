@@ -8091,7 +8091,121 @@ const NPC_DATA = {
         close: true,
       }
     ]
-  }
+  },
+
+  // Trade District NPCs
+  blacksmith: {
+    id: 'blacksmith',
+    name: 'Garret the Blacksmith',
+    location: 'blacksmith',
+    unlocked: true,
+    greeting: "Hmph. Another traveler. If you need weapons forged, you've come to the right place. I used to make plows and horseshoes. Now it's all swords and shields.",
+    topics: [
+      {
+        id: 'about_weapons',
+        text: 'Can you forge me something special?',
+        response: "I can forge decent blades, but the real materials... they're buried in the graveyard. Bring me rare metal and I'll make you something legendary.",
+        affection: 0,
+      },
+      {
+        id: 'about_himself',
+        text: 'How did you end up here?',
+        response: "I was the finest smith in the valley. When the dead rose, my forge was the first thing they destroyed. I've been tempering steel and tempering my patience ever since.",
+        affection: 0,
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  },
+
+  tavern_keeper: {
+    id: 'tavern_keeper',
+    name: 'Mira the Tavern Keeper',
+    location: 'tavern',
+    unlocked: true,
+    greeting: "Welcome, weary soul! Sit down, have a drink. Well... we're out of ale. But I've got stories, and those are free.",
+    topics: [
+      {
+        id: 'rumors',
+        text: 'Any rumors from the road?',
+        response: "Travelers say the Gravekeeper wasn't always a monster. Some say he was a good man once, until something broke inside him. Tragic, really.",
+        affection: 0,
+      },
+      {
+        id: 'about_tavern',
+        text: 'This place used to be lively, huh?',
+        response: "Lively? It was the heart of the village! Singing, dancing, feasts every fortnight. Now it's just me and the rats. But we keep the lights on. Hope is important.",
+        affection: 1,
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  },
+
+  // Residential NPCs
+  worried_refugee: {
+    id: 'worried_refugee',
+    name: 'Anxious Refugee',
+    location: 'residential',
+    unlocked: true,
+    greeting: "*shivers* Did you hear that last night? Groaning from the graveyard. They're getting closer every day...",
+    topics: [
+      {
+        id: 'weather',
+        text: 'How are you holding up?',
+        response: "The nights are getting colder. My children are sick. I don't know how much longer we can survive here. But at least you fight for us. That means something.",
+        affection: 0,
+      },
+      {
+        id: 'zombies',
+        text: 'Are the zombies really getting closer?',
+        response: "Every night I hear them. Scratching at the walls, moaning. Elder Rowan says we're safe, but I've seen them in the treeline. They're watching us.",
+        affection: 0,
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  },
+
+  weather_watcher: {
+    id: 'weather_watcher',
+    name: 'Old Sarah',
+    location: 'residential',
+    unlocked: true,
+    greeting: "Rain's coming. My bones always know. *looks at the sky* Dark clouds gathering over the graveyard...",
+    topics: [
+      {
+        id: 'weather',
+        text: 'What do you think about the weather?',
+        response: "Storm's brewing. Good for the crops — if we had any left. Bad for morale. People get anxious when the sky goes dark. Reminds them of... you know.",
+        affection: 0,
+      },
+      {
+        id: 'old_days',
+        text: 'Tell me about the old days.',
+        response: "Oh honey, I remember when this was all green fields. Markets full of flowers, children laughing. Now look at us. Huddled around campfires, jumping at shadows.",
+        affection: 0,
+      },
+      {
+        id: 'end',
+        text: '[End Conversation]',
+        response: null,
+        close: true,
+      }
+    ]
+  },
 };
 
 class TownScreen {
@@ -8201,7 +8315,7 @@ class TownScreen {
         this.game.audioManager.playMenuSound('back');
         this.locationManager.goBack();
       } else if (e.target.classList.contains('bc-item') && !e.target.classList.contains('current')) {
-        this.game.audioManager.playMenuSound('select');
+        this.game.audioManager?.playMenuSound('select');
         const locId = e.target.dataset.locId;
         if (locId) this.locationManager.navigateTo(locId);
       }
@@ -8225,7 +8339,7 @@ class TownScreen {
     this._updateDisplay();
     this._renderBreadcrumb();
     this._renderLocationCards();
-    this._renderFarmingSlots();
+    this._renderFarmingSlotsButton();
     this._renderCompanionSlots();
     this._updateSwipeIndicator();
   }
@@ -8292,6 +8406,7 @@ class TownScreen {
 
 
   _openDialogue(npc) {
+    if (!npc || !npc.topics) return;
     this._lastDialogueNpcId = npc.id;
     // Use inline SVG for reliable rendering
     const svgHtml = SVG_PORTRAITS[npc.id] || '';
@@ -8299,13 +8414,13 @@ class TownScreen {
       const styled = svgHtml.replace('<svg ', '<svg style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(255,215,0,0.2);flex-shrink:0;" ');
       this.dom.dialoguePortrait.innerHTML = styled;
     }
-    this.dom.dialogueName.textContent = npc.name;
+    this.dom.dialogueName.textContent = npc.name || 'Unknown';
     this.dom.dialogueChoices.style.display = 'none';
     this.dom.dialogueContinue.style.display = 'none';
     this.dom.dialogueOverlay.classList.add('active');
 
-    // Show greeting with typewriter
-    this._typewriteText(npc.greeting, () => {
+    // Show greeting with typewriter, then show choices
+    this._typewriteText(npc.greeting || '...', () => {
       this._showChoices(npc);
     });
   }
@@ -8341,14 +8456,26 @@ class TownScreen {
         }
         // Show response
         this.dom.dialogueChoices.style.display = 'none';
-        this._typewriteText(topic.response, () => {
-          this.dom.dialogueContinue.style.display = 'block';
-          this.dom.dialogueContinue.onclick = () => {
-            this.game.audioManager.playMenuSound('select');
-            this.dom.dialogueContinue.style.display = 'none';
-            this._showChoices(npc);
-          };
-        });
+        if (topic.response) {
+          this._typewriteText(topic.response, () => {
+            this.dom.dialogueContinue.style.display = 'block';
+            this.dom.dialogueContinue.onclick = () => {
+              this.game.audioManager?.playMenuSound('select');
+              this.dom.dialogueContinue.style.display = 'none';
+              this._showChoices(npc);
+            };
+          });
+        } else {
+          // Null response — just show continue or close
+          this._typewriteText('', () => {
+            this.dom.dialogueContinue.style.display = 'block';
+            this.dom.dialogueContinue.onclick = () => {
+              this.game.audioManager?.playMenuSound('select');
+              this.dom.dialogueContinue.style.display = 'none';
+              this._showChoices(npc);
+            };
+          });
+        }
       });
       this.dom.dialogueChoices.appendChild(btn);
     }
@@ -8659,61 +8786,91 @@ class TownScreen {
   }
 
   // E1: Render farming slots UI
-  _renderFarmingSlots() {
+  _renderFarmingSlotsButton() {
     const area = this.dom.npcArea;
     if (!area) return;
-    // Don't render farming at child locations — only at root
     if (!this.locationManager.isRoot()) return;
 
-    const farmingDiv = document.createElement('div');
-    farmingDiv.className = 'farming-section';
-    farmingDiv.innerHTML = '<div class="section-label" style="color:#FFD700;font-size:0.85rem;margin-bottom:8px;">📋 Auto-Clear Farming</div>';
+    let activeCount = 0, completedCount = 0;
+    for (let i = 0; i < 3; i++) {
+      const s = this.game.farmingSystem?.getSlotStatus(i + 1);
+      if (s?.status === 'running') activeCount++;
+      if (s?.status === 'complete') completedCount++;
+    }
+
+    const btn = document.createElement('div');
+    btn.className = 'location-card';
+    btn.style.cursor = 'pointer';
+    btn.innerHTML = `
+      <span class="loc-icon">\u{1f4cb}</span>
+      <div class="loc-info">
+        <div class="loc-name">Auto-Clear Farming</div>
+        <div class="loc-desc">${activeCount} active${completedCount > 0 ? ' \u00b7 ' + completedCount + ' loot ready' : ''}</div>
+      </div>
+      <span class="loc-arrow">\u25b8</span>`;
+    btn.addEventListener('click', () => {
+      this.game.audioManager?.playMenuSound('select');
+      this._openFarmingMenu();
+    });
+    area.appendChild(btn);
+  }
+
+  _openFarmingMenu() {
+    const overlay = document.getElementById('shop-overlay');
+    if (!overlay) return;
+    overlay.classList.add('active');
+    const header = document.getElementById('shop-header');
+    if (header) header.querySelector('.shop-title').textContent = '\u{1f4cb} Auto-Clear Farming';
+    const tabs = document.getElementById('shop-tabs');
+    if (tabs) tabs.style.display = 'none';
+    const items = document.getElementById('shop-items');
+    if (!items) return;
+    items.innerHTML = '';
 
     for (let i = 0; i < 3; i++) {
       const status = this.game.farmingSystem?.getSlotStatus(i + 1);
-      const slotEl = document.createElement('div');
-      slotEl.className = 'location-card' + (status?.status === 'locked' ? ' locked' : '');
-      
+      const slotLabel = FARMING_CONFIG.slotLabels[i];
+      const card = document.createElement('div');
+      card.className = 'shop-item';
+
       if (status?.status === 'locked') {
-        slotEl.innerHTML = '<span class="loc-icon">🔒</span><div class="loc-info"><div class="loc-name">Locked Slot</div><div class="loc-desc">Complete 3★ on a stage to unlock</div></div>';
+        card.classList.add('cant-afford');
+        card.innerHTML = `<span class="item-icon">\u{1f512}</span><div class="item-info"><div class="item-name">${slotLabel}</div><div class="item-desc">Complete 3\u2605 on a stage to unlock</div></div>`;
       } else if (status?.status === 'idle') {
-        slotEl.innerHTML = `<span class="loc-icon">${FARMING_CONFIG.slotLabels[i].split(' ')[0]}</span>
-          <div class="loc-info">
-            <div class="loc-name">${FARMING_CONFIG.slotLabels[i]}</div>
-            <div class="loc-desc">Tap to assign a stage</div>
-          </div>
-          <span class="loc-arrow">▸</span>`;
-        slotEl.addEventListener('click', () => {
-          this.game.audioManager.playMenuSound('select');
+        card.innerHTML = `<span class="item-icon">${slotLabel.split(' ')[0]}</span><div class="item-info"><div class="item-name">${slotLabel}</div><div class="item-desc">Tap to assign \u2014 Graveyard (5min)</div></div><span class="item-cost" style="color:#4FC3F7;">Assign \u25b8</span>`;
+        card.addEventListener('click', () => {
+          this.game.audioManager?.playMenuSound('select');
           this._assignFarmingSlot(i + 1);
+          this._openFarmingMenu();
         });
       } else if (status?.status === 'running') {
         const pct = Math.round(status.progress * 100);
         const mins = Math.floor(status.timeRemaining / 60);
         const secs = Math.floor(status.timeRemaining % 60);
-        slotEl.innerHTML = `<span class="loc-icon">⏳</span>
-          <div class="loc-info">
-            <div class="loc-name">${status.stageId || 'Stage'} — ${status.unitId || 'Unit'}</div>
-            <div class="loc-desc">${pct}% complete — ${mins}:${String(secs).padStart(2, '0')} remaining</div>
-          </div>`;
-        slotEl.style.borderColor = 'rgba(255, 215, 0, 0.2)';
+        card.innerHTML = `<span class="item-icon">\u23f3</span><div class="item-info"><div class="item-name">${status.stageId || 'Stage'} \u2014 ${status.unitId || 'Unit'}</div><div class="item-desc">${pct}% complete \u00b7 ${mins}:${String(secs).padStart(2, '0')} remaining</div></div>`;
+        card.style.borderColor = 'rgba(255, 215, 0, 0.2)';
       } else if (status?.status === 'complete') {
-        slotEl.innerHTML = `<span class="loc-icon">✅</span>
-          <div class="loc-info">
-            <div class="loc-name" style="color: #4FC3F7;">Loot Ready!</div>
-            <div class="loc-desc">Tap to collect rewards</div>
-          </div>
-          <span class="loc-arrow" style="color: #4FC3F7;">💰 Collect</span>`;
-        slotEl.style.borderColor = 'rgba(79, 195, 247, 0.3)';
-        slotEl.addEventListener('click', () => {
-          this.game.audioManager.playMenuSound('powerup');
+        card.innerHTML = `<span class="item-icon">\u2705</span><div class="item-info"><div class="item-name" style="color: #4FC3F7;">Loot Ready!</div><div class="item-desc">Tap to collect rewards</div></div><span class="item-cost" style="color:#4FC3F7;">\u{1f4b0} Collect</span>`;
+        card.style.borderColor = 'rgba(79, 195, 247, 0.3)';
+        card.addEventListener('click', () => {
+          this.game.audioManager?.playMenuSound('powerup');
           this._collectFarmingSlot(i + 1);
+          this._openFarmingMenu();
         });
       }
-      farmingDiv.appendChild(slotEl);
+      items.appendChild(card);
     }
-    area.appendChild(farmingDiv);
+
+    const closeBtn = document.getElementById('shop-close');
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        overlay.classList.remove('active');
+        if (tabs) tabs.style.display = '';
+        if (header) header.querySelector('.shop-title').textContent = '\u{1f6d2} Grand Bazaar';
+      };
+    }
   }
+
 
   _assignFarmingSlot(slotId) {
     // For now, auto-assign to the first available stage
@@ -8748,7 +8905,7 @@ class TownScreen {
 
     const success = this.game.farmingSystem?.assignSlot(slotId, stageId, unitType, unitId);
     if (success) {
-      this._renderFarmingSlots();
+      this._renderFarmingSlotsButton();
       this._renderCompanionSlots();
     }
   }
@@ -8766,7 +8923,7 @@ class TownScreen {
         notif.classList.add('active');
         setTimeout(() => notif.classList.remove('active'), 3000);
       }
-      this._renderFarmingSlots();
+      this._renderFarmingSlotsButton();
       this._updateDisplay();
     }
   }
@@ -8909,6 +9066,12 @@ class TownScreen {
     if (this._typewriterTimer) {
       clearInterval(this._typewriterTimer);
       this._typewriterTimer = null;
+    }
+    // Guard: handle null/undefined text
+    if (!text) {
+      this.dom.dialogueText.textContent = '';
+      if (onComplete) onComplete();
+      return;
     }
     this.dom.dialogueText.textContent = '';
     let i = 0;
