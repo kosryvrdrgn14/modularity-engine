@@ -1,9 +1,10 @@
 # Modularity Engine — Weapons Specification
 
-> **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-20
+> **Version:** 2.0 (Design Decisions Locked)
+> **Last Updated:** 2026-08-26
 > **Status:** Spec
 > **Canonical Sources:** `vs_prog.md` Weapon Progression (all values), `vs_colors.md` Weapon Visuals, `01_engine_architecture.md` (engine systems)
+> **Design Decisions:** D1 (3 companion slots), D3 (stage tiers), D5 (1:1 weapon-companion binding)
 
 ---
 
@@ -26,11 +27,42 @@ All weapons auto-fire without player input. The player's role is positioning —
 
 ### Unlock Schedule
 
-| Weapon | Unlock Condition | Expected Time |
+| Weapon | Unlock Condition | Expected Time (5min stage) |
 |---|---|---|
 | Weapon 1 (Projectile) | Start of game | 0:00 |
 | Weapon 2 (Orbit) | Player reaches Level 3 | ~0:15 |
 | Weapon 3 (Area) | Player reaches Level 6 | ~1:15 |
+
+### Companion Pairing (D1/D5: 1:1 Binding)
+
+Each weapon has a companion slot. The companion buffs and evolves its paired weapon. Companions auto-level with their paired weapon — no separate upgrade system.
+
+| Weapon Slot | Companion Slot | Companion Buffs |
+|---|---|---|
+| W1 (Projectile) | C1 | Projectile damage, pierce, split upgrades |
+| W2 (Orbit) | C2 | Orbit radius, speed, afterimage upgrades |
+| W3 (Area) | C3 | Area radius, pulse count, stun upgrades |
+
+**Why 1:1 binding:**
+- Simplifies upgrade path: companion level = weapon level
+- UI is clean: 3 slots = 3 companions = 3 weapons
+- Balance is natural: each companion only affects one weapon's DPS
+- Players choose which companion to pair with which weapon
+
+### Weapon Scaling by Stage Tier (D3)
+
+Weapons are designed with different scaling profiles for different stage lengths:
+
+| Weapon | Profile | 3min Stage | 5min Stage | 10min Stage |
+|---|---|---|---|---|
+| W1 (Projectile) | **Frontloaded** | Strong early, good for quick clears | Solid mid-game | Scales well with split at L7 |
+| W2 (Orbit) | **Scaling** | Weak early (orbs too few/slow) | Good mid-game | Excellent late (4 orbs + afterimages) |
+| W3 (Area) | **Burst** | Good for 3min (double pulse at L4) | Solid all-around | Best at L7 (triple pulse + stun) |
+
+**Stage design implication:**
+- 3min stages: Players favor W1 (frontloaded) + W3 (burst). W2 is weak.
+- 5min stages: Balanced mix. All weapons viable.
+- 10min stages: W2 (scaling) becomes dominant. W1 still good. W3 essential for boss control.
 
 ### Behavior Types
 
@@ -442,7 +474,58 @@ function upgradeWeapon(weapon):
 
 ---
 
-## 7. Cross-Reference Summary
+## 7. Weapon Evolutions (Companion-Driven)
+
+Companions don't just buff weapons — they can trigger weapon evolutions at specific conditions. Evolutions are special power spikes beyond the normal L4/L7 system.
+
+### Evolution System
+
+| Weapon | Evolution Trigger | Effect | Visual Change |
+|---|---|---|---|
+| W1 (Projectile) | Companion C1 at L7 + 100 kills with W1 | Projectiles gain homing (turn toward nearest enemy) | Projectiles glow gold, leave longer trail |
+| W2 (Orbit) | Companion C2 at L7 + survive 8min with W2 active | Orbs create a protective barrier (blocks 1 projectile per 5s) | Orbs gain blue shield shimmer |
+| W3 (Area) | Companion C3 at L7 + hit 500 enemies with W3 | Area pulses chain to 2 nearby enemies at 50% damage | Pulses leave electric arcs between enemies |
+
+### Why Companion-Driven Evolutions
+
+| Design Aspect | Justification |
+|---|---|
+| **Reward investment** | Players who invest in a companion get a meaningful payoff |
+| **Build diversity** | Different evolution paths encourage trying different companion-weapon combos |
+| **Late-game goal** | Evolutions give max-level players something to work toward |
+| **Narrative flavor** | The companion "awakens" the weapon's true potential through bond |
+
+### Evolution Data Structure
+
+```json
+{
+  "weaponId": "w1_projectile",
+  "companionId": "companion_001",
+  "evolution": {
+    "id": "w1_homing",
+    "name": "Seeking Shot",
+    "trigger": {
+      "companionLevel": 7,
+      "killCount": 100,
+      "weaponId": "w1_projectile"
+    },
+    "effect": {
+      "type": "homing",
+      "turnRate": 3.0,
+      "description": "Projectiles now track nearest enemy"
+    },
+    "visual": {
+      "glow": true,
+      "trailLength": 20,
+      "color": "#FFD700"
+    }
+  }
+}
+```
+
+---
+
+## 8. Cross-Reference Summary
 
 | Section | References |
 |---|---|
@@ -458,7 +541,10 @@ function upgradeWeapon(weapon):
 | Sound effects | `09_audio_spec.md` per-weapon fire sounds |
 | Combined DPS | `vs_prog.md` Combined DPS by Minute table |
 | Boss DPS check | `vs_prog.md` Boss DPS Check section |
+| Companion pairing | `20_companion_combat_spec.md` (1:1 binding, D1/D5) |
+| Weapon evolutions | `game_frame.md` Section 6.5 (companion-weapon binding) |
+| Stage scaling | `05_stages_spec.md` (3/5/10min tiers, D3) |
 
 ---
 
-*End of 03_weapons_spec.md — Version 1*
+*End of 03_weapons_spec.md — Version 2.0 (Design Decisions Locked)*

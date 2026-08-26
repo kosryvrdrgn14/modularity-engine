@@ -2,6 +2,34 @@
 
 ---
 
+## v0.4.0 — Design Decisions Locked (D1-D8)
+**Date:** August 26, 2026
+**Status:** All 8 core design decisions resolved, game_frame.md updated
+
+### Design Decisions (D1-D8)
+- **D1:** 3 companion slots, fixed. W1=C1, W2=C2, W3=C3.
+- **D2:** Companions always invulnerable. Protected quest targets = map assets with HP.
+- **D3:** Stage length tiers: 3min (quick grind), 5min (baseline story), 10min (highlight story). Frontloaded weapons for 3min, scaling for 10min.
+- **D4:** Estates produce materials + quests + unlocks only. No gold production.
+- **D5:** 1:1 companion-weapon binding. Companions buff/evolve their paired weapon.
+- **D6:** Keep 3 core factions. 50-55 wife roster from multiple mythologies expands factions. Some lore-only.
+- **D7:** Skill tree is a placeholder. Game playable without it.
+- **D8:** Gold income: combat + quests + events. No estate income.
+
+### Updated Files
+- **game_frame.md** — v0.3.0 → v0.4.0:
+  - Section 6.5: 3 fixed companion slots with 1:1 weapon binding
+  - Section 6.5: Combat engine integration updated for binding model
+  - Section 7: Faction expansion note added (D6)
+  - Section 8: Skill tree marked as placeholder (D7)
+  - Section 11: Estate economy updated — materials/quests/unlocks, no gold (D4)
+  - Section 14 (Gap 11): Resolved via 1:1 binding (D1/D5)
+  - Section 14 (Q3): Resolved with D1/D2/D5
+  - Save data: partySlots → 3
+- **spec_update_roadmap.md** — All 8 decisions marked as resolved
+
+---
+
 ## v0.3.0 — City Builder Navigation & Location System
 **Date:** August 26, 2026
 **Status:** Design document complete, awaiting review

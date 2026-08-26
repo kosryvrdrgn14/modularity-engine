@@ -13,16 +13,16 @@ These decisions affect multiple specs and must be made before any spec updates.
 
 | # | Decision | Affects | Options | Recommendation |
 |---|---|---|---|---|
-| D1 | **Companion slots: 3 or 4?** | §20, §21, §22, game_frame, UI | A: 3 slots (current) / B: 4 slots (goal doc) | Start with 3, unlock 4th later via Tavern upgrade |
-| D2 | **Companion damage model** | §20, §21, combat engine | A: Always invulnerable / B: Invulnerable except quest scenarios | A for v1, B as future feature |
-| D3 | **Stage length tiers** | §05, combat engine, spawn system | A: Single 5min / B: 3/5/10min tiers | B — but implement gradually (5min first, add 3min and 10min later) |
-| D4 | **Estate production model** | game_frame §5, economy | A: Estates produce gold / B: Estates produce materials + quests only | B — gold stays valuable for equipment, not inflated by estates |
-| D5 | **Companion-weapon binding** | §20, combat engine | A: Independent slots / B: 1:1 weapon-companion binding | B — simplifies upgrade path, each companion enhances one weapon |
-| D6 | **Faction system status** | game_frame §7 | A: Keep 3 factions / B: Drop factions / C: Simplify to 2 | A — factions add meaningful choice, keep as-is |
-| D7 | **Skill tree status** | game_frame §8 | A: Keep 5-branch tree / B: Simplify / C: Defer | A — already spec'd, keep as-is |
-| D8 | **Gold income sources** | economy, combat, estates | A: Combat only / B: Combat + estate trickle / C: Combat + quests | A or C — gold should come from active play |
+| D1 | **Companion slots: 3** | §20, §21, §22, game_frame, UI | ✅ DECIDED: 3 slots. W1=C1, W2=C2, W3=C3. One companion per weapon. |
+| D2 | **Companion damage: Always invulnerable** | §20, §21, combat engine | ✅ DECIDED: Always invulnerable. Protected quest targets = map assets with HP. |
+| D3 | **Stage length tiers: 3/5/10min** | §05, combat engine, spawn system | ✅ DECIDED: 3min=quick grind, 5min=baseline story, 10min=highlight. Frontloaded weapons for 3min, scaling for 10min, mix for 5min. |
+| D4 | **Estate production: Materials + Quests + Unlocks** | game_frame §5, economy | ✅ DECIDED: No gold. Estates produce materials, quests, and unlock content only. |
+| D5 | **Companion-weapon binding: 1:1** | §20, combat engine | ✅ DECIDED: C1 buffs W1, C2 buffs W2, C3 buffs W3. Companion upgrades mirror weapon. |
+| D6 | **Faction system: Keep + massive expansion** | game_frame §7 | ✅ DECIDED: Keep 3 core. 50-55 wife roster from multiple mythologies expands factions. Some lore-only. |
+| D7 | **Skill tree: Placeholder** | game_frame §8 | ✅ DECIDED: Keep 5-branch as placeholder. Unlocks/bonuses. Game playable without it. |
+| D8 | **Gold income: Combat + Quests + Events** | economy, combat, estates | ✅ DECIDED: Three gold sources. No estate income. |
 
-**Action:** Review these 8 decisions with the user before proceeding to Phase 1.
+**Status:** ✅ ALL DECISIONS RESOLVED (August 26, 2026). Proceed to Phase 1.
 
 ---
 

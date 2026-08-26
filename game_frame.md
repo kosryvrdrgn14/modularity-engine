@@ -1,7 +1,7 @@
 # Modularity Engine — Game Framework
 
-> **Version:** 0.3.0 (Framework Design)
-> **Date:** August 23, 2026
+> **Version:** 0.4.0 (Design Decisions Locked)
+> **Date:** August 26, 2026
 > **Status:** Design Document
 > **Predecessor:** `extract_engine.html` (combat engine extraction plan)
 
@@ -188,7 +188,7 @@ The entire player state lives in one JSON object:
     "completedDialogues": [],
     "activeRequests": [],
     "companions": [],
-    "partySlots": 2
+    "partySlots": 3
   },
 
   "factions": {
@@ -328,7 +328,7 @@ The combat engine is **one game mode** — a self-contained module that:
 function onCombatEnd(result) {
   const store = getStore();
 
-  // Gold earned
+  // Gold earned (D8: Combat + Quests + Events)
   store.town.resources.gold += result.goldEarned;
   store.player.totalGold += result.goldEarned;
 
@@ -659,15 +659,20 @@ The combat engine tells a story through gameplay (surviving, getting stronger). 
 
 #### Party Slot System
 
-The player has a **limited number of party slots** (default: 2, expandable to 4 via the Tavern building). Each NPC companion occupies 1 slot.
+The player has **3 companion slots**, each bound 1:1 to a weapon slot. W1=C1, W2=C2, W3=C3. A companion in slot 1 buffs and evolves weapon 1, slot 2 buffs weapon 2, etc. Companions are always invulnerable — they cannot take damage or die. If a quest needs a protect target, that target is a map asset with HP, not a companion.
 
 ```
-Party Slots:
-[1] ── Gareth (Blacksmith) ── Melee support, 25% damage
-[2] ── Elara (Herbalist) ── Heal-over-time aura, 15% damage
-[3] ── (empty) ── Unlock at Tavern Lv2
-[4] ── (empty) ── Unlock at Tavern Lv3
+Party Slots (1:1 with weapons):
+[1] ── W1 (Projectile) ── C1 buffs W1, evolves W1
+[2] ── W2 (Orbit)     ── C2 buffs W2, evolves W2
+[3] ── W3 (Area)      ── C3 buffs W3, evolves W3
 ```
+
+**Why 3 fixed slots (not expandable):**
+- Simplifies the upgrade path: each companion mirrors its paired weapon's level
+- Reduces UI complexity: 3 slots = clean layout on mobile
+- Balances combat: 3 companions max prevents trivializing encounters
+- Players choose which 3 of their unlocked companions to deploy per stage
 
 #### NPC Companion Tiers
 
@@ -745,35 +750,55 @@ Dialogue is defined per-NPC in `combatDialogue` and selected randomly from the p
 
 | Scenario | Recommended Party | Why |
 |---|---|---|
-| **General combat** | 2 Adept-tier NPCs | Balanced damage + utility |
-| **Boss fight** | Master + Adept | Maximum passive bonuses, strong dialogue |
-| **Affection farming** | 1 useful NPC + 1 dead weight | Build trust with the dead weight while staying viable |
-| **Quest completion** | Quest-specified NPC + best available | Meet quest requirements without sacrificing too much |
-| **Challenge run** | Solo (no companions) | All slots empty = no passive effects, pure skill |
+| **General combat** | 2-3 companions matched to weapons | Companions buff their paired weapons |
+| **Boss fight** | All 3 slots filled | Maximum passive bonuses + AoE support |
+| **Affection farming** | 1 combat companion + 1 dead weight + 1 empty | Build trust with dead weight while staying viable |
+| **Quest completion** | Quest-specified companion in paired slot | Meet quest requirements |
+| **Challenge run** | Solo (no companions) | All slots empty = pure skill |
 
-#### Combat Engine Integration
+#### Combat Engine Integration (D1/D5: 1:1 Weapon-Companion Binding)
 
-The combat engine reads `store.npcs.companions` (the list of NPCs in the party) and spawns them as invulnerable entities:
+The combat engine reads `store.npcs.companions` (3 slots, each bound to a weapon) and spawns them as invulnerable entities. Each companion buffs and evolves its paired weapon:
 
 ```javascript
 // CombatModule.startSession()
-const party = store.npcs.companions; // ['blacksmith', 'herbalist']
-for (const npcId of party) {
-  const npcData = dataManager.npcs.find(n => n.id === npcId);
-  if (npcData?.companion) {
-    entityManager.create('companion', {
-      x: player.x + offset,
-      y: player.y + offset,
-      npcId: npcId,
-      damage: baseDamage * npcData.companion.damageMultiplier,
-      attackSpeed: npcData.companion.attackSpeedMultiplier,
-      attackPattern: npcData.companion.attackPattern,
-      invulnerable: true,  // KEY: companions cannot take damage
-      visual: npcData.visual,
-      passiveEffect: npcData.companion.passiveEffect,
-    });
+const companions = store.npcs.companions; // { 1: 'dog', 2: null, 3: null }
+const weapons = store.combat.weaponLevels; // { w1: 3, w2: 0, w3: 0 }
+
+for (let slot = 1; slot <= 3; slot++) {
+  const companionId = companions[slot];
+  const weaponId = `w${slot}`;
+  const weaponLevel = weapons[weaponId] || 0;
+
+  if (companionId) {
+    const npcData = dataManager.npcs.find(n => n.id === companionId);
+    if (npcData?.companion) {
+      const companionLevel = weaponLevel; // Companions mirror weapon level
+
+      entityManager.create('companion', {
+        x: player.x + offset,
+        y: player.y + offset,
+        npcId: companionId,
+        slot: slot,  // 1:1 with weapon
+        weaponSlot: weaponId,
+        damage: getCompanionDamage(npcData.companion, companionLevel),
+        cooldown: getCompanionCooldown(npcData.companion, companionLevel),
+        attackPattern: npcData.companion.attackPattern,
+        invulnerable: true,  // KEY: companions cannot take damage (D2)
+        visual: npcData.visual,
+        passiveEffect: npcData.companion.passiveEffect,
+        weaponBuff: npcData.companion.weaponBuff, // Buffs applied to paired weapon
+      });
+    }
   }
 }
+```
+
+**Why 1:1 binding simplifies everything:**
+- No separate companion upgrade system — companions auto-level with their paired weapon
+- UI is clean: 3 slots = 3 companions = 3 weapons
+- Balance is natural: each companion only affects one weapon's DPS
+- Players choose which companion to pair with which weapon, not which companion to bring
 ```
 
 ### Visual Novel Dialogue Interface
@@ -822,7 +847,9 @@ When the player talks to an NPC, the screen transitions to a **dialogue view**:
 
 ---
 
-## 7. Faction & Reputation System
+## 7. Faction & Reputation System (D6: Keep 3 Core + Massive Expansion)
+
+> **Status:** 3 core factions defined below. The 50-55 NPC wife roster is based on multiple mythologies from different eras, which will significantly expand the faction landscape. Some factions will be lore-only without reputation tracks. Full faction expansion deferred to a future spec.
 
 ### Why Factions
 
@@ -869,7 +896,9 @@ Factions create **meaningful choice** in a game that could otherwise be purely o
 
 ---
 
-## 8. Skill Tree & Permanent Progression
+## 8. Skill Tree & Permanent Progression (D7: PLACEHOLDER)
+
+> **Status:** This section is a placeholder. The skill tree is used for unlocks and bonuses but the game is fully playable without it. No detailed node design yet — will be fleshed out in a future spec update.
 
 ### Why a Skill Tree
 
@@ -1148,19 +1177,33 @@ Each NPC has a unique marriage quest chain that reflects their personality:
    → Reward: Marriage to Gareth, affection unlocks to Tier 6 (Dynasty)
 ```
 
-### Estate Economy (Family Maintenance Only)
+### Estate Economy (Materials + Quests + Unlocks — D4 DECIDED)
 
-Each estate generates internal income that is consumed entirely by the household. **None of it goes to the player's gold pool.** The estate covers its own food, staff wages, building maintenance, and family needs.
+Estates produce **materials, story quests, and unlock content** — never gold. Gold income comes from combat, quests, and events (D8). This keeps gold valuable for equipment and town upgrades while letting estates provide unique materials and story content.
 
 ```
-Tier 1 (Homestead):    Costs ~10g/run in upkeep  → Player must cover the deficit
-Tier 2 (Farmstead):    Earns ~10g/run internally  → Breaks even on upkeep (costs player nothing)
-Tier 3 (Manor):        Earns ~30g/run internally  → Covers family + small reserve for repairs
-Tier 4 (Estate):       Earns ~75g/run internally  → Covers large family, children, tutors, nurses
-Tier 5 (Dynasty):      Earns ~150g/run internally → Full dynasty costs covered, legacy secured
+Tier 1 (Homestead):    Produces: 1-2 basic materials/run (herbs, wood scraps)
+                       Generates: No quests yet
+                       Cost: Player funds upkeep (~5g/run) until Tier 2
+
+Tier 2 (Farmstead):    Produces: 3-5 materials/run (wood, herbs, basic stone)
+                       Generates: 1 basic quest per 5 runs
+                       Self-sustaining: Covers own material upkeep
+
+Tier 3 (Manor):        Produces: 8-12 materials/run (wood, stone, ore, rare herbs)
+                       Generates: 1 quest per 3 runs (materials + story)
+                       Unlocks: 1 unique item or crafting recipe
+
+Tier 4 (Estate):       Produces: 15-20 materials/run (all types + rare materials)
+                       Generates: 1 quest per 2 runs (story-heavy, affection-gated)
+                       Unlocks: 2 unique items + 1 estate-exclusive companion ability
+
+Tier 5 (Dynasty):      Produces: 25-30 materials/run (all types + legendary materials)
+                       Generates: 1 quest per run (family story, children quests)
+                       Unlocks: Full estate quest chain + legacy items
 ```
 
-**Multiple estates multiply family costs, not player income.** A player with 3 wives at Tier 4 has 3 households to maintain — the estate system pays for all of them internally. The player's gold never increases from estate activity.
+**Multiple estates multiply content, not income.** A player with 3 wives at Tier 4 has 3 households producing materials and generating quests. The player's gold never increases from estate activity — instead, they get a rich variety of materials, stories, and unlocks from their families.
 
 ### Why Estates Are Self-Contained
 
@@ -1524,9 +1567,8 @@ The framework is single-player only. No leaderboards (beyond local Arena scores)
 No colorblind mode, no difficulty settings, no input remapping.
 - **Action:** Add an `options` section to the save data and an Options menu in the UI. Include at minimum: difficulty modifier, colorblind palette, input remapping.
 
-**Gap 11: Companion damage tuning could trivialize combat.**
-If the player brings 2 Master-tier NPCs (50% damage each), that's effectively +100% damage — doubling DPS. Combined with skill tree bonuses, combat could become too easy.
-- **Action:** Implement diminishing returns on companion damage when multiple companions are present. Formula: `effectiveDamage = baseMultiplier * (1 - 0.15 * (companionCount - 1))`. Two companions at 30% each → 30% + 25.5% = 55.5% total, not 60%.
+**Gap 11: Companion damage tuning could trivialize combat.** (RESOLVED — D1/D5)
+Companions are now bound 1:1 to weapon slots (W1=C1, W2=C2, W3=C3). Each companion buffs and evolves only its paired weapon. This naturally limits total DPS increase — a Master-tier companion at 40% makes W1 significantly stronger but doesn't affect W2 or W3. Combined with the 3-slot cap, total DPS increase is bounded at ~40% per weapon, not multiplicative across all weapons.
 
 **Gap 12: Dead weight NPCs could feel pointless if affection bonuses are too small.**
 If bringing Ani (10% damage) only gives 2x affection gain but costs a party slot, players may never bother.
@@ -1581,8 +1623,8 @@ Options: (a) Silent protagonist with text-only narration. (b) Narrator with occa
 Options: (a) Seamless transition (camera zooms into the stage). (b) Loading screen with lore text. (c) World map as an intermediate screen.
 - **Recommendation:** (c) World map. It provides a natural place to select stages, view quest objectives, and check intel. Also future-proofs for multiple regions.
 
-**Q3: How should NPC combat companions work?** (RESOLVED)
-NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. NPC weapons show in the weapon bar as smaller icons with colored NPC border. NPCs auto-level to match the player's current level, scaling at 10-50% of player damage depending on trust tier. No manual NPC upgrade management. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
+**Q3: How should NPC combat companions work?** (RESOLVED — D1/D2/D5)
+NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. 3 companion slots, each bound 1:1 to a weapon slot (W1=C1, W2=C2, W3=C3). Companions buff and evolve their paired weapon. NPC weapons show in the weapon bar as smaller icons with colored NPC border. NPCs auto-level to match the player's current level, scaling at 10-50% of player damage depending on trust tier. No manual NPC upgrade management. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
 
 **Q4: Should there be a "prestige" or "new game+" system?**
 When the player completes all content, should they be able to restart with bonuses? Or is the game "done" at that point?
@@ -1651,4 +1693,4 @@ The extraction plan's Phase 1-5 (externalizing combat data) becomes a prerequisi
 
 ---
 
-*Modularity Engine Game Framework v0.3.0 — Generated August 23, 2026*
+*Modularity Engine Game Framework v0.4.0 — Updated August 26, 2026*

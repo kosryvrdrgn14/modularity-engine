@@ -1,8 +1,9 @@
 # Modularity Engine — Stages Specification
 
-> **Version:** 1.0 (Prototype)
-> **Last Updated:** 2026-08-20
+> **Version:** 2.0 (Design Decisions Locked)
+> **Last Updated:** 2026-08-26
 > **Status:** Spec
+> **Design Decisions:** D3 (stage tiers: 3/5/10min), D5 (1:1 companion binding)
 > **Canonical Sources:** `vs_prog.md` Wave Timeline + Boss Encounter + Stage End (all values), `vs_colors.md` Map & Obstacles + Background & Environment, `01_engine_architecture.md` (engine systems)
 
 ---
@@ -26,10 +27,29 @@
 
 ## 1. Stage Overview
 
+### Stage Length Tiers (D3 DECIDED)
+
+Stages come in 3 length tiers. Each tier has different design goals, weapon scaling expectations, and content density.
+
+| Tier | Duration | Purpose | Boss? | Weapon Focus | Example Use |
+|---|---|---|---|---|---|
+| **Quick** | 3 minutes | Grind quests, minor quests, daily challenges | No | Frontloaded (W1, W3) | "Clear 50 zombies for the Blacksmith" |
+| **Standard** | 5 minutes | Baseline story stages, main progression | Yes (at 4:00) | Balanced (all weapons) | "Defeat the Gravekeeper" |
+| **Highlight** | 10 minutes | Major story moments, faction milestones | Yes (at 8:00) + mid-boss | Scaling (W2 dominant) | "Survive the Necromancer's ritual" |
+
+**Why 3 tiers:**
+- 3min stages keep grind sessions short and satisfying
+- 5min stages are the "default" — balanced for all weapon types
+- 10min stages are epic encounters that test sustained builds
+- Players choose stage length based on their goals (quick grind vs. deep run)
+
+### Current Stage: The Graveyard (Standard Tier)
+
 | Property | Value |
 |---|---|
 | Name | The Graveyard |
 | Theme | Dark gothic / cemetery |
+| Tier | Standard (5 minutes) |
 | Duration | 5 minutes (300 seconds) |
 | Arena | Infinite open arena with camera following player |
 | Enemy Count | 5 types + 1 boss |
@@ -469,7 +489,125 @@ Text appears center-screen, fades in over 0.5s, holds for 2s, fades out. White t
 
 ---
 
-## 12. Cross-Reference Summary
+## 12. Star Conditions (Goal Doc)
+
+Stages award 1★–3★ based on performance. Stars gate auto-clear eligibility and unlock harder content.
+
+### Star Conditions
+
+| Star | Condition Types | Examples |
+|---|---|---|
+| **1★** | Complete the stage (survive or kill boss) | "Survive 5 minutes" / "Defeat the Gravekeeper" |
+| **2★** | Performance thresholds (4+ conditions, pick 2) | "Kill 200+ enemies", "Finish under 4:30", "Reach Level 12+", "Collect 500+ gold" |
+| **3★** | Mastery challenges (6+ conditions, pick 2) | "No-hit run", "Starter weapon only", "Underleveled (Lv8 or below)", "No companions", "All weapons Lv7" |
+
+### 2★ Conditions Pool
+
+| Condition | Threshold | Category |
+|---|---|---|
+| Kill count | 200+ kills | Combat |
+| Time cleared | Under 4:30 (boss killed before 4:30) | Speed |
+| Level reached | Level 12+ | Progression |
+| Gold collected | 500+ gold | Economy |
+| Boss killed | Yes (required for 2★) | Boss |
+| Weapon loadout | All 3 weapons unlocked | Build |
+
+### 3★ Conditions Pool
+
+| Condition | Threshold | Category |
+|---|---|---|
+| No-hit run | Take 0 damage entire stage | Mastery |
+| Starter weapon only | Only W1, no W2/W3 | Challenge |
+| Underleveled | Finish at Level 8 or below | Challenge |
+| No companions | All 3 companion slots empty | Solo |
+| All weapons maxed | W1/W2/W3 all at Level 7 | Build |
+| Speed kill | Boss killed in under 15 seconds | Speed |
+| Itemless | No power-up pickups collected | Challenge |
+| Pacifist segment | Survive first 2 minutes with 0 kills | Stealth |
+
+### Star Display
+
+Stars appear on the stage select screen:
+- ★☆☆ = 1★ (completed)
+- ★★☆ = 2★ (all 2★ conditions met)
+- ★★★ = 3★ (all 3★ conditions met)
+- Locked stages show gray stars
+
+### Auto-Clear Eligibility
+
+Stages with 3★ become eligible for auto-clear (farming system). See `23_auto_clear_farming_spec.md` for full farming mechanics.
+
+---
+
+## 13. Stage Scaling by Tier (D3)
+
+### Quick Stage (3 minutes)
+
+| Property | Value |
+|---|---|
+| Duration | 180 seconds |
+| Boss | None |
+| Wave timeline | Compressed — all enemy types by 1:30 |
+| Spawn rate | 1.5× faster than Standard |
+| XP scaling | 1.2× (faster leveling) |
+| Gold scaling | 0.8× (less gold, shorter run) |
+| Weapon expectation | W1 at L4+ by end, W2 at L1-2, W3 at L1 |
+| Difficulty | Lower enemy HP (0.8×) |
+
+### Standard Stage (5 minutes)
+
+| Property | Value |
+|---|---|
+| Duration | 300 seconds |
+| Boss | Yes (at 4:00) |
+| Wave timeline | As defined in §4 (current Graveyard) |
+| Spawn rate | Base (1.0×) |
+| XP scaling | 1.0× (baseline) |
+| Gold scaling | 1.0× (baseline) |
+| Weapon expectation | W1 at L5-6, W2 at L3-4, W3 at L2-3 |
+| Difficulty | Base enemy HP (1.0×) |
+
+### Highlight Stage (10 minutes)
+
+| Property | Value |
+|---|---|
+| Duration | 600 seconds |
+| Boss | Yes (at 8:00) + mid-boss at 5:00 |
+| Wave timeline | Extended — gradual escalation over 10 minutes |
+| Spawn rate | 0.8× slower early, 1.2× faster late |
+| XP scaling | 1.0× (more time = more XP naturally) |
+| Gold scaling | 1.5× (longer run = more gold) |
+| Weapon expectation | W1 at L7, W2 at L6-7, W3 at L5-6 |
+| Difficulty | Higher enemy HP (1.3×), new enemy variants |
+| Special | Frenzy mode unlockable (see §14) |
+
+---
+
+## 14. Frenzy Mode (Goal Doc)
+
+Frenzy mode is an alternate playstyle unlocked after achieving 3★ on a stage.
+
+### Trigger
+
+- **Primary:** 3★ clear on the stage
+- **Alternate:** Kill X enemies within a time window during normal play
+
+### Gameplay
+
+- Max-spawn dump mode — enemies spawn at maximum rate from the start
+- No wave progression — constant chaos
+- Better drop rates (1.5× rare drops)
+- Faster clears (enemies have 0.7× HP for faster kills)
+
+### Clean Run Compatibility
+
+- Frenzy mode counts as a "clean run" only if the player chooses it at stage start
+- Clean runs in frenzy mode still award stars (if conditions are met)
+- Players can toggle between normal and frenzy at stage select
+
+---
+
+## 15. Cross-Reference Summary
 
 | Section | References |
 |---|---|
@@ -489,7 +627,12 @@ Text appears center-screen, fades in over 0.5s, holds for 2s, fades out. White t
 | Music transitions | `09_audio_spec.md` Music Progression |
 | Screen shake events | `01_engine_architecture.md` §9 |
 | JSON schema | `10_json_schemas.md` stages.json |
+| Stage tiers (D3) | `game_frame.md` §4 (Combat Engine) |
+| Star conditions | `24_star_conditions_spec.md` (to be created) |
+| Frenzy mode | `29_frenzy_mode_spec.md` (to be created) |
+| Auto-clear | `23_auto_clear_farming_spec.md` (to be created) |
+| Companion pairing | `03_weapons_spec.md` §2 (1:1 binding, D5) |
 
 ---
 
-*End of 05_stages_spec.md — Version 1*
+*End of 05_stages_spec.md — Version 2.0 (Design Decisions Locked)*
