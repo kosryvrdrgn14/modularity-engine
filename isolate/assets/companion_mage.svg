@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14">
+  <!-- Magic aura -->
+  <circle cx="7" cy="7" r="6.5" fill="#FFD700" opacity="0.1"/>
+  <!-- Robe (dark purple) -->
+  <path d="M4 8 Q3 10 2 13 L12 13 Q11 10 10 8 Z" fill="#2A1A3A"/>
+  <path d="M2 13 Q7 12 12 13" fill="none" stroke="#6A3A8A" stroke-width="0.4"/>
+  <!-- Robe stars pattern -->
+  <circle cx="5" cy="10" r="0.3" fill="#FFD700" opacity="0.5"/>
+  <circle cx="9" cy="11" r="0.2" fill="#FFD700" opacity="0.4"/>
+  <circle cx="7" cy="9.5" r="0.25" fill="#FFD700" opacity="0.3"/>
+  <!-- Body -->
+  <rect x="5" y="7" width="4" height="3" rx="1" fill="#E8C8A8"/>
+  <!-- Head -->
+  <circle cx="7" cy="5" r="2.5" fill="#E8C8A8"/>
+  <!-- Hood (dark purple) -->
+  <path d="M4 4 Q5 2 7 1 Q9 2 10 4 Q9.5 3 8 2.5 Q7 2 6 2.5 Q4.5 3 4 4" fill="#1A0A2A"/>
+  <!-- Hair (silver/white, peeking) -->
+  <path d="M5 3.5 Q4.5 5 5 6.5" fill="#C8C8D8"/>
+  <path d="M9 3.5 Q9.5 5 9 6.5" fill="#C8C8D8"/>
+  <!-- Eyes (glowing gold) -->
+  <circle cx="6" cy="5" r="0.6" fill="#FFD700"/>
+  <circle cx="6" cy="5" r="0.3" fill="#FFA000"/>
+  <circle cx="8" cy="5" r="0.6" fill="#FFD700"/>
+  <circle cx="8" cy="5" r="0.3" fill="#FFA000"/>
+  <!-- Eyebrows (arched) -->
+  <path d="M5.2 4.2 Q6 3.8 6.8 4.2" fill="none" stroke="#8A7A8A" stroke-width="0.3"/>
+  <path d="M7.2 4.2 Q8 3.8 8.8 4.2" fill="none" stroke="#8A7A8A" stroke-width="0.3"/>
+  <!-- Mysterious smile -->
+  <path d="M6 6 Q7 6.5 8 6" fill="none" stroke="#AA7766" stroke-width="0.3"/>
+  <!-- Staff (right side) -->
+  <rect x="11" y="4" width="0.6" height="8" rx="0.2" fill="#3A2A4A"/>
+  <!-- Staff orb (lightning) -->
+  <circle cx="11.3" cy="3.5" r="1" fill="#FFD700"/>
+  <circle cx="11.3" cy="3.5" r="0.6" fill="#FFEB3B"/>
+  <!-- Lightning bolt on orb -->
+  <path d="M11 3 L11.3 3.3 L11 3.6 M11.6 3 L11.3 3.3 L11.6 3.6" fill="none" stroke="#FFA000" stroke-width="0.2"/>
+  <!-- Floating lightning sparks -->
+  <path d="M3 4 L3.3 4.5 L3 5" fill="none" stroke="#FFD700" stroke-width="0.2" opacity="0.6"/>
+  <path d="M4 2 L4.3 2.5 L4 3" fill="none" stroke="#FFD700" stroke-width="0.2" opacity="0.4"/>
+  <circle cx="10" cy="2.5" r="0.2" fill="#FFD700" opacity="0.5"/>
+</svg>
