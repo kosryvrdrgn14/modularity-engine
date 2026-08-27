@@ -8659,10 +8659,6 @@ class TownScreen {
       this._renderLocationCards();
     });
 
-    if (partyBtn) partyBtn.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
-      // Party management — show companion slots (already visible)
-    });
 
     // D2: Swipe gestures on town screen
     const screen = this.dom.screen;
