@@ -97,6 +97,7 @@
       z-index: 100;
       font-family: 'Segoe UI', system-ui, sans-serif;
       overflow: hidden;
+      touch-action: auto;
     }
     #title-screen.active { display: flex; }
     #title-bg {
@@ -227,6 +228,8 @@
       background: rgba(10, 10, 26, 0.92);
       z-index: 105;
       font-family: 'Segoe UI', system-ui, sans-serif;
+    
+      touch-action: auto;
     }
     #settings-screen.active { display: flex; }
     #settings-content {
@@ -665,6 +668,7 @@
       z-index: 95;
       font-family: 'Segoe UI', system-ui, sans-serif;
       overflow: hidden;
+      touch-action: auto;
     }
     #town-screen.active { display: flex; }
 
@@ -964,6 +968,7 @@
       background: rgba(0, 0, 0, 0.6);
       z-index: 96;
       padding: 20px;
+      touch-action: auto;
     }
     #dialogue-overlay.active { display: flex; }
     #dialogue-box {
@@ -1103,6 +1108,8 @@
       display: none; flex-direction: column;
       background: rgba(10,10,26,0.95);
       backdrop-filter: blur(8px);
+    
+      touch-action: auto;
     }
     #shop-overlay.active { display: flex; }
     #shop-header {
@@ -1996,9 +2003,6 @@ class InputManager {
   }
 
   _onPointerDown(screenX, screenY) {
-    // Reset keyboard lock on any click (cross-input cleanup)
-    this._upgradeKeyLock = false;
-    
     const rect = this.canvas.getBoundingClientRect();
     const x = (screenX - rect.left) * (this.canvas.width / rect.width);
     const y = (screenY - rect.top) * (this.canvas.height / rect.height);
@@ -7665,9 +7669,12 @@ class Game {
       this._showUpgradeOptions();
     });
 
+    this._isSelectingUpgrade = false;
     this.eventBus.on('selectUpgrade', (data) => {
       if (!this.gameState.isLevelUp()) return;
+      if (this._isSelectingUpgrade) return;
       if (!this.uiManager.levelUpOptions) return;
+      this._isSelectingUpgrade = true;
       const index = data.index;
       if (index < 0 || index >= this.uiManager.levelUpOptions.length) return;
       const option = this.uiManager.levelUpOptions[index];
@@ -7675,8 +7682,10 @@ class Game {
       this.uiManager.hideLevelUp();
       if (this.levelingSystem.hasPendingLevelUp()) {
         this.levelingSystem.consumeLevelUp();
+        this._isSelectingUpgrade = false;
         this._showUpgradeOptions();
       } else {
+        this._isSelectingUpgrade = false;
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
