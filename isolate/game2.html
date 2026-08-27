@@ -395,14 +395,28 @@
       padding-bottom: 80px;
     }
     #town-left-panel {
+      position: absolute;
+      top: 0;
       left: 0;
+      bottom: 0;
+      width: 280px;
       border-right: 1px solid rgba(255, 215, 0, 0.08);
       transform: translateX(-100%);
+      background: rgba(10, 10, 26, 0.95);
+      overflow-y: auto;
+      z-index: 8;
     }
     #town-right-panel {
+      position: absolute;
+      top: 0;
       right: 0;
+      bottom: 0;
+      width: 280px;
       border-left: 1px solid rgba(255, 215, 0, 0.08);
       transform: translateX(100%);
+      background: rgba(10, 10, 26, 0.95);
+      overflow-y: auto;
+      z-index: 8;
     }
     #town-left-panel.open { transform: translateX(0); }
     #town-right-panel.open { transform: translateX(0); }
