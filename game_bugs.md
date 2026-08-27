@@ -57,7 +57,7 @@
 | 43 | Duplicate _showDogDialogue/companion methods — two identical definitions from Python bulk insert | 🟡 Low | ✅ Fixed | Removed 79 duplicate lines |
 | — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
 
-**Total: 45 bugs found, 45 fixed, 0 open**
+**Total: 46 bugs found, 46 fixed, 0 open**
 
 ---
 
@@ -417,6 +417,42 @@ Changed `screen.x/screen.y` → `s.x/s.y` to match the rest of the drawing funct
 
 ---
 
+## Bug #46 — Double Upgrade Regression (Bug #28/30 Re-fix)
+
+**Date:** August 27, 2026
+**Severity:** 🔴 Critical (game balance)
+**Discovered by:** Cross-check audit
+**Regression of:** Bug #28, Bug #30
+
+### Symptom
+Player receives 2 upgrades per single level-up during queued level-ups (e.g., gaining 2+ levels at once). Same symptom as original Bug #28.
+
+### Root Cause
+Town layout refactor removed the `_isSelectingUpgrade` processing guard from the `selectUpgrade` handler. Additionally, `_onPointerDown` had a broken pattern: it reset `_upgradeKeyLock = false` at the top, then immediately checked `!_upgradeKeyLock` — making the lock useless for mouse clicks.
+
+```javascript
+// Broken: reset defeats the lock
+_onPointerDown(screenX, screenY) {
+  this._upgradeKeyLock = false;  // ← always resets
+  ...
+  if (!this._upgradeKeyLock) {   // ← always true
+    this._upgradeKeyLock = true;
+    this.eventBus.emit('selectUpgrade', { index: cardIndex });
+  }
+}
+```
+
+### Fix (4 changes)
+1. Added `_isSelectingUpgrade` guard to `selectUpgrade` handler
+2. Reset `_isSelectingUpgrade = false` on state transition to 'playing'
+3. Reset `_isSelectingUpgrade = false` before showing next queued upgrade
+4. Removed broken `_upgradeKeyLock = false` reset from `_onPointerDown`
+
+### Prevention Rule
+> **When refactoring UI code, grep for all debounce/guard variables (`_isSelectingUpgrade`, `_upgradeKeyLock`, etc.) to ensure they survive the refactor.** Town layout refactor touched `_setupEvents()` and accidentally removed upgrade guards. Always verify guard logic after bulk code moves.
+
+---
+
 ## Known Limitations (Not Bugs)
 
 1. **Audio system** — Stub only, no sounds implemented
@@ -449,7 +485,7 @@ Changed `screen.x/screen.y` → `s.x/s.y` to match the rest of the drawing funct
 
 ---
 
-*Report compiled from all development sessions and system audit. 45 bugs found and fixed.*
+*Report compiled from all development sessions and system audit. 46 bugs found and fixed.*
 
 ---
 

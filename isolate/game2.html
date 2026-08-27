@@ -2695,7 +2695,7 @@ class CompanionSystem {
         const ge = c._growlEffect;
         const progress = ge.elapsed / ge.duration;
         ctx.save();
-        ctx.translate(screen.x, screen.y);
+        ctx.translate(s.x, s.y);
         ctx.rotate(ge.angle);
 
         // Cone fill
@@ -8659,10 +8659,6 @@ class TownScreen {
       this._renderLocationCards();
     });
 
-    if (partyBtn) partyBtn.addEventListener('click', () => {
-      this.game.audioManager.playMenuSound('select');
-      // Party management — show companion slots (already visible)
-    });
 
     // D2: Swipe gestures on town screen
     const screen = this.dom.screen;
