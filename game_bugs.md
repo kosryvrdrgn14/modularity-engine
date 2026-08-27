@@ -57,7 +57,7 @@
 | 43 | Duplicate _showDogDialogue/companion methods — two identical definitions from Python bulk insert | 🟡 Low | ✅ Fixed | Removed 79 duplicate lines |
 | — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
 
-**Total: 43 bugs found, 43 fixed, 0 open**
+**Total: 44 bugs found, 44 fixed, 0 open**
 
 ---
 
@@ -359,6 +359,36 @@ update(dt) {
 
 ---
 
+## Bug #44 — Undeclared `partyBtn` Crashes TownScreen Constructor
+
+**Date:** August 27, 2026
+**Severity:** 🔴 Critical (game won't load — blank screen)
+**Discovered by:** Claude analysis (ESLint no-undef)
+
+### Symptom
+Preview shows a blank dark screen after loading. Loading screen hides, but title screen never appears. No error visible to user.
+
+### Root Cause
+During the town UI refactor (switching from action bar to bottom dock), the `#ab-party` HTML element was removed, but the event listener referencing its variable was left behind:
+
+```javascript
+// In TownScreen._setupEvents(), called from constructor:
+if (partyBtn) partyBtn.addEventListener('click', () => {
+  this.game.audioManager.playMenuSound('select');
+  // Party management — show companion slots (already visible)
+});
+```
+
+`partyBtn` was **never declared** (no `const`, no `getElementById`). Accessing an undeclared variable throws `ReferenceError`, which crashes the TownScreen constructor. Since `TownScreen` is created before `titleMenu.show()`, the title screen never renders.
+
+### Fix
+Deleted the dead 4-line block. The party button was intentionally folded into always-visible companion slots.
+
+### Prevention Rule
+> **When removing a UI element, grep the entire file for every reference to that variable or ID name before considering the removal "done."** Don't trust that a single-pass edit caught every reference. LLMs frequently remove an element (button + getElementById) but miss downstream event listeners in the same function. Always: `grep -n 'variableName' file.html` after removing an element.
+
+---
+
 ## Known Limitations (Not Bugs)
 
 1. **Audio system** — Stub only, no sounds implemented
@@ -391,7 +421,7 @@ update(dt) {
 
 ---
 
-*Report compiled from all development sessions and system audit. 36 bugs found and fixed.*
+*Report compiled from all development sessions and system audit. 44 bugs found and fixed.*
 
 ---
 
@@ -503,3 +533,11 @@ These bugs share common root causes. Use this checklist after any code change se
 | Scan for duplicate method definitions after Python/regex insertions | Bug #43: duplicate _showDogDialogue from repeated inserts |
 | Verify class method count matches expected after bulk edits | Catches accidental duplications early |
 | Event handlers removed/replaced on re-open | Prevents stale listener accumulation |
+
+### 9. UI Element Removal
+| Check | Why |
+|---|---|
+| `grep -n 'varName' file.html` after removing any element/variable | Bug #44: partyBtn deleted but event listener left behind |
+| Trace every reference from declaration to end of function scope | Prevents orphaned references to removed DOM elements |
+| Check constructor/init chains for downstream dependencies | partyBtn crash blocked titleMenu.show() two lines later |
+| Remove HTML element + getElementById + ALL event listeners in one pass | Partial removals are the root cause of orphan variable crashes |
