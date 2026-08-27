@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="dogFur" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8A44A"/>
+      <stop offset="100%" stop-color="#C08030"/>
+    </linearGradient>
+    <linearGradient id="dogBelly" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5D8A0"/>
+      <stop offset="100%" stop-color="#E8C878"/>
+    </linearGradient>
+    <linearGradient id="dogNose" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4A3020"/>
+      <stop offset="100%" stop-color="#2A1810"/>
+    </linearGradient>
+    <radialGradient id="dogEyeShine" cx="40%" cy="35%">
+      <stop offset="0%" stop-color="#FFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="collar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2E8B57"/>
+      <stop offset="100%" stop-color="#1A6B3A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#1A1A2E" stroke="#553355" stroke-width="1.5"/>
+
+  <!-- Body / Chest -->
+  <ellipse cx="50" cy="72" rx="22" ry="18" fill="url(#dogBelly)"/>
+
+  <!-- Fur texture on chest -->
+  <path d="M38 65 Q42 60 46 65 Q50 60 54 65 Q58 60 62 65" fill="none" stroke="#D4A050" stroke-width="0.8" opacity="0.5"/>
+  <path d="M40 70 Q44 66 48 70 Q52 66 56 70 Q60 66 64 70" fill="none" stroke="#D4A050" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- Head (main) -->
+  <ellipse cx="50" cy="42" rx="24" ry="22" fill="url(#dogFur)"/>
+
+  <!-- Left ear (floppy, darker) -->
+  <path d="M28 32 Q20 35 18 50 Q16 58 22 56 Q26 54 30 45" fill="#B07030" stroke="#8B5520" stroke-width="0.5"/>
+  <!-- Inner ear -->
+  <path d="M24 38 Q20 42 20 50 Q21 52 24 50" fill="#D4956A" opacity="0.6"/>
+
+  <!-- Right ear (floppy, darker) -->
+  <path d="M72 32 Q80 35 82 50 Q84 58 78 56 Q74 54 70 45" fill="#B07030" stroke="#8B5520" stroke-width="0.5"/>
+  <!-- Inner ear -->
+  <path d="M76 38 Q80 42 80 50 Q79 52 76 50" fill="#D4956A" opacity="0.6"/>
+
+  <!-- Muzzle (lighter area) -->
+  <ellipse cx="50" cy="50" rx="14" ry="10" fill="#F5D8A0"/>
+
+  <!-- Eyes - large, round, expressive -->
+  <!-- Left eye -->
+  <ellipse cx="40" cy="40" rx="6" ry="6.5" fill="#3A2010"/>
+  <ellipse cx="40" cy="40" rx="5" ry="5.5" fill="#5A3015"/>
+  <circle cx="40" cy="39" r="3.5" fill="#2A1508"/>
+  <circle cx="38.5" cy="37.5" r="1.8" fill="white" opacity="0.9"/>
+  <circle cx="41" cy="41" r="0.8" fill="white" opacity="0.4"/>
+
+  <!-- Right eye -->
+  <ellipse cx="60" cy="40" rx="6" ry="6.5" fill="#3A2010"/>
+  <ellipse cx="60" cy="40" rx="5" ry="5.5" fill="#5A3015"/>
+  <circle cx="60" cy="39" r="3.5" fill="#2A1508"/>
+  <circle cx="58.5" cy="37.5" r="1.8" fill="white" opacity="0.9"/>
+  <circle cx="61" cy="41" r="0.8" fill="white" opacity="0.4"/>
+
+  <!-- Eyebrows (subtle) -->
+  <path d="M34 34 Q37 32 44 33" fill="none" stroke="#8B5520" stroke-width="1" opacity="0.5"/>
+  <path d="M56 33 Q63 32 66 34" fill="none" stroke="#8B5520" stroke-width="1" opacity="0.5"/>
+
+  <!-- Nose -->
+  <path d="M46 47 Q50 44 54 47 Q54 51 50 52 Q46 51 46 47Z" fill="url(#dogNose)"/>
+  <!-- Nose shine -->
+  <ellipse cx="48.5" cy="47" rx="1.5" ry="1" fill="white" opacity="0.2"/>
+
+  <!-- Mouth (happy smile) -->
+  <path d="M44 51 Q47 55 50 53 Q53 55 56 51" fill="none" stroke="#6B3A20" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Mouth line from nose -->
+  <line x1="50" y1="52" x2="50" y2="53" stroke="#6B3A20" stroke-width="0.8"/>
+
+  <!-- Tongue (small, playful) -->
+  <path d="M48 53 Q50 58 52 53" fill="#E87070" stroke="#CC5555" stroke-width="0.3"/>
+  <line x1="50" y1="53" x2="50" y2="57" stroke="#CC5555" stroke-width="0.3" opacity="0.5"/>
+
+  <!-- Collar -->
+  <path d="M30 58 Q40 62 50 63 Q60 62 70 58" fill="none" stroke="url(#collar)" stroke-width="4" stroke-linecap="round"/>
+  <!-- Collar tag (gold) -->
+  <circle cx="50" cy="64" r="3" fill="#FFD700" stroke="#DAA520" stroke-width="0.5"/>
+  <text x="50" y="65.5" text-anchor="middle" font-size="3" fill="#8B6914" font-weight="bold">★</text>
+
+  <!-- Left front paw (reaching up) -->
+  <path d="M32 78 Q28 85 30 90 Q34 92 38 88 Q36 82 34 78" fill="url(#dogFur)"/>
+  <ellipse cx="33" cy="90" rx="5" ry="3" fill="#D4A050"/>
+  <!-- Paw pads -->
+  <circle cx="31" cy="90" r="1" fill="#C08030" opacity="0.5"/>
+  <circle cx="33.5" cy="89.5" r="1" fill="#C08030" opacity="0.5"/>
+  <circle cx="36" cy="90" r="1" fill="#C08030" opacity="0.5"/>
+
+  <!-- Right front paw -->
+  <path d="M68 78 Q72 85 70 90 Q66 92 62 88 Q64 82 66 78" fill="url(#dogFur)"/>
+  <ellipse cx="67" cy="90" rx="5" ry="3" fill="#D4A050"/>
+  <circle cx="65" cy="90" r="1" fill="#C08030" opacity="0.5"/>
+  <circle cx="67.5" cy="89.5" r="1" fill="#C08030" opacity="0.5"/>
+  <circle cx="70" cy="90" r="1" fill="#C08030" opacity="0.5"/>
+
+  <!-- Tail (wagging, behind body) -->
+  <path d="M28 68 Q18 55 15 48 Q14 44 18 42 Q22 44 22 50 Q24 58 30 66" fill="url(#dogFur)" stroke="#B07030" stroke-width="0.3"/>
+  <!-- Tail tip (lighter) -->
+  <circle cx="16" cy="44" r="3" fill="#F5D8A0" opacity="0.7"/>
+
+  <!-- Whisker dots -->
+  <circle cx="37" cy="49" r="0.5" fill="#8B5520" opacity="0.3"/>
+  <circle cx="35" cy="51" r="0.5" fill="#8B5520" opacity="0.3"/>
+  <circle cx="63" cy="49" r="0.5" fill="#8B5520" opacity="0.3"/>
+  <circle cx="65" cy="51" r="0.5" fill="#8B5520" opacity="0.3"/>
+
+  <!-- Small star/sparkle near ear (personality detail) -->
+  <g transform="translate(75,28)" opacity="0.6">
+    <line x1="-3" y1="0" x2="3" y2="0" stroke="#FFD700" stroke-width="0.8"/>
+    <line x1="0" y1="-3" x2="0" y2="3" stroke="#FFD700" stroke-width="0.8"/>
+    <line x1="-2" y1="-2" x2="2" y2="2" stroke="#FFD700" stroke-width="0.5"/>
+    <line x1="2" y1="-2" x2="-2" y2="2" stroke="#FFD700" stroke-width="0.5"/>
+  </g>
+</svg>

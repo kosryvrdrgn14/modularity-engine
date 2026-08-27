@@ -1,0 +1,264 @@
+[
+  {
+    "id": "zombie",
+    "name": "Zombie",
+    "type": "normal",
+    "stats": {
+      "hp": 10,
+      "damage": 5,
+      "speed": 40,
+      "size": 10,
+      "xpValue": 1,
+      "goldValue": 1,
+      "goldCoins": {
+        "min": 1,
+        "max": 2
+      }
+    },
+    "behavior": {
+      "pattern": "chase",
+      "params": {
+        "chaseSpeed": 40
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 0.01
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 100,
+      "firstAppears": "0:00"
+    }
+  },
+  {
+    "id": "bat",
+    "name": "Bat",
+    "type": "normal",
+    "stats": {
+      "hp": 5,
+      "damage": 3,
+      "speed": 100,
+      "size": 8,
+      "xpValue": 1,
+      "goldValue": 1,
+      "goldCoins": {
+        "min": 1,
+        "max": 1
+      }
+    },
+    "behavior": {
+      "pattern": "swarm",
+      "params": {
+        "erraticism": 0.8
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "magnet",
+          "chance": 0.05
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 80,
+      "firstAppears": "1:00"
+    }
+  },
+  {
+    "id": "skeleton",
+    "name": "Skeleton",
+    "type": "normal",
+    "stats": {
+      "hp": 20,
+      "damage": 8,
+      "speed": 50,
+      "size": 12,
+      "xpValue": 3,
+      "goldValue": 2,
+      "goldCoins": {
+        "min": 2,
+        "max": 3
+      }
+    },
+    "behavior": {
+      "pattern": "chase",
+      "params": {
+        "chaseSpeed": 50
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "screen_wipe",
+          "chance": 0.02
+        },
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 0.01
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 60,
+      "firstAppears": "2:00"
+    }
+  },
+  {
+    "id": "ghost",
+    "name": "Ghost",
+    "type": "normal",
+    "stats": {
+      "hp": 15,
+      "damage": 10,
+      "speed": 80,
+      "size": 12,
+      "xpValue": 2,
+      "goldValue": 2,
+      "goldCoins": {
+        "min": 2,
+        "max": 3
+      }
+    },
+    "behavior": {
+      "pattern": "wander_chase",
+      "params": {
+        "wanderTime": 2,
+        "chaseTime": 4
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "magnet",
+          "chance": 0.05
+        },
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 0.01
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 50,
+      "firstAppears": "2:30"
+    }
+  },
+  {
+    "id": "caster",
+    "name": "Caster",
+    "type": "normal",
+    "stats": {
+      "hp": 12,
+      "damage": 8,
+      "speed": 50,
+      "size": 13,
+      "xpValue": 3,
+      "goldValue": 3,
+      "goldCoins": {
+        "min": 3,
+        "max": 4
+      }
+    },
+    "behavior": {
+      "pattern": "ranged",
+      "params": {
+        "maintainDistance": 150,
+        "projectileDamage": 6,
+        "projectileSpeed": 150
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "screen_wipe",
+          "chance": 0.02
+        },
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 0.01
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 45,
+      "firstAppears": "3:00"
+    }
+  },
+  {
+    "id": "boss_gravekeeper",
+    "name": "The Gravekeeper",
+    "type": "boss",
+    "stats": {
+      "hp": 1000,
+      "damage": 15,
+      "speed": 70,
+      "size": 28,
+      "xpValue": 50,
+      "goldValue": 1,
+      "goldCoins": {
+        "min": 20,
+        "max": 30
+      }
+    },
+    "behavior": {
+      "pattern": "boss_charge",
+      "params": {
+        "chargeDuration": 1.5,
+        "pauseDuration": 1.0
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 1.0
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 0,
+      "firstAppears": "4:00"
+    },
+    "phases": [
+      {
+        "hpThreshold": 1.0,
+        "speed": 70,
+        "chargeInterval": 3.0,
+        "chargeDuration": 1.5,
+        "pauseDuration": 1.0,
+        "minionCount": 3,
+        "minionInterval": 3.0
+      },
+      {
+        "hpThreshold": 0.5,
+        "speed": 100,
+        "chargeInterval": 2.0,
+        "chargeDuration": 1.5,
+        "pauseDuration": 0.8,
+        "minionCount": 5,
+        "minionInterval": 2.0,
+        "groundPound": {
+          "interval": 5.0,
+          "radius": 80,
+          "damage": 20,
+          "telegraphTime": 0.75
+        }
+      }
+    ],
+    "loot": {
+      "xp": 50,
+      "gold": {
+        "min": 20,
+        "max": 30
+      },
+      "guaranteedPowerUp": "pickup_weapon_level_up"
+    },
+    "screenWipeResistance": 0.8,
+    "chargeResumeBehavior": "continue_from_frozen"
+  }
+]

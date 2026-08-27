@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="df" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8A44A"/>
+      <stop offset="100%" stop-color="#C08030"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Body -->
+  <ellipse cx="16" cy="16" rx="9" ry="6" fill="url(#df)"/>
+
+  <!-- Belly (lighter) -->
+  <ellipse cx="16" cy="18" rx="7" ry="3.5" fill="#F5D8A0"/>
+
+  <!-- Head -->
+  <circle cx="24" cy="12" r="5.5" fill="#E8A44A"/>
+
+  <!-- Muzzle -->
+  <ellipse cx="27" cy="13" rx="3" ry="2" fill="#F5D8A0"/>
+
+  <!-- Ear (floppy) -->
+  <path d="M22 8 Q20 6 19 10 Q20 12 22 11" fill="#B07030"/>
+
+  <!-- Eye -->
+  <circle cx="25" cy="11" r="1.5" fill="#3A2010"/>
+  <circle cx="25.5" cy="10.5" r="0.6" fill="white" opacity="0.8"/>
+
+  <!-- Nose -->
+  <circle cx="28.5" cy="12.5" r="1" fill="#2A1810"/>
+
+  <!-- Mouth (happy) -->
+  <path d="M26.5 13.5 Q28 15 29 13.5" fill="none" stroke="#6B3A20" stroke-width="0.5"/>
+
+  <!-- Tail (wagging up) -->
+  <path d="M7 14 Q4 8 5 6 Q6 5 7 7 Q7 10 8 13" fill="#E8A44A" stroke="#B07030" stroke-width="0.3"/>
+
+  <!-- Front legs (running pose) -->
+  <path d="M20 20 L22 26 L23 26" fill="none" stroke="#C08030" stroke-width="2" stroke-linecap="round"/>
+  <path d="M22 20 L19 26 L18 26" fill="none" stroke="#C08030" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Back legs (running pose) -->
+  <path d="M12 20 L14 26 L15 26" fill="none" stroke="#C08030" stroke-width="2" stroke-linecap="round"/>
+  <path d="M10 20 L8 26 L7 26" fill="none" stroke="#C08030" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Collar -->
+  <path d="M20 14 Q22 15 24 14" fill="none" stroke="#2E8B57" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- Collar tag -->
+  <circle cx="22" cy="15" r="0.8" fill="#FFD700"/>
+</svg>
