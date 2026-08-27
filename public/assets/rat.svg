@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Body -->
+  <ellipse cx="8" cy="10" rx="4" ry="3" fill="#5A4A3A"/>
+  <!-- Head -->
+  <ellipse cx="12" cy="9" rx="3" ry="2.5" fill="#6A5A4A"/>
+  <!-- Snout -->
+  <ellipse cx="14" cy="9.5" rx="1.5" ry="1" fill="#7A6A5A"/>
+  <!-- Nose -->
+  <circle cx="15" cy="9.5" r="0.6" fill="#FF6B6B"/>
+  <!-- Eye -->
+  <circle cx="13" cy="8.5" r="0.8" fill="#FF4444"/>
+  <circle cx="13.2" cy="8.3" r="0.3" fill="#FFAAAA"/>
+  <!-- Ears -->
+  <ellipse cx="11" cy="7" rx="1.2" ry="1.5" fill="#6A5A4A"/>
+  <ellipse cx="11" cy="7" rx="0.8" ry="1" fill="#8A6A5A"/>
+  <ellipse cx="12.5" cy="7.2" rx="1" ry="1.2" fill="#6A5A4A"/>
+  <ellipse cx="12.5" cy="7.2" rx="0.6" ry="0.8" fill="#8A6A5A"/>
+  <!-- Tail -->
+  <path d="M4 10 Q2 8 1 10 Q0 12 2 11" fill="none" stroke="#5A4A3A" stroke-width="0.8"/>
+  <!-- Legs (running pose) -->
+  <line x1="6" y1="12" x2="5" y2="14" stroke="#5A4A3A" stroke-width="1"/>
+  <line x1="10" y1="12" x2="11" y2="14" stroke="#5A4A3A" stroke-width="1"/>
+  <!-- Whiskers -->
+  <line x1="14" y1="9" x2="16" y2="8" stroke="#8A7A6A" stroke-width="0.3"/>
+  <line x1="14" y1="9.5" x2="16" y2="9.5" stroke="#8A7A6A" stroke-width="0.3"/>
+  <line x1="14" y1="10" x2="16" y2="11" stroke="#8A7A6A" stroke-width="0.3"/>
+  <!-- Fur texture -->
+  <path d="M6 9 Q7 8.5 8 9" fill="none" stroke="#4A3A2A" stroke-width="0.3" opacity="0.5"/>
+  <path d="M9 9 Q10 8.5 11 9" fill="none" stroke="#4A3A2A" stroke-width="0.3" opacity="0.5"/>
+</svg>
