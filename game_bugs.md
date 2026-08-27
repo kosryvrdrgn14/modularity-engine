@@ -57,7 +57,7 @@
 | 43 | Duplicate _showDogDialogue/companion methods — two identical definitions from Python bulk insert | 🟡 Low | ✅ Fixed | Removed 79 duplicate lines |
 | — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
 
-**Total: 44 bugs found, 44 fixed, 0 open**
+**Total: 45 bugs found, 45 fixed, 0 open**
 
 ---
 
@@ -389,6 +389,34 @@ Deleted the dead 4-line block. The party button was intentionally folded into al
 
 ---
 
+## Bug #45 — Companion Growl Cone Renders at Wrong Position
+
+**Date:** August 27, 2026
+**Severity:** 🟡 Visual (silent glitch — no crash)
+**Discovered by:** Claude analysis
+
+### Symptom
+The companion's growl cone effect renders offset from the companion sprite instead of centered on it. Not a crash because `screen` resolves to `window.screen` (the browser Screen API) which has no `.x/.y`, so `ctx.translate(undefined, undefined)` silently does nothing.
+
+### Root Cause
+In the companion sprite draw function, the growl cone block used `screen.x/screen.y` instead of `s.x/s.y`:
+
+```javascript
+// Every other line uses s.x, s.y (companion's screen position):
+ctx.ellipse(s.x - sz * 0.4, s.y + sz * 0.05, ...);
+
+// But growl cone used screen.x/screen.y (browser Screen API):
+ctx.translate(screen.x, screen.y);  // ← BUG: should be s.x, s.y
+```
+
+### Fix
+Changed `screen.x/screen.y` → `s.x/s.y` to match the rest of the drawing function.
+
+### Prevention Rule
+> **When copy-pasting drawing code blocks, verify that positional variables match the local scope.** `screen` is a browser global — referencing it accidentally won't crash, it will silently render at the wrong position. Always grep for `screen.x` and `screen.y` in canvas draw functions to catch this pattern.
+
+---
+
 ## Known Limitations (Not Bugs)
 
 1. **Audio system** — Stub only, no sounds implemented
@@ -421,7 +449,7 @@ Deleted the dead 4-line block. The party button was intentionally folded into al
 
 ---
 
-*Report compiled from all development sessions and system audit. 44 bugs found and fixed.*
+*Report compiled from all development sessions and system audit. 45 bugs found and fixed.*
 
 ---
 
@@ -541,3 +569,10 @@ These bugs share common root causes. Use this checklist after any code change se
 | Trace every reference from declaration to end of function scope | Prevents orphaned references to removed DOM elements |
 | Check constructor/init chains for downstream dependencies | partyBtn crash blocked titleMenu.show() two lines later |
 | Remove HTML element + getElementById + ALL event listeners in one pass | Partial removals are the root cause of orphan variable crashes |
+
+### 10. Canvas Drawing & Coordinate Systems
+| Check | Why |
+|---|---|
+| `grep -n 'screen\.x\|screen\.y' file.html` in canvas draw functions | Bug #45: screen.x silently resolves to browser Screen API, not sprite position |
+| Verify positional variables match local scope (s.x vs screen.x vs entity.x) | Copy-paste errors introduce wrong coordinate systems |
+| Browser globals like `screen`, `location`, `name` won't crash when used wrongly | Silent misrendering is harder to find than crashes |
