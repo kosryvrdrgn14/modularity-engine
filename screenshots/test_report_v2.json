@@ -1,0 +1,124 @@
+{
+  "timestamp": "2026-08-27T08:04:44.392Z",
+  "results": [
+    {
+      "t": "1a. Title screen renders",
+      "s": "✅",
+      "d": "visible"
+    },
+    {
+      "t": "1b. Menu items present",
+      "s": "✅",
+      "d": "5: ▶ Play, ▶ Characters 🔒, ▶ Stages 🔒, ▶ Settings, ▶ Test Town +100g"
+    },
+    {
+      "t": "1c. Title background",
+      "s": "✅",
+      "d": "src=title_background.svg"
+    },
+    {
+      "t": "2a. Town screen renders",
+      "s": "✅",
+      "d": "{\"visible\":true,\"hasHeader\":true,\"hasDock\":true,\"hasCenter\":true,\"hasBg\":true,\"hasBreadcrumb\":true,\"hasNPCArea\":true}"
+    },
+    {
+      "t": "2b. Header",
+      "s": "✅",
+      "d": "name=\"Refugee Camp\", resources=0"
+    },
+    {
+      "t": "2c. Breadcrumb",
+      "s": "✅",
+      "d": "\"Refugee Camp\""
+    },
+    {
+      "t": "2d. Root NPCs",
+      "s": "✅",
+      "d": "2: Lina\n          🔒 Upgrade the , Elder Rowan\n          \"Welcome"
+    },
+    {
+      "t": "2e. Upgrade camp card",
+      "s": "✅",
+      "d": "\"🔨 Upgrade Camp — Build Wooden Shacks\n      100g\" disabled=false"
+    },
+    {
+      "t": "2f. Dock tabs",
+      "s": "✅",
+      "d": "5: 🗺️Map, 👥NPCs0, 📋Systems0, 🛒Shop, ⚔️Fight"
+    },
+    {
+      "t": "3a. NPCs panel",
+      "s": "✅",
+      "d": "has content"
+    },
+    {
+      "t": "3b. Systems panel",
+      "s": "✅",
+      "d": "has content"
+    },
+    {
+      "t": "3c. Map tab",
+      "s": "✅",
+      "d": "switched back to center"
+    },
+    {
+      "t": "4a. Trade District",
+      "s": "✅",
+      "d": "breadcrumb=\"◀ Refugee Camp › Trade District\", locations=2"
+    },
+    {
+      "t": "4b. Blacksmith",
+      "s": "✅",
+      "d": "breadcrumb=\"◀ Refugee Camp › Trade District › Blacksmith\", npcs=1"
+    },
+    {
+      "t": "4c. Breadcrumb back",
+      "s": "✅",
+      "d": "\"◀ Refugee Camp › Trade District\""
+    },
+    {
+      "t": "4d. Back button",
+      "s": "✅",
+      "d": "breadcrumb=\"Refugee Camp\""
+    },
+    {
+      "t": "5a. Elder Rowan dialogue",
+      "s": "❌",
+      "d": "clicked=true, visible=false"
+    },
+    {
+      "t": "5c. Dialogue closes",
+      "s": "✅",
+      "d": "overlay hidden"
+    },
+    {
+      "t": "6a. Shop overlay",
+      "s": "✅",
+      "d": "tabs=4, items=0"
+    },
+    {
+      "t": "7a. Combat started",
+      "s": "✅",
+      "d": "time=2.0s, HP=100"
+    },
+    {
+      "t": "7b. Enemies spawning",
+      "s": "✅",
+      "d": "3 enemies at 5.1s"
+    },
+    {
+      "t": "8a. Back to title",
+      "s": "✅",
+      "d": "title screen visible"
+    },
+    {
+      "t": "No JS errors",
+      "s": "✅",
+      "d": "clean console"
+    }
+  ],
+  "passed": 22,
+  "failed": 1,
+  "warnings": 0,
+  "errors": []
+}

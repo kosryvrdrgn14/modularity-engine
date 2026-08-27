@@ -1,0 +1,120 @@
+{
+  "timestamp": "2026-08-27T08:02:17.174Z",
+  "total": 22,
+  "passed": 18,
+  "failed": 0,
+  "warnings": 4,
+  "tests": [
+    {
+      "test": "Title screen renders",
+      "status": "✅",
+      "detail": "display=flex, opacity=1"
+    },
+    {
+      "test": "Title screen menu items",
+      "status": "⚠️",
+      "detail": "No menu items found via selectors - checking innerHTML"
+    },
+    {
+      "test": "No critical JS errors",
+      "status": "✅",
+      "detail": "6 CORS/resource errors only (expected for file://)"
+    },
+    {
+      "test": "Town screen elements",
+      "status": "✅",
+      "detail": "header=true, dock=true, center=true"
+    },
+    {
+      "test": "Town header exists",
+      "status": "✅",
+      "detail": "location=\"null\", resources=1"
+    },
+    {
+      "test": "Breadcrumb",
+      "status": "⚠️",
+      "detail": "Not found via selector"
+    },
+    {
+      "test": "Dock tabs",
+      "status": "✅",
+      "detail": "5 tabs: 🗺️Map, 👥NPCs0, 📋Systems0, 🛒Shop, ⚔️Fight"
+    },
+    {
+      "test": "Tab \"🗺️Map\" opens panel",
+      "status": "✅",
+      "detail": "left=true, right=true"
+    },
+    {
+      "test": "Tab \"👥NPCs0\" opens panel",
+      "status": "✅",
+      "detail": "left=true, right=true"
+    },
+    {
+      "test": "Tab \"📋Systems0\" opens panel",
+      "status": "✅",
+      "detail": "left=true, right=true"
+    },
+    {
+      "test": "Tab \"🛒Shop\" opens panel",
+      "status": "✅",
+      "detail": "left=true, right=true"
+    },
+    {
+      "test": "Tab \"⚔️Fight\" opens panel",
+      "status": "✅",
+      "detail": "left=true, right=true"
+    },
+    {
+      "test": "Location cards",
+      "status": "✅",
+      "detail": "4 cards: 🏪\n        \n          Trade District\n   , ⛺\n        \n          Residential\n       , 🌲\n        \n          Wilderness\n       , 📋\n      \n        Auto-Clear Farming\n   "
+    },
+    {
+      "test": "Navigate to Trade District",
+      "status": "✅",
+      "detail": "clicked=\"🏪\n        \n          Trade Di\""
+    },
+    {
+      "test": "Sub-location cards",
+      "status": "✅",
+      "detail": "2: 🔨\n        \n          Blacksmith\n       , 🍺\n        \n          Tavern\n          R"
+    },
+    {
+      "test": "NPC cards",
+      "status": "⚠️",
+      "detail": "No NPC cards found"
+    },
+    {
+      "test": "Swipe indicator",
+      "status": "⚠️",
+      "detail": "Not found"
+    },
+    {
+      "test": "Swipe gesture dispatched",
+      "status": "✅",
+      "detail": "touchstart → touchmove → touchend"
+    },
+    {
+      "test": "Shop overlay",
+      "status": "✅",
+      "detail": "tabs=4, items=0"
+    },
+    {
+      "test": "Game canvas",
+      "status": "✅",
+      "detail": "1280x720"
+    },
+    {
+      "test": "Combat started",
+      "status": "✅",
+      "detail": "state=playing"
+    },
+    {
+      "test": "Return to title",
+      "status": "✅",
+      "detail": "Title screen visible again"
+    }
+  ],
+  "consoleErrors": []
+}
