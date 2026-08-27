@@ -612,3 +612,11 @@ These bugs share common root causes. Use this checklist after any code change se
 | `grep -n 'screen\.x\|screen\.y' file.html` in canvas draw functions | Bug #45: screen.x silently resolves to browser Screen API, not sprite position |
 | Verify positional variables match local scope (s.x vs screen.x vs entity.x) | Copy-paste errors introduce wrong coordinate systems |
 | Browser globals like `screen`, `location`, `name` won't crash when used wrongly | Silent misrendering is harder to find than crashes |
+
+### 11. Refactor Isolation Protocol
+| Check | Why |
+|---|---|
+| **Isolate before refactoring**: identify ALL methods/variables in the affected scope before touching code | Bug #44 + #46: town layout refactor accidentally dropped partyBtn + upgrade guards |
+| List every guard/lock/debounce variable in the target scope before starting | Prevents silent removal of safety logic during restructuring |
+| Refactor in small steps — move one block at a time, verify parse + guard survival after each step | Bulk moves make it impossible to tell which step broke what |
+| After refactor, grep for every guard variable name across the entire file | Catches orphaned references and missing guards in one pass |
