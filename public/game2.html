@@ -97,6 +97,7 @@
       z-index: 100;
       font-family: 'Segoe UI', system-ui, sans-serif;
       overflow: hidden;
+      touch-action: auto;
     }
     #title-screen.active { display: flex; }
     #title-bg {
@@ -227,6 +228,8 @@
       background: rgba(10, 10, 26, 0.92);
       z-index: 105;
       font-family: 'Segoe UI', system-ui, sans-serif;
+    
+      touch-action: auto;
     }
     #settings-screen.active { display: flex; }
     #settings-content {
@@ -665,6 +668,7 @@
       z-index: 95;
       font-family: 'Segoe UI', system-ui, sans-serif;
       overflow: hidden;
+      touch-action: auto;
     }
     #town-screen.active { display: flex; }
 
@@ -964,6 +968,7 @@
       background: rgba(0, 0, 0, 0.6);
       z-index: 96;
       padding: 20px;
+      touch-action: auto;
     }
     #dialogue-overlay.active { display: flex; }
     #dialogue-box {
@@ -1103,6 +1108,8 @@
       display: none; flex-direction: column;
       background: rgba(10,10,26,0.95);
       backdrop-filter: blur(8px);
+    
+      touch-action: auto;
     }
     #shop-overlay.active { display: flex; }
     #shop-header {
