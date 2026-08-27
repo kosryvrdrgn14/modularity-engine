@@ -9023,7 +9023,8 @@ class TownScreen {
 
     // NPCs at current location
     npcArea.innerHTML = '';
-    const npcs = this.locationManager?.getCurrentNPCs() || [];
+    const curLoc = this.locationManager?.getCurrentLocation();
+    const npcs = curLoc ? (this.locationManager.getNPCsAtLocation(curLoc.id) || []) : [];
     for (const npc of npcs.slice(0, 3)) {
       const svg = SVG_PORTRAITS[npc.id] || '<div style="width:36px;height:36px;border-radius:50%;background:#333;"></div>';
       const svgSmall = svg.replace('<svg ', '<svg style="width:36px;height:36px;" ');
@@ -9066,7 +9067,7 @@ class TownScreen {
     // Locations
     locArea.innerHTML = '';
     const region = this.locationManager?.getCurrentRegion();
-    const children = this.locationManager?.getChildLocations() || [];
+    const children = this.locationManager?.getChildLocations(this.locationManager.currentLocationId) || [];
     const currentId = this.locationManager?.currentLocationId;
 
     // Current location
