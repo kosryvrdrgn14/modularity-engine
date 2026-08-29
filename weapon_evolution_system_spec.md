@@ -455,3 +455,33 @@ const EVOLUTION_TABLE = {
 *Spec Version: 1.0*
 *Status: Planning — No Implementation Yet*
 *Next Step: File split, then implement evolution system after base weapons*
+
+---
+
+## ⚠️ Forward Design Note: Adjacency System (Planned)
+
+> **See:** `32_adjacency_system_spec.md` for the full adjacency system design.
+
+**Impact on weapon evolution:**
+
+The planned adjacency system (Backpack Battles-style) will change how evolutions work:
+
+- **Current design:** Companions evolve weapons based on fixed combos (Dog + Sword = Wolf Fang)
+- **Future design:** Companions evolve weapons based on **adjacency + tags** in a 6-slot grid
+- **Grid layout:** C1↔W1↔W2↔W3↔C2↔C3
+- **Key:** Items have tags (`fire`, `physical`, `vuln`, etc.) that buff adjacent items
+
+**Design constraints (DO NOT violate):**
+
+1. Weapon data must support a `tags` array (add to data format now, populate later)
+2. Companion data must support a `tags` array
+3. Evolution triggers should be data-driven, not hardcoded
+4. Weapon stats should be separable from tag effects (base stats + tag multipliers)
+5. The 3-weapon + 3-companion loadout structure must be preserved
+
+**When adjacency ships:**
+- Evolution = companion adjacent to weapon + correct tags + Lv7
+- Adjacent tag buffs stack multiplicatively with evolution bonuses
+- This creates the "ridiculous" late-game scaling Vampire Survivors is known for
+
+*Added: August 29, 2026 — Design reference for future adjacency system*

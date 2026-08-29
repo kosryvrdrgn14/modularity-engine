@@ -478,3 +478,34 @@ The Dog has a passive loot collection radius of **40px** from its current positi
 ---
 
 *Companion Combat Spec v1.0 — Created August 24, 2026*
+
+---
+
+## ⚠️ Forward Design Note: Adjacency System (Planned)
+
+> **See:** `32_adjacency_system_spec.md` for the full adjacency system design.
+
+**Impact on companion design:**
+
+The adjacency system will add a `tags` array to companion data:
+
+```json
+{
+  "id": "mage",
+  "name": "Mage",
+  "tags": ["lightning", "vuln"],
+  "adjacencyBuffs": {
+    "lightning": "+10% chain damage to adjacent",
+    "vuln": "+5% vuln duration to adjacent"
+  }
+}
+```
+
+**Design constraints:**
+
+1. Companion data must support `tags` array (add to schema, populate later)
+2. Companion attack types should map to tags for adjacency interactions
+3. The 3 companion slot structure (C1, C2, C3) maps to the adjacency grid
+4. Companion-weapon evolution is adjacency-dependent (companion must be adjacent to weapon)
+
+*Added: August 29, 2026 — Design reference for future adjacency system*

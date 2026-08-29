@@ -1638,6 +1638,16 @@ Three stage tiers: 3min (quick grind), 5min (baseline story), 10min (highlight s
 **Q3: How should NPC combat companions work?** (RESOLVED — D1/D2/D5)
 NPCs can accompany the player in combat as invulnerable support companions. They deal reduced damage and attack slower than the player. Survival is 100% on the player character — NPCs cannot die, take damage, or be targeted by enemies. 3 companion slots, each bound 1:1 to a weapon slot (W1=C1, W2=C2, W3=C3). Companions buff and evolve their paired weapon. NPC weapons show in the weapon bar as smaller icons with colored NPC border. NPCs auto-level to match the player's current level, scaling at 10-50% of player damage depending on trust tier. No manual NPC upgrade management. Some NPCs are intentionally weak ("dead weight") and take up party slots for affection building or quest requirements. See Section 6.5 for the full design.
 
+**⚠️ Adjacency System (Planned — See `32_adjacency_system_spec.md`):**
+
+The 1:1 binding (C1↔W1, C2↔W2, C3↔W3) is the foundation for a Backpack Battles-style adjacency system planned for late-game scaling. In the final game, items will have **tags** (fire, physical, vuln, etc.) that buff adjacent items. The grid layout will be:
+
+```
+C1 ↔ W1 ↔ W2 ↔ W3 ↔ C2 ↔ C3
+```
+
+W2 and W3 receive the most buffs (2 neighbors each). Companion-weapon evolution will require adjacency + correct tags + Lv7. This creates the "ridiculous" exponential scaling Vampire Survivors is known for. **Do not design weapon/companion data in a way that blocks this — all items must support a `tags` array in their data format.** See `32_adjacency_system_spec.md` for full details.
+
 **Q4: Should there be a "prestige" or "new game+" system?**
 When the player completes all content, should they be able to restart with bonuses? Or is the game "done" at that point?
 - **Recommendation:** Include in the framework design but defer implementation. The save data has a `meta.prestigeCount` field. When implemented, prestige would reset most progress but keep cosmetic rewards and unlock harder difficulty modifiers.

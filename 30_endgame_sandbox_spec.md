@@ -263,3 +263,22 @@ Track the player's best sandbox performances:
 ---
 
 *Endgame Sandbox Mode Spec v0.1.0 — August 26, 2026*
+
+---
+
+## ⚠️ Forward Design Note: Adjacency System (Planned)
+
+> **See:** `32_adjacency_system_spec.md` for the full adjacency system design.
+
+**Impact on sandbox mode:**
+
+The sandbox mode will need to support:
+
+1. **Grid layout view** — player arranges items in the 6-slot adjacency grid
+2. **Buff preview** — show active adjacency buffs before launching
+3. **Evolution indicators** — glow when correct combo is adjacent
+4. **Build comparison** — compare different grid arrangements
+
+**When adjacency ships, sandbox mode becomes the primary testing ground for builds.**
+
+*Added: August 29, 2026 — Design reference for future adjacency system*
