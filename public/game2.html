@@ -5066,6 +5066,79 @@ class Renderer {
     ctx.fillRect(0, h - 20, w, 20);
     ctx.fillStyle = '#4FC3F7';
     ctx.fillRect(0, h - 20, w * (this.xpPercent || 0), 20);
+
+    // Weapon Slots (bottom-left, above EXP bar)
+    if (this._activeWeaponIds && this._activeWeaponIds.length > 0) {
+      const slotSize = 36;
+      const slotGap = 4;
+      const slotY = h - 60;
+      const slotX = 10;
+      const weaponNames = {
+        w1_projectile: { icon: '\u{1f3f9}', name: 'Proj', color: '#FFD700' },
+        w2_orbit: { icon: '\u{1f504}', name: 'Orb', color: '#4FC3F7' },
+        weapon_area_pulse: { icon: '\u{1f4a5}', name: 'Area', color: '#FF9100' },
+        w4_flame_wave: { icon: '\u{1f525}', name: 'Flame', color: '#FF5722' },
+        w5_arcane_bolt: { icon: '\u26a1', name: 'Arc', color: '#AB47BC' },
+        w6_dagger: { icon: '\u{1f5e1}\ufe0f', name: 'Dagger', color: '#78909C' },
+        w7_sword: { icon: '\u2694\ufe0f', name: 'Sword', color: '#5C6BC0' },
+        w8_claymore: { icon: '\u{1fa93}', name: 'Clay', color: '#8D6E63' },
+      };
+      for (let i = 0; i < this._activeWeaponIds.length && i < 3; i++) {
+        const wid = this._activeWeaponIds[i];
+        const wn = weaponNames[wid] || { icon: '?', name: wid.slice(0, 4), color: '#666' };
+        const level = (this._weaponLevels && this._weaponLevels[wid]) || 0;
+        const x = slotX + i * (slotSize + slotGap);
+        ctx.fillStyle = level > 0 ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)';
+        ctx.fillRect(x, slotY, slotSize, slotSize);
+        ctx.strokeStyle = level > 0 ? wn.color : '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, slotY, slotSize, slotSize);
+        ctx.font = '16px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(wn.icon, x + slotSize / 2, slotY + 20);
+        if (level > 0) {
+          ctx.fillStyle = wn.color;
+          ctx.font = 'bold 9px monospace';
+          ctx.fillText('Lv' + level, x + slotSize / 2, slotY + slotSize - 4);
+        }
+      }
+    }
+
+    // Companion Slots (below weapon slots)
+    if (this._activeCompanionIds && this._activeCompanionIds.length > 0) {
+      const slotSize = 36;
+      const slotGap = 4;
+      const slotY = h - 60 - 40;
+      const slotX = 10;
+      const companionIcons = {
+        dog: { icon: '\u{1f415}', color: '#E8A44A' },
+        healer: { icon: '\u{1f49a}', color: '#4CAF50' },
+        archer: { icon: '\u{1f3f9}', color: '#8BC34A' },
+        mage: { icon: '\u{1f9d9}', color: '#AB47BC' },
+        knight: { icon: '\u2694\ufe0f', color: '#5C6BC0' },
+        panther: { icon: '\u{1f408}', color: '#37474F' },
+        spider: { icon: '\u{1f577}\ufe0f', color: '#7B1FA2' },
+        hawk: { icon: '\u{1f985}', color: '#FF9800' },
+        turtle: { icon: '\u{1f422}', color: '#4CAF50' },
+        owl: { icon: '\u{1f989}', color: '#795548' },
+        rat: { icon: '\u{1f400}', color: '#9E9E9E' },
+        frog: { icon: '\u{1f438}', color: '#66BB6A' },
+        bat_companion: { icon: '\u{1f987}', color: '#5C6BC0' },
+      };
+      for (let i = 0; i < this._activeCompanionIds.length && i < 3; i++) {
+        const cid = this._activeCompanionIds[i];
+        const cn = companionIcons[cid] || { icon: '\u{1f43e}', color: '#666' };
+        const x = slotX + i * (slotSize + slotGap);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(x, slotY, slotSize, slotSize);
+        ctx.strokeStyle = cn.color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, slotY, slotSize, slotSize);
+        ctx.font = '16px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(cn.icon, x + slotSize / 2, slotY + 22);
+      }
+    }
   }
 }
 
@@ -8844,6 +8917,9 @@ class Game {
     if (this.player) {
       this.renderer.level = this.levelingSystem.level;
       this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
+      this.renderer._activeWeaponIds = this._activeWeapons || [];
+      this.renderer._weaponLevels = this.weaponSystem.weaponLevels || {};
+      this.renderer._activeCompanionIds = this.companionSystem.companions ? this.companionSystem.companions.map(c => c.id || c.companionId) : [];
     }
 
     // Floating damage/pickup text

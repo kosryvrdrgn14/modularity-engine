@@ -800,6 +800,9 @@ class Game {
     if (this.player) {
       this.renderer.level = this.levelingSystem.level;
       this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
+      this.renderer._activeWeaponIds = this._activeWeapons || [];
+      this.renderer._weaponLevels = this.weaponSystem.weaponLevels || {};
+      this.renderer._activeCompanionIds = this.companionSystem.companions ? this.companionSystem.companions.map(c => c.id || c.companionId) : [];
     }
 
     // Floating damage/pickup text
