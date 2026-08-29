@@ -1029,3 +1029,55 @@ When introducing a new data source (dev loadout, player inventory, etc.), trace 
 | W8 Explosion | `setTimeout` 200ms | `_w8ExplosionQueue` frame-based |
 
 *Weapon damage pipeline session: 4 found, 4 fixed, 0 open.*
+
+---
+
+## Bug #60: All weapons unlocked immediately instead of loadout-position progression
+**Date:** Current session  
+**Severity:** 🔴 Critical  
+**Status:** Fixed
+
+**Symptom:** When the player selected a weapon loadout (e.g., Dagger-FlameWave-Sword), ALL three weapons were active from the start of the stage instead of progressing: Slot 0 at Lv1, Slot 1 at Lv3, Slot 2 at Lv6.
+
+**Root cause:** Two bugs working together:
+1. `startGame()` called `unlockWeapon()` for ALL weapons in `_activeWeapons`, making them all active at Level 1.
+2. `_checkWeaponUnlocks()` used fixed `unlockLevel` values from weapon data (e.g., w2_orbit=3, weapon_area_pulse=6) instead of loadout position.
+
+**Impact:** The game had no weapon unlock progression. All weapons fired immediately, making the game trivially easy and defeating the purpose of the loadout selection system.
+
+**Fix:**
+1. `startGame()` now only unlocks Slot 0: `this.weaponSystem.unlockWeapon(this._activeWeapons[0])`
+2. `_checkWeaponUnlocks()` now uses loadout position: Slot 0=Lv1 (start), Slot 1=unlocks at Lv3, Slot 2=unlocks at Lv6.
+
+**Verified via headless tests:**
+- Loadout [Dagger, FlameWave, Sword]: Dagger active at Lv1, FlameWave at Lv3, Sword at Lv6 ✅
+- Loadout [Sword, Dagger, Projectile]: Sword active at Lv1, Dagger at Lv3, Projectile at Lv6 ✅
+- Upgrade pool only shows upgrades for currently unlocked weapons ✅
+
+---
+
+## Bug #61: _isSelectingUpgrade flag not reset on early return
+**Date:** Current session  
+**Severity:** 🟡 Medium  
+**Status:** Fixed
+
+**Symptom:** If `selectUpgrade` was called with an out-of-bounds index (e.g., index 2 when only 2 options exist), the `_isSelectingUpgrade` flag would stay `true` forever, permanently blocking all future upgrade selections.
+
+**Root cause:** The early return path `if (index < 0 || index >= this.uiManager.levelUpOptions.length) return;` did not reset `_isSelectingUpgrade`.
+
+**Impact:** Would permanently freeze the upgrade system, trapping the player in the level-up screen.
+
+**Fix:** Added `this._isSelectingUpgrade = false;` before the early return.
+
+---
+
+## Bug #62: startGame() exposed on window for testing
+**Date:** Current session  
+**Severity:** 🟢 Low  
+**Status:** Intentional  
+
+**Note:** Added `window.game = game;` to game2.html for headless browser testing. This exposes the game object globally for debug/test access. Should be removed before production release.
+
+---
+
+*Weapon unlock progression session: 3 found, 3 fixed, 0 open.*

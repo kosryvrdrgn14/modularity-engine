@@ -327,8 +327,9 @@ class Game {
       // Fallback: use stage-recommended weapons if player hasn't chosen
       this._activeWeapons = tierConfig?.recommendedWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     }
-    for (const wid of this._activeWeapons) {
-      this.weaponSystem.unlockWeapon(wid);
+    // Only Slot 0 (first weapon) starts active. Slot 1 unlocks at Lv3, Slot 2 at Lv6.
+    if (this._activeWeapons.length > 0) {
+      this.weaponSystem.unlockWeapon(this._activeWeapons[0]);
     }
 
     // B3: Apply tier multipliers to spawn system
@@ -861,14 +862,15 @@ class Game {
     const level = this.levelingSystem.level;
     const weapons = this.dataManager.weapons;
     if (!weapons || !Array.isArray(weapons)) return;
-    for (const weapon of weapons) {
-      // Only unlock weapons that are active in this run (stage loadout + dev picks)
-      if (!this._activeWeapons?.includes(weapon.id)) continue;
-      if (weapon.unlockLevel && level >= weapon.unlockLevel) {
-        if (!this.weaponSystem.weaponLevels[weapon.id]) {
-            this.weaponSystem.unlockWeapon(weapon.id);
-          this.eventBus.emit('weaponUnlock', { weaponId: weapon.id, name: weapon.name });
-        }
+    // Slot 0 = Lv1 (already active), Slot 1 = unlocks at Lv3, Slot 2 = unlocks at Lv6
+    const unlockSchedule = [1, 3, 6];
+    for (let i = 0; i < this._activeWeapons.length && i < 3; i++) {
+      const wid = this._activeWeapons[i];
+      const unlockAt = unlockSchedule[i];
+      if (level >= unlockAt && !this.weaponSystem.weaponLevels[wid]) {
+        this.weaponSystem.unlockWeapon(wid);
+        const wData = weapons.find(w => w.id === wid);
+        this.eventBus.emit('weaponUnlock', { weaponId: wid, name: wData?.name || wid });
       }
     }
   }
