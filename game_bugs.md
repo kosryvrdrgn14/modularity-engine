@@ -2,7 +2,7 @@
 
 **Project:** Modularity Engine (Vampire Survivors Prototype)
 **File:** `public/game2.html` (single-file HTML5 game)
-**Last Updated:** August 29, 2026
+**Last Updated:** August 29, 2026 (v2)
 
 ---
 
@@ -58,6 +58,16 @@
 | — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
 | 44 | townScreen partyBtn ReferenceError — deleted DOM element still referenced in _setupEvents | 🔴 Critical | ✅ Fixed | Claude ESLint audit |
 | 45 | Companion growl cone renders at wrong position — screen.x/screen.y used instead of s.x/s.y | 🟡 Medium | ✅ Fixed | Claude ESLint audit |
+| 46 | Double power-up: mouse+key race condition on upgrade selection | 🔴 Critical | ✅ Fixed | Gemini review |
+| 47 | Empty wave compositionWeights crash when spawnRate=0 | 🟡 Medium | ✅ Fixed | Phase 1.3 audit |
+| 48 | Data sync drift between embeddedData.js and content/*.json | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 49 | Ghoul lunge behavior not implemented in MovementSystem | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 50 | Necromancer phase attacks not implemented | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 51 | Necromancer portrait SVG not wired into boss intro overlay | 🟢 Low | 🟡 Open | Phase 1.3 audit |
+| 52 | Fast-forward testing unreliable (bypasses game state logic) | 🟢 Low | 🟡 Open | Phase 1.3 audit |
+| 53 | stageId/tier undefined in DEV stage selector click callback | 🔴 Critical | ✅ Fixed | Dev loadout selector |
+| 54 | Quote escaping in str_replace broke engine/titleMenu.js | 🟡 Medium | ✅ Fixed | Dev loadout selector |
+| 55 | _activeWeapons not used in upgrade/unlock/pickup logic | 🔴 Critical | ✅ Fixed | Dev loadout selector |
 | 46 | Double power-up persists — mouse click and key events both fire selectUpgrade without shared guard | 🔴 Critical | ✅ Fixed | Gemini + Claude review |
 | 47 | SpawnSystem compositionWeights crash on empty waves — wave with spawnRate=0 still triggers _spawnEnemy | 🟡 Medium | ✅ Fixed | Phase 1.3 gap test |
 | 48 | Data sync drift — embeddedData.js and content/*.json can have different enemy/stage counts | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
@@ -803,3 +813,136 @@ Add a `game.debugSkipToTime(seconds)` method that:
 3. Handles any state transitions that occur (level-ups, boss intros)
 
 ---
+
+| 46 | Double power-up: mouse+key race condition on upgrade selection | 🔴 Critical | ✅ Fixed | Gemini review |
+| 47 | Empty wave compositionWeights crash when spawnRate=0 | 🟡 Medium | ✅ Fixed | Phase 1.3 audit |
+| 48 | Data sync drift between embeddedData.js and content/*.json | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 49 | Ghoul lunge behavior not implemented in MovementSystem | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 50 | Necromancer phase attacks not implemented | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 51 | Necromancer portrait SVG not wired into boss intro overlay | 🟢 Low | 🟡 Open | Phase 1.3 audit |
+| 52 | Fast-forward testing unreliable (bypasses game state logic) | 🟢 Low | 🟡 Open | Phase 1.3 audit |
+| 53 | stageId/tier undefined in DEV stage selector click callback | 🔴 Critical | ✅ Fixed | Dev loadout selector impl |
+| 54 | Quote escaping in str_replace broke engine/titleMenu.js syntax | 🟡 Medium | ✅ Fixed | Dev loadout selector impl |
+| 55 | _activeWeapons not used in upgrade/unlock/pickup logic — dev picks excluded from upgrade pool | 🔴 Critical | ✅ Fixed | Dev loadout selector impl |
+
+---
+
+## Detailed Bug Reports — Session August 29, 2026 (Dev Loadout Selector)
+
+---
+
+### Bug #53 — stageId/tier Undefined in DEV Stage Selector Click Callback
+
+**Severity:** 🔴 Critical  
+**Discovered by:** Dev loadout selector implementation  
+**Status:** ✅ Fixed
+
+### Symptom
+Clicking a tier button in the DEV stage selector would call `_showWeaponSelector(stageId, tier)` but both variables were `undefined` in the `forEach` callback scope. This caused the weapon selector to receive `undefined, undefined` and fail to load the correct stage loadout for default weapon selection.
+
+### Root Cause
+The `forEach` callback parameter was `btn`, and the click handler used `stageId` and `tier` which were never declared in that scope. The correct values are `btn.dataset.stage` and `btn.dataset.tier` (which are set as data attributes on the tier buttons).
+
+```javascript
+// BROKEN:
+btn.addEventListener('click', () => {
+  this._showWeaponSelector(stageId, tier);  // stageId and tier are undefined!
+});
+
+// FIXED:
+btn.addEventListener('click', () => {
+  this._showWeaponSelector(btn.dataset.stage, btn.dataset.tier);
+});
+```
+
+### Impact
+The weapon selector received `undefined` parameters, so the default weapon loadout was not loaded from the correct stage data. This broke the entire DEV loadout flow.
+
+### Prevention Rule
+When using `forEach` or `map` callbacks, always verify that variables referenced inside the callback are either declared in the callback scope, passed as parameters, or accessible via the callback parameter (e.g., `btn.dataset`). Never assume outer-scope variables are accessible in arrow function callbacks without explicit closure.
+
+---
+
+### Bug #54 — Quote Escaping in str_replace Broke engine/titleMenu.js Syntax
+
+**Severity:** 🟡 Medium  
+**Discovered by:** Syntax check after dev loadout implementation  
+**Status:** ✅ Fixed
+
+### Symptom
+After inserting the `_showWeaponSelector` method via `str_replace`, `node -c engine/titleMenu.js` reported `Unexpected token ';'` at line 268.
+
+### Root Cause
+The `str_replace` tool inserted `opacity +;\">';` where `\"` inside the JS source code was interpreted as a literal double-quote character that broke the string concatenation. The correct code should have been `+ opacity + ';">';`.
+
+```javascript
+// BROKEN (syntax error):
+html += '<div ... opacity:' + opacity +;\">';
+//                                              ^ " breaks the string
+
+// FIXED:
+html += '<div ... opacity:' + opacity + ';">';
+```
+
+### Impact
+The entire `engine/titleMenu.js` file was syntactically invalid and could not be loaded by the browser. The inline copy in `game2.html` was correct (inserted via Python) so the game still worked, but the split file was broken.
+
+### Prevention Rule
+When inserting JavaScript string concatenation via `str_replace` or Python bulk edits, always verify the resulting file passes `node --check` before considering the edit complete. Pay special attention to quote characters (`'`, `"`, `\`) in HTML attribute strings — these are the most common source of syntax errors in template literal concatenation.
+
+---
+
+### Bug #55 — _activeWeapons Not Used in Upgrade/Unlock/Pickup Logic
+
+**Severity:** 🔴 Critical  
+**Discovered by:** Dev loadout selector design review  
+**Status:** ✅ Fixed
+
+### Symptom
+When using the DEV loadout to bring weapons not in the stage loadout (e.g., Dagger `w6_shadow_dagger` alongside the standard Projectile+Orbit+Area loadout), those weapons would:
+1. Never appear in level-up upgrade options
+2. Never auto-unlock when the player reached the weapon's `unlockLevel`
+3. Never be upgraded by `pickup_weapon_level_up` pickups
+
+### Root Cause
+Three methods in `Game` used `_currentStageWeapons` (the stage's loadout) instead of the combined set of stage weapons + dev-chosen weapons:
+
+```javascript
+// _checkWeaponUnlocks(): only unlocked weapons in _currentStageWeapons
+if (!this._currentStageWeapons?.includes(weapon.id)) continue;
+
+// _showUpgradeOptions(): only showed upgrades for _currentStageWeapons
+const activeWeaponIds = this._currentStageWeapons || ...
+
+// _applyWeaponLevelUp(): only leveled up _currentStageWeapons
+const weaponIds = this._currentStageWeapons || ...
+```
+
+### Fix
+Introduced `_activeWeapons` — a union (Set) of stage loadout weapons and dev-chosen weapons:
+
+```javascript
+// In startGame():
+const stageWeapons = loadout ? loadout.weapons : [...];
+const devWeapons = this.gameManager.get('session.dev_weapons');
+if (devWeapons && devWeapons.length > 0) {
+  this._activeWeapons = [...new Set([...stageWeapons, ...devWeapons.filter(Boolean)])];
+} else {
+  this._activeWeapons = [...stageWeapons];
+}
+
+// All three methods now use _activeWeapons:
+if (!this._activeWeapons?.includes(weapon.id)) continue;
+const activeWeaponIds = this._activeWeapons || ...;
+const weaponIds = this._activeWeapons || ...;
+```
+
+### Impact
+Without this fix, the DEV weapon selector was functionally useless — weapons selected outside the stage loadout had no effect during gameplay. This also affects the future production weapon selection system where players choose which weapons to bring to a stage.
+
+### Prevention Rule
+When introducing a new data source (dev loadout, player inventory, etc.), trace ALL downstream consumers that use the old data source. A `grep` for the old variable name (`_currentStageWeapons`) should have been run to find every reference before making the change. This is the same pattern as the `partyBtn` bug (#44) — modifying a data source without updating all consumers.
+
+---
+
+*Dev Loadout Selector session bugs: 3 found, 3 fixed, 0 open.*
