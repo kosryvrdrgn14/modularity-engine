@@ -212,7 +212,10 @@ class Game {
       if (!this.uiManager.levelUpOptions) return;
       this._isSelectingUpgrade = true;
       const index = data.index;
-      if (index < 0 || index >= this.uiManager.levelUpOptions.length) return;
+      if (index < 0 || index >= this.uiManager.levelUpOptions.length) {
+        this._isSelectingUpgrade = false;
+        return;
+      }
       const option = this.uiManager.levelUpOptions[index];
       if (option && option.apply) option.apply(this);
       this.uiManager.hideLevelUp();
