@@ -5862,46 +5862,59 @@ class TitleMenu {
       overlay = document.createElement('div');
       overlay.id = 'dev-stage-overlay';
       overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
-      overlay.innerHTML = '<div style="background:#1a1a2e;border:2px solid #FFD700;border-radius:12px;padding:24px;max-width:90%;width:360px;max-height:85vh;overflow-y:auto;"><div style="color:#FFD700;font-size:18px;font-weight:bold;margin-bottom:16px;text-align:center;">\u{1f9ea} Dev: Stage Select</div><div id="dev-stage-options"></div><div style="color:#666;font-size:11px;margin-top:12px;text-align:center;">Choose stage \u2192 Choose tier</div></div>';
       document.body.appendChild(overlay);
     }
-    const optionsEl = overlay.querySelector('#dev-stage-options');
-    optionsEl.innerHTML = '';
+    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area', w4_flame_wave: 'Flame Wave', w5_arcane_bolt: 'Arcane Bolt' };
+    const tierIcons = { quick: '\u26a1', standard: '\u2694\ufe0f', highlight: '\u{1f525}' };
+    const tierLabels = { quick: 'Quick', standard: 'Standard', highlight: 'Highlight' };
+    const tierColors = { quick: '#4FC3F7', standard: '#FFD700', highlight: '#FF5722' };
     const stages = this.game.dataManager?.getStageList?.() || [];
-    if (stages.length === 0) {
-      optionsEl.innerHTML = '<div style="color:#666;text-align:center;">No stages loaded</div>';
-    }
+    let html = '<div style="background:#1a1a2e;border:2px solid #FFD700;border-radius:12px;padding:20px;max-width:90%;width:380px;max-height:85vh;overflow-y:auto;">';
+    html += '<div style="color:#FFD700;font-size:18px;font-weight:bold;margin-bottom:4px;text-align:center;">\u{1f9ea} Dev: Stage Select</div>';
+    html += '<div style="color:#666;font-size:11px;text-align:center;margin-bottom:16px;">Choose stage \u2192 Choose tier</div>';
+    if (stages.length === 0) html += '<div style="color:#666;text-align:center;">No stages loaded</div>';
     for (const stage of stages) {
-      const stageDiv = document.createElement('div');
-      stageDiv.style.cssText = 'margin-bottom:16px;';
-      stageDiv.innerHTML = '<div style="color:#4FC3F7;font-size:14px;font-weight:bold;margin-bottom:8px;">' + (stage.name || stage.id) + '</div>';
-      const tiers = [
-        { key: 'quick', label: '\u26a1 Quick (3m)' },
-        { key: 'standard', label: '\u2694\ufe0f Std (5m)' },
-        { key: 'highlight', label: '\u{1f525} Highlight (10m)' },
-      ];
-      for (const tier of tiers) {
-        if (!stage.weaponLoadouts?.[tier.key]) continue;
-        const loadout = stage.weaponLoadouts[tier.key];
-        const btn = document.createElement('div');
-        btn.style.cssText = 'background:#0d0d1a;border:1px solid #333;border-radius:6px;padding:10px;margin-bottom:6px;cursor:pointer;color:#e0e0e0;display:flex;justify-content:space-between;align-items:center;';
-        btn.innerHTML = '<span style="font-size:13px;">' + tier.label + '</span><span style="font-size:11px;color:#666;">' + loadout.duration + 's</span>';
-        btn.addEventListener('click', () => {
-          this.game.gameManager.set('session.selected_stage_id', stage.id);
-          this.game.gameManager.set('session.current_stage_tier', tier.key);
-          overlay.style.display = 'none';
-          if (this.game.audioManager) this.game.audioManager.playMenuSound('select');
-          this.game._startFromTitle();
-        });
-        btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#FFD700'; });
-        btn.addEventListener('mouseleave', () => { btn.style.borderColor = '#333'; });
-        stageDiv.appendChild(btn);
+      const bossEnemy = this.game.dataManager.enemies?.find(e => e.id === stage.bossConfig?.enemyId);
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="color:#4FC3F7;font-size:15px;font-weight:bold;">' + (stage.name || stage.id) + '</div>';
+      if (stage.description) html += '<div style="color:#888;font-size:11px;margin-bottom:6px;">' + stage.description + '</div>';
+      html += '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">';
+      if (bossEnemy) html += '<span style="background:#3D1F4D;color:#C77DFF;font-size:10px;padding:2px 6px;border-radius:4px;">Boss: ' + bossEnemy.name + '</span>';
+      html += '<span style="background:#1a3310;color:#4CAF50;font-size:10px;padding:2px 6px;border-radius:4px;">' + (stage.waves?.length || 0) + ' waves</span>';
+      html += '</div>';
+      for (const [tierKey, loadout] of Object.entries(stage.weaponLoadouts || {})) {
+        const icon = tierIcons[tierKey] || '';
+        const label = tierLabels[tierKey] || tierKey;
+        const color = tierColors[tierKey] || '#e0e0e0';
+        const mins = Math.floor(loadout.duration / 60);
+        const secs = loadout.duration % 60;
+        const timeStr = mins + ':' + String(secs).padStart(2, '0');
+        const wNames = (loadout.weapons || []).map(w => weaponNames[w] || w).join(', ');
+        html += '<div class="dev-tier-btn" data-stage="' + stage.id + '" data-tier="' + tierKey + '" style="background:#0d0d1a;border:1px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;color:#e0e0e0;transition:border-color 0.15s;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+        html += '<span style="font-size:13px;font-weight:bold;color:' + color + ';">' + icon + ' ' + label + '</span>';
+        html += '<span style="font-size:12px;color:#FFD700;">' + timeStr + '</span>';
+        html += '</div>';
+        html += '<div style="font-size:10px;color:#666;margin-top:4px;">' + wNames + '</div>';
+        html += '<div style="font-size:10px;color:#555;margin-top:2px;">' + (loadout.description || '') + '</div>';
+        html += '</div>';
       }
-      optionsEl.appendChild(stageDiv);
+      html += '</div>';
     }
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.style.display = 'none';
+    html += '</div>';
+    overlay.innerHTML = html;
+    overlay.querySelectorAll('.dev-tier-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.game.gameManager.set('session.selected_stage_id', btn.dataset.stage);
+        this.game.gameManager.set('session.current_stage_tier', btn.dataset.tier);
+        overlay.style.display = 'none';
+        if (this.game.audioManager) this.game.audioManager.playMenuSound('select');
+        this.game._startFromTitle();
+      });
+      btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#FFD700'; });
+      btn.addEventListener('mouseleave', () => { btn.style.borderColor = '#333'; });
     });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
     overlay.style.display = 'flex';
   }
 

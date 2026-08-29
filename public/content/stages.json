@@ -245,7 +245,8 @@
         "gold": 1.5,
         "xp": 1.0
       }
-    }
+    },
+    "description": "5-minute introductory stage. Fight through waves of undead and face the Gravekeeper."
   },
   {
     "id": "stage_graveyard_extended",
@@ -701,6 +702,6 @@
         "xp": 1.0
       }
     },
-    "description": "A 10-minute descent into the necromancer's domain"
+    "description": "10-minute extended stage. Face all enemy types, a ghoul miniboss, and Lilith the Necromancer."
   }
 ]
