@@ -1,0 +1,30 @@
+// Extracted from game2.html — pure data, no logic.
+
+const COMPANION_DATA = {
+  dog: {
+    id: 'dog',
+    name: 'Dog',
+    slot: 1,
+    pairedWeapon: 'w1_projectile',
+    size: 14,
+    visual: { shape: 'circle', color: '#8B6914' },
+    statsPerLevel: [
+      { cooldown: 10.0, primaryDamage: 18, secondaryDamage: 9 },
+      { cooldown: 9.5, primaryDamage: 18, secondaryDamage: 9 },
+      { cooldown: 9.0, primaryDamage: 22, secondaryDamage: 11 },
+      { cooldown: 8.0, primaryDamage: 22, secondaryDamage: 11 },
+      { cooldown: 7.5, primaryDamage: 26, secondaryDamage: 13 },
+      { cooldown: 7.0, primaryDamage: 26, secondaryDamage: 13 },
+      { cooldown: 5.5, primaryDamage: 32, secondaryDamage: 16 },
+    ],
+    coneAngle: Math.PI / 3,  // 60 degrees
+    coneRange: 60,
+    followDistance: 24,
+    followSpeedMultiplier: 0.8,
+    attackSpeedMultiplier: 1.5,
+    detectionRange: 120,
+    maxChaseRange: 200,
+    hitCooldown: 1.0,
+    lootRadius: 40,
+  }
+};
