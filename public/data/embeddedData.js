@@ -1,4 +1,4 @@
-// Extracted from game2.html — pure data, no logic.
+// Extracted from game2.html - pure data, no logic.
 
 const EMBEDDED_DATA = {
   characters: {
@@ -261,6 +261,411 @@ const EMBEDDED_DATA = {
       visual: {
         shape: "circle",
         color: "#FF9100"
+      }
+    },
+    {
+      id: "w4_flame_wave",
+      name: "Flame Wave",
+      type: "cone",
+      targeting: "nearest",
+      unlockLevel: 1,
+      orbDamageCooldown: 0,
+      statsPerLevel: [
+        {
+          level: 1,
+          damage: 20,
+          cooldown: 0.8,
+          coneAngle: 60,
+          coneRange: 60
+        },
+        {
+          level: 2,
+          damage: 28,
+          cooldown: 0.7,
+          coneAngle: 60,
+          coneRange: 65
+        },
+        {
+          level: 3,
+          damage: 36,
+          cooldown: 0.6,
+          coneAngle: 60,
+          coneRange: 70
+        },
+        {
+          level: 4,
+          damage: 45,
+          cooldown: 0.5,
+          coneAngle: 70,
+          coneRange: 80
+        },
+        {
+          level: 5,
+          damage: 50,
+          cooldown: 0.48,
+          coneAngle: 70,
+          coneRange: 82
+        },
+        {
+          level: 6,
+          damage: 54,
+          cooldown: 0.46,
+          coneAngle: 70,
+          coneRange: 84
+        },
+        {
+          level: 7,
+          damage: 58,
+          cooldown: 0.45,
+          coneAngle: 75,
+          coneRange: 85
+        }
+      ],
+      powerSpikes: {
+        level4: {
+          name: "Inferno",
+          description: "Burns enemies for 3s",
+          statModifiers: {
+            burnDuration: 3,
+            burnDamage: 5
+          }
+        },
+        level7: {
+          name: "Explosion",
+          description: "Kills explode in small AoE",
+          statModifiers: {
+            explodeRadius: 40,
+            explodeDamage: 15
+          }
+        }
+      },
+      visual: {
+        shape: "cone",
+        color: "#FF4500"
+      }
+    },
+    {
+      id: "w5_arcane_bolt",
+      name: "Arcane Bolt",
+      type: "chain",
+      targeting: "nearest",
+      unlockLevel: 1,
+      orbDamageCooldown: 0,
+      statsPerLevel: [
+        {
+          level: 1,
+          damage: 5,
+          cooldown: 2,
+          chainCount: 0,
+          chainRange: 80
+        },
+        {
+          level: 2,
+          damage: 7,
+          cooldown: 1.9,
+          chainCount: 0,
+          chainRange: 80
+        },
+        {
+          level: 3,
+          damage: 10,
+          cooldown: 1.8,
+          chainCount: 0,
+          chainRange: 80
+        },
+        {
+          level: 4,
+          damage: 14,
+          cooldown: 1.6,
+          chainCount: 1,
+          chainRange: 80
+        },
+        {
+          level: 5,
+          damage: 22,
+          cooldown: 1.3,
+          chainCount: 2,
+          chainRange: 90
+        },
+        {
+          level: 6,
+          damage: 35,
+          cooldown: 1,
+          chainCount: 3,
+          chainRange: 100
+        },
+        {
+          level: 7,
+          damage: 55,
+          cooldown: 0.7,
+          chainCount: 5,
+          chainRange: 120
+        }
+      ],
+      powerSpikes: {
+        level4: {
+          name: "Chain Lightning",
+          description: "Bolt chains to 1 enemy",
+          statModifiers: {
+            chainCount: 1
+          }
+        },
+        level7: {
+          name: "Arcane Storm",
+          description: "Chains to 5, slows 50%",
+          statModifiers: {
+            chainCount: 5,
+            slowAmount: 0.5,
+            slowDuration: 2
+          }
+        }
+      },
+      visual: {
+        shape: "diamond",
+        color: "#9C27B0"
+      }
+    },
+    {
+      id: "w6_dagger",
+      name: "Shadow Dagger",
+      type: "melee_cone",
+      targeting: "nearest",
+      unlockLevel: 1,
+      orbDamageCooldown: 0,
+      statsPerLevel: [
+        {
+          level: 1,
+          damage: 4,
+          cooldown: 0.5,
+          hitCount: 1,
+          range: 50,
+          coneWidth: 30
+        },
+        {
+          level: 2,
+          damage: 5,
+          cooldown: 0.45,
+          hitCount: 1,
+          range: 55,
+          coneWidth: 30
+        },
+        {
+          level: 3,
+          damage: 6,
+          cooldown: 0.4,
+          hitCount: 1,
+          range: 60,
+          coneWidth: 35
+        },
+        {
+          level: 4,
+          damage: 7,
+          cooldown: 0.35,
+          hitCount: 3,
+          range: 60,
+          coneWidth: 40
+        },
+        {
+          level: 5,
+          damage: 8,
+          cooldown: 0.32,
+          hitCount: 3,
+          range: 65,
+          coneWidth: 45
+        },
+        {
+          level: 6,
+          damage: 9,
+          cooldown: 0.28,
+          hitCount: 3,
+          range: 70,
+          coneWidth: 50
+        },
+        {
+          level: 7,
+          damage: 10,
+          cooldown: 0.25,
+          hitCount: 5,
+          range: 100,
+          coneWidth: 60,
+          homing: true,
+          homingTurnRate: 200
+        }
+      ],
+      powerSpikes: {
+        level4: {
+          name: "Triple Stab",
+          description: "3 rapid hits in cone"
+        },
+        level7: {
+          name: "Homing Daggers",
+          description: "5 daggers seek enemies"
+        }
+      },
+      visual: {
+        shape: "triangle",
+        color: "#9B59B6"
+      }
+    },
+    {
+      id: "w7_sword",
+      name: "Soul Whip",
+      type: "melee_combo",
+      targeting: "self",
+      unlockLevel: 1,
+      orbDamageCooldown: 0,
+      statsPerLevel: [
+        {
+          level: 1,
+          damage: 6,
+          cooldown: 1.4,
+          range: 140,
+          arcWidth: 80,
+          comboHits: 3
+        },
+        {
+          level: 2,
+          damage: 7,
+          cooldown: 1.3,
+          range: 150,
+          arcWidth: 85,
+          comboHits: 3
+        },
+        {
+          level: 3,
+          damage: 8,
+          cooldown: 1.2,
+          range: 160,
+          arcWidth: 90,
+          comboHits: 3
+        },
+        {
+          level: 4,
+          damage: 10,
+          cooldown: 1.1,
+          range: 170,
+          arcWidth: 100,
+          comboHits: 3
+        },
+        {
+          level: 5,
+          damage: 12,
+          cooldown: 1,
+          range: 175,
+          arcWidth: 110,
+          comboHits: 3
+        },
+        {
+          level: 6,
+          damage: 15,
+          cooldown: 0.9,
+          range: 180,
+          arcWidth: 120,
+          comboHits: 3
+        },
+        {
+          level: 7,
+          damage: 18,
+          cooldown: 0.8,
+          range: 180,
+          arcWidth: 160,
+          comboHits: 3
+        }
+      ],
+      powerSpikes: {
+        level4: {
+          name: "Wide Arc",
+          description: "Wider swing range"
+        },
+        level7: {
+          name: "Crimson Whip",
+          description: "Massive 360 coverage"
+        }
+      },
+      visual: {
+        shape: "arc",
+        color: "#3498DB"
+      }
+    },
+    {
+      id: "w8_claymore",
+      name: "Grave Claymore",
+      type: "melee_slam",
+      targeting: "nearest",
+      unlockLevel: 1,
+      orbDamageCooldown: 0,
+      statsPerLevel: [
+        {
+          level: 1,
+          damage: 18,
+          cooldown: 2,
+          range: 100,
+          aoeWidth: 120
+        },
+        {
+          level: 2,
+          damage: 22,
+          cooldown: 1.85,
+          range: 105,
+          aoeWidth: 130
+        },
+        {
+          level: 3,
+          damage: 28,
+          cooldown: 1.7,
+          range: 110,
+          aoeWidth: 140
+        },
+        {
+          level: 4,
+          damage: 35,
+          cooldown: 1.55,
+          range: 115,
+          aoeWidth: 150,
+          explosionDmgPct: 0.5,
+          explosionRadius: 100
+        },
+        {
+          level: 5,
+          damage: 42,
+          cooldown: 1.4,
+          range: 120,
+          aoeWidth: 160,
+          explosionDmgPct: 0.5,
+          explosionRadius: 110
+        },
+        {
+          level: 6,
+          damage: 50,
+          cooldown: 1.3,
+          range: 130,
+          aoeWidth: 170,
+          explosionDmgPct: 0.5,
+          explosionRadius: 120
+        },
+        {
+          level: 7,
+          damage: 65,
+          cooldown: 1.15,
+          range: 140,
+          aoeWidth: 200,
+          explosionDmgPct: 0.6,
+          explosionRadius: 150
+        }
+      ],
+      powerSpikes: {
+        level4: {
+          name: "Ground Explosion",
+          description: "Explosion on impact"
+        },
+        level7: {
+          name: "Devastation",
+          description: "Extended range + bigger explosion"
+        }
+      },
+      visual: {
+        shape: "rectangle",
+        color: "#7F8C8D"
       }
     }
   ],
@@ -534,28 +939,26 @@ const EMBEDDED_DATA = {
       }
     },
     {
-      id: "ghoul",
-      name: "Ghoul",
-      type: "miniboss",
+      id: "boss_gravekeeper",
+      name: "The Gravekeeper",
+      type: "boss",
       stats: {
-        hp: 300,
-        damage: 18,
-        speed: 60,
-        size: 22,
-        xpValue: 30,
-        goldValue: 15,
+        hp: 1000,
+        damage: 15,
+        speed: 70,
+        size: 28,
+        xpValue: 50,
+        goldValue: 1,
         goldCoins: {
-          min: 15,
-          max: 20
+          min: 20,
+          max: 30
         }
       },
       behavior: {
-        pattern: "ghoul_lunge",
+        pattern: "boss_charge",
         params: {
-          lungeDistance: 200,
-          lungeSpeed: 300,
-          windup: 0.5,
-          stunDuration: 1.5
+          chargeDuration: 1.5,
+          pauseDuration: 1
         }
       },
       drops: {
@@ -563,19 +966,49 @@ const EMBEDDED_DATA = {
           {
             type: "pickup_weapon_level_up",
             chance: 1
-          },
-          {
-            type: "magnet",
-            chance: 0.5
           }
         ]
       },
       spawn: {
         weight: 0,
-        firstAppears: "7:00"
+        firstAppears: "4:00"
       },
-      phases: [],
-      screenWipeResistance: 0.5
+      phases: [
+        {
+          hpThreshold: 1,
+          speed: 70,
+          chargeInterval: 3,
+          chargeDuration: 1.5,
+          pauseDuration: 1,
+          minionCount: 3,
+          minionInterval: 3
+        },
+        {
+          hpThreshold: 0.5,
+          speed: 100,
+          chargeInterval: 2,
+          chargeDuration: 1.5,
+          pauseDuration: 0.8,
+          minionCount: 5,
+          minionInterval: 2,
+          groundPound: {
+            interval: 5,
+            radius: 80,
+            damage: 20,
+            telegraphTime: 0.75
+          }
+        }
+      ],
+      loot: {
+        xp: 50,
+        gold: {
+          min: 20,
+          max: 30
+        },
+        guaranteedPowerUp: "pickup_weapon_level_up"
+      },
+      screenWipeResistance: 0.8,
+      chargeResumeBehavior: "continue_from_frozen"
     },
     {
       id: "boss_necromancer",
@@ -695,87 +1128,48 @@ const EMBEDDED_DATA = {
       chargeResumeBehavior: "continue_from_frozen"
     },
     {
-      id: "boss_gravekeeper",
-      name: "The Gravekeeper",
-      type: "boss",
+      id: "ghoul",
+      name: "Ghoul",
+      type: "miniboss",
       stats: {
-        hp: 1000,
-        damage: 15,
-        speed: 70,
-        size: 28,
-        xpValue: 50,
-        goldValue: 1,
+        hp: 300,
+        damage: 18,
+        speed: 60,
+        size: 22,
+        xpValue: 30,
+        goldValue: 15,
         goldCoins: {
-          min: 20,
-          max: 30
+          min: 15,
+          max: 20
         }
       },
       behavior: {
-        pattern: "boss_charge",
+        pattern: "ghoul_lunge",
         params: {
-          chargeDuration: 1.5,
-          pauseDuration: 1
+          lungeDistance: 200,
+          lungeSpeed: 300,
+          windup: 0.5,
+          stunDuration: 1.5
         }
-      },
-      intro: {
-        bossName: "The Gravekeeper",
-        bossSubtitle: "Guardian of the Forgotten Dead",
-        totalDuration: 3.5,
-        allowSkip: true,
-        dimColor: "rgba(0, 0, 0, 0.75)",
-        nameColor: "#FF4444",
-        subtitleColor: "#888888",
-        nameFontSize: 40,
-        subtitleFontSize: 18
       },
       drops: {
         powerUpTable: [
           {
             type: "pickup_weapon_level_up",
             chance: 1
+          },
+          {
+            type: "magnet",
+            chance: 0.5
           }
         ]
       },
       spawn: {
         weight: 0,
-        firstAppears: "4:00"
+        firstAppears: "7:00"
       },
-      phases: [
-        {
-          hpThreshold: 1,
-          speed: 70,
-          chargeInterval: 3,
-          chargeDuration: 1.5,
-          pauseDuration: 1,
-          minionCount: 3,
-          minionInterval: 3
-        },
-        {
-          hpThreshold: 0.5,
-          speed: 100,
-          chargeInterval: 2,
-          chargeDuration: 1.5,
-          pauseDuration: 0.8,
-          minionCount: 5,
-          minionInterval: 2,
-          groundPound: {
-            interval: 5,
-            radius: 80,
-            damage: 20,
-            telegraphTime: 0.75
-          }
-        }
-      ],
-      loot: {
-        xp: 50,
-        gold: {
-          min: 20,
-          max: 30
-        },
-        guaranteedPowerUp: "pickup_weapon_level_up"
-      },
-      screenWipeResistance: 0.8,
-      chargeResumeBehavior: "continue_from_frozen"
+      phases: [],
+      screenWipeResistance: 0.5
     }
   ],
   stages: [
@@ -783,6 +1177,8 @@ const EMBEDDED_DATA = {
       id: "stage_graveyard",
       name: "The Graveyard",
       theme: "Gothic horror",
+      tier: "standard",
+      duration: 300,
       background: {
         baseColor: "#1A1A2E",
         gridColor: "#16213E",
@@ -793,8 +1189,7 @@ const EMBEDDED_DATA = {
         maxDistance: 600,
         maxEnemies: 200,
         baseSpawnRate: 0.8,
-        spawnRateCap: 3,
-        maxEnemyCapBehavior: "stop_spawn"
+        spawnRateCap: 3
       },
       waves: [
         {
@@ -836,12 +1231,14 @@ const EMBEDDED_DATA = {
           time: "1:30-2:00",
           enemyTypes: [
             "zombie",
-            "bat"
+            "bat",
+            "rat"
           ],
           spawnRate: 1.8,
           compositionWeights: {
-            zombie: 0.55,
-            bat: 0.45
+            zombie: 0.4,
+            bat: 0.35,
+            rat: 0.25
           },
           maxEnemies: 80
         },
@@ -884,15 +1281,19 @@ const EMBEDDED_DATA = {
             "bat",
             "skeleton",
             "ghost",
-            "caster"
+            "caster",
+            "rat",
+            "brute"
           ],
           spawnRate: 2.5,
           compositionWeights: {
-            zombie: 0.25,
-            bat: 0.25,
-            skeleton: 0.2,
-            ghost: 0.15,
-            caster: 0.15
+            zombie: 0.2,
+            bat: 0.2,
+            skeleton: 0.15,
+            ghost: 0.1,
+            caster: 0.1,
+            rat: 0.15,
+            brute: 0.1
           },
           maxEnemies: 150
         },
@@ -903,15 +1304,19 @@ const EMBEDDED_DATA = {
             "bat",
             "skeleton",
             "ghost",
-            "caster"
+            "caster",
+            "rat",
+            "brute"
           ],
           spawnRate: 3,
           compositionWeights: {
-            zombie: 0.2,
-            bat: 0.25,
-            skeleton: 0.2,
-            ghost: 0.15,
-            caster: 0.2
+            zombie: 0.15,
+            bat: 0.2,
+            skeleton: 0.15,
+            ghost: 0.1,
+            caster: 0.15,
+            rat: 0.15,
+            brute: 0.1
           },
           maxEnemies: 180
         },
@@ -922,17 +1327,9 @@ const EMBEDDED_DATA = {
             "bat",
             "skeleton",
             "ghost",
-            "caster",
-            "boss_gravekeeper"
+            "caster"
           ],
           spawnRate: 2,
-          compositionWeights: {
-            zombie: 0.2,
-            bat: 0.25,
-            skeleton: 0.2,
-            ghost: 0.15,
-            caster: 0.2
-          },
           maxEnemies: 150
         },
         {
@@ -942,28 +1339,12 @@ const EMBEDDED_DATA = {
             "bat",
             "skeleton",
             "ghost",
-            "caster",
-            "boss_gravekeeper"
+            "caster"
           ],
           spawnRate: 1.5,
-          compositionWeights: {
-            zombie: 0.2,
-            bat: 0.25,
-            skeleton: 0.2,
-            ghost: 0.15,
-            caster: 0.2
-          },
           maxEnemies: 120
         }
       ],
-      difficultyScaling: {
-        hpMultiplier: "1 + 0.15 * minutes_after_boss_kill",
-        damageMultiplier: "1 + 0.10 * minutes_after_boss_kill",
-        timerStart: "boss_death_timestamp"
-      },
-      xpScaling: {
-        formula: "base_xp * (1 + 0.05 * floor(t / 60))"
-      },
       bossConfig: {
         enemyId: "boss_gravekeeper",
         spawnTime: "4:00",
@@ -971,46 +1352,18 @@ const EMBEDDED_DATA = {
           {
             time: 230,
             text: "Something stirs in the darkness...",
-            type: "text",
-            styling: {
-              fontSize: 24,
-              position: "center",
-              animation: "fadeInHoldFadeOut"
-            }
-          },
-          {
-            time: 230,
-            type: "dim",
-            brightness: 0.8
+            type: "text"
           },
           {
             time: 235,
             text: "The Gravekeeper rises!",
-            type: "shake",
-            styling: {
-              fontSize: 28,
-              position: "center",
-              animation: "scalePulse"
-            }
+            type: "shake"
           },
           {
             time: 240,
-            type: "boss_spawn",
-            position: "nearest_edge_to_player"
+            type: "boss_spawn"
           }
         ]
-      },
-      obstacles: {
-        types: 5,
-        collisionRules: "player+enemies collide, projectiles+pickups pass through",
-        weights: {
-          small_tombstone: 0.3,
-          large_tombstone: 0.1,
-          grave_mound: 0.25,
-          broken_wall: 0.15,
-          cracked_floor: 0.2
-        },
-        seedDerivation: "hash(stageId + difficultyLevel)"
       },
       weaponLoadouts: {
         quick: {
@@ -1066,7 +1419,8 @@ const EMBEDDED_DATA = {
           gold: 1.5,
           xp: 1
         }
-      }
+      },
+      description: "5-minute introductory stage. Fight through waves of undead and face the Gravekeeper."
     },
     {
       id: "stage_graveyard_extended",
@@ -1522,7 +1876,7 @@ const EMBEDDED_DATA = {
           xp: 1
         }
       },
-      description: "A 10-minute descent into the necromancer's domain"
+      description: "10-minute extended stage. Face all enemy types, a ghoul miniboss, and Lilith the Necromancer."
     }
   ],
   pickups: [
@@ -1535,38 +1889,6 @@ const EMBEDDED_DATA = {
         shape: "diamond",
         color: "#4FC3F7",
         size: 8
-      },
-      behavior: {
-        duration: null,
-        attractRadius: 50,
-        attractSpeed: 0,
-        instantBurstRadius: 0
-      },
-      dropConfig: {
-        sources: [
-          {
-            enemyId: "zombie",
-            chance: 1
-          },
-          {
-            enemyId: "bat",
-            chance: 1
-          },
-          {
-            enemyId: "skeleton",
-            chance: 1
-          },
-          {
-            enemyId: "ghost",
-            chance: 1
-          },
-          {
-            enemyId: "caster",
-            chance: 1
-          }
-        ],
-        guaranteedDropEnemies: [],
-        rollOrder: 0
       }
     },
     {
@@ -1578,19 +1900,6 @@ const EMBEDDED_DATA = {
         shape: "diamond",
         color: "#81D4FA",
         size: 14
-      },
-      behavior: {
-        duration: null,
-        attractRadius: 50,
-        attractSpeed: 0,
-        instantBurstRadius: 0
-      },
-      dropConfig: {
-        sources: [],
-        guaranteedDropEnemies: [
-          "boss_gravekeeper"
-        ],
-        rollOrder: 0
       }
     },
     {
@@ -1602,42 +1911,6 @@ const EMBEDDED_DATA = {
         shape: "circle",
         color: "#FFD700",
         size: 10
-      },
-      behavior: {
-        duration: 30,
-        attractRadius: 50,
-        attractSpeed: 0,
-        instantBurstRadius: 0
-      },
-      dropConfig: {
-        sources: [
-          {
-            enemyId: "zombie",
-            chance: 1
-          },
-          {
-            enemyId: "bat",
-            chance: 1
-          },
-          {
-            enemyId: "skeleton",
-            chance: 1
-          },
-          {
-            enemyId: "ghost",
-            chance: 1
-          },
-          {
-            enemyId: "caster",
-            chance: 1
-          },
-          {
-            enemyId: "boss_gravekeeper",
-            chance: 1
-          }
-        ],
-        guaranteedDropEnemies: [],
-        rollOrder: 0
       },
       goldValuePerCoin: 1
     },
@@ -1651,30 +1924,9 @@ const EMBEDDED_DATA = {
         color: "#00E676",
         size: 16
       },
-      behavior: {
-        duration: null,
-        attractRadius: 50,
-        attractSpeed: 0,
-        instantBurstRadius: 0
-      },
-      dropConfig: {
-        sources: [
-          {
-            enemyId: "skeleton",
-            chance: 0.02
-          },
-          {
-            enemyId: "caster",
-            chance: 0.02
-          }
-        ],
-        guaranteedDropEnemies: [],
-        rollOrder: 2
-      },
       killsAllEnemies: true,
       bossDamage: 200,
-      bossResistance: 0.8,
-      powerUpDespawnTime: null
+      bossResistance: 0.8
     },
     {
       id: "magnet",
@@ -1691,22 +1943,7 @@ const EMBEDDED_DATA = {
         attractRadius: 350,
         attractSpeed: 400,
         instantBurstRadius: 150
-      },
-      dropConfig: {
-        sources: [
-          {
-            enemyId: "bat",
-            chance: 0.05
-          },
-          {
-            enemyId: "ghost",
-            chance: 0.05
-          }
-        ],
-        guaranteedDropEnemies: [],
-        rollOrder: 3
-      },
-      powerUpDespawnTime: null
+      }
     },
     {
       id: "pickup_weapon_level_up",
@@ -1717,171 +1954,68 @@ const EMBEDDED_DATA = {
         shape: "triangle",
         color: "#FF9100",
         size: 16
-      },
-      behavior: {
-        duration: null,
-        attractRadius: 50,
-        attractSpeed: 0,
-        instantBurstRadius: 0
-      },
-      dropConfig: {
-        sources: [
-          {
-            enemyId: "zombie",
-            chance: 0.01
-          },
-          {
-            enemyId: "skeleton",
-            chance: 0.01
-          },
-          {
-            enemyId: "ghost",
-            chance: 0.01
-          },
-          {
-            enemyId: "caster",
-            chance: 0.01
-          }
-        ],
-        guaranteedDropEnemies: [
-          "boss_gravekeeper"
-        ],
-        rollOrder: 1
-      },
-      powerUpDespawnTime: null
+      }
     }
   ],
   leveling: {
     xpCurve: [
       {
         level: 1,
-        xpToNext: 5,
-        cumulativeXp: 0
+        xpToNext: 5
       },
       {
         level: 2,
-        xpToNext: 10,
-        cumulativeXp: 5
+        xpToNext: 10
       },
       {
         level: 3,
-        xpToNext: 15,
-        cumulativeXp: 15
+        xpToNext: 15
       },
       {
         level: 4,
-        xpToNext: 22,
-        cumulativeXp: 30
+        xpToNext: 22
       },
       {
         level: 5,
-        xpToNext: 32,
-        cumulativeXp: 52
+        xpToNext: 32
       },
       {
         level: 6,
-        xpToNext: 45,
-        cumulativeXp: 84
+        xpToNext: 45
       },
       {
         level: 7,
-        xpToNext: 62,
-        cumulativeXp: 129
+        xpToNext: 60
       },
       {
         level: 8,
-        xpToNext: 85,
-        cumulativeXp: 191
+        xpToNext: 80
       },
       {
         level: 9,
-        xpToNext: 115,
-        cumulativeXp: 276
+        xpToNext: 105
       },
       {
         level: 10,
-        xpToNext: 155,
-        cumulativeXp: 391
+        xpToNext: 135
       },
       {
         level: 11,
-        xpToNext: 210,
-        cumulativeXp: 546
+        xpToNext: 170
       },
       {
         level: 12,
-        xpToNext: 280,
-        cumulativeXp: 756
+        xpToNext: 210
       },
       {
         level: 13,
-        xpToNext: 375,
-        cumulativeXp: 1036
-      },
-      {
-        level: 14,
-        xpToNext: 375,
-        cumulativeXp: 1411
+        xpToNext: 260
       }
     ],
-    formula: {
-      forLevel: 14,
-      expression: "floor(375 * 1.3^(N-14))"
-    },
     upgradePool: {
-      weaponWeight: 0.6,
-      passiveWeight: 0.4,
-      weaponUnlockGuaranteed: true
-    },
-    passiveOptions: [
-      {
-        id: "max_health",
-        name: "Max Health +20%",
-        stat: "maxHealth",
-        value: 0.2,
-        description: "Increases maximum HP by 20%",
-        maxStacks: 5,
-        icon: "heart"
-      },
-      {
-        id: "move_speed",
-        name: "Move Speed +10%",
-        stat: "moveSpeed",
-        value: 0.1,
-        description: "Increases movement speed by 10%",
-        maxStacks: 3,
-        icon: "speed"
-      },
-      {
-        id: "armor",
-        name: "Armor +1",
-        stat: "armor",
-        value: 1,
-        description: "Reduces all damage by 1",
-        maxStacks: 3,
-        icon: "shield"
-      },
-      {
-        id: "pickup_range",
-        name: "Pickup Range +25px",
-        stat: "pickupRange",
-        value: 25,
-        description: "Collect pickups from further",
-        maxStacks: 4,
-        icon: "magnet"
-      },
-      {
-        id: "crit_chance",
-        name: "Crit Chance +5%",
-        stat: "critChance",
-        value: 0.05,
-        description: "5% chance for 1.5x damage",
-        maxStacks: 4,
-        icon: "star"
-      }
-    ],
-    maxLevelUpQueue: 3,
-    excessXPBehavior: "carry_over",
-    maxHealthPassiveHealsCurrent: true
+      weaponUpgrades: 0.4,
+      passiveStats: 0.3,
+      specialAbilities: 0.3
+    }
   }
 };

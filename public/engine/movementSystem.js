@@ -196,15 +196,39 @@ class MovementSystem {
 
   _moveProjectiles(dt) {
     const projectiles = this.entityManager.getActive('projectile');
+    const enemies = this.entityManager.getActive('enemy');
     
     for (const proj of projectiles) {
+      // Homing behavior for dagger projectiles
+      if (proj.homing && enemies.length > 0) {
+        let nearest = null, minDist = Infinity;
+        for (const e of enemies) {
+          const d = Math.hypot(e.x - proj.x, e.y - proj.y);
+          if (d < minDist) { minDist = d; nearest = e; }
+        }
+        if (nearest && minDist < 200) {
+          const targetAngle = Math.atan2(nearest.y - proj.y, nearest.x - proj.x);
+          const currentAngle = Math.atan2(proj.vy, proj.vx);
+          let diff = targetAngle - currentAngle;
+          while (diff > Math.PI) diff -= 2 * Math.PI;
+          while (diff < -Math.PI) diff += 2 * Math.PI;
+          const maxTurn = (proj.homingTurnRate || 200) * Math.PI / 180 * dt;
+          const clampedDiff = Math.max(-maxTurn, Math.min(maxTurn, diff));
+          const newAngle = currentAngle + clampedDiff;
+          const speed = Math.hypot(proj.vx, proj.vy);
+          proj.vx = Math.cos(newAngle) * speed;
+          proj.vy = Math.sin(newAngle) * speed;
+        }
+      }
+
       proj.x += proj.vx * dt;
       proj.y += proj.vy * dt;
       proj.age = (proj.age || 0) + dt;
       proj.distanceTraveled = (proj.distanceTraveled || 0) + Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy) * dt;
       
-      // Despawn after 3 seconds or 600px traveled
-      if (proj.age > 3 || proj.distanceTraveled > 600) {
+      // Despawn after maxAge (default 3s) or 600px traveled
+      const maxAge = proj.maxAge || 3;
+      if (proj.age > maxAge || proj.distanceTraveled > 600) {
         this.entityManager.destroy(proj);
       }
     }

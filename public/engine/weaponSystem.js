@@ -28,6 +28,9 @@ class WeaponSystem {
     this._fireW3(player, dt);
     this._fireW4(player, dt);
     this._fireW5(player, dt);
+    this._fireW6(player, dt);
+    this._fireW7(player, dt);
+    this._fireW8(player, dt);
     this._updateW3Pulses(dt);
   }
 
@@ -350,6 +353,208 @@ class WeaponSystem {
         }
       }, 50);
     }
+  }
+
+  // === W6: Shadow Dagger (melee cone) ===
+  _fireW6(player, dt) {
+    const id = 'w6_dagger';
+    const level = this.weaponLevels[id] || 0;
+    if (level <= 0) return;
+    this.cooldowns[id] = (this.cooldowns[id] || 0) - dt;
+    if (this.cooldowns[id] > 0) return;
+    const stats = this._getWeaponStats(id, level);
+    if (!stats) return;
+    this.cooldowns[id] = stats.cooldown;
+
+    const hitCount = stats.hitCount || 1;
+    const range = stats.range || 50;
+    const coneWidth = stats.coneWidth || 30;
+    const damage = stats.damage;
+    const enemies = this.entityManager.getActive('enemy');
+
+    // Find player facing direction (toward nearest enemy or movement direction)
+    let facingAngle = 0;
+    if (enemies.length > 0) {
+      let nearest = null, minDist = Infinity;
+      for (const e of enemies) {
+        const d = Math.hypot(e.x - player.x, e.y - player.y);
+        if (d < minDist) { minDist = d; nearest = e; }
+      }
+      if (nearest) facingAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+    }
+
+    // Hit enemies in cone
+    const hitEnemies = [];
+    for (const e of enemies) {
+      const dx = e.x - player.x, dy = e.y - player.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > range + e.size) continue;
+      const angle = Math.atan2(dy, dx);
+      let diff = angle - facingAngle;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      if (Math.abs(diff) < coneWidth * Math.PI / 180) {
+        hitEnemies.push(e);
+      }
+    }
+
+    // Apply damage (homming at Lv7)
+    if (stats.homing && hitCount > 1) {
+      // Homming daggers: create projectile entities that seek enemies
+      for (let i = 0; i < hitCount; i++) {
+        const spreadAngle = facingAngle + (i - Math.floor(hitCount / 2)) * 0.2;
+        this.entityManager.create('projectile', {
+          x: player.x, y: player.y,
+          vx: Math.cos(spreadAngle) * 300,
+          vy: Math.sin(spreadAngle) * 300,
+          damage: damage,
+          size: 4,
+          age: 0,
+          maxAge: 1.0,
+          pierceCount: 0,
+          color: '#9B59B6',
+          shape: 'triangle',
+          homing: true,
+          homingTurnRate: stats.homingTurnRate || 200,
+          damageOwner: true,
+        });
+      }
+      this.eventBus.emit('weaponFire', { weaponId: id });
+    } else {
+      // Standard cone hits
+      const hitsToApply = Math.min(hitCount, hitEnemies.length || 1);
+      for (let i = 0; i < hitsToApply; i++) {
+        for (const e of hitEnemies) {
+          this.eventBus.emit('damageEntity', { entity: e, damage, source: player });
+        }
+      }
+      this.eventBus.emit('weaponFire', { weaponId: id });
+    }
+  }
+
+  // === W7: Soul Whip (melee combo) ===
+  _fireW7(player, dt) {
+    const id = 'w7_sword';
+    const level = this.weaponLevels[id] || 0;
+    if (level <= 0) return;
+    this.cooldowns[id] = (this.cooldowns[id] || 0) - dt;
+    if (this.cooldowns[id] > 0) return;
+    const stats = this._getWeaponStats(id, level);
+    if (!stats) return;
+    this.cooldowns[id] = stats.cooldown;
+
+    const range = stats.range || 140;
+    const arcWidth = stats.arcWidth || 80;
+    const damage = stats.damage;
+    const enemies = this.entityManager.getActive('enemy');
+
+    // Triple-hit combo: front, back, both sides
+    const combos = [
+      { label: 'front', angleOffset: 0 },
+      { label: 'back', angleOffset: Math.PI },
+      { label: 'both', angleOffset: null }, // null = full 360
+    ];
+
+    let hitCount = 0;
+    for (let ci = 0; ci < combos.length; ci++) {
+      const combo = combos[ci];
+      setTimeout(() => {
+        for (const e of enemies) {
+          const dx = e.x - player.x, dy = e.y - player.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > range + e.size) continue;
+
+          if (combo.angleOffset === null) {
+            // Both sides: hit everything in range
+            this.eventBus.emit('damageEntity', { entity: e, damage, source: player });
+            hitCount++;
+          } else {
+            const angle = Math.atan2(dy, dx);
+            let diff = angle - combo.angleOffset;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            if (Math.abs(diff) < (arcWidth / 2) * Math.PI / 180) {
+              this.eventBus.emit('damageEntity', { entity: e, damage, source: player });
+              hitCount++;
+            }
+          }
+        }
+        if (ci === 0) this.eventBus.emit('weaponFire', { weaponId: id });
+      }, ci * 250); // 250ms between hits
+    }
+  }
+
+  // === W8: Grave Claymore (melee slam) ===
+  _fireW8(player, dt) {
+    const id = 'w8_claymore';
+    const level = this.weaponLevels[id] || 0;
+    if (level <= 0) return;
+    this.cooldowns[id] = (this.cooldowns[id] || 0) - dt;
+    if (this.cooldowns[id] > 0) return;
+    const stats = this._getWeaponStats(id, level);
+    if (!stats) return;
+    this.cooldowns[id] = stats.cooldown;
+
+    const range = stats.range || 100;
+    const aoeWidth = stats.aoeWidth || 120;
+    const damage = stats.damage;
+    const enemies = this.entityManager.getActive('enemy');
+
+    // Find nearest enemy direction
+    let facingAngle = 0;
+    if (enemies.length > 0) {
+      let nearest = null, minDist = Infinity;
+      for (const e of enemies) {
+        const d = Math.hypot(e.x - player.x, e.y - player.y);
+        if (d < minDist) { minDist = d; nearest = e; }
+      }
+      if (nearest) facingAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+    }
+
+    // Hit enemies in rectangular area in front
+    const hitEnemies = [];
+    for (const e of enemies) {
+      const dx = e.x - player.x, dy = e.y - player.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > range + e.size) continue;
+      const angle = Math.atan2(dy, dx);
+      let diff = angle - facingAngle;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      if (Math.abs(diff) < (aoeWidth / 2) * Math.PI / 180) {
+        hitEnemies.push(e);
+      }
+    }
+
+    // Apply main damage
+    for (const e of hitEnemies) {
+      this.eventBus.emit('damageEntity', { entity: e, damage, source: player });
+    }
+    this.eventBus.emit('weaponFire', { weaponId: id });
+
+    // Explosion at Lv4+
+    if (stats.explosionDmgPct && hitEnemies.length > 0) {
+      setTimeout(() => {
+        const explosionDmg = Math.round(damage * stats.explosionDmgPct);
+        const explosionRadius = stats.explosionRadius || 100;
+        for (const e of this.entityManager.getActive('enemy')) {
+          // Explosion radiates from center of hit area
+          const hitCenterX = player.x + Math.cos(facingAngle) * (range * 0.7);
+          const hitCenterY = player.y + Math.sin(facingAngle) * (range * 0.7);
+          const dist = Math.hypot(e.x - hitCenterX, e.y - hitCenterY);
+          if (dist < explosionRadius) {
+            this.eventBus.emit('damageEntity', { entity: e, damage: explosionDmg, source: player });
+          }
+        }
+        this.eventBus.emit('areaPulse', { x: hitCenterX, y: hitCenterY, radius: explosionRadius, color: '#FF6B35' });
+      }, 200); // Delay for swing animation
+    }
+  }
+
+  _getWeaponStats(weaponId, level) {
+    const weapon = this.dataManager.weapons?.find(w => w.id === weaponId);
+    if (!weapon || !weapon.statsPerLevel) return null;
+    return weapon.statsPerLevel[level - 1] || weapon.statsPerLevel[0];
   }
 
   levelUp(weaponId) {
