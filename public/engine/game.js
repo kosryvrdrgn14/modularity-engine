@@ -284,7 +284,6 @@ class Game {
     this.renderer._announcements = [];
     this.renderer._dimOverlay = null;
     this.entityManager.clearAll();
-    this.spawnSystem.reset();
     this.pickupSystem.reset();
     this.levelingSystem.reset();
     this.weaponSystem.reset();
@@ -306,6 +305,11 @@ class Game {
       this.spawnSystem._tierXpMult = tierMults?.xp || 1.0;
       this.spawnSystem._tierSpawnRateMult = tierMults?.spawnRate || 1.0;
     }
+    // Dynamic boss spawn time from stage data (duration - 60s for boss fight)
+    const stageDuration = loadout?.duration || 300;
+    const bossSpawnTime = stageDuration - 60; // Boss spawns 60s before end
+    this._bossSpawnTime = bossSpawnTime;
+    this.spawnSystem.reset(bossSpawnTime);
     this.companionSystem.companions = [];
     this.gameTime = 0;
 
@@ -448,11 +452,17 @@ class Game {
   _updateAnnouncements() {
     const stageData = this.dataManager.stages;
     if (!stageData || !stageData.bossConfig || !stageData.bossConfig.announcement) return;
+    // Announcements are defined relative to boss spawn time in the data
+    // e.g. time: 230 means 10s before boss spawn at 240. We offset dynamically.
+    const bossBase = 240; // Reference time the data was designed for (standard 5min)
+    const bossActual = this._bossSpawnTime || 240;
+    const offset = bossActual - bossBase;
     
     for (const ann of stageData.bossConfig.announcement) {
-      if (this._announcementTriggered[ann.time]) continue;
-      if (this.gameTime >= ann.time) {
-        this._announcementTriggered[ann.time] = true;
+      const adjustedTime = ann.time + offset;
+      if (this._announcementTriggered[adjustedTime]) continue;
+      if (this.gameTime >= adjustedTime) {
+        this._announcementTriggered[adjustedTime] = true;
         if (ann.type === 'text' || ann.type === 'boss_name') {
           this.renderer.showAnnouncement(ann.text, ann.styling || {});
         }

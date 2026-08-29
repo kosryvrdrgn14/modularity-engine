@@ -1203,6 +1203,9 @@
         <div class="menu-item" data-action="test-town" data-index="4" style="border-top: 1px solid rgba(255,255,255,0.06); margin-top: 4px; padding-top: 12px;">
           <span class="menu-arrow">▶</span> <span style="color:#FF9100;">Test Town</span> <span style="font-size:0.7rem;color:#666;margin-left:auto;">+100g</span>
         </div>
+        <div class="menu-item" data-action="dev-stage" data-index="5">
+          <span class="menu-arrow">▶</span> <span style="color:#4FC3F7;">🧪 Stage Select</span> <span style="font-size:0.7rem;color:#666;margin-left:auto;">DEV</span>
+        </div>
       </div>
       <div id="title-info">
         <span id="info-version">v0.3.0</span>
@@ -2511,8 +2514,9 @@ class SpawnSystem {
       this._spawnEnemy(wave);
     }
     
-    // Boss spawn at 4:00 (240 seconds)
-    if (!this.bossSpawned && this.gameTime >= 240) {
+    // Boss spawn — read from stage data (default 240s / 4:00)
+    const bossTime = this._bossSpawnTime || 240;
+    if (!this.bossSpawned && this.gameTime >= bossTime) {
       this._spawnBoss();
       this.bossSpawned = true;
     }
@@ -2612,11 +2616,12 @@ class SpawnSystem {
     return colors[id] || '#555';
   }
 
-  reset() {
+  reset(bossSpawnTime) {
     this.spawnTimer = 0;
     this.gameTime = 0;
     this.currentWave = 0;
     this.bossSpawned = false;
+    this._bossSpawnTime = bossSpawnTime || 240;
   }
 }
 
@@ -5691,6 +5696,7 @@ class TitleMenu {
       { action: 'stages', locked: true },
       { action: 'settings', locked: false },
       { action: 'test-town', locked: false },
+      { action: 'dev-stage', locked: false },
     ];
     this.dom = {
       screen: document.getElementById('title-screen'),
@@ -5805,7 +5811,46 @@ class TitleMenu {
       case 'test-town':
         this.game._testTown();
         break;
+      case 'dev-stage':
+        this._showStageSelector();
+        break;
     }
+  }
+
+  _showStageSelector() {
+    let overlay = document.getElementById('dev-stage-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'dev-stage-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+      overlay.innerHTML = '<div style="background:#1a1a2e;border:2px solid #FFD700;border-radius:12px;padding:24px;max-width:90%;width:340px;"><div style="color:#FFD700;font-size:18px;font-weight:bold;margin-bottom:16px;text-align:center;">\u{1f9ea} Dev: Stage Select</div><div id="dev-stage-options"></div><div style="color:#666;font-size:11px;margin-top:12px;text-align:center;">Choose tier \u2192 auto-applies loadout + multipliers</div></div>';
+      document.body.appendChild(overlay);
+    }
+    const optionsEl = overlay.querySelector('#dev-stage-options');
+    optionsEl.innerHTML = '';
+    const tiers = [
+      { key: 'quick', label: '\u26a1 Quick (3 min)', desc: 'Frontloaded weapons, fast spawns', duration: 180 },
+      { key: 'standard', label: '\u2694\ufe0f Standard (5 min)', desc: 'Balanced gameplay', duration: 300 },
+      { key: 'highlight', label: '\u{1f525} Highlight (10 min)', desc: 'Scaling weapons, extended run', duration: 600 },
+    ];
+    for (const tier of tiers) {
+      const btn = document.createElement('div');
+      btn.style.cssText = 'background:#0d0d1a;border:1px solid #333;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;color:#e0e0e0;';
+      btn.innerHTML = '<div style="font-size:15px;font-weight:bold;">' + tier.label + '</div><div style="font-size:11px;color:#888;margin-top:4px;">' + tier.desc + '</div>';
+      btn.addEventListener('click', () => {
+        this.game.gameManager.set('session.current_stage_tier', tier.key);
+        overlay.style.display = 'none';
+        if (this.game.audioManager) this.game.audioManager.playMenuSound('select');
+        this.game._startFromTitle();
+      });
+      btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#FFD700'; });
+      btn.addEventListener('mouseleave', () => { btn.style.borderColor = '#333'; });
+      optionsEl.appendChild(btn);
+    }
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.style.display = 'none';
+    });
+    overlay.style.display = 'flex';
   }
 
   _showTooltip(text) {
@@ -7355,7 +7400,6 @@ class Game {
     this.renderer._announcements = [];
     this.renderer._dimOverlay = null;
     this.entityManager.clearAll();
-    this.spawnSystem.reset();
     this.pickupSystem.reset();
     this.levelingSystem.reset();
     this.weaponSystem.reset();
@@ -7377,6 +7421,11 @@ class Game {
       this.spawnSystem._tierXpMult = tierMults?.xp || 1.0;
       this.spawnSystem._tierSpawnRateMult = tierMults?.spawnRate || 1.0;
     }
+    // Dynamic boss spawn time from stage data (duration - 60s for boss fight)
+    const stageDuration = loadout?.duration || 300;
+    const bossSpawnTime = stageDuration - 60; // Boss spawns 60s before end
+    this._bossSpawnTime = bossSpawnTime;
+    this.spawnSystem.reset(bossSpawnTime);
     this.companionSystem.companions = [];
     this.gameTime = 0;
 
@@ -7519,11 +7568,16 @@ class Game {
   _updateAnnouncements() {
     const stageData = this.dataManager.stages;
     if (!stageData || !stageData.bossConfig || !stageData.bossConfig.announcement) return;
+    // Announcements are defined relative to boss spawn time in the data
+    const bossBase = 240; // Reference time the data was designed for (standard 5min)
+    const bossActual = this._bossSpawnTime || 240;
+    const offset = bossActual - bossBase;
     
     for (const ann of stageData.bossConfig.announcement) {
-      if (this._announcementTriggered[ann.time]) continue;
-      if (this.gameTime >= ann.time) {
-        this._announcementTriggered[ann.time] = true;
+      const adjustedTime = ann.time + offset;
+      if (this._announcementTriggered[adjustedTime]) continue;
+      if (this.gameTime >= adjustedTime) {
+        this._announcementTriggered[adjustedTime] = true;
         if (ann.type === 'text' || ann.type === 'boss_name') {
           this.renderer.showAnnouncement(ann.text, ann.styling || {});
         }
@@ -9121,9 +9175,9 @@ window.skipToBoss = () => {
   const ss = game.spawnSystem;
   if (ss) {
     ss.bossSpawned = true;
-    ss.gameTime = 245;
+    ss.gameTime = (game._bossSpawnTime || 240) + 5;
     ss._spawnBoss();
-    console.log('[DEBUG] Boss spawned via spawnSystem!');
+    console.log('[DEBUG] Boss spawned at', ss.gameTime, 's');
   } else {
     console.log('[DEBUG] spawnSystem not found');
   }

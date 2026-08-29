@@ -1,10 +1,11 @@
 # Modularity Engine — Stages Specification
 
-> **Version:** 2.0 (Design Decisions Locked)
-> **Last Updated:** 2026-08-26
+> **Version:** 3.0 (Stage Creation Template Added)
+> **Last Updated:** 2026-08-29
 > **Status:** Spec
 > **Design Decisions:** D3 (stage tiers: 3/5/10min), D5 (1:1 companion binding)
 > **Canonical Sources:** `vs_prog.md` Wave Timeline + Boss Encounter + Stage End (all values), `vs_colors.md` Map & Obstacles + Background & Environment, `01_engine_architecture.md` (engine systems)
+> **Template:** See `stage_creation_template.md` for the standardized stage creation format with all balance levers
 
 ---
 

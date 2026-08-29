@@ -31,8 +31,9 @@ class SpawnSystem {
       this._spawnEnemy(wave);
     }
     
-    // Boss spawn at 4:00 (240 seconds)
-    if (!this.bossSpawned && this.gameTime >= 240) {
+    // Boss spawn — read from stage data (default 240s / 4:00)
+    const bossTime = this._bossSpawnTime || 240;
+    if (!this.bossSpawned && this.gameTime >= bossTime) {
       this._spawnBoss();
       this.bossSpawned = true;
     }
@@ -132,11 +133,12 @@ class SpawnSystem {
     return colors[id] || '#555';
   }
 
-  reset() {
+  reset(bossSpawnTime) {
     this.spawnTimer = 0;
     this.gameTime = 0;
     this.currentWave = 0;
     this.bossSpawned = false;
+    this._bossSpawnTime = bossSpawnTime || 240;
   }
 }
 
