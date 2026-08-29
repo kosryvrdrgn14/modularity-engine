@@ -56,12 +56,14 @@
       "time": "1:30-2:00",
       "enemyTypes": [
         "zombie",
-        "bat"
+        "bat",
+        "rat"
       ],
       "spawnRate": 1.8,
       "compositionWeights": {
-        "zombie": 0.55,
-        "bat": 0.45
+        "zombie": 0.4,
+        "bat": 0.35,
+        "rat": 0.25
       },
       "maxEnemies": 80
     },
@@ -104,15 +106,19 @@
         "bat",
         "skeleton",
         "ghost",
-        "caster"
+        "caster",
+        "rat",
+        "brute"
       ],
       "spawnRate": 2.5,
       "compositionWeights": {
-        "zombie": 0.25,
-        "bat": 0.25,
-        "skeleton": 0.2,
-        "ghost": 0.15,
-        "caster": 0.15
+        "zombie": 0.2,
+        "bat": 0.2,
+        "skeleton": 0.15,
+        "ghost": 0.1,
+        "caster": 0.1,
+        "rat": 0.15,
+        "brute": 0.1
       },
       "maxEnemies": 150
     },
@@ -123,15 +129,19 @@
         "bat",
         "skeleton",
         "ghost",
-        "caster"
+        "caster",
+        "rat",
+        "brute"
       ],
       "spawnRate": 3.0,
       "compositionWeights": {
-        "zombie": 0.2,
-        "bat": 0.25,
-        "skeleton": 0.2,
-        "ghost": 0.15,
-        "caster": 0.2
+        "zombie": 0.15,
+        "bat": 0.2,
+        "skeleton": 0.15,
+        "ghost": 0.1,
+        "caster": 0.15,
+        "rat": 0.15,
+        "brute": 0.1
       },
       "maxEnemies": 180
     },

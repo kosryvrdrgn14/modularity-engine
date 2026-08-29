@@ -129,6 +129,8 @@ class SpawnSystem {
       skeleton: '#C0392B', // Bright red
       ghost: '#8E44AD',    // Light purple
       caster: '#2E86C1',   // Blue
+      rat: '#8B6914',      // Brown — fast swarm
+      brute: '#2D4A1E',    // Dark green — beefy tank
     };
     return colors[id] || '#555';
   }

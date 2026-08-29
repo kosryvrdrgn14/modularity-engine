@@ -190,6 +190,84 @@
     }
   },
   {
+    "id": "rat",
+    "name": "Rat",
+    "type": "normal",
+    "stats": {
+      "hp": 6,
+      "damage": 6,
+      "speed": 120,
+      "size": 7,
+      "xpValue": 1,
+      "goldValue": 1,
+      "goldCoins": {
+        "min": 1,
+        "max": 1
+      }
+    },
+    "behavior": {
+      "pattern": "swarm",
+      "params": {
+        "erraticism": 0.9
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "magnet",
+          "chance": 0.03
+        },
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 0.01
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 70,
+      "firstAppears": "1:30"
+    }
+  },
+  {
+    "id": "brute",
+    "name": "Brute",
+    "type": "normal",
+    "stats": {
+      "hp": 40,
+      "damage": 12,
+      "speed": 30,
+      "size": 16,
+      "xpValue": 5,
+      "goldValue": 4,
+      "goldCoins": {
+        "min": 3,
+        "max": 5
+      }
+    },
+    "behavior": {
+      "pattern": "chase",
+      "params": {
+        "chaseSpeed": 30
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "screen_wipe",
+          "chance": 0.02
+        },
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 0.015
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 30,
+      "firstAppears": "3:00"
+    }
+  },
+  {
     "id": "boss_gravekeeper",
     "name": "The Gravekeeper",
     "type": "boss",
