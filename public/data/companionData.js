@@ -26,5 +26,36 @@ const COMPANION_DATA = {
     maxChaseRange: 200,
     hitCooldown: 1.0,
     lootRadius: 40,
-  }
+  },
+  // --- Stub entries for future companions (locked in dev selector) ---
+  healer: {
+    id: 'healer',
+    name: 'Healer',
+    slot: 2,
+    pairedWeapon: 'w2_orbit',
+    size: 14,
+    visual: { shape: 'circle', color: '#4CAF50' },
+    statsPerLevel: [],
+    locked: true,
+  },
+  archer: {
+    id: 'archer',
+    name: 'Archer',
+    slot: 2,
+    pairedWeapon: 'w2_orbit',
+    size: 14,
+    visual: { shape: 'circle', color: '#2196F3' },
+    statsPerLevel: [],
+    locked: true,
+  },
+  mage: {
+    id: 'mage',
+    name: 'Mage',
+    slot: 3,
+    pairedWeapon: 'weapon_area_pulse',
+    size: 14,
+    visual: { shape: 'circle', color: '#9C27B0' },
+    statsPerLevel: [],
+    locked: true,
+  },
 };

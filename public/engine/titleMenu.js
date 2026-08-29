@@ -200,17 +200,235 @@ class TitleMenu {
         const tier = btn.dataset.tier;
         this.game.gameManager.set('session.selected_stage_id', stageId);
         this.game.gameManager.set('session.current_stage_tier', tier);
-        overlay.style.display = 'none';
         if (this.game.audioManager) this.game.audioManager.playMenuSound('select');
-        this.game._startFromTitle();
+        this._showWeaponSelector(btn.dataset.stage, btn.dataset.tier);
       });
       btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#FFD700'; });
       btn.addEventListener('mouseleave', () => { btn.style.borderColor = '#333'; });
-    });
+    });      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.style.display = 'none';
+      });
+      overlay.style.display = 'flex';
+    }
 
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.style.display = 'none';
-    });
+  _showWeaponSelector(stageId, stageTier) {
+    const overlay = document.getElementById('dev-stage-overlay');
+    if (!overlay) return;
+
+    // Weapon catalog: all weapons from data
+    const allWeapons = this.game.dataManager?.weapons || [];
+    const allWeaponDefs = [
+      { id: 'w1_projectile', name: 'Projectile', icon: '\u{1f3f9}', type: 'ranged', unlockLevel: 1 },
+      { id: 'w2_orbit', name: 'Orbit', icon: '\u{1f504}', type: 'ranged', unlockLevel: 3 },
+      { id: 'weapon_area_pulse', name: 'Area', icon: '\u{1f4a5}', type: 'ranged', unlockLevel: 6 },
+      { id: 'w4_flame_wave', name: 'Flame Wave', icon: '\u{1f525}', type: 'ranged', unlockLevel: 4 },
+      { id: 'w5_arcane_bolt', name: 'Arcane Bolt', icon: '\u26a1', type: 'ranged', unlockLevel: 5 },
+      { id: 'w6_shadow_dagger', name: 'Dagger', icon: '\u{1f5e1}\ufe0f', type: 'melee', unlockLevel: 1 },
+      { id: 'w7_soul_whip', name: 'Whip', icon: '\u2694\ufe0f', type: 'melee', unlockLevel: 1 },
+      { id: 'w8_grave_claymore', name: 'Claymore', icon: '\u{1fa93}', type: 'melee', unlockLevel: 1 },
+    ];
+
+    // Default: stage loadout weapons pre-filled
+    const stageData = this.game.dataManager?.stages;
+    const stageLoadout = stageData?.weaponLoadouts?.[stageTier];
+    const defaultWeapons = stageLoadout?.weapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const selected = [defaultWeapons[0] || null, defaultWeapons[1] || null, defaultWeapons[2] || null];
+
+    const self = this;
+
+    function renderWeaponGrid() {
+      let html = '<div style="background:#1a1a2e;border:2px solid #FFD700;border-radius:12px;padding:20px;max-width:90%;width:380px;max-height:85vh;overflow-y:auto;">';
+      html += '<div style="color:#FFD700;font-size:18px;font-weight:bold;margin-bottom:4px;text-align:center;">\u2694\ufe0f Dev: Choose Weapons</div>';
+      html += '<div style="color:#666;font-size:11px;text-align:center;margin-bottom:12px;">Select exactly 3 weapons for this run</div>';
+
+      // Selected slots
+      html += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
+      for (let i = 0; i < 3; i++) {
+        const wid = selected[i];
+        const wDef = wid ? allWeaponDefs.find(w => w.id === wid) : null;
+        const label = wDef ? wDef.icon + ' ' + wDef.name : 'Empty';
+        const bg = wid ? '#1a3310' : '#0d0d1a';
+        const border = wid ? '1px solid #4CAF50' : '1px solid #333';
+        html += '<div class="dev-wslot" data-slot="' + i + '" style="flex:1;background:' + bg + ';border:' + border + ';border-radius:6px;padding:8px 4px;text-align:center;cursor:pointer;min-width:0;">';
+        html += '<div style="font-size:10px;color:#666;">Slot ' + (i + 1) + '</div>';
+        html += '<div style="font-size:12px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + label + '</div>';
+        if (wid) html += '<div style="font-size:9px;color:#4CAF50;margin-top:2px;">Tap to remove</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+
+      // Weapon grid
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">';
+      for (const w of allWeaponDefs) {
+        const isSelected = selected.includes(w.id);
+        const isLocked = false; // Dev mode: all available
+        const bg = isSelected ? 'rgba(76,175,80,0.15)' : '#0d0d1a';
+        const border = isSelected ? '1px solid #4CAF50' : '1px solid #333';
+        const opacity = isLocked ? '0.4' : '1';
+        html += '<div class="dev-wcard" data-wid="' + w.id + '" style="background:' + bg + ';border:' + border + ';border-radius:6px;padding:8px 4px;text-align:center;cursor:pointer;opacity:' + opacity + ';">';
+        html += '<div style="font-size:20px;">' + w.icon + '</div>';
+        html += '<div style="font-size:11px;color:#e0e0e0;margin-top:2px;">' + w.name + '</div>';
+        html += '<div style="font-size:9px;color:#666;">' + w.type + ' \u00b7 Lv' + w.unlockLevel + '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+
+      // Launch button
+      const canLaunch = selected.filter(Boolean).length === 3;
+      html += '<div class="dev-launch-btn" style="background:' + (canLaunch ? '#2d5a1e' : '#1a1a2e') + ';border:1px solid ' + (canLaunch ? '#4CAF50' : '#333') + ';border-radius:8px;padding:10px;text-align:center;cursor:' + (canLaunch ? 'pointer' : 'default') + ';">';
+      html += '<span style="color:' + (canLaunch ? '#4CAF50' : '#666') + ';font-weight:bold;font-size:14px;">\u25b6 Next: Companions</span>';
+      html += '</div>';
+
+      html += '</div>';
+      overlay.innerHTML = html;
+
+      // Wire slot removal
+      overlay.querySelectorAll('.dev-wslot').forEach(slot => {
+        slot.addEventListener('click', () => {
+          const idx = parseInt(slot.dataset.slot);
+          selected[idx] = null;
+          self.game.audioManager?.playMenuSound('back');
+          renderWeaponGrid();
+        });
+      });
+
+      // Wire weapon card clicks
+      overlay.querySelectorAll('.dev-wcard').forEach(card => {
+        card.addEventListener('click', () => {
+          const wid = card.dataset.wid;
+          if (selected.includes(wid)) return; // Already selected
+          // Fill first empty slot
+          const emptyIdx = selected.indexOf(null);
+          if (emptyIdx >= 0) {
+            selected[emptyIdx] = wid;
+          } else {
+            // Replace last slot
+            selected[2] = wid;
+          }
+          self.game.audioManager?.playMenuSound('select');
+          renderWeaponGrid();
+        });
+      });
+
+      // Wire launch
+      if (canLaunch) {
+        overlay.querySelector('.dev-launch-btn').addEventListener('click', () => {
+          self.game.gameManager.set('session.dev_weapons', [...selected]);
+          self.game.audioManager?.playMenuSound('select');
+          self._showCompanionSelector(stageId, stageTier);
+        });
+      }
+    }
+
+    renderWeaponGrid();
+    overlay.style.display = 'flex';
+  }
+
+  _showCompanionSelector(stageId, stageTier) {
+    const overlay = document.getElementById('dev-stage-overlay');
+    if (!overlay) return;
+
+    // Companion catalog
+    const allCompanions = [
+      { id: 'dog', name: 'Dog', icon: '\u{1f415}', desc: 'Auto-loot, AoE growl', available: true },
+      { id: 'healer', name: 'Healer', icon: '\u{1f49a}', desc: 'Threshold heals (coming soon)', available: false },
+      { id: 'archer', name: 'Archer', icon: '\u{1f3f9}', desc: 'Slow + poison (coming soon)', available: false },
+      { id: 'mage', name: 'Mage', icon: '\u{1f9d9}', desc: 'Chain lightning (coming soon)', available: false },
+    ];
+
+    const selected = [null, null, null];
+    // Default: dog in slot 1 if unlocked
+    const savedCompanions = this.game.gameManager.get('session.dev_companions');
+    if (savedCompanions && savedCompanions.length > 0) {
+      for (let i = 0; i < 3; i++) selected[i] = savedCompanions[i] || null;
+    } else {
+      selected[0] = 'dog';
+    }
+
+    const self = this;
+
+    function renderCompanionGrid() {
+      let html = '<div style="background:#1a1a2e;border:2px solid #FFD700;border-radius:12px;padding:20px;max-width:90%;width:380px;max-height:85vh;overflow-y:auto;">';
+      html += '<div style="color:#FFD700;font-size:18px;font-weight:bold;margin-bottom:4px;text-align:center;">\u{1f415} Dev: Choose Companions</div>';
+      html += '<div style="color:#666;font-size:11px;text-align:center;margin-bottom:4px;">C1\u2192W1, C2\u2192W2, C3\u2192W3</div>';
+      html += '<div style="color:#888;font-size:10px;text-align:center;margin-bottom:12px;">Companion upgrades sync with paired weapon</div>';
+
+      // Selected slots
+      html += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
+      for (let i = 0; i < 3; i++) {
+        const cid = selected[i];
+        const cDef = cid ? allCompanions.find(c => c.id === cid) : null;
+        const label = cDef ? cDef.icon + ' ' + cDef.name : 'Empty';
+        const bg = cid ? '#1a3310' : '#0d0d1a';
+        const border = cid ? '1px solid #4CAF50' : '1px solid #333';
+        html += '<div class="dev-cslot" data-slot="' + i + '" style="flex:1;background:' + bg + ';border:' + border + ';border-radius:6px;padding:8px 4px;text-align:center;cursor:pointer;min-width:0;">';
+        html += '<div style="font-size:10px;color:#666;">Slot ' + (i + 1) + '</div>';
+        html += '<div style="font-size:12px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + label + '</div>';
+        if (cid) html += '<div style="font-size:9px;color:#4CAF50;margin-top:2px;">Tap to remove</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+
+      // Companion grid
+      for (const c of allCompanions) {
+        const isSelected = selected.includes(c.id);
+        const bg = !c.available ? '#0a0a12' : isSelected ? 'rgba(76,175,80,0.15)' : '#0d0d1a';
+        const border = isSelected ? '1px solid #4CAF50' : c.available ? '1px solid #333' : '1px solid #1a1a2e';
+        const opacity = c.available ? '1' : '0.35';
+        html += '<div class="dev-ccard" data-cid="' + c.id + '" data-avail="' + (c.available ? '1' : '0') + '" style="background:' + bg + ';border:' + border + ';border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:' + (c.available ? 'pointer' : 'default') + ';opacity:' + opacity + ';display:flex;align-items:center;gap:8px;">';
+        html += '<span style="font-size:20px;">' + c.icon + '</span>';
+        html += '<div><div style="font-size:12px;color:#e0e0e0;">' + c.name + '</div>';
+        html += '<div style="font-size:10px;color:#666;">' + c.desc + '</div></div>';
+        if (isSelected) html += '<span style="margin-left:auto;color:#4CAF50;font-size:10px;">\u2713</span>';
+        html += '</div>';
+      }
+
+      // Launch button
+      const filledCount = selected.filter(Boolean).length;
+      html += '<div class="dev-launch-btn" style="background:#2d5a1e;border:1px solid #4CAF50;border-radius:8px;padding:10px;text-align:center;cursor:pointer;margin-top:8px;">';
+      html += '<span style="color:#4CAF50;font-weight:bold;font-size:14px;">\u25b6 Launch Game</span>';
+      html += '</div>';
+
+      html += '</div>';
+      overlay.innerHTML = html;
+
+      // Wire slot removal
+      overlay.querySelectorAll('.dev-cslot').forEach(slot => {
+        slot.addEventListener('click', () => {
+          const idx = parseInt(slot.dataset.slot);
+          selected[idx] = null;
+          self.game.audioManager?.playMenuSound('back');
+          renderCompanionGrid();
+        });
+      });
+
+      // Wire companion card clicks
+      overlay.querySelectorAll('.dev-ccard').forEach(card => {
+        card.addEventListener('click', () => {
+          if (card.dataset.avail !== '1') return;
+          const cid = card.dataset.cid;
+          if (selected.includes(cid)) return;
+          const emptyIdx = selected.indexOf(null);
+          if (emptyIdx >= 0) {
+            selected[emptyIdx] = cid;
+          } else {
+            selected[2] = cid;
+          }
+          self.game.audioManager?.playMenuSound('select');
+          renderCompanionGrid();
+        });
+      });
+
+      // Wire launch
+      overlay.querySelector('.dev-launch-btn').addEventListener('click', () => {
+        self.game.gameManager.set('session.dev_companions', [...selected]);
+        self.game.audioManager?.playMenuSound('select');
+        overlay.style.display = 'none';
+        self.game._startFromTitle();
+      });
+    }
+
+    renderCompanionGrid();
     overlay.style.display = 'flex';
   }
 

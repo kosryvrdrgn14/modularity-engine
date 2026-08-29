@@ -298,8 +298,15 @@ class Game {
     const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
     const stageData = this.dataManager.stages;
     const loadout = stageData?.weaponLoadouts?.[stageTier];
-    this._currentStageWeapons = loadout ? loadout.weapons : ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
-    for (const wid of this._currentStageWeapons) {
+    const stageWeapons = loadout ? loadout.weapons : ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    // Dev override: merge stage loadout with player-chosen weapons
+    const devWeapons = this.gameManager.get('session.dev_weapons');
+    if (devWeapons && devWeapons.length > 0) {
+      this._activeWeapons = [...new Set([...stageWeapons, ...devWeapons.filter(Boolean)])];
+    } else {
+      this._activeWeapons = [...stageWeapons];
+    }
+    for (const wid of this._activeWeapons) {
       this.weaponSystem.unlockWeapon(wid);
     }
 
@@ -335,8 +342,11 @@ class Game {
 
     this.weaponSystem.init(this.player);
 
-    // Spawn companions from GameManager
-    const companionIds = this.gameManager.get_companions();
+    // Spawn companions from GameManager (or dev override)
+    const devCompanions = this.gameManager.get('session.dev_companions');
+    let companionIds = (devCompanions && devCompanions.some(Boolean))
+      ? devCompanions.filter(Boolean)
+      : this.gameManager.get_companions();
     if (companionIds && companionIds.length > 0) {
       this.companionSystem.init(companionIds, this.player, this.weaponSystem);
       // C2: Mark companions as deployed in combat
@@ -516,7 +526,7 @@ class Game {
   }
 
   _applyWeaponLevelUp() {
-    const weaponIds = this._currentStageWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const weaponIds = this._activeWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     // Find the lowest-level active weapon (prioritize upgrading what's unlocked)
     let bestWeapon = null;
     let bestLevel = Infinity;
@@ -828,8 +838,8 @@ class Game {
     const weapons = this.dataManager.weapons;
     if (!weapons || !Array.isArray(weapons)) return;
     for (const weapon of weapons) {
-      // Only unlock weapons in the current stage loadout
-      if (!this._currentStageWeapons?.includes(weapon.id)) continue;
+      // Only unlock weapons that are active in this run (stage loadout + dev picks)
+      if (!this._activeWeapons?.includes(weapon.id)) continue;
       if (weapon.unlockLevel && level >= weapon.unlockLevel) {
         if (!this.weaponSystem.weaponLevels[weapon.id]) {
             this.weaponSystem.unlockWeapon(weapon.id);
@@ -877,11 +887,12 @@ class Game {
       },
     ];
 
-    // Add weapon upgrades ONLY for weapons in the current stage loadout
-    const activeWeaponIds = this._currentStageWeapons || Object.keys(this.weaponSystem.weaponLevels).filter(wid => this.weaponSystem.weaponLevels[wid] > 0);
+    // Add weapon upgrades for ALL active weapons (stage loadout + dev picks)
+    const activeWeaponIds = this._activeWeapons || Object.keys(this.weaponSystem.weaponLevels).filter(wid => this.weaponSystem.weaponLevels[wid] > 0);
     const weaponNames = {
       w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area',
       w4_flame_wave: 'Flame Wave', w5_arcane_bolt: 'Arcane Bolt',
+      w6_shadow_dagger: 'Dagger', w7_soul_whip: 'Whip', w8_grave_claymore: 'Claymore',
     };
     for (const wid of activeWeaponIds) {
       const wLevel = this.weaponSystem.weaponLevels[wid] || 0;
