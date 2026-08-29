@@ -1,5 +1,7 @@
 # Graveyard Stage V2 — 10-Minute Extended Map Spec
 
+> **Note:** This is a *reference implementation* for stage creation. The stage creation process below should be followed for all future stages.
+
 ## Overview
 
 Redesign of the graveyard stage from a 5-minute standard map to a 10-minute highlight map with new enemy types, a miniboss encounter, and a cute female necromancer as the final boss.
