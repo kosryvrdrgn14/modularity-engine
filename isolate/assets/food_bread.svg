@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Bread body -->
+  <ellipse cx="8" cy="10" rx="6" ry="4" fill="#D4A460"/>
+  <!-- Bread top crust -->
+  <ellipse cx="8" cy="8" rx="5.5" ry="3" fill="#E8C080"/>
+  <!-- Score marks -->
+  <path d="M4 8 Q6 7 8 8 Q10 7 12 8" fill="none" stroke="#C49440" stroke-width="0.5"/>
+  <path d="M5 9 Q7 8 9 9 Q11 8 13 9" fill="none" stroke="#C49440" stroke-width="0.4" opacity="0.7"/>
+  <!-- Crust texture -->
+  <circle cx="6" cy="7.5" r="0.3" fill="#C49440" opacity="0.5"/>
+  <circle cx="10" cy="7.5" r="0.3" fill="#C49440" opacity="0.5"/>
+  <!-- Shine -->
+  <path d="M6 7 Q8 6.5 10 7" fill="none" stroke="#F0D890" stroke-width="0.4" opacity="0.6"/>
+  <!-- Flour dust -->
+  <circle cx="5" cy="9" r="0.2" fill="#FFF" opacity="0.3"/>
+  <circle cx="11" cy="9" r="0.2" fill="#FFF" opacity="0.3"/>
+  <!-- Wheat stalk decoration -->
+  <path d="M8 5 L8 3" fill="none" stroke="#8B7355" stroke-width="0.3"/>
+  <path d="M7.5 4 L8 3.5 L8.5 4" fill="#D4A460"/>
+</svg>
