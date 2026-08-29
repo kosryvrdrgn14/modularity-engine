@@ -2,7 +2,7 @@
 
 **Project:** Modularity Engine (Vampire Survivors Prototype)
 **File:** `public/game2.html` (single-file HTML5 game)
-**Last Updated:** August 24, 2026
+**Last Updated:** August 29, 2026
 
 ---
 
@@ -56,8 +56,17 @@
 | 42 | Boss charges at player instead of telegraph direction — _chargeDir recalculated at charge start instead of locked to telegraph angle | 🔴 Critical | ✅ Fixed | User report |
 | 43 | Duplicate _showDogDialogue/companion methods — two identical definitions from Python bulk insert | 🟡 Low | ✅ Fixed | Removed 79 duplicate lines |
 | — | Companion system implemented | ℹ️ Feature | ✅ Complete | Spec + Implementation |
+| 44 | townScreen partyBtn ReferenceError — deleted DOM element still referenced in _setupEvents | 🔴 Critical | ✅ Fixed | Claude ESLint audit |
+| 45 | Companion growl cone renders at wrong position — screen.x/screen.y used instead of s.x/s.y | 🟡 Medium | ✅ Fixed | Claude ESLint audit |
+| 46 | Double power-up persists — mouse click and key events both fire selectUpgrade without shared guard | 🔴 Critical | ✅ Fixed | Gemini + Claude review |
+| 47 | SpawnSystem compositionWeights crash on empty waves — wave with spawnRate=0 still triggers _spawnEnemy | 🟡 Medium | ✅ Fixed | Phase 1.3 gap test |
+| 48 | Data sync drift — embeddedData.js and content/*.json can have different enemy/stage counts | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 49 | Ghoul lunge behavior not implemented — data defined but MovementSystem has no ghoul_lunge handler | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 50 | Necromancer magic/skull/shadowStep attacks not implemented — data has 3 phases but engine only handles charge | 🟡 Medium | 🟡 Open | Phase 1.3 audit |
+| 51 | Necromancer boss portrait not wired into intro overlay — SVG exists but not rendered | 🟢 Low | 🟡 Open | Phase 1.3 audit |
+| 52 | Fast-forward testing unreliable — setting spawnSystem.gameTime directly bypasses game state checks | 🟢 Low | 🟡 Open | Phase 1.3 test methodology |
 
-**Total: 46 bugs found, 46 fixed, 0 open**
+**Total: 55 bugs found, 49 fixed, 6 open**
 
 ---
 
@@ -620,3 +629,177 @@ These bugs share common root causes. Use this checklist after any code change se
 | List every guard/lock/debounce variable in the target scope before starting | Prevents silent removal of safety logic during restructuring |
 | Refactor in small steps — move one block at a time, verify parse + guard survival after each step | Bulk moves make it impossible to tell which step broke what |
 | After refactor, grep for every guard variable name across the entire file | Catches orphaned references and missing guards in one pass |
+
+
+---
+
+## Phase 1.1–1.3 Bugs (August 29, 2026)
+
+### Bug #44 — townScreen partyBtn ReferenceError (Crash)
+
+**Severity:** 🔴 Critical  
+**Discovered by:** Claude ESLint static analysis  
+**Status:** ✅ Fixed
+
+### Symptom
+Title screen shows blank/loading screen after town UI refactor. Game never starts.
+
+### Root Cause
+During the town UI refactor, the `partyBtn` DOM element was removed (feature folded into always-visible companion slots), but the `_setupEvents()` method still referenced it via `partyBtn.addEventListener(...)`. Since `partyBtn` was never declared, JavaScript throws `ReferenceError` and halts the `TownScreen` constructor, which prevents `titleMenu.show()` from running.
+
+### Fix
+Deleted the orphaned `if (partyBtn) { ... }` block (3 lines).
+
+### Lesson
+**Pattern to watch for:** When removing a UI element, grep for its variable/ID name across the entire file to catch every downstream reference. Partial removals are the root cause of orphan variable crashes.
+
+---
+
+### Bug #45 — Companion Growl Cone Renders at Wrong Position
+
+**Severity:** 🟡 Medium  
+**Discovered by:** Claude ESLint static analysis  
+**Status:** ✅ Fixed
+
+### Symptom
+Dog's growl cone visual effect renders at wrong transform origin instead of centered on the companion sprite.
+
+### Root Cause
+The companion sprite draw function uses `s.x`/`s.y` for all visual elements (eyes, nose, mouth), but the growl cone block accidentally uses `screen.x`/`screen.y`. `window.screen` (the browser Screen API) has no `.x`/`.y` properties, so it resolves to `undefined`, causing the cone to render at the wrong position.
+
+### Fix
+Changed `ctx.translate(screen.x, screen.y)` to `ctx.translate(s.x, s.y)`.
+
+---
+
+### Bug #46 — Double Power-Up on Mouse Click + Key
+
+**Severity:** 🔴 Critical  
+**Discovered by:** Gemini code review + Claude analysis  
+**Status:** ✅ Fixed
+
+### Symptom
+Player gets 2 upgrade selections when they should get 1, even after the key repeat fix (#29).
+
+### Root Cause
+Two separate input paths fire `selectUpgrade`:
+1. `keydown` handler with `_upgradeKeyLock` debounce (fixed in #29)
+2. `_onPointerDown` handler for mouse/touch clicks — does NOT share the same lock
+
+A rapid click or touch during the brief window between `levelUp` event and state transition allows both inputs to fire.
+
+### Fix
+Added `_isSelectingUpgrade` guard flag in Game's `selectUpgrade` handler. Both keyboard and mouse/touch paths check this flag before processing.
+
+---
+
+### Bug #47 — SpawnSystem compositionWeights Crash on Empty Waves
+
+**Severity:** 🟡 Medium  
+**Discovered by:** Phase 1.3 comprehensive gap test  
+**Status:** ✅ Fixed
+
+### Symptom
+Console error: `Cannot read properties of undefined (reading 'zombie')` during gameplay on the extended 10-minute stage.
+
+### Root Cause
+The extended stage has an empty wave (8:30-8:35) with `spawnRate: 0` and empty `compositionWeights: {}`. The SpawnSystem's `_spawnEnemy` method tries to look up `weights[enemy.id]` for each enemy type, but when the wave has no composition weights and spawnRate is 0, it should skip spawning entirely. The guard only checked `if (!wave)` but not the spawn rate.
+
+### Fix
+Added guard: `if (!wave || !wave.spawnRate || wave.spawnRate <= 0) return;`
+
+---
+
+### Bug #48 — Data Sync Drift Between Files
+
+**Severity:** 🟡 Medium  
+**Discovered by:** Phase 1.3 audit  
+**Status:** 🟡 Open
+
+### Symptom
+`embeddedData.js` and `content/*.json` can have different enemy/stage counts. The game loads JSON first, falls back to embedded data, but they can drift out of sync.
+
+### Impact
+If JSON files fail to load (CORS on file:// protocol), the embedded fallback may be outdated. Currently:
+- enemies.json has 10 enemies (correct)
+- embeddedData.js has 13 enemies (includes extras from earlier iteration)
+- leveling.json has 13 XP curve entries, embeddedData.js has 14
+
+### Recommended Fix
+Add a build script that regenerates `embeddedData.js` from `content/*.json`, or consolidate to a single source of truth.
+
+---
+
+### Bug #49 — Ghoul Lunge Behavior Not Implemented
+
+**Severity:** 🟡 Medium  
+**Discovered by:** Phase 1.3 audit  
+**Status:** 🟡 Open
+
+### Symptom
+Ghoul miniboss spawns with correct stats (300 HP, 18 DMG) but behaves as a regular chase enemy instead of performing its lunge attack.
+
+### Root Cause
+The enemy data defines `behavior.pattern: "ghoul_lunge"` with lunge parameters, but MovementSystem only handles `chase`, `swarm`, `wander_chase`, `ranged`, and `boss_charge` patterns. The `ghoul_lunge` pattern falls through to default chase behavior.
+
+### Recommended Fix
+Implement ghoul lunge behavior: idle (2s) → windup telegraph (0.5s) → lunge dash (200px at 300 speed) → stunned (1.5s) → repeat.
+
+---
+
+### Bug #50 — Necromancer Phase Attacks Not Implemented
+
+**Severity:** 🟡 Medium  
+**Discovered by:** Phase 1.3 audit  
+**Status:** 🟡 Open
+
+### Symptom
+Necromancer boss has 3 phases defined with magic bolts, skull rings, and shadow step, but only uses basic charge behavior.
+
+### Root Cause
+The boss behavior system handles `boss_charge` pattern with minion spawning, but the Necromancer's additional attack types (`magicBolt`, `skullRing`, `shadowStep`) are defined in data but not processed by the engine.
+
+### Recommended Fix
+Extend boss behavior to process phase-specific attack properties:
+- `magicBolt`: periodic projectile toward player
+- `skullRing`: expanding ring of projectiles
+- `shadowStep`: teleport behind player with windup telegraph
+
+---
+
+### Bug #51 — Necromancer Portrait Not Wired Into Boss Intro
+
+**Severity:** 🟢 Low  
+**Discovered by:** Phase 1.3 audit  
+**Status:** 🟡 Open
+
+### Symptom
+Necromancer boss intro shows name/subtitle text but no portrait image.
+
+### Root Cause
+The boss intro overlay system renders text (name, subtitle) and a dim overlay, but doesn't load or display the boss portrait SVG. The `necromancer_portrait.svg` file exists in `public/assets/` but is not referenced in the intro rendering code.
+
+### Recommended Fix
+Wire portrait SVG into boss intro: check `boss.intro.portrait` in data, load the SVG, and render it centered during the intro sequence.
+
+---
+
+### Bug #52 — Fast-Forward Testing Unreliable
+
+**Severity:** 🟢 Low  
+**Discovered by:** Phase 1.3 test methodology  
+**Status:** 🟡 Open
+
+### Symptom
+Setting `spawnSystem.gameTime` directly in tests doesn't trigger boss spawning or wave transitions because the game's `update()` method checks `gameState.isPlaying()` and other state guards.
+
+### Root Cause
+The game loop manages state transitions (level-up, boss intro, game over) that block `update()` from advancing. Manually setting time bypasses these guards but also bypasses the actual game logic that needs to run.
+
+### Recommended Fix
+Add a `game.debugSkipToTime(seconds)` method that:
+1. Sets the game state to 'playing'
+2. Runs the game loop forward in controlled ticks
+3. Handles any state transitions that occur (level-ups, boss intros)
+
+---
