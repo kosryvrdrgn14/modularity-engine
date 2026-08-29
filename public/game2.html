@@ -6178,10 +6178,19 @@ class TitleMenu {
     if (!overlay) return;
 
     const allCompanions = [
-      { id: 'dog', name: 'Dog', icon: '\u{1f415}', desc: 'Auto-loot, AoE growl', available: true },
-      { id: 'healer', name: 'Healer', icon: '\u{1f49a}', desc: 'Threshold heals (coming soon)', available: false },
-      { id: 'archer', name: 'Archer', icon: '\u{1f3f9}', desc: 'Slow + poison (coming soon)', available: false },
-      { id: 'mage', name: 'Mage', icon: '\u{1f9d9}', desc: 'Chain lightning (coming soon)', available: false },
+      { id: 'dog', name: 'Dog', icon: '\u{1f415}', desc: 'Melee AoE \u00b7 loot', available: true },
+      { id: 'healer', name: 'Healer', icon: '\u{1f49a}', desc: 'Threshold heals + regen', available: true },
+      { id: 'archer', name: 'Archer', icon: '\u{1f3f9}', desc: 'Ranged \u00b7 slow + poison', available: true },
+      { id: 'mage', name: 'Mage', icon: '\u{1f9d9}', desc: 'Chain lightning + vuln', available: true },
+      { id: 'knight', name: 'Knight', icon: '\u2694\ufe0f', desc: 'Tank \u00b7 armor shred', available: true },
+      { id: 'panther', name: 'Panther', icon: '\u{1f408}', desc: 'Chain melee \u00b7 fast', available: true },
+      { id: 'spider', name: 'Spider', icon: '\u{1f577}\ufe0f', desc: 'Stacking poison DoT', available: true },
+      { id: 'hawk', name: 'Hawk', icon: '\u{1f985}', desc: 'Dive bomb AoE', available: true },
+      { id: 'turtle', name: 'Turtle', icon: '\u{1f422}', desc: 'Shield + knockback', available: true },
+      { id: 'owl', name: 'Owl', icon: '\u{1f989}', desc: 'Damage amplifier', available: true },
+      { id: 'rat', name: 'Rat', icon: '\u{1f400}', desc: 'Summon swarm', available: true },
+      { id: 'frog', name: 'Frog', icon: '\u{1f438}', desc: 'Leap + slow + knockback', available: true },
+      { id: 'bat', name: 'Bat', icon: '\u{1f987}', desc: 'Lifesteal + speed buff', available: true },
     ];
 
     const selected = [null, null, null];
