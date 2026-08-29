@@ -98,7 +98,15 @@ class SpawnSystem {
   }
 
   _spawnBoss() {
-    const boss = this.dataManager.enemies.find(e => e.type === 'boss');
+    // Select boss from stage's bossConfig, fallback to first boss in enemies
+    const stage = this.dataManager.stages;
+    let boss;
+    if (stage?.bossConfig?.enemyId) {
+      boss = this.dataManager.enemies.find(e => e.id === stage.bossConfig.enemyId);
+    }
+    if (!boss) {
+      boss = this.dataManager.enemies.find(e => e.type === 'boss');
+    }
     if (!boss) return;
     
     const angle = Math.random() * Math.PI * 2;
@@ -116,7 +124,7 @@ class SpawnSystem {
       size: boss.stats.size,
       enemyData: boss,
       isBoss: true,
-      visual: { shape: 'square', color: '#4A0000' },
+      visual: { shape: 'square', color: this._getEnemyColor(boss.id) || '#4A0000' },
     });
     
     this.eventBus.emit('bossSpawn', { boss });
@@ -131,6 +139,9 @@ class SpawnSystem {
       caster: '#2E86C1',   // Blue
       rat: '#8B6914',      // Brown — fast swarm
       brute: '#2D4A1E',    // Dark green — beefy tank
+      ghoul: '#5B2C6F',    // Dark purple — miniboss
+      boss_necromancer: '#6A0DAD', // Deep purple — necromancer boss
+      boss_gravekeeper: '#4A0000', // Crimson — gravekeeper boss
     };
     return colors[id] || '#555';
   }

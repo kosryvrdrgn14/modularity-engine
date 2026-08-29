@@ -338,5 +338,166 @@
     },
     "screenWipeResistance": 0.8,
     "chargeResumeBehavior": "continue_from_frozen"
+  },
+  {
+    "id": "boss_necromancer",
+    "name": "Lilith the Necromancer",
+    "type": "boss",
+    "stats": {
+      "hp": 1200,
+      "damage": 18,
+      "speed": 65,
+      "size": 30,
+      "xpValue": 75,
+      "goldValue": 1,
+      "goldCoins": {
+        "min": 25,
+        "max": 35
+      }
+    },
+    "behavior": {
+      "pattern": "boss_charge",
+      "params": {
+        "chargeDuration": 1.2,
+        "pauseDuration": 0.8
+      }
+    },
+    "intro": {
+      "bossName": "Lilith the Necromancer",
+      "bossSubtitle": "She who commands the dead",
+      "totalDuration": 4.0,
+      "allowSkip": true,
+      "dimColor": "rgba(20, 0, 40, 0.80)",
+      "nameColor": "#C77DFF",
+      "subtitleColor": "#888888",
+      "nameFontSize": 36,
+      "subtitleFontSize": 16
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 1.0
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 0,
+      "firstAppears": "8:35"
+    },
+    "phases": [
+      {
+        "hpThreshold": 1.0,
+        "speed": 40,
+        "chargeInterval": 3.0,
+        "chargeDuration": 1.2,
+        "pauseDuration": 0.8,
+        "minionCount": 2,
+        "minionInterval": 8.0,
+        "magicBolt": {
+          "interval": 3.0,
+          "damage": 8,
+          "speed": 120
+        }
+      },
+      {
+        "hpThreshold": 0.6,
+        "speed": 60,
+        "chargeInterval": 2.0,
+        "chargeDuration": 1.2,
+        "pauseDuration": 0.6,
+        "minionCount": 3,
+        "minionInterval": 6.0,
+        "magicBolt": {
+          "interval": 2.0,
+          "damage": 8,
+          "speed": 120
+        },
+        "skullRing": {
+          "interval": 8.0,
+          "count": 8,
+          "damage": 10,
+          "speed": 100
+        }
+      },
+      {
+        "hpThreshold": 0.3,
+        "speed": 80,
+        "chargeInterval": 1.5,
+        "chargeDuration": 1.0,
+        "pauseDuration": 0.5,
+        "minionCount": 4,
+        "minionInterval": 4.0,
+        "magicBolt": {
+          "interval": 1.5,
+          "damage": 8,
+          "speed": 150
+        },
+        "skullRing": {
+          "interval": 5.0,
+          "count": 8,
+          "damage": 10,
+          "speed": 120
+        },
+        "shadowStep": {
+          "interval": 6.0,
+          "windup": 0.5
+        }
+      }
+    ],
+    "loot": {
+      "xp": 75,
+      "gold": {
+        "min": 25,
+        "max": 35
+      },
+      "guaranteedPowerUp": "pickup_weapon_level_up"
+    },
+    "screenWipeResistance": 0.8,
+    "chargeResumeBehavior": "continue_from_frozen"
+  },
+  {
+    "id": "ghoul",
+    "name": "Ghoul",
+    "type": "miniboss",
+    "stats": {
+      "hp": 300,
+      "damage": 18,
+      "speed": 60,
+      "size": 22,
+      "xpValue": 30,
+      "goldValue": 15,
+      "goldCoins": {
+        "min": 15,
+        "max": 20
+      }
+    },
+    "behavior": {
+      "pattern": "ghoul_lunge",
+      "params": {
+        "lungeDistance": 200,
+        "lungeSpeed": 300,
+        "windup": 0.5,
+        "stunDuration": 1.5
+      }
+    },
+    "drops": {
+      "powerUpTable": [
+        {
+          "type": "pickup_weapon_level_up",
+          "chance": 1.0
+        },
+        {
+          "type": "magnet",
+          "chance": 0.5
+        }
+      ]
+    },
+    "spawn": {
+      "weight": 0,
+      "firstAppears": "7:00"
+    },
+    "phases": [],
+    "screenWipeResistance": 0.5
   }
 ]

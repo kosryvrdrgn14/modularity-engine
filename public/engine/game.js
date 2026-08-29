@@ -288,6 +288,12 @@ class Game {
     this.levelingSystem.reset();
     this.weaponSystem.reset();
 
+    // Select stage by ID from session, fallback to first available
+    const selectedStageId = this.gameManager.get('session.selected_stage_id');
+    if (selectedStageId && this.dataManager._allStages) {
+      this.dataManager.selectStage(selectedStageId);
+    }
+
     // B1: Apply weapon loadout from current stage tier
     const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
     const stageData = this.dataManager.stages;

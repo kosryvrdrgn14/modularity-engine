@@ -42,8 +42,37 @@ class DataManager {
       }
     }
 
+    // Support stages as array — select by ID
+    this._normalizeStages();
+
     if (onProgress) onProgress(1, 'Ready');
     return true;
+  }
+
+  _normalizeStages() {
+    if (!this.stages) return;
+    if (Array.isArray(this.stages)) {
+      this._allStages = this.stages;
+      // Default to first stage
+      this.selectStage(this.stages[0]?.id);
+    } else {
+      // Single object — wrap in array
+      this._allStages = [this.stages];
+    }
+  }
+
+  selectStage(stageId) {
+    if (!this._allStages) return;
+    if (stageId && this._allStages.find(s => s.id === stageId)) {
+      this.stages = this._allStages.find(s => s.id === stageId);
+    } else {
+      this.stages = this._allStages[0];
+    }
+    return this.stages;
+  }
+
+  getStageList() {
+    return this._allStages || (this.stages ? [this.stages] : []);
   }
 
   getEmbeddedData(key) {
