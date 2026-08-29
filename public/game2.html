@@ -3523,6 +3523,7 @@ class WeaponSystem {
     this._fireW7(player, dt);
     this._fireW8(player, dt);
     this._updateW3Pulses(dt);
+    this._updateW5Chains(dt);
     this._updateW7Combos(dt);
     this._updateW8Explosions(dt);
   }
@@ -3717,7 +3718,7 @@ class WeaponSystem {
       while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
 
       if (Math.abs(angleDiff) <= coneAngle / 2) {
-        this.eventBus.emit('damage', { source: player, target: enemy, damage, type: 'fire' });
+        this.eventBus.emit('damageEntity', { entity: enemy, damage, source: player });
 
         // L4+ Burn effect
         if (level >= 4 && weapon.powerSpikes?.level4) {
@@ -3730,6 +3731,7 @@ class WeaponSystem {
     }
 
     // Emit visual effect
+    this.eventBus.emit('weaponFire', { weaponId: 'w4_flame_wave' });
     this.eventBus.emit('coneAttack', {
       x: player.x, y: player.y, angle, range, coneAngle,
       damage, color: '#FF4500', level,
@@ -3821,11 +3823,8 @@ class WeaponSystem {
     if (nearest) {
       // Chain to next enemy with reduced damage
       const chainDamage = Math.floor(killer.damage * 0.7);
-      this.eventBus.emit('damage', {
-        source: killer.sourceEntity || null,
-        target: nearest,
-        damage: chainDamage,
-        type: 'arcane',
+      this.eventBus.emit('damageEntity', {
+        entity: nearest, damage: chainDamage, source: killer.sourceEntity || null,
       });
 
       // Spawn chain visual
@@ -3839,12 +3838,24 @@ class WeaponSystem {
       killer.chainCount--;
       killer.x = nearest.x;
       killer.y = nearest.y;
-      // Trigger chain on next frame via event
-      setTimeout(() => {
-        if (nearest.hp <= 0) {
-          this._handleW5Chain(killer, nearest);
+      if (killer.chainCount > 0 && nearest.hp <= 0) {
+        if (!this._w5ChainQueue) this._w5ChainQueue = [];
+        this._w5ChainQueue.push({ killer: {...killer}, victim: nearest, timer: 0.05 });
+      }
+    }
+  }
+
+  _updateW5Chains(dt) {
+    if (!this._w5ChainQueue) return;
+    for (let i = this._w5ChainQueue.length - 1; i >= 0; i--) {
+      const q = this._w5ChainQueue[i];
+      q.timer -= dt;
+      if (q.timer <= 0) {
+        this._w5ChainQueue.splice(i, 1);
+        if (q.victim && q.victim.active && q.victim.hp <= 0) {
+          this._handleW5Chain(q.killer, q.victim);
         }
-      }, 50);
+      }
     }
   }
 
@@ -4088,6 +4099,7 @@ class WeaponSystem {
   reset() {
     this.weaponLevels = {};
     this._w3PulseQueue = [];
+    this._w5ChainQueue = [];
     this._w7ComboQueue = [];
     this._w8ExplosionQueue = [];
     this.cooldowns = {};
@@ -4785,10 +4797,20 @@ class Renderer {
     this._announcementTimer = 0;
     this._dimOverlay = null;
     this.imageCache = null;
+    this.coneEffects = [];
+    this.chainLightningEffects = [];
   }
 
   addPulseEffect(x, y, radius, color) {
     this.pulseEffects.push({ x, y, radius, color, age: 0, maxAge: 0.5 });
+  }
+
+  addConeEffect(x, y, angle, range, coneAngle, color) {
+    this.coneEffects.push({ x, y, angle, range, coneAngle, color, age: 0, maxAge: 0.25 });
+  }
+
+  addChainLightningEffect(x1, y1, x2, y2, color) {
+    this.chainLightningEffects.push({ x1, y1, x2, y2, color, age: 0, maxAge: 0.3 });
   }
 
   _updateAndDrawPulses(dt) {
@@ -4822,6 +4844,61 @@ class Renderer {
     }
   }
 
+  _updateAndDrawCones(dt) {
+    const ctx = this.ctx;
+    for (let i = this.coneEffects.length - 1; i >= 0; i--) {
+      const c = this.coneEffects[i];
+      c.age += dt || 1/60;
+      if (c.age >= c.maxAge) { this.coneEffects.splice(i, 1); continue; }
+      const progress = c.age / c.maxAge;
+      const alpha = 0.4 * (1 - progress);
+      const halfAngle = (c.coneAngle || 60) * Math.PI / 360;
+      const range = c.range * (0.5 + 0.5 * progress);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.arc(c.x, c.y, range, c.angle - halfAngle, c.angle + halfAngle);
+      ctx.closePath();
+      ctx.fillStyle = c.color || '#FF4500';
+      ctx.fill();
+      ctx.globalAlpha = alpha * 1.5;
+      ctx.strokeStyle = c.color || '#FF4500';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  _updateAndDrawChainLightnings(dt) {
+    const ctx = this.ctx;
+    for (let i = this.chainLightningEffects.length - 1; i >= 0; i--) {
+      const cl = this.chainLightningEffects[i];
+      cl.age += dt || 1/60;
+      if (cl.age >= cl.maxAge) { this.chainLightningEffects.splice(i, 1); continue; }
+      const progress = cl.age / cl.maxAge;
+      const alpha = 0.8 * (1 - progress);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = cl.color || '#9C27B0';
+      ctx.lineWidth = 3 * (1 - progress);
+      ctx.shadowColor = cl.color || '#9C27B0';
+      ctx.shadowBlur = 10 * (1 - progress);
+      ctx.beginPath();
+      ctx.moveTo(cl.x1, cl.y1);
+      const segments = 5;
+      for (let s = 1; s <= segments; s++) {
+        const t = s / segments;
+        const lx = cl.x1 + (cl.x2 - cl.x1) * t + (Math.random() - 0.5) * 12;
+        const ly = cl.y1 + (cl.y2 - cl.y1) * t + (Math.random() - 0.5) * 12;
+        ctx.lineTo(lx, ly);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+  }
+
   clear() {
     this.ctx.fillStyle = '#1A1A2E';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -4846,6 +4923,8 @@ class Renderer {
 
     // Draw pulse effects (after entities, before camera restore)
     this._updateAndDrawPulses(1/60);
+    this._updateAndDrawCones(1/60);
+    this._updateAndDrawChainLightnings(1/60);
 
     this.ctx.restore();
 
@@ -5551,6 +5630,11 @@ class AudioManager {
     // WEAPON EVENTS
     bus.on('weaponFire', (data) => {
       if (data.weaponId === 'w1_projectile') this.play('w1_fire');
+      else if (data.weaponId === 'w4_flame_wave') this.play('w4_fire');
+      else if (data.weaponId === 'w5_arcane_bolt') this.play('w5_fire');
+      else if (data.weaponId === 'w6_dagger') this.play('w6_fire');
+      else if (data.weaponId === 'w7_sword') this.play('w7_fire');
+      else if (data.weaponId === 'w8_claymore') this.play('w8_fire');
     });
     bus.on('projectileHit', () => this.play('weapon_hit'));
     bus.on('areaPulse', () => this.play('w3_pulse'));
@@ -5663,6 +5747,11 @@ class AudioManager {
     switch (soundId) {
       // WEAPONS
       case 'w1_fire': this._synthW1Fire(vol); break;
+      case 'w4_fire': this._synthW4Fire(vol); break;
+      case 'w5_fire': this._synthW5Fire(vol); break;
+      case 'w6_fire': this._synthW6Fire(vol); break;
+      case 'w7_fire': this._synthW7Fire(vol); break;
+      case 'w8_fire': this._synthW8Fire(vol); break;
       case 'w3_pulse': this._synthW3Pulse(vol); break;
       case 'weapon_hit': this._synthWeaponHit(vol); break;
       case 'weapon_unlock': this._synthWeaponUnlock(vol, channel); break;
@@ -5850,6 +5939,36 @@ class AudioManager {
     // Short square blip, pitch scales with damage
     const freq = 600 + Math.random() * 200;
     this._playNote(freq, vol * 0.12, this.ctx.currentTime, 0.03, 'square', 'sfx');
+  }
+
+  _synthW4Fire(vol) {
+    const t = this.ctx.currentTime;
+    this._playNote(180, vol * 0.15, t, 0.12, 'sawtooth', 'sfx');
+    this._playNote(240, vol * 0.1, t + 0.02, 0.08, 'sine', 'sfx');
+  }
+
+  _synthW5Fire(vol) {
+    const t = this.ctx.currentTime;
+    this._playNote(500, vol * 0.1, t, 0.15, 'sine', 'sfx');
+    this._playNote(800, vol * 0.08, t + 0.05, 0.1, 'sine', 'sfx');
+  }
+
+  _synthW6Fire(vol) {
+    const freq = 1200 + Math.random() * 400;
+    this._playNote(freq, vol * 0.1, this.ctx.currentTime, 0.04, 'sawtooth', 'sfx');
+  }
+
+  _synthW7Fire(vol) {
+    const t = this.ctx.currentTime;
+    this._playNote(300, vol * 0.12, t, 0.06, 'square', 'sfx');
+    this._playNote(250, vol * 0.08, t + 0.12, 0.05, 'square', 'sfx');
+    this._playNote(350, vol * 0.14, t + 0.24, 0.08, 'square', 'sfx');
+  }
+
+  _synthW8Fire(vol) {
+    const t = this.ctx.currentTime;
+    this._playNote(100, vol * 0.2, t, 0.15, 'sawtooth', 'sfx');
+    this._playNote(60, vol * 0.15, t + 0.05, 0.2, 'sine', 'sfx');
   }
 
   _synthW3Pulse(vol) {
@@ -8309,6 +8428,23 @@ class Game {
       if (this.companionSystem) this.companionSystem.refreshWeaponBuffs();
       if (data.weaponId === 'w1_projectile') {
         this.companionSystem.setLevel('dog', data.newLevel);
+      }
+    });
+
+    // Visual effects for weapons
+    this.eventBus.on('coneAttack', (data) => {
+      if (this.renderer) {
+        this.renderer.addConeEffect(data.x, data.y, data.angle, data.range, data.coneAngle, data.color);
+      }
+    });
+    this.eventBus.on('chainLightning', (data) => {
+      if (this.renderer) {
+        this.renderer.addChainLightningEffect(data.x1, data.y1, data.x2, data.y2, data.color);
+      }
+    });
+    this.eventBus.on('arcaneShot', (data) => {
+      if (this.renderer) {
+        this.renderer.addPulseEffect(data.x, data.y, 20, data.color || '#9C27B0');
       }
     });
 

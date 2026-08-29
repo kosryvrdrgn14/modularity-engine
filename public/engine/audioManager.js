@@ -114,6 +114,11 @@ class AudioManager {
     // WEAPON EVENTS
     bus.on('weaponFire', (data) => {
       if (data.weaponId === 'w1_projectile') this.play('w1_fire');
+      else if (data.weaponId === 'w4_flame_wave') this.play('w4_fire');
+      else if (data.weaponId === 'w5_arcane_bolt') this.play('w5_fire');
+      else if (data.weaponId === 'w6_dagger') this.play('w6_fire');
+      else if (data.weaponId === 'w7_sword') this.play('w7_fire');
+      else if (data.weaponId === 'w8_claymore') this.play('w8_fire');
     });
     bus.on('projectileHit', () => this.play('weapon_hit'));
     bus.on('areaPulse', () => this.play('w3_pulse'));
@@ -226,6 +231,11 @@ class AudioManager {
     switch (soundId) {
       // WEAPONS
       case 'w1_fire': this._synthW1Fire(vol); break;
+      case 'w4_fire': this._synthW4Fire(vol); break;
+      case 'w5_fire': this._synthW5Fire(vol); break;
+      case 'w6_fire': this._synthW6Fire(vol); break;
+      case 'w7_fire': this._synthW7Fire(vol); break;
+      case 'w8_fire': this._synthW8Fire(vol); break;
       case 'w3_pulse': this._synthW3Pulse(vol); break;
       case 'weapon_hit': this._synthWeaponHit(vol); break;
       case 'weapon_unlock': this._synthWeaponUnlock(vol, channel); break;
@@ -413,6 +423,41 @@ class AudioManager {
     // Short square blip, pitch scales with damage
     const freq = 600 + Math.random() * 200;
     this._playNote(freq, vol * 0.12, this.ctx.currentTime, 0.03, 'square', 'sfx');
+  }
+
+  _synthW4Fire(vol) {
+    // Flame whoosh — noise burst + low sine
+    const t = this.ctx.currentTime;
+    this._playNote(180, vol * 0.15, t, 0.12, 'sawtooth', 'sfx');
+    this._playNote(240, vol * 0.1, t + 0.02, 0.08, 'sine', 'sfx');
+  }
+
+  _synthW5Fire(vol) {
+    // Arcane ping — rising tone
+    const t = this.ctx.currentTime;
+    this._playNote(500, vol * 0.1, t, 0.15, 'sine', 'sfx');
+    this._playNote(800, vol * 0.08, t + 0.05, 0.1, 'sine', 'sfx');
+  }
+
+  _synthW6Fire(vol) {
+    // Dagger slash — quick high swoosh
+    const freq = 1200 + Math.random() * 400;
+    this._playNote(freq, vol * 0.1, this.ctx.currentTime, 0.04, 'sawtooth', 'sfx');
+  }
+
+  _synthW7Fire(vol) {
+    // Sword combo — punchy mid-range hit
+    const t = this.ctx.currentTime;
+    this._playNote(300, vol * 0.12, t, 0.06, 'square', 'sfx');
+    this._playNote(250, vol * 0.08, t + 0.12, 0.05, 'square', 'sfx');
+    this._playNote(350, vol * 0.14, t + 0.24, 0.08, 'square', 'sfx');
+  }
+
+  _synthW8Fire(vol) {
+    // Claymore slam — deep heavy impact
+    const t = this.ctx.currentTime;
+    this._playNote(100, vol * 0.2, t, 0.15, 'sawtooth', 'sfx');
+    this._playNote(60, vol * 0.15, t + 0.05, 0.2, 'sine', 'sfx');
   }
 
   _synthW3Pulse(vol) {

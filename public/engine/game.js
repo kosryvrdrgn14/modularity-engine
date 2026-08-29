@@ -127,6 +127,24 @@ class Game {
       }
     });
 
+    // Visual effects for weapons
+    this.eventBus.on('coneAttack', (data) => {
+      if (this.renderer) {
+        this.renderer.addConeEffect(data.x, data.y, data.angle, data.range, data.coneAngle, data.color);
+      }
+    });
+    this.eventBus.on('chainLightning', (data) => {
+      if (this.renderer) {
+        this.renderer.addChainLightningEffect(data.x1, data.y1, data.x2, data.y2, data.color);
+      }
+    });
+    this.eventBus.on('arcaneShot', (data) => {
+      // W5 visual: brief flash at cast point
+      if (this.renderer) {
+        this.renderer.addPulseEffect(data.x, data.y, 20, data.color || '#9C27B0');
+      }
+    });
+
     // Boss intro: reset companion state
     this.eventBus.on('bossIntro', () => {
       this.companionSystem.onBossIntro();

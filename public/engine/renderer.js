@@ -10,10 +10,20 @@ class Renderer {
     this._announcementTimer = 0;
     this._dimOverlay = null;
     this.imageCache = null;
+    this.coneEffects = [];
+    this.chainLightningEffects = [];
   }
 
   addPulseEffect(x, y, radius, color) {
     this.pulseEffects.push({ x, y, radius, color, age: 0, maxAge: 0.5 });
+  }
+
+  addConeEffect(x, y, angle, range, coneAngle, color) {
+    this.coneEffects.push({ x, y, angle, range, coneAngle, color, age: 0, maxAge: 0.25 });
+  }
+
+  addChainLightningEffect(x1, y1, x2, y2, color) {
+    this.chainLightningEffects.push({ x1, y1, x2, y2, color, age: 0, maxAge: 0.3 });
   }
 
   _updateAndDrawPulses(dt) {
@@ -47,6 +57,68 @@ class Renderer {
     }
   }
 
+  _updateAndDrawCones(dt) {
+    const ctx = this.ctx;
+    for (let i = this.coneEffects.length - 1; i >= 0; i--) {
+      const c = this.coneEffects[i];
+      c.age += dt || 1/60;
+      if (c.age >= c.maxAge) {
+        this.coneEffects.splice(i, 1);
+        continue;
+      }
+      const progress = c.age / c.maxAge;
+      const alpha = 0.4 * (1 - progress);
+      const halfAngle = (c.coneAngle || 60) * Math.PI / 360; // half in radians
+      const range = c.range * (0.5 + 0.5 * progress);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.arc(c.x, c.y, range, c.angle - halfAngle, c.angle + halfAngle);
+      ctx.closePath();
+      ctx.fillStyle = c.color || '#FF4500';
+      ctx.fill();
+      ctx.globalAlpha = alpha * 1.5;
+      ctx.strokeStyle = c.color || '#FF4500';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  _updateAndDrawChainLightnings(dt) {
+    const ctx = this.ctx;
+    for (let i = this.chainLightningEffects.length - 1; i >= 0; i--) {
+      const cl = this.chainLightningEffects[i];
+      cl.age += dt || 1/60;
+      if (cl.age >= cl.maxAge) {
+        this.chainLightningEffects.splice(i, 1);
+        continue;
+      }
+      const progress = cl.age / cl.maxAge;
+      const alpha = 0.8 * (1 - progress);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = cl.color || '#9C27B0';
+      ctx.lineWidth = 3 * (1 - progress);
+      ctx.shadowColor = cl.color || '#9C27B0';
+      ctx.shadowBlur = 10 * (1 - progress);
+      // Draw jagged lightning line
+      ctx.beginPath();
+      ctx.moveTo(cl.x1, cl.y1);
+      const segments = 5;
+      for (let s = 1; s <= segments; s++) {
+        const t = s / segments;
+        const lx = cl.x1 + (cl.x2 - cl.x1) * t + (Math.random() - 0.5) * 12;
+        const ly = cl.y1 + (cl.y2 - cl.y1) * t + (Math.random() - 0.5) * 12;
+        ctx.lineTo(lx, ly);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+  }
+
   clear() {
     this.ctx.fillStyle = '#1A1A2E';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -71,6 +143,8 @@ class Renderer {
 
     // Draw pulse effects (after entities, before camera restore)
     this._updateAndDrawPulses(1/60);
+    this._updateAndDrawCones(1/60);
+    this._updateAndDrawChainLightnings(1/60);
 
     this.ctx.restore();
 

@@ -946,3 +946,86 @@ When introducing a new data source (dev loadout, player inventory, etc.), trace 
 ---
 
 *Dev Loadout Selector session bugs: 3 found, 3 fixed, 0 open.*
+
+---
+
+## Bug #56: W4 Flame Wave deals ZERO damage — upgrade freeze
+**Date:** Current session  
+**Severity:** 🔴 Critical  
+**Status:** Fixed
+
+**Symptom:** W4 (Flame Wave) appeared to fire (visual cone visible) but dealt zero damage to enemies. Selecting the Flame Wave upgrade caused the game to freeze.
+
+**Root cause:** W4 emitted `this.eventBus.emit('damage', { source: player, target: enemy, damage, type: 'fire' })` — but `'damage'` is a **notification event** used by FloatingTextSystem for display. No system listens for it to actually apply damage. W4 also didn't emit `weaponFire`, so no audio played.
+
+**Impact:** Enemies were never damaged by W4, they accumulated on screen, and the upgrade selection triggered state processing on an impossible game state, causing a freeze.
+
+**Fix:** Changed W4 to emit `damageEntity` (which DamageSystem handles) for each enemy in the cone, plus added `weaponFire` emission for audio.
+
+**Lesson:** Always trace event names through the full emit→listener chain. `'damage'` is NOT the same as `'damageEntity'` — the former is display-only, the latter applies actual damage. Never assume an event name sounds like it does damage.
+
+---
+
+## Bug #57: W4, W5, W6 missing visual effects
+**Date:** Current session  
+**Severity:** 🟡 Medium  
+**Status:** Fixed
+
+**Symptom:** W4 (Flame Wave) cone attack, W5 (Arcane Bolt) arcane shot and chain lightning, W6 (Dagger) homing projectiles had no visual feedback.
+
+**Root cause:** These weapons emitted custom events (`coneAttack`, `arcaneShot`, `chainLightning`) but nothing in the Renderer or Game listened for them.
+
+**Impact:** Weapons appeared to fire into empty air with no visible effect, making combat feel broken.
+
+**Fix:** Added `coneEffects` and `chainLightningEffects` arrays to Renderer with drawing methods (`_updateAndDrawCones`, `_updateAndDrawChainLightnings`). Added event listeners in Game.init() to wire `coneAttack`→`addConeEffect`, `chainLightning`→`addChainLightningEffect`, `arcaneShot`→`addPulseEffect` (as a brief cast flash).
+
+---
+
+## Bug #58: W5 Arcane Bolt chain uses setTimeout (freeze risk)
+**Date:** Current session  
+**Severity:** 🟡 Medium  
+**Status:** Fixed
+
+**Symptom:** Same pattern as W7/W8 — W5 chain reaction used `setTimeout` to trigger the next chain hit 50ms later. If the game paused (level-up, game over) during a chain, the callback would fire against stale entity state.
+
+**Root cause:** `setTimeout(() => { if (nearest.hp <= 0) this._handleW5Chain(killer, nearest); }, 50)` runs outside the game loop.
+
+**Fix:** Replaced with `_w5ChainQueue` — a frame-based queue processed in `_updateW5Chains(dt)`. Also fixed the chain damage event from `'damage'` (notification only) to `'damageEntity'` (actual damage).
+
+---
+
+## Bug #59: W4-W8 weapons had no audio
+**Date:** Current session  
+**Severity:** 🟡 Medium  
+**Status:** Fixed
+
+**Symptom:** W4 (Flame Wave), W5 (Arcane Bolt), W6 (Dagger), W7 (Sword), W8 (Claymore) fire sounds were silent.
+
+**Root cause:** AudioManager only had a handler for `w1_projectile` weaponFire events. W4-W8 emitted `weaponFire` events but no synth methods existed for them.
+
+**Fix:** Added `weaponFire` event handlers for all 5 new weapons in AudioManager, with unique synth sounds (W4=flame whoosh, W5=arcane ping, W6=slash swoosh, W7=combo hit, W8=heavy slam). Added corresponding switch cases and `_synthW*_Fire()` methods.
+
+---
+
+### Weapon Damage Pipeline Audit (post-fix):
+
+| Weapon | Damage Event | Listener | Visual | Audio | Status |
+|---|---|---|---|---|---|
+| W1 Projectile | `projectileHit` (CollisionSystem) | DamageSystem ✅ | ✅ projectile entity | ✅ w1_fire | ✅ |
+| W2 Orbit | `projectileHit` (CollisionSystem) | DamageSystem ✅ | ✅ orb entities | ✅ orbit hum | ✅ |
+| W3 Area Pulse | `areaPulse` | DamageSystem ✅ | ✅ pulse effect | ✅ w3_pulse | ✅ |
+| W4 Flame Wave | `damageEntity` | DamageSystem ✅ | ✅ cone effect | ✅ w4_fire | ✅ |
+| W5 Arcane Bolt | `projectileHit` (CollisionSystem) + `damageEntity` (chain) | DamageSystem ✅ | ✅ arcane pulse + chain lightning | ✅ w5_fire | ✅ |
+| W6 Dagger | `damageEntity` (cone) + projectile entities (Lv7 homing) | DamageSystem ✅ | ✅ projectile entities | ✅ w6_fire | ✅ |
+| W7 Sword | `damageEntity` (combo) | DamageSystem ✅ | ✅ (combo queue) | ✅ w7_fire | ✅ |
+| W8 Claymore | `damageEntity` (slam) + `areaPulse` (explosion) | DamageSystem ✅ | ✅ pulse effect (explosion) | ✅ w8_fire | ✅ |
+
+### setTimeout Audit (all frame-based now):
+
+| Weapon | Before | After |
+|---|---|---|
+| W5 Chain | `setTimeout` 50ms | `_w5ChainQueue` frame-based |
+| W7 Combo | `setTimeout` 0/250/500ms | `_w7ComboQueue` frame-based |
+| W8 Explosion | `setTimeout` 200ms | `_w8ExplosionQueue` frame-based |
+
+*Weapon damage pipeline session: 4 found, 4 fixed, 0 open.*

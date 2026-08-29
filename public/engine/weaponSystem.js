@@ -32,6 +32,7 @@ class WeaponSystem {
     this._fireW7(player, dt);
     this._fireW8(player, dt);
     this._updateW3Pulses(dt);
+    this._updateW5Chains(dt);
     this._updateW7Combos(dt);
     this._updateW8Explosions(dt);
   }
@@ -226,7 +227,7 @@ class WeaponSystem {
       while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
 
       if (Math.abs(angleDiff) <= coneAngle / 2) {
-        this.eventBus.emit('damage', { source: player, target: enemy, damage, type: 'fire' });
+        this.eventBus.emit('damageEntity', { entity: enemy, damage, source: player });
 
         // L4+ Burn effect
         if (level >= 4 && weapon.powerSpikes?.level4) {
@@ -238,7 +239,8 @@ class WeaponSystem {
       }
     }
 
-    // Emit visual effect
+    // Emit visual effect and weapon fire
+    this.eventBus.emit('weaponFire', { weaponId: 'w4_flame_wave' });
     this.eventBus.emit('coneAttack', {
       x: player.x, y: player.y, angle, range, coneAngle,
       damage, color: '#FF4500', level,
@@ -330,11 +332,8 @@ class WeaponSystem {
     if (nearest) {
       // Chain to next enemy with reduced damage
       const chainDamage = Math.floor(killer.damage * 0.7);
-      this.eventBus.emit('damage', {
-        source: killer.sourceEntity || null,
-        target: nearest,
-        damage: chainDamage,
-        type: 'arcane',
+      this.eventBus.emit('damageEntity', {
+        entity: nearest, damage: chainDamage, source: killer.sourceEntity || null,
       });
 
       // Spawn chain visual
@@ -344,16 +343,29 @@ class WeaponSystem {
         color: '#9C27B0',
       });
 
-      // Continue chain with reduced count
+      // Continue chain with reduced count (frame-based, not setTimeout)
       killer.chainCount--;
       killer.x = nearest.x;
       killer.y = nearest.y;
-      // Trigger chain on next frame via event
-      setTimeout(() => {
-        if (nearest.hp <= 0) {
-          this._handleW5Chain(killer, nearest);
+      if (killer.chainCount > 0 && nearest.hp <= 0) {
+        if (!this._w5ChainQueue) this._w5ChainQueue = [];
+        this._w5ChainQueue.push({ killer: {...killer}, victim: nearest, timer: 0.05 });
+      }
+    }
+  }
+
+  // Called from update() to process pending W5 chain reactions
+  _updateW5Chains(dt) {
+    if (!this._w5ChainQueue) return;
+    for (let i = this._w5ChainQueue.length - 1; i >= 0; i--) {
+      const q = this._w5ChainQueue[i];
+      q.timer -= dt;
+      if (q.timer <= 0) {
+        this._w5ChainQueue.splice(i, 1);
+        if (q.victim && q.victim.active && q.victim.hp <= 0) {
+          this._handleW5Chain(q.killer, q.victim);
         }
-      }, 50);
+      }
     }
   }
 
@@ -637,6 +649,7 @@ class WeaponSystem {
   reset() {
     this.weaponLevels = {};
     this._w3PulseQueue = [];
+    this._w5ChainQueue = [];
     this._w7ComboQueue = [];
     this._w8ExplosionQueue = [];
     this.cooldowns = {};
