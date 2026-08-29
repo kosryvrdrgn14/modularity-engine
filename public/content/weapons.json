@@ -10,7 +10,7 @@
       {
         "level": 1,
         "damage": 8,
-        "cooldown": 1.0,
+        "cooldown": 1,
         "projectileCount": 1
       },
       {
@@ -82,9 +82,9 @@
       {
         "level": 1,
         "damage": 5,
-        "cooldown": 2.0,
+        "cooldown": 2,
         "orbitCount": 2,
-        "orbitSpeed": 2.0,
+        "orbitSpeed": 2,
         "orbitRadius": 80
       },
       {
@@ -130,9 +130,9 @@
       {
         "level": 7,
         "damage": 16,
-        "cooldown": 1.0,
+        "cooldown": 1,
         "orbitCount": 4,
-        "orbitSpeed": 1.0,
+        "orbitSpeed": 1,
         "orbitRadius": 160
       }
     ],
@@ -189,7 +189,7 @@
       {
         "level": 4,
         "damage": 22,
-        "cooldown": 2.0,
+        "cooldown": 2,
         "pulseRadius": 110,
         "pulseCount": 2
       },
@@ -227,7 +227,7 @@
         "name": "Devastation",
         "description": "Triple + stun",
         "statModifiers": {
-          "thirdPulseStunDuration": 1.0
+          "thirdPulseStunDuration": 1
         }
       }
     },
@@ -328,7 +328,7 @@
       {
         "level": 1,
         "damage": 5,
-        "cooldown": 2.0,
+        "cooldown": 2,
         "chainCount": 0,
         "chainRange": 80
       },
@@ -363,7 +363,7 @@
       {
         "level": 6,
         "damage": 35,
-        "cooldown": 1.0,
+        "cooldown": 1,
         "chainCount": 3,
         "chainRange": 100
       },
@@ -400,7 +400,7 @@
   },
   {
     "id": "w6_dagger",
-    "name": "Shadow Dagger",
+    "name": "Dagger",
     "type": "melee_cone",
     "targeting": "nearest",
     "unlockLevel": 1,
@@ -482,7 +482,7 @@
   },
   {
     "id": "w7_sword",
-    "name": "Soul Whip",
+    "name": "Soul Sword",
     "type": "melee_combo",
     "targeting": "self",
     "unlockLevel": 1,
@@ -523,7 +523,7 @@
       {
         "level": 5,
         "damage": 12,
-        "cooldown": 1.0,
+        "cooldown": 1,
         "range": 175,
         "arcWidth": 110,
         "comboHits": 3
@@ -562,7 +562,7 @@
   },
   {
     "id": "w8_claymore",
-    "name": "Grave Claymore",
+    "name": "Claymore",
     "type": "melee_slam",
     "targeting": "nearest",
     "unlockLevel": 1,
@@ -571,7 +571,7 @@
       {
         "level": 1,
         "damage": 18,
-        "cooldown": 2.0,
+        "cooldown": 2,
         "range": 100,
         "aoeWidth": 120
       },

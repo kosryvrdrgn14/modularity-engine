@@ -892,7 +892,7 @@ class Game {
     const weaponNames = {
       w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area',
       w4_flame_wave: 'Flame Wave', w5_arcane_bolt: 'Arcane Bolt',
-      w6_shadow_dagger: 'Dagger', w7_soul_whip: 'Whip', w8_grave_claymore: 'Claymore',
+      w6_dagger: 'Dagger', w7_sword: 'Sword', w8_claymore: 'Claymore',
     };
     for (const wid of activeWeaponIds) {
       const wLevel = this.weaponSystem.weaponLevels[wid] || 0;

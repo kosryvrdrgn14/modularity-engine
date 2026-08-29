@@ -139,7 +139,7 @@ class TitleMenu {
     }
 
     // Weapon name map
-    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area', w4_flame_wave: 'Flame Wave', w5_arcane_bolt: 'Arcane Bolt' };
+    const weaponNames = { w1_projectile: 'Projectile', w2_orbit: 'Orbit', weapon_area_pulse: 'Area', w4_flame_wave: 'Flame Wave', w5_arcane_bolt: 'Arcane Bolt', w6_dagger: 'Dagger', w7_sword: 'Sword', w8_claymore: 'Claymore' };
     const tierIcons = { quick: '\u26a1', standard: '\u2694\ufe0f', highlight: '\u{1f525}' };
     const tierLabels = { quick: 'Quick', standard: 'Standard', highlight: 'Highlight' };
     const tierColors = { quick: '#4FC3F7', standard: '#FFD700', highlight: '#FF5722' };
@@ -223,9 +223,9 @@ class TitleMenu {
       { id: 'weapon_area_pulse', name: 'Area', icon: '\u{1f4a5}', type: 'ranged', unlockLevel: 6 },
       { id: 'w4_flame_wave', name: 'Flame Wave', icon: '\u{1f525}', type: 'ranged', unlockLevel: 4 },
       { id: 'w5_arcane_bolt', name: 'Arcane Bolt', icon: '\u26a1', type: 'ranged', unlockLevel: 5 },
-      { id: 'w6_shadow_dagger', name: 'Dagger', icon: '\u{1f5e1}\ufe0f', type: 'melee', unlockLevel: 1 },
-      { id: 'w7_soul_whip', name: 'Whip', icon: '\u2694\ufe0f', type: 'melee', unlockLevel: 1 },
-      { id: 'w8_grave_claymore', name: 'Claymore', icon: '\u{1fa93}', type: 'melee', unlockLevel: 1 },
+      { id: 'w6_dagger', name: 'Dagger', icon: '\u{1f5e1}\ufe0f', type: 'melee', unlockLevel: 1 },
+      { id: 'w7_sword', name: 'Sword', icon: '\u2694\ufe0f', type: 'melee', unlockLevel: 1 },
+      { id: 'w8_claymore', name: 'Claymore', icon: '\u{1fa93}', type: 'melee', unlockLevel: 1 },
     ];
 
     // Default: stage-recommended weapons pre-filled (player can change)

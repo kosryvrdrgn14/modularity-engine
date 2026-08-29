@@ -416,7 +416,7 @@ const EMBEDDED_DATA = {
     },
     {
       id: "w6_dagger",
-      name: "Shadow Dagger",
+      name: "Dagger",
       type: "melee_cone",
       targeting: "nearest",
       unlockLevel: 1,
@@ -496,7 +496,7 @@ const EMBEDDED_DATA = {
     },
     {
       id: "w7_sword",
-      name: "Soul Whip",
+      name: "Soul Sword",
       type: "melee_combo",
       targeting: "self",
       unlockLevel: 1,
@@ -574,7 +574,7 @@ const EMBEDDED_DATA = {
     },
     {
       id: "w8_claymore",
-      name: "Grave Claymore",
+      name: "Claymore",
       type: "melee_slam",
       targeting: "nearest",
       unlockLevel: 1,
