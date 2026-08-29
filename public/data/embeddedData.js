@@ -4,7 +4,6 @@ const EMBEDDED_DATA = {
   characters: {
     id: "player_default",
     name: "The Survivor",
-    description: "A lone hero fighting through the night.",
     stats: {
       maxHealth: 100,
       moveSpeed: 200,
@@ -25,7 +24,7 @@ const EMBEDDED_DATA = {
       color: "#FFD700"
     }
   },
-  weapons: [
+  recommendedWeapons: [
     {
       id: "w1_projectile",
       name: "Projectile",
@@ -80,14 +79,12 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Pierce",
-          description: "Pierces +1 enemy",
           statModifiers: {
             pierceCount: 1
           }
         },
         level7: {
           name: "Split",
-          description: "Splits into 3",
           statModifiers: {
             splitCount: 3
           }
@@ -166,14 +163,12 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Expanded Orbit",
-          description: "+50% radius, +1 orb",
           statModifiers: {
             orbitRadiusBonus: 0.5
           }
         },
         level7: {
           name: "Afterimage",
-          description: "Damaging trails",
           statModifiers: {
             afterimageDuration: 0.5
           }
@@ -245,14 +240,12 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Double Pulse",
-          description: "Fires twice",
           statModifiers: {
             pulseCountBonus: 1
           }
         },
         level7: {
           name: "Devastation",
-          description: "Triple + stun",
           statModifiers: {
             thirdPulseStunDuration: 1
           }
@@ -324,7 +317,6 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Inferno",
-          description: "Burns enemies for 3s",
           statModifiers: {
             burnDuration: 3,
             burnDamage: 5
@@ -332,7 +324,6 @@ const EMBEDDED_DATA = {
         },
         level7: {
           name: "Explosion",
-          description: "Kills explode in small AoE",
           statModifiers: {
             explodeRadius: 40,
             explodeDamage: 15
@@ -405,14 +396,12 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Chain Lightning",
-          description: "Bolt chains to 1 enemy",
           statModifiers: {
             chainCount: 1
           }
         },
         level7: {
           name: "Arcane Storm",
-          description: "Chains to 5, slows 50%",
           statModifiers: {
             chainCount: 5,
             slowAmount: 0.5,
@@ -495,11 +484,9 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Triple Stab",
-          description: "3 rapid hits in cone"
         },
         level7: {
           name: "Homing Daggers",
-          description: "5 daggers seek enemies"
         }
       },
       visual: {
@@ -575,11 +562,9 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Wide Arc",
-          description: "Wider swing range"
         },
         level7: {
           name: "Crimson Whip",
-          description: "Massive 360 coverage"
         }
       },
       visual: {
@@ -656,11 +641,9 @@ const EMBEDDED_DATA = {
       powerSpikes: {
         level4: {
           name: "Ground Explosion",
-          description: "Explosion on impact"
         },
         level7: {
           name: "Devastation",
-          description: "Extended range + bigger explosion"
         }
       },
       visual: {
@@ -1365,33 +1348,30 @@ const EMBEDDED_DATA = {
           }
         ]
       },
-      weaponLoadouts: {
+      tierConfig: {
         quick: {
           duration: 180,
-          weapons: [
+          recommendedWeapons: [
             "w1_projectile",
             "w4_flame_wave",
             "weapon_area_pulse"
           ],
-          description: "Frontloaded for fast clears"
         },
         standard: {
           duration: 300,
-          weapons: [
+          recommendedWeapons: [
             "w1_projectile",
             "w2_orbit",
             "weapon_area_pulse"
           ],
-          description: "Balanced for standard play"
         },
         highlight: {
           duration: 600,
-          weapons: [
+          recommendedWeapons: [
             "w1_projectile",
             "w5_arcane_bolt",
             "weapon_area_pulse"
           ],
-          description: "Scaling for extended runs"
         }
       },
       tierMultipliers: {
@@ -1420,7 +1400,6 @@ const EMBEDDED_DATA = {
           xp: 1
         }
       },
-      description: "5-minute introductory stage. Fight through waves of undead and face the Gravekeeper."
     },
     {
       id: "stage_graveyard_extended",
@@ -1821,33 +1800,30 @@ const EMBEDDED_DATA = {
           }
         ]
       },
-      weaponLoadouts: {
+      tierConfig: {
         quick: {
           duration: 180,
-          weapons: [
+          recommendedWeapons: [
             "w1_projectile",
             "w4_flame_wave",
             "weapon_area_pulse"
           ],
-          description: "Frontloaded for fast clears"
         },
         standard: {
           duration: 300,
-          weapons: [
+          recommendedWeapons: [
             "w1_projectile",
             "w2_orbit",
             "weapon_area_pulse"
           ],
-          description: "Balanced for standard play"
         },
         highlight: {
           duration: 600,
-          weapons: [
+          recommendedWeapons: [
             "w1_projectile",
             "w5_arcane_bolt",
             "weapon_area_pulse"
           ],
-          description: "Scaling for extended runs"
         }
       },
       tierMultipliers: {
@@ -1876,7 +1852,6 @@ const EMBEDDED_DATA = {
           xp: 1
         }
       },
-      description: "10-minute extended stage. Face all enemy types, a ghoul miniboss, and Lilith the Necromancer."
     }
   ],
   pickups: [

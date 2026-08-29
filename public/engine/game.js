@@ -294,17 +294,17 @@ class Game {
       this.dataManager.selectStage(selectedStageId);
     }
 
-    // B1: Apply weapon loadout from current stage tier
+    // B1: Player loadout — weapons are what the player chose, not the stage's
     const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
     const stageData = this.dataManager.stages;
-    const loadout = stageData?.weaponLoadouts?.[stageTier];
-    const stageWeapons = loadout ? loadout.weapons : ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
-    // Dev override: merge stage loadout with player-chosen weapons
+    const tierConfig = stageData?.tierConfig?.[stageTier];
+    // Loadout comes exclusively from player selection (stored in session)
     const devWeapons = this.gameManager.get('session.dev_weapons');
     if (devWeapons && devWeapons.length > 0) {
-      this._activeWeapons = [...new Set([...stageWeapons, ...devWeapons.filter(Boolean)])];
+      this._activeWeapons = devWeapons.filter(Boolean);
     } else {
-      this._activeWeapons = [...stageWeapons];
+      // Fallback: use stage-recommended weapons if player hasn't chosen
+      this._activeWeapons = tierConfig?.recommendedWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     }
     for (const wid of this._activeWeapons) {
       this.weaponSystem.unlockWeapon(wid);
@@ -319,7 +319,7 @@ class Game {
       this.spawnSystem._tierSpawnRateMult = tierMults?.spawnRate || 1.0;
     }
     // Dynamic boss spawn time from stage data (duration - 60s for boss fight)
-    const stageDuration = loadout?.duration || 300;
+    const stageDuration = tierConfig?.duration || 300;
     const bossSpawnTime = stageDuration - 60; // Boss spawns 60s before end
     this._bossSpawnTime = bossSpawnTime;
     this.spawnSystem.reset(bossSpawnTime);

@@ -6552,21 +6552,21 @@ class TitleMenu {
       if (bossEnemy) html += '<span style="background:#3D1F4D;color:#C77DFF;font-size:10px;padding:2px 6px;border-radius:4px;">Boss: ' + bossEnemy.name + '</span>';
       html += '<span style="background:#1a3310;color:#4CAF50;font-size:10px;padding:2px 6px;border-radius:4px;">' + (stage.waves?.length || 0) + ' waves</span>';
       html += '</div>';
-      for (const [tierKey, loadout] of Object.entries(stage.weaponLoadouts || {})) {
+      for (const [tierKey, tierCfg] of Object.entries(stage.tierConfig || {})) {
         const icon = tierIcons[tierKey] || '';
         const label = tierLabels[tierKey] || tierKey;
         const color = tierColors[tierKey] || '#e0e0e0';
-        const mins = Math.floor(loadout.duration / 60);
-        const secs = loadout.duration % 60;
+        const mins = Math.floor(tierCfg.duration / 60);
+        const secs = tierCfg.duration % 60;
         const timeStr = mins + ':' + String(secs).padStart(2, '0');
-        const wNames = (loadout.weapons || []).map(w => weaponNames[w] || w).join(', ');
+        const wNames = (tierCfg.recommendedWeapons || []).map(w => weaponNames[w] || w).join(', ');
         html += '<div class="dev-tier-btn" data-stage="' + stage.id + '" data-tier="' + tierKey + '" style="background:#0d0d1a;border:1px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;color:#e0e0e0;transition:border-color 0.15s;">';
         html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
         html += '<span style="font-size:13px;font-weight:bold;color:' + color + ';">' + icon + ' ' + label + '</span>';
         html += '<span style="font-size:12px;color:#FFD700;">' + timeStr + '</span>';
         html += '</div>';
         html += '<div style="font-size:10px;color:#666;margin-top:4px;">' + wNames + '</div>';
-        html += '<div style="font-size:10px;color:#555;margin-top:2px;">' + (loadout.description || '') + '</div>';
+        html += '<div style="font-size:10px;color:#555;margin-top:2px;">' + (tierCfg.description || '') + '</div>';
         html += '</div>';
       }
       html += '</div>';
@@ -6604,8 +6604,8 @@ class TitleMenu {
     ];
 
     const stageData = this.game.dataManager?.stages;
-    const stageLoadout = stageData?.weaponLoadouts?.[stageTier];
-    const defaultWeapons = stageLoadout?.weapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const tierCfg = stageData?.tierConfig?.[stageTier];
+    const defaultWeapons = tierCfg?.recommendedWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     const selected = [defaultWeapons[0] || null, defaultWeapons[1] || null, defaultWeapons[2] || null];
 
     const self = this;
@@ -8340,16 +8340,17 @@ class Game {
       this.dataManager.selectStage(selectedStageId);
     }
 
-    // B1: Apply weapon loadout from current stage tier
+    // B1: Player loadout — weapons are what the player chose, not the stage's
     const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
     const stageData = this.dataManager.stages;
-    const loadout = stageData?.weaponLoadouts?.[stageTier];
-    const stageWeapons = loadout ? loadout.weapons : ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const tierConfig = stageData?.tierConfig?.[stageTier];
+    // Loadout comes exclusively from player selection (stored in session)
     const devWeapons = this.gameManager.get('session.dev_weapons');
     if (devWeapons && devWeapons.length > 0) {
-      this._activeWeapons = [...new Set([...stageWeapons, ...devWeapons.filter(Boolean)])];
+      this._activeWeapons = devWeapons.filter(Boolean);
     } else {
-      this._activeWeapons = [...stageWeapons];
+      // Fallback: use stage-recommended weapons if player hasn't chosen
+      this._activeWeapons = tierConfig?.recommendedWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     }
     for (const wid of this._activeWeapons) {
       this.weaponSystem.unlockWeapon(wid);
@@ -8364,7 +8365,7 @@ class Game {
       this.spawnSystem._tierSpawnRateMult = tierMults?.spawnRate || 1.0;
     }
     // Dynamic boss spawn time from stage data (duration - 60s for boss fight)
-    const stageDuration = loadout?.duration || 300;
+    const stageDuration = tierConfig?.duration || 300;
     const bossSpawnTime = stageDuration - 60; // Boss spawns 60s before end
     this._bossSpawnTime = bossSpawnTime;
     this.spawnSystem.reset(bossSpawnTime);

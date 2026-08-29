@@ -169,14 +169,14 @@ class TitleMenu {
       html += '<span style="background:#1a3310;color:#4CAF50;font-size:10px;padding:2px 6px;border-radius:4px;">' + (stage.waves?.length || 0) + ' waves</span>';
       html += '</div>';
 
-      for (const [tierKey, loadout] of Object.entries(stage.weaponLoadouts || {})) {
+      for (const [tierKey, tierCfg] of Object.entries(stage.tierConfig || {})) {
         const icon = tierIcons[tierKey] || '';
         const label = tierLabels[tierKey] || tierKey;
         const color = tierColors[tierKey] || '#e0e0e0';
-        const mins = Math.floor(loadout.duration / 60);
-        const secs = loadout.duration % 60;
+        const mins = Math.floor(tierCfg.duration / 60);
+        const secs = tierCfg.duration % 60;
         const timeStr = mins + ':' + String(secs).padStart(2, '0');
-        const weaponNamesStr = (loadout.weapons || []).map(w => weaponNames[w] || w).join(', ');
+        const weaponNamesStr = (tierCfg.recommendedWeapons || []).map(w => weaponNames[w] || w).join(', ');
 
         html += '<div class="dev-tier-btn" data-stage="' + stage.id + '" data-tier="' + tierKey + '" ';
         html += 'style="background:#0d0d1a;border:1px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;color:#e0e0e0;transition:border-color 0.15s;">';
@@ -185,7 +185,7 @@ class TitleMenu {
         html += '<span style="font-size:12px;color:#FFD700;">' + timeStr + '</span>';
         html += '</div>';
         html += '<div style="font-size:10px;color:#666;margin-top:4px;">' + weaponNamesStr + '</div>';
-        html += '<div style="font-size:10px;color:#555;margin-top:2px;">' + (loadout.description || '') + '</div>';
+        html += '<div style="font-size:10px;color:#555;margin-top:2px;">' + (tierCfg.description || '') + '</div>';
         html += '</div>';
       }
       html += '</div>';
@@ -228,10 +228,10 @@ class TitleMenu {
       { id: 'w8_grave_claymore', name: 'Claymore', icon: '\u{1fa93}', type: 'melee', unlockLevel: 1 },
     ];
 
-    // Default: stage loadout weapons pre-filled
+    // Default: stage-recommended weapons pre-filled (player can change)
     const stageData = this.game.dataManager?.stages;
-    const stageLoadout = stageData?.weaponLoadouts?.[stageTier];
-    const defaultWeapons = stageLoadout?.weapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+    const tierCfg = stageData?.tierConfig?.[stageTier];
+    const defaultWeapons = tierCfg?.recommendedWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     const selected = [defaultWeapons[0] || null, defaultWeapons[1] || null, defaultWeapons[2] || null];
 
     const self = this;
