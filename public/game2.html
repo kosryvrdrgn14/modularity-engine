@@ -3499,9 +3499,9 @@ class WeaponSystem {
   }
 
   init(player) {
-    // Start with W1
-    this.weaponLevels['w1_projectile'] = 1;
-    this.cooldowns['w1_projectile'] = 0;
+    // Do NOT hardcode any weapons here. Weapon initialization is handled by
+    // Game.startGame() calling unlockWeapon() for each weapon in _activeWeapons.
+    // This method is only used for player-reference setup if needed.
   }
 
   update(dt) {
