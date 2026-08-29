@@ -4112,6 +4112,8 @@ class DamageSystem {
     this.eventBus.on('projectileHit', (data) => this._handleProjectileHit(data));
     this.eventBus.on('areaPulse', (data) => this._handleAreaPulse(data));
     this.eventBus.on('companionDamage', (data) => this._handleCompanionDamage(data));
+    // W6/W7/W8 melee weapons emit 'damageEntity' — handle it here
+    this.eventBus.on('damageEntity', (data) => this._handleDamage(data.entity, data.source, data.damage));
   }
 
   _handleCompanionDamage(data) {
