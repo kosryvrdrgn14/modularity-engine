@@ -1,0 +1,386 @@
+class WeaponSystem {
+  constructor(entityManager, dataManager, eventBus) {
+    this.entityManager = entityManager;
+    this.dataManager = dataManager;
+    this.eventBus = eventBus;
+    this.weaponLevels = {};
+    this.cooldowns = {};
+  }
+
+  init(player) {
+    // Start with W1
+    this.weaponLevels['w1_projectile'] = 1;
+    this.cooldowns['w1_projectile'] = 0;
+  }
+
+  update(dt) {
+    const player = this.entityManager.getActive('player')[0];
+    if (!player) return;
+
+    // Update cooldowns
+    for (const weaponId in this.cooldowns) {
+      this.cooldowns[weaponId] = Math.max(0, this.cooldowns[weaponId] - dt);
+    }
+
+    // Fire weapons
+    this._fireW1(player, dt);
+    this._fireW2(player, dt);
+    this._fireW3(player, dt);
+    this._fireW4(player, dt);
+    this._fireW5(player, dt);
+    this._updateW3Pulses(dt);
+  }
+
+  _fireW1(player, dt) {
+    const level = this.weaponLevels['w1_projectile'];
+    if (!level) return;
+
+    if (this.cooldowns['w1_projectile'] > 0) return;
+
+    const weapon = this.dataManager.weapons[0];
+    const stats = weapon.statsPerLevel[level - 1];
+    this.cooldowns['w1_projectile'] = stats.cooldown;
+
+    // Find nearest enemy
+    const enemies = this.entityManager.getActive('enemy');
+    if (enemies.length === 0) return;
+
+    let nearest = null;
+    let minDist = Infinity;
+    for (const enemy of enemies) {
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    if (!nearest) return;
+
+    // Fire projectile
+    const dx = nearest.x - player.x;
+    const dy = nearest.y - player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) return;  // Guard: enemy on top of player
+    const speed = 400;
+
+    const finalDamage = Math.floor(stats.damage * (player.damageMultiplier || 1));
+    const projCount = stats.projectileCount || 1;
+    const baseAngle = Math.atan2(dy, dx);
+    const spreadAngle = 0.25;
+    for (let i = 0; i < projCount; i++) {
+      const angle = projCount === 1 ? baseAngle : baseAngle + (i - (projCount - 1) / 2) * spreadAngle;
+      this.entityManager.create('projectile', {
+        x: player.x,
+        y: player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        damage: finalDamage,
+        size: 4,
+        visual: { shape: 'square', color: '#FFD700' },
+      });
+    }
+    // GAP 1 FIX: Emit weaponFire so AudioManager can play w1_fire
+    this.eventBus.emit('weaponFire', { weaponId: 'w1_projectile' });
+  }
+
+  _fireW2(player, dt) {
+    const level = this.weaponLevels['w2_orbit'];
+    if (!level) return;
+
+    const weapon = this.dataManager.weapons[1];
+    const stats = weapon.statsPerLevel[level - 1];
+    const orbCount = stats.orbitCount;
+
+    // Maintain orbs
+    const existingOrbs = this.entityManager.getActive('orb').filter(o => o.ownerId === player.id);
+    
+    // Remove excess orbs
+    while (existingOrbs.length > orbCount) {
+      this.entityManager.destroy(existingOrbs.pop());
+    }
+
+    // Create missing orbs
+    while (existingOrbs.length < orbCount) {
+      const orbDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
+      const orb = this.entityManager.create('orb', {
+        ownerId: player.id,
+        x: player.x,
+        y: player.y,
+        damage: orbDmg,
+        size: 6,
+        orbitAngle: (existingOrbs.length / orbCount) * Math.PI * 2,
+        orbitRadius: stats.orbitRadius,
+        orbitSpeed: stats.orbitSpeed,
+        visual: { shape: 'circle', color: '#4FC3F7' },
+      });
+      existingOrbs.push(orb);
+    }
+
+    // Update orb positions
+    for (const orb of existingOrbs) {
+      orb.orbitAngle += dt * (Math.PI * 2 / orb.orbitSpeed);
+      orb.x = player.x + Math.cos(orb.orbitAngle) * orb.orbitRadius;
+      orb.y = player.y + Math.sin(orb.orbitAngle) * orb.orbitRadius;
+    }
+  }
+
+  _fireW3(player, dt) {
+    const level = this.weaponLevels['weapon_area_pulse'];
+    if (!level) return;
+    // W3 is active — this line only prints once per fire cycle after cooldown
+
+    this.cooldowns['weapon_area_pulse'] = (this.cooldowns['weapon_area_pulse'] || 0) - dt;
+    if (this.cooldowns['weapon_area_pulse'] > 0) return;
+
+    const weapon = this.dataManager.weapons[2];
+    if (!weapon || !weapon.statsPerLevel) {
+      console.error('[W3] Weapon data missing!', weapon);
+      return;
+    }
+    const stats = weapon.statsPerLevel[level - 1];
+    if (!stats) {
+      console.error('[W3] Stats missing for level', level);
+      return;
+    }
+    this.cooldowns['weapon_area_pulse'] = stats.cooldown;
+
+    // Emit area pulse event(s) — queue-based (respects pause/game over)
+    const pulseDmg = Math.floor(stats.damage * (player.damageMultiplier || 1));
+    const pulseCount = stats.pulseCount || 1;
+    for (let i = 0; i < pulseCount; i++) {
+      this._w3PulseQueue.push({ delay: i * 0.25, elapsed: 0, dmg: pulseDmg, radius: stats.pulseRadius, pulseCount, fired: false });
+    }
+  }
+
+  _updateW3Pulses(dt) {
+    if (!this._w3PulseQueue || this._w3PulseQueue.length === 0) return;
+    const player = this.entityManager.getActive('player')[0];
+    for (let i = this._w3PulseQueue.length - 1; i >= 0; i--) {
+      const q = this._w3PulseQueue[i];
+      q.elapsed += dt;
+      if (q.elapsed >= q.delay && !q.fired) {
+        q.fired = true;
+        if (player) {
+          this.eventBus.emit('areaPulse', {
+            x: player.x, y: player.y,
+            damage: q.dmg, radius: q.radius,
+            pulseCount: q.pulseCount,
+          });
+        }
+      }
+      if (q.fired) this._w3PulseQueue.splice(i, 1);
+    }
+  }
+
+  _fireW4(player, dt) {
+    // W4: Flame Wave — short-range cone attack (frontloaded weapon)
+    const level = this.weaponLevels['w4_flame_wave'];
+    if (!level) return;
+
+    this.cooldowns['w4_flame_wave'] = (this.cooldowns['w4_flame_wave'] || 0) - dt;
+    if (this.cooldowns['w4_flame_wave'] > 0) return;
+
+    const weapon = this.dataManager.weapons.find(w => w.id === 'w4_flame_wave');
+    if (!weapon) return;
+    const stats = weapon.statsPerLevel[level - 1];
+    if (!stats) return;
+    this.cooldowns['w4_flame_wave'] = stats.cooldown;
+
+    // Find nearest enemy for direction
+    const enemies = this.entityManager.getActive('enemy');
+    if (enemies.length === 0) return;
+
+    let nearest = null;
+    let minDist = Infinity;
+    for (const enemy of enemies) {
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist) { minDist = dist; nearest = enemy; }
+    }
+    if (!nearest) return;
+
+    const angle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+    const coneAngle = (stats.coneAngle || 60) * Math.PI / 180;
+    const range = stats.coneRange || 60;
+    const damage = Math.floor(stats.damage * (player.damageMultiplier || 1));
+
+    // Damage all enemies in cone
+    for (const enemy of enemies) {
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > range) continue;
+
+      const enemyAngle = Math.atan2(dy, dx);
+      let angleDiff = enemyAngle - angle;
+      while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+      while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+      if (Math.abs(angleDiff) <= coneAngle / 2) {
+        this.eventBus.emit('damage', { source: player, target: enemy, damage, type: 'fire' });
+
+        // L4+ Burn effect
+        if (level >= 4 && weapon.powerSpikes?.level4) {
+          const burnDmg = weapon.powerSpikes.level4.statModifiers.burnDamage || 5;
+          const burnDur = weapon.powerSpikes.level4.statModifiers.burnDuration || 3;
+          enemy.burnTimer = burnDur;
+          enemy.burnDamage = burnDmg;
+        }
+      }
+    }
+
+    // Emit visual effect
+    this.eventBus.emit('coneAttack', {
+      x: player.x, y: player.y, angle, range, coneAngle,
+      damage, color: '#FF4500', level,
+    });
+  }
+
+  _fireW5(player, dt) {
+    // W5: Arcane Bolt — slow bolt that chains on kill (scaling weapon)
+    const level = this.weaponLevels['w5_arcane_bolt'];
+    if (!level) return;
+
+    this.cooldowns['w5_arcane_bolt'] = (this.cooldowns['w5_arcane_bolt'] || 0) - dt;
+    if (this.cooldowns['w5_arcane_bolt'] > 0) return;
+
+    const weapon = this.dataManager.weapons.find(w => w.id === 'w5_arcane_bolt');
+    if (!weapon) return;
+    const stats = weapon.statsPerLevel[level - 1];
+    if (!stats) return;
+    this.cooldowns['w5_arcane_bolt'] = stats.cooldown;
+
+    // Find nearest enemy
+    const enemies = this.entityManager.getActive('enemy');
+    if (enemies.length === 0) return;
+
+    let nearest = null;
+    let minDist = Infinity;
+    for (const enemy of enemies) {
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist) { minDist = dist; nearest = enemy; }
+    }
+    if (!nearest) return;
+
+    const damage = Math.floor(stats.damage * (player.damageMultiplier || 1));
+    const chainCount = stats.chainCount || 0;
+    const chainRange = stats.chainRange || 80;
+
+    // Fire bolt at nearest enemy
+    const dx = nearest.x - player.x;
+    const dy = nearest.y - player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) return;
+
+    const speed = 300;
+    const angle = Math.atan2(dy, dx);
+
+    // Spawn projectile with chain data
+    const proj = this.entityManager.create('projectile', {
+      x: player.x, y: player.y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      damage, size: 6,
+      color: '#9C27B0',
+      piercing: false,
+      chainCount, chainRange,
+      slowAmount: weapon.powerSpikes?.level7?.statModifiers?.slowAmount || 0,
+      slowDuration: weapon.powerSpikes?.level7?.statModifiers?.slowDuration || 0,
+      age: 0, sourceWeapon: 'w5_arcane_bolt',
+    });
+
+    // Visual effect
+    this.eventBus.emit('arcaneShot', {
+      x: player.x, y: player.y, angle, damage, color: '#9C27B0',
+    });
+  }
+
+  // Handle chain reaction when W5 bolt kills an enemy
+  _handleW5Chain(killer, victim) {
+    if (!killer?.sourceWeapon || killer.sourceWeapon !== 'w5_arcane_bolt') return;
+    if (killer.chainCount <= 0) return;
+
+    const enemies = this.entityManager.getActive('enemy');
+    const chainRange = killer.chainRange || 80;
+    let nearest = null;
+    let minDist = Infinity;
+
+    for (const enemy of enemies) {
+      if (enemy === victim || !enemy.active) continue;
+      const dx = enemy.x - victim.x;
+      const dy = enemy.y - victim.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist && dist < chainRange * chainRange) {
+        minDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    if (nearest) {
+      // Chain to next enemy with reduced damage
+      const chainDamage = Math.floor(killer.damage * 0.7);
+      this.eventBus.emit('damage', {
+        source: killer.sourceEntity || null,
+        target: nearest,
+        damage: chainDamage,
+        type: 'arcane',
+      });
+
+      // Spawn chain visual
+      this.eventBus.emit('chainLightning', {
+        x1: victim.x, y1: victim.y,
+        x2: nearest.x, y2: nearest.y,
+        color: '#9C27B0',
+      });
+
+      // Continue chain with reduced count
+      killer.chainCount--;
+      killer.x = nearest.x;
+      killer.y = nearest.y;
+      // Trigger chain on next frame via event
+      setTimeout(() => {
+        if (nearest.hp <= 0) {
+          this._handleW5Chain(killer, nearest);
+        }
+      }, 50);
+    }
+  }
+
+  levelUp(weaponId) {
+    const current = this.weaponLevels[weaponId] || 0;
+    if (current < 7) {
+      this.weaponLevels[weaponId] = current + 1;
+      this.eventBus.emit('weaponLevelUp', { weaponId, newLevel: current + 1 });
+    }
+  }
+
+  unlockWeapon(weaponId) {
+    if (!this.weaponLevels[weaponId]) {
+      this.weaponLevels[weaponId] = 1;
+      this.cooldowns[weaponId] = 0;
+    }
+  }
+
+  getWeaponLevel(weaponId) {
+    return this.weaponLevels[weaponId] || 0;
+  }
+
+  reset() {
+    this.weaponLevels = {};
+    this._w3PulseQueue = [];
+    this.cooldowns = {};
+  }
+}
+
+// ============================================================
+// PHASE 9: DAMAGE SYSTEM
+// ============================================================
+
+// --- DamageSystem ---
+// Applies damage, crits, knockback, invincibility
