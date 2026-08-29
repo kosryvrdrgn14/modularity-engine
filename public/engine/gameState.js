@@ -8,8 +8,9 @@ class GameState {
 
     // Valid transitions table
     this.transitions = {
-      loading: ['menu', 'playing'],
-      menu: ['playing'],
+      loading: ['menu', 'playing', 'title'],
+      menu: ['playing', 'title'],
+      title: ['playing'],
       playing: ['paused', 'levelUp', 'gameOver', 'bossIntro'],
       paused: ['playing'],
       levelUp: ['playing'],

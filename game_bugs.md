@@ -1115,3 +1115,40 @@ When introducing a new data source (dev loadout, player inventory, etc.), trace 
 | Touch/click on title menu | ✅ Worked (same element) | ✅ Works | OK |
 
 *Title screen overlay session: 1 critical bug found, 1 fixed.*
+
+---
+
+## Bug #64: Lv3 upgrade freeze — NOT reproduced in headless
+**Date:** Current session  
+**Severity:** 🟡 Investigating  
+**Status:** Open
+
+**Symptom:** Player can click upgrade cards at Lv2, but the game freezes at the Lv3 level-up screen (cards visible but unresponsive).
+
+**What was verified working in headless:**
+- Title screen hidden after startGame ✅
+- Click on upgrade card at Lv2 ✅
+- Weapon unlock at Lv3 (Slot 1) ✅
+- Upgrade options at Lv3 include new weapon ✅
+- Click on upgrade card at Lv3 ✅
+- Keyboard upgrade at Lv3 ✅
+- Weapon unlock at Lv6 (Slot 2) ✅
+
+**What was NOT reproduced:**
+- The actual freeze at Lv3 during real gameplay
+
+**Possible causes to investigate:**
+1. Multiple simultaneous level-ups (queue processing) — when addXP pushes 2+ levels, the second levelUp event fires while the first is processing, potentially overwriting upgrade options
+2. Browser-specific touch/click event handling — the canvas mousedown event may not fire on certain browsers/devices
+3. CSS viewport scaling — the canvas coordinate mapping may be off on mobile browsers
+4. The `Invalid transition: loading → title` warning during init — cosmetic but indicates gameState may be in unexpected state
+
+**Recommended next steps:**
+1. User should open browser console (F12) when the freeze happens and share any errors/warnings
+2. Check if the freeze is consistent or intermittent
+3. Check if pressing keyboard 1/2/3 works when the click doesn't
+4. Try on a different browser to isolate browser-specific issues
+
+---
+
+*Lv3 freeze investigation: 0 confirmed causes, 1 open.*
