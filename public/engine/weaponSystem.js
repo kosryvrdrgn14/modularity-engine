@@ -32,6 +32,8 @@ class WeaponSystem {
     this._fireW7(player, dt);
     this._fireW8(player, dt);
     this._updateW3Pulses(dt);
+    this._updateW7Combos(dt);
+    this._updateW8Explosions(dt);
   }
 
   _fireW1(player, dt) {
@@ -446,41 +448,80 @@ class WeaponSystem {
     const range = stats.range || 140;
     const arcWidth = stats.arcWidth || 80;
     const damage = stats.damage;
+
+    // Triple-hit combo: front, back, both sides — use queue instead of setTimeout
+    // to avoid stale closures when game pauses (level-up, game over)
+    if (!this._w7ComboQueue) this._w7ComboQueue = [];
+    this._w7ComboQueue.push({
+      combos: [
+        { angleOffset: 0 },
+        { angleOffset: Math.PI },
+        { angleOffset: null },
+      ],
+      nextHit: 0,
+      range, arcWidth, damage,
+      playerRef: player,
+    });
+    // Process first hit immediately
+    this._processW7Combo();
+  }
+
+  _processW7Combo() {
+    if (!this._w7ComboQueue || this._w7ComboQueue.length === 0) return;
+    const combo = this._w7ComboQueue[0];
+    if (!combo || !combo.playerRef || !combo.playerRef.active) {
+      this._w7ComboQueue.shift();
+      return;
+    }
+    if (combo.nextHit >= combo.combos.length) {
+      this._w7ComboQueue.shift();
+      this._processW7Combo();
+      return;
+    }
+    const hit = combo.combos[combo.nextHit];
     const enemies = this.entityManager.getActive('enemy');
-
-    // Triple-hit combo: front, back, both sides
-    const combos = [
-      { label: 'front', angleOffset: 0 },
-      { label: 'back', angleOffset: Math.PI },
-      { label: 'both', angleOffset: null }, // null = full 360
-    ];
-
-    let hitCount = 0;
-    for (let ci = 0; ci < combos.length; ci++) {
-      const combo = combos[ci];
-      setTimeout(() => {
-        for (const e of enemies) {
-          const dx = e.x - player.x, dy = e.y - player.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > range + e.size) continue;
-
-          if (combo.angleOffset === null) {
-            // Both sides: hit everything in range
-            this.eventBus.emit('damageEntity', { entity: e, damage, source: player });
-            hitCount++;
-          } else {
-            const angle = Math.atan2(dy, dx);
-            let diff = angle - combo.angleOffset;
-            while (diff > Math.PI) diff -= 2 * Math.PI;
-            while (diff < -Math.PI) diff += 2 * Math.PI;
-            if (Math.abs(diff) < (arcWidth / 2) * Math.PI / 180) {
-              this.eventBus.emit('damageEntity', { entity: e, damage, source: player });
-              hitCount++;
-            }
-          }
+    const player = combo.playerRef;
+    for (const e of enemies) {
+      if (!e.active) continue;
+      const dx = e.x - player.x, dy = e.y - player.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > combo.range + e.size) continue;
+      if (hit.angleOffset === null) {
+        this.eventBus.emit('damageEntity', { entity: e, damage: combo.damage, source: player });
+      } else {
+        const angle = Math.atan2(dy, dx);
+        let diff = angle - hit.angleOffset;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        if (Math.abs(diff) < (combo.arcWidth / 2) * Math.PI / 180) {
+          this.eventBus.emit('damageEntity', { entity: e, damage: combo.damage, source: player });
         }
-        if (ci === 0) this.eventBus.emit('weaponFire', { weaponId: id });
-      }, ci * 250); // 250ms between hits
+      }
+    }
+    if (combo.nextHit === 0) this.eventBus.emit('weaponFire', { weaponId: 'w7_sword' });
+    combo.nextHit++;
+    if (combo.nextHit < combo.combos.length) {
+      // Schedule next hit via game update (checked in update loop)
+      combo._nextHitTime = (combo._nextHitTime || 0) + 0.25;
+    }
+  }
+
+  // Called from update() to process pending W7 combo hits
+  _updateW7Combos(dt) {
+    if (!this._w7ComboQueue) return;
+    for (let i = this._w7ComboQueue.length - 1; i >= 0; i--) {
+      const combo = this._w7ComboQueue[i];
+      if (!combo || !combo.playerRef || !combo.playerRef.active) {
+        this._w7ComboQueue.splice(i, 1);
+        continue;
+      }
+      if (combo._nextHitTime !== undefined) {
+        combo._nextHitTime -= dt;
+        if (combo._nextHitTime <= 0) {
+          combo._nextHitTime = undefined;
+          this._processW7Combo();
+        }
+      }
     }
   }
 
@@ -532,22 +573,39 @@ class WeaponSystem {
     }
     this.eventBus.emit('weaponFire', { weaponId: id });
 
-    // Explosion at Lv4+
+    // Explosion at Lv4+ — use queue instead of setTimeout
     if (stats.explosionDmgPct && hitEnemies.length > 0) {
-      setTimeout(() => {
-        const explosionDmg = Math.round(damage * stats.explosionDmgPct);
-        const explosionRadius = stats.explosionRadius || 100;
-        for (const e of this.entityManager.getActive('enemy')) {
-          // Explosion radiates from center of hit area
-          const hitCenterX = player.x + Math.cos(facingAngle) * (range * 0.7);
-          const hitCenterY = player.y + Math.sin(facingAngle) * (range * 0.7);
-          const dist = Math.hypot(e.x - hitCenterX, e.y - hitCenterY);
-          if (dist < explosionRadius) {
-            this.eventBus.emit('damageEntity', { entity: e, damage: explosionDmg, source: player });
+      if (!this._w8ExplosionQueue) this._w8ExplosionQueue = [];
+      this._w8ExplosionQueue.push({
+        damage: Math.round(damage * stats.explosionDmgPct),
+        radius: stats.explosionRadius || 100,
+        cx: player.x + Math.cos(facingAngle) * (range * 0.7),
+        cy: player.y + Math.sin(facingAngle) * (range * 0.7),
+        timer: 0.2,
+        playerRef: player,
+      });
+    }
+  }
+
+  _updateW8Explosions(dt) {
+    if (!this._w8ExplosionQueue) return;
+    for (let i = this._w8ExplosionQueue.length - 1; i >= 0; i--) {
+      const exp = this._w8ExplosionQueue[i];
+      exp.timer -= dt;
+      if (exp.timer <= 0) {
+        if (exp.playerRef && exp.playerRef.active) {
+          const enemies = this.entityManager.getActive('enemy');
+          for (const e of enemies) {
+            if (!e.active) continue;
+            const dist = Math.hypot(e.x - exp.cx, e.y - exp.cy);
+            if (dist < exp.radius) {
+              this.eventBus.emit('damageEntity', { entity: e, damage: exp.damage, source: exp.playerRef });
+            }
           }
+          this.eventBus.emit('areaPulse', { x: exp.cx, y: exp.cy, radius: exp.radius, color: '#FF6B35' });
         }
-        this.eventBus.emit('areaPulse', { x: hitCenterX, y: hitCenterY, radius: explosionRadius, color: '#FF6B35' });
-      }, 200); // Delay for swing animation
+        this._w8ExplosionQueue.splice(i, 1);
+      }
     }
   }
 
@@ -579,6 +637,8 @@ class WeaponSystem {
   reset() {
     this.weaponLevels = {};
     this._w3PulseQueue = [];
+    this._w7ComboQueue = [];
+    this._w8ExplosionQueue = [];
     this.cooldowns = {};
   }
 }
