@@ -1082,4 +1082,4 @@ Long-press item → Equip, Gift, Drop, Study. Drag to estate slot for direct gif
 
 Vampire Survivors is typically landscape. Should we enforce landscape for combat, or support both?
 
-**Recommendation:** Support both. Portrait is fine for mobile. The canvas scales dynamically. Desktop users can resize freely. No orientation lock.
+**Decision (Aug 29):** Portrait-only for now. Mobile-first UI. PC layout migration deferred — user will notify when ready. When migrating: PC gets side rails always visible, hover states, keyboard shortcuts. Mobile keeps slide-in panels, touch-optimized targets.
