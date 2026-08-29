@@ -16,7 +16,7 @@ class SpawnSystem {
     const stage = this.dataManager.stages;
     const wave = this._getCurrentWave(stage.waves);
     
-    if (!wave) return;
+    if (!wave || !wave.spawnRate || wave.spawnRate <= 0) return;
     
     // Check spawn cap
     const enemyCount = this.entityManager.getCount('enemy') + this.entityManager.getCount('boss');
