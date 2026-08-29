@@ -207,16 +207,15 @@ class Game {
 
     this._isSelectingUpgrade = false;
     this.eventBus.on('selectUpgrade', (data) => {
-      if (!this.gameState.isLevelUp()) return;
-      if (this._isSelectingUpgrade) return;
-      if (!this.uiManager.levelUpOptions) return;
+      console.log('[selectUpgrade] Received, index:', data.index, 'state:', this.gameState.state, 'isSelecting:', this._isSelectingUpgrade, 'hasOpts:', !!this.uiManager.levelUpOptions);
+      if (!this.gameState.isLevelUp()) { console.log('[selectUpgrade] BLOCKED: not levelUp'); return; }
+      if (this._isSelectingUpgrade) { console.log('[selectUpgrade] BLOCKED: already selecting'); return; }
+      if (!this.uiManager.levelUpOptions) { console.log('[selectUpgrade] BLOCKED: no options'); return; }
       this._isSelectingUpgrade = true;
       const index = data.index;
-      if (index < 0 || index >= this.uiManager.levelUpOptions.length) {
-        this._isSelectingUpgrade = false;
-        return;
-      }
+      if (index < 0 || index >= this.uiManager.levelUpOptions.length) { console.log('[selectUpgrade] BLOCKED: bad index', index, 'len:', this.uiManager.levelUpOptions.length); this._isSelectingUpgrade = false; return; }
       const option = this.uiManager.levelUpOptions[index];
+      console.log('[selectUpgrade] Applying:', option?.name);
       if (option && option.apply) option.apply(this);
       this.uiManager.hideLevelUp();
       if (this.levelingSystem.hasPendingLevelUp()) {
@@ -229,6 +228,7 @@ class Game {
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
         this.audioManager.duckForLevelUp(false);
+        console.log('[selectUpgrade] Resumed playing');
       }
     });
 
@@ -293,6 +293,7 @@ class Game {
   }
 
   startGame() {
+    this.titleMenu.hide();
     this.gameState.reset();
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();

@@ -93,10 +93,15 @@ class InputManager {
     const x = (screenX - rect.left) * (this.canvas.width / rect.width);
     const y = (screenY - rect.top) * (this.canvas.height / rect.height);
     
+    const gameState = this._game?.gameState?.state || 'unknown';
+    const isPaused = this._isPaused;
+    
     // Check if clicking on upgrade cards during levelUp state (debounced)
     const cardIndex = this._getUpgradeCardAt(x, y);
     if (cardIndex >= 0) {
+      console.log('[Input] Card tap detected, index:', cardIndex, 'lock:', this._upgradeKeyLock, 'state:', gameState);
       if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: cardIndex }); }
+      else { console.log('[Input] BLOCKED by _upgradeKeyLock'); }
       return;
     }
     

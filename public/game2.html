@@ -8596,6 +8596,7 @@ class Game {
   }
 
   startGame() {
+    this.titleMenu.hide();
     this.gameState.reset();
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();

@@ -1081,3 +1081,37 @@ When introducing a new data source (dev loadout, player inventory, etc.), trace 
 ---
 
 *Weapon unlock progression session: 3 found, 3 fixed, 0 open.*
+
+---
+
+## Bug #63: Title screen overlay blocks all mouse/touch input during gameplay
+**Date:** Current session  
+**Severity:** 🔴 Critical  
+**Status:** Fixed
+
+**Symptom:** After starting the game, clicking on upgrade cards during the level-up screen did nothing. The game appeared to "freeze" at the level-up screen because no input could reach the canvas.
+
+**Root cause:** The `startGame()` method never called `this.titleMenu.hide()`. The title screen element (`#title-screen`) has `z-index: 100`, `position: fixed`, and `800×600` dimensions — covering the ENTIRE game canvas. It retained `class="active"`, meaning it was visible and intercepting all mouse/touch events.
+
+**Evidence from headless browser:**
+- `document.elementsFromPoint(220, 320)` returned `#title-screen` as element[0] with `z-index: 100`
+- Raw `mousedown` event listener on canvas never fired
+- Direct `eventBus.emit('selectUpgrade')` worked fine (bypassing DOM)
+- Keyboard events worked (they go through `window`, not the canvas DOM)
+
+**Fix:** Added `this.titleMenu.hide();` as the first line of `startGame()`.
+
+**Lesson (from Claude handoff):** When removing or hiding UI elements, always trace ALL references. The `titleMenu.hide()` was called in some code paths (e.g., `_startFromTitle()`) but was missing from `startGame()` which can be called directly by the dev selector. Always verify that overlays with `position: fixed` and high `z-index` are properly hidden before gameplay begins.
+
+---
+
+### Input System Audit (post-fix):
+
+| Input Path | Before Fix | After Fix | Status |
+|---|---|---|---|
+| Touch/click on upgrade cards | ❌ Blocked by title screen | ✅ Works | Fixed |
+| Keyboard (1/2/3) on upgrade cards | ✅ Worked (goes through window) | ✅ Works | OK |
+| Touch/click during gameplay | ❌ Blocked by title screen | ✅ Works | Fixed |
+| Touch/click on title menu | ✅ Worked (same element) | ✅ Works | OK |
+
+*Title screen overlay session: 1 critical bug found, 1 fixed.*
