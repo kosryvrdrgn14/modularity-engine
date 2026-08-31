@@ -16,7 +16,7 @@ const path = require('path');
 
   console.log('=== SVG INTEGRATION TEST ===\n');
 
-  const filePath = path.resolve(__dirname, 'game.html');
+  const filePath = path.resolve(__dirname, 'game2.html');
   await page.goto(`file://${filePath}`);
   await page.waitForTimeout(2000);
 
@@ -70,7 +70,7 @@ const path = require('path');
   console.log(`6. SVG files on disk: ${svgCount}/${svgFiles.length} ${svgCount === svgFiles.length ? '✅' : '❌'}`);
 
   // Verify ASSET_MAP in source
-  const html = fs.readFileSync(path.resolve(__dirname, 'game.html'), 'utf8');
+  const html = fs.readFileSync(path.resolve(__dirname, 'game2.html'), 'utf8');
   const hasAssetMap = html.includes('const ASSET_MAP');
   const hasPreload = html.includes('async function preloadAssets');
   const hasCacheCheck = html.includes("this.imageCache && this.imageCache[cacheKey]");

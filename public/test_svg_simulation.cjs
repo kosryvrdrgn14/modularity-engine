@@ -19,7 +19,7 @@ const fs = require('fs');
 
   page.on('pageerror', err => errors.push(`PAGE_ERROR: ${err.message}`));
 
-  const filePath = path.resolve(__dirname, 'game.html');
+  const filePath = path.resolve(__dirname, 'game2.html');
   console.log('=== SVG REPLACEMENT SIMULATION ===\n');
 
   // Step 1: Load the game and click start

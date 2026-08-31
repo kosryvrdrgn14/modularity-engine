@@ -16,7 +16,7 @@ const fs = require('fs');
     if (msg.type() === 'error') errors.push(text);
   });
 
-  const filePath = path.resolve(__dirname, 'game.html');
+  const filePath = path.resolve(__dirname, 'game2.html');
   console.log('=== AUDIO PIPELINE VERIFICATION ===\n');
   console.log(`Loading: ${filePath}`);
   await page.goto(`file://${filePath}`);

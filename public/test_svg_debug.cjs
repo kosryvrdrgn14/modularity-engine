@@ -11,7 +11,7 @@ const path = require('path');
 
   console.log('=== SVG CACHE DEBUG ===\n');
 
-  await page.goto(`file://${path.resolve(__dirname, 'game.html')}`);
+  await page.goto(`file://${path.resolve(__dirname, 'game2.html')}`);
   await page.waitForTimeout(1500);
 
   // Click start

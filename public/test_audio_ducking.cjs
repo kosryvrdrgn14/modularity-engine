@@ -10,7 +10,7 @@ const fs = require('fs');
   const consoleLogs = [];
   page.on('console', msg => consoleLogs.push(`[${msg.type()}] ${msg.text()}`));
 
-  const filePath = path.resolve(__dirname, 'game.html');
+  const filePath = path.resolve(__dirname, 'game2.html');
   console.log('=== AUDIO DUCKING FIX VERIFICATION ===\n');
 
   await page.goto(`file://${filePath}`);
