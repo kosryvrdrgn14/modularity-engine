@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Modularity Engine v0.3.0</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <!-- Level-Up Overlay (HTML buttons for reliable click/touch) -->
+  <div id="levelup-overlay">
+    <div id="levelup-title">LEVEL UP!</div>
+    <div id="levelup-cards"></div>
+    <div id="levelup-hint">Press 1, 2, or 3 to select</div>
+  </div>
+  <div id="loading-screen">
+    <h1>MODULARITY ENGINE</h1>
+    <div style="font-size: 12px; color: #666; margin-bottom: 20px;">v0.3.0</div>
+    <div id="loading-bar"><div id="loading-fill"></div></div>
+    <div id="loading-status">Loading...</div>
+  </div>
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <img id="title-bg" src="assets/title_background.svg" alt="" />
+    <div id="title-overlay"></div>
+    <div id="title-content">
+      <div id="title-name">Modularity Engine</div>
+      <div id="title-subtitle">A Vampire Survivors Experience</div>
+      <div id="title-menu">
+        <div class="menu-item selected" data-action="play" data-index="0">
+          <span class="menu-arrow">▶</span> Play
+        </div>
+        <div class="menu-item locked" data-action="characters" data-index="1">
+          <span class="menu-arrow">▶</span> Characters <span class="menu-lock">🔒</span>
+        </div>
+        <div class="menu-item locked" data-action="stages" data-index="2">
+          <span class="menu-arrow">▶</span> Stages <span class="menu-lock">🔒</span>
+        </div>
+        <div class="menu-item" data-action="settings" data-index="3">
+          <span class="menu-arrow">▶</span> Settings
+        </div>
+        <div class="menu-item" data-action="test-town" data-index="4" style="border-top: 1px solid rgba(255,255,255,0.06); margin-top: 4px; padding-top: 12px;">
+          <span class="menu-arrow">▶</span> <span style="color:#FF9100;">Test Town</span> <span style="font-size:0.7rem;color:#666;margin-left:auto;">+100g</span>
+        </div>
+        <div class="menu-item" data-action="dev-stage" data-index="5">
+          <span class="menu-arrow">▶</span> <span style="color:#4FC3F7;">🧪 Stage Select</span> <span style="font-size:0.7rem;color:#666;margin-left:auto;">DEV</span>
+        </div>
+      </div>
+      <div id="title-info">
+        <span id="info-version">v0.3.0</span>
+        <span>│</span>
+        <span id="info-best-run">Best: --:-- Lv--</span>
+        <span>│</span>
+        <span id="info-total-gold">Gold: 0</span>
+      </div>
+      <div id="title-controls-hint">WASD / ↑↓ navigate · ENTER select</div>
+    </div>
+  </div>
+  <div id="title-tooltip"></div>
+
+
+  <!-- Town Screen -->
+  <div id="town-screen">
+    <!-- Zone 1: Top Header -->
+    <div id="town-header">
+      <button id="town-back" class="town-hdr-btn" style="display:none;">◀</button>
+      <span class="town-hdr-icon" id="town-location-icon">🏕️</span>
+      <span class="camp-name" id="town-camp-name">Refugee Camp</span>
+      <div class="town-hdr-spacer"></div>
+      <div class="town-resources">
+        <span class="res-chip" id="town-gold">💰 0</span>
+        <span class="res-chip" id="town-wood">🪵 0</span>
+        <span class="res-chip" id="town-stone">🪨 0</span>
+      </div>
+      <div class="town-hdr-meta">
+        <span class="res-chip" id="town-run-stats">⚔Lv1</span>
+      </div>
+    </div>
+
+    <!-- Zone 2: Left Panel (Social & Progress) -->
+    <div id="town-left-panel">
+      <div class="panel-section">
+        <div class="panel-section-title">📋 Priority Quests</div>
+        <div id="panel-quests"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">👥 Residents</div>
+        <div id="panel-npcs"></div>
+      </div>
+      <div class="panel-section" id="panel-camp-upgrade-section" style="display:none;">
+        <div class="panel-section-title">🏕️ Camp</div>
+        <div id="panel-camp-upgrade"></div>
+      </div>
+      <div class="panel-section" id="panel-companion-status">
+        <div class="panel-section-title">🐕 Companions</div>
+        <div id="panel-companions"></div>
+      </div>
+      <div class="panel-cta">
+        <button id="panel-enter-combat" class="panel-combat-btn">⚔️ Enter Combat</button>
+      </div>
+    </div>
+
+    <!-- Zone 3: Center Stage -->
+    <div id="town-center">
+      <div class="panel-backdrop" id="panel-backdrop"></div>
+      <img id="town-bg" src="assets/town_refugee_camp.svg" alt="" />
+      <div id="town-overlay"></div>
+      <div id="town-breadcrumb"></div>
+      <div id="town-npc-area"></div>
+      <div id="town-companions-center">
+        <div class="companion-slot" id="companion-slot-0"><span class="empty-icon">+</span></div>
+        <div class="companion-slot" id="companion-slot-1"><span class="empty-icon">+</span></div>
+        <div class="companion-slot" id="companion-slot-2"><span class="empty-icon">+</span></div>
+      </div>
+      <div id="town-swipe-indicator">
+        <div class="swipe-dot active" data-region="0"></div>
+        <div class="swipe-dot" data-region="1"></div>
+        <div class="swipe-dot" data-region="2"></div>
+        <span class="swipe-label" id="swipe-region-name">Town</span>
+      </div>
+      <div id="dog-dialogue">
+        <div id="dog-dialogue-portrait" class="dog-portrait"></div>
+        <div class="dog-content">
+          <div class="dog-name">???</div>
+          <div class="dog-text" id="dog-dialogue-text"></div>
+          <div class="dog-choices" id="dog-dialogue-choices"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone 4: Right Panel (Infrastructure & Systems) -->
+    <div id="town-right-panel">
+      <div class="panel-section">
+        <div class="panel-section-title">📍 Locations</div>
+        <div id="panel-locations"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">🌾 Auto-Clear Farming</div>
+        <div id="panel-farming"></div>
+      </div>
+      <div class="panel-section" id="panel-events-section" style="display:none;">
+        <div class="panel-section-title">⚠️ Pending Events</div>
+        <div id="panel-events"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">🔬 Debug</div>
+        <div id="panel-sandbox">
+          <button class="panel-sandbox-btn" id="panel-open-sandbox">🔬 Sandbox Mode</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone 5: Bottom Dock -->
+    <div id="town-dock">
+      <button class="dock-tab active" id="dock-map"><span class="dock-icon">🗺️</span><span class="dock-label">Map</span></button>
+      <button class="dock-tab" id="dock-social"><span class="dock-icon">👥</span><span class="dock-label">NPCs</span><span class="dock-badge" id="dock-social-badge" style="display:none;">0</span></button>
+      <button class="dock-tab" id="dock-systems"><span class="dock-icon">📋</span><span class="dock-label">Systems</span><span class="dock-badge" id="dock-systems-badge" style="display:none;">0</span></button>
+      <button class="dock-tab" id="dock-shop"><span class="dock-icon">🛒</span><span class="dock-label">Shop</span></button>
+      <button class="dock-tab dock-combat" id="dock-combat"><span class="dock-icon">⚔️</span><span class="dock-label">Fight</span></button>
+    </div>
+  </div>
+
+  <!-- Dialogue Overlay -->
+  <div id="dialogue-overlay">
+    <div id="dialogue-box">
+      <div id="dialogue-header">
+        <div id="dialogue-portrait"></div>
+        <div>
+          <div id="dialogue-name"></div>
+          <div id="dialogue-text"></div>
+        </div>
+      </div>
+      <div id="dialogue-choices"></div>
+      <button id="dialogue-continue">Continue</button>
+    </div>
+  </div>
+
+  <!-- Settings Screen -->
+  <div id="settings-screen">
+    <div id="settings-content">
+      <h2>Settings</h2>
+      <div class="setting-group">
+        <div class="setting-label"><span>SFX Volume</span><span id="sfx-val">85%</span></div>
+        <input type="range" class="setting-slider" id="sfx-slider" min="0" max="100" value="85" />
+        <div class="setting-label"><span>Music Volume</span><span id="music-val">40%</span></div>
+        <input type="range" class="setting-slider" id="music-slider" min="0" max="100" value="40" />
+      </div>
+      <div class="setting-group">
+        <div class="setting-section-title">Controls</div>
+        <div class="controls-row"><span>Move</span><span>WASD / Arrow Keys</span></div>
+        <div class="controls-row"><span>Select Upgrade</span><span>1 / 2 / 3 / Click</span></div>
+        <div class="controls-row"><span>Pause</span><span>Esc</span></div>
+      </div>
+      <div class="settings-danger" id="reset-progress">Reset All Progress</div>
+      <div class="settings-back" id="settings-back">◀ Back</div>
+    </div>
+  </div>
+
+  <!-- Shop Overlay -->
+  <div id="shop-overlay">
+    <div id="shop-header">
+      <span class="shop-title">🛒 Grand Bazaar</span>
+      <span class="shop-close" id="shop-close">✕</span>
+    </div>
+    <div id="shop-tabs">
+      <div class="shop-tab active" data-tab="combat">⚔️ Combat</div>
+      <div class="shop-tab" data-tab="companion">🐕 Companion</div>
+      <div class="shop-tab" data-tab="estate">🏗️ Estate</div>
+      <div class="shop-tab" data-tab="gifts">💝 Gifts</div>
+    </div>
+    <div id="shop-items"></div>
+  </div>
+
+  <!-- Companion Notification -->
+  <div id="companion-notification">
+    <div class="notif-icon">🐕</div>
+    <div class="notif-title"></div>
+    <div class="notif-desc"></div>
+  </div>
+
+<script src="data/embeddedData.js"></script>
+<script src="data/companionData.js"></script>
+<script src="data/assetMap.js"></script>
+<script src="data/locationTree.js"></script>
+<script src="data/shopData.js"></script>
+<script src="data/disasterEvents.js"></script>
+<script src="data/farmingConfig.js"></script>
+<script src="data/affectionTiers.js"></script>
+<script src="data/estateTiers.js"></script>
+<script src="data/childGrowthStages.js"></script>
+<script src="data/sandboxDefaults.js"></script>
+<script src="data/svgPortraits.js"></script>
+<script src="data/npcData.js"></script>
+<script src="engine/titleMenu_refactored.js"></script>
+<script src="engine/core.js"></script>
+<script src="engine/entities.js"></script>
+<script src="engine/combat.js"></script>
+<script src="engine/pickup.js"></script>
+<script src="engine/rendering.js"></script>
+<script src="systems/companion.js"></script>
+<script src="systems/progression.js"></script>
+<script src="systems/loot.js"></script>
+<script src="engine/locationManager.js"></script>
+<script src="ui/audio.js"></script>
+<script src="ui/game.js"></script>
+<script src="ui/dockMenu.js"></script>
+<script src="ui/shop.js"></script>
+<script src="ui/townEngine.js"></script>
+<script src="ui/townContent.js"></script>
+<script src="ui/town.js"></script>
+<script src="engine/game.js"></script>
+<script>
+const game = new Game();
+window.game = game;
+window.skipToBoss = () => {
+  if (!game.gameState.isPlaying()) {
+    console.log('[DEBUG] Cannot skip — state:', game.gameState.state);
+    return;
+  }
+  const ss = game.spawnSystem;
+  if (ss) {
+    ss.bossSpawned = true;
+    ss.gameTime = (game._bossSpawnTime || 240) + 5;
+    ss._spawnBoss();
+    console.log('[DEBUG] Boss spawned at', ss.gameTime, 's');
+  } else {
+    console.log('[DEBUG] spawnSystem not found');
+  }
+};
+game.init().catch(console.error);
+</script>
+
+</body>
+</html>

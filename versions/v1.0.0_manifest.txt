@@ -1,0 +1,122 @@
+=============================================================
+ v1.0.0 — File Split Complete
+ Date: August 31, 2026
+=============================================================
+
+This version represents the completion of the file split from a
+monolithic game2.html (10,519 lines) to a modular architecture
+(275 lines + 31 external files).
+
+=============================================================
+ FILE STRUCTURE
+=============================================================
+
+public/
+├── game2.html          (275 lines)  — HTML + init script only
+├── styles.css          (1,232 lines) — All CSS
+│
+├── data/               (13 files)   — Game data & configs
+│   ├── embeddedData.js      (1,996 lines) — Weapons, enemies, stages, evolutions
+│   ├── companionData.js     (216 lines)   — Companion definitions
+│   ├── npcData.js           (175 lines)   — NPC definitions & dialogue
+│   ├── locationTree.js      (92 lines)    — Town location hierarchy
+│   ├── shopData.js          (30 lines)    — Shop items & categories
+│   ├── assetMap.js          (24 lines)    — Asset path mappings
+│   ├── farmingConfig.js     (15 lines)    — Farming slot configuration
+│   ├── svgPortraits.js      (15 lines)    — SVG character portraits
+│   ├── sandboxDefaults.js   (13 lines)    — Sandbox mode defaults
+│   ├── affectionTiers.js    (9 lines)     — Affection level thresholds
+│   ├── disasterEvents.js    (9 lines)     — Random disaster definitions
+│   ├── estateTiers.js       (9 lines)     — Estate upgrade tiers
+│   └── childGrowthStages.js (3 lines)     — Child growth stages
+│
+├── engine/             (8 active files) — Core game systems
+│   ├── core.js               (518 lines)  — EventBus, DataManager, GameState, GameLoop, Camera, InputManager
+│   ├── entities.js           (506 lines)  — EntityManager, SpawnSystem, MovementSystem
+│   ├── combat.js             (831 lines)  — CollisionSystem, WeaponSystem, DamageSystem
+│   ├── pickup.js             (547 lines)  — PickupSystem, LevelingSystem, TelegraphSystem
+│   ├── rendering.js          (573 lines)  — Renderer, FloatingTextSystem
+│   ├── titleMenu_refactored.js (428 lines) — Title screen (no circular deps)
+│   ├── locationManager.js    (94 lines)   — Town location navigation
+│   └── game.js               (990 lines)  — Game orchestrator (main loop)
+│
+├── systems/            (3 files)     — Game feature systems
+│   ├── companion.js          (1,010 lines) — CompanionSystem (12 companions)
+│   ├── progression.js        (937 lines)   — GameManager, StorageBackend, Affection, Estate, Children, Disaster, Farming, Sandbox
+│   └── loot.js               (102 lines)   — StarSystem, FrenzySystem, GachaProtection
+│
+└── ui/                 (7 files)     — UI components
+    ├── audio.js              (1,146 lines) — AudioManager, TitleBGM
+    ├── dockMenu.js           (86 lines)    — Modular bottom navigation
+    ├── game.js               (148 lines)   — UIManager (HUD, level-up, overlays)
+    ├── shop.js               (334 lines)   — ShopSystem (data-driven shop modes)
+    ├── town.js               (113 lines)   — TownScreen orchestrator
+    ├── townContent.js        (810 lines)   — Town features (NPCs, dialogue, farming, estate)
+    └── townEngine.js         (367 lines)   — Town UI framework (panels, navigation, swipe)
+
+=============================================================
+ SCRIPT LOAD ORDER (in game2.html)
+=============================================================
+
+  1. Data files (13)      — Game data loaded first
+  2. titleMenu_refactored — Title screen (no Game dependency)
+  3. core.js              — EventBus, DataManager, GameState, GameLoop, Camera, InputManager
+  4. entities.js          — EntityManager, SpawnSystem, MovementSystem
+  5. combat.js            — CollisionSystem, WeaponSystem, DamageSystem
+  6. pickup.js            — PickupSystem, LevelingSystem, TelegraphSystem
+  7. rendering.js         — Renderer, FloatingTextSystem
+  8. companion.js         — CompanionSystem
+  9. progression.js       — GameManager, StorageBackend, + 7 systems
+  10. loot.js             — StarSystem, FrenzySystem, GachaProtection
+  11. locationManager.js  — Town location navigation
+  12. audio.js            — AudioManager, TitleBGM
+  13. game.js (ui)        — UIManager
+  14. dockMenu.js         — Modular bottom navigation
+  15. shop.js             — ShopSystem
+  16. townEngine.js       — Town UI framework
+  17. townContent.js      — Town features
+  18. town.js             — TownScreen orchestrator
+  19. game.js (engine)    — Game orchestrator
+  20. <script>            — Init code (creates Game instance)
+
+=============================================================
+ ARCHITECTURE NOTES
+=============================================================
+
+• Circular dependencies broken via dependency injection:
+  - TitleMenu receives audioManager, gameManager, dataManager via constructor
+  - TownScreen receives 13 dependencies via constructor
+  - No class stores `this.game` anymore
+
+• EventBus is the central communication hub:
+  - ~45 emit() calls across all files
+  - ~41 on() listeners across all files
+
+• Data-driven design:
+  - Adding new weapon = edit embeddedData.js
+  - Adding new NPC = edit npcData.js
+  - Adding new location = edit locationTree.js
+  - Adding new companion = edit companionData.js
+
+• 34 legacy engine files exist in engine/ but are NOT loaded
+  (individual class files from earlier extraction phases)
+
+=============================================================
+ KNOWN ISSUES (as of v1.0.0)
+=============================================================
+
+1. Some weapons lack visual effects
+2. Engine has 34 unused legacy files (can be archived)
+3. TownScreen townContent.js is 810 lines (could be split further)
+4. No web tools for content creation yet
+
+=============================================================
+ VERSION HISTORY
+=============================================================
+
+v0.2.0  — Aug 21  — Early prototype (2,479 lines, monolithic)
+v0.7.0  — Aug 26  — Mid-development backup
+v0.9.0  — Aug 31  — Last monolithic version (10,519 lines)
+v1.0.0  — Aug 31  — File split complete (275 lines + 31 files)
+
+=============================================================
