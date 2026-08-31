@@ -1,0 +1,138 @@
+# Handoff: Level 3 Upgrade Freeze Bug
+
+## Summary
+The game freezes when clicking an upgrade card at level 3 (when a new weapon unlocks). Pressing keyboard keys 1/2/3 works fine. The bug is in the **click handler path**, not the logic itself.
+
+## Key Finding
+- **Keyboard shortcut** (1,2,3) → Works ✅
+- **Click on HTML overlay card** → Freezes ❌
+- **Touch on HTML overlay card** → Freezes ❌
+
+## Architecture
+
+### File: `public/game2.html` (10,515 lines, monolithic)
+
+**Two input paths for upgrade selection:**
+
+1. **Keyboard** (lines 1856-1860): Sets `_upgradeKeyLock = true`, then emits `selectUpgrade`
+2. **HTML Overlay Click** (lines 5473-5478): Emits `selectUpgrade` directly (no lock)
+
+**Both converge on the same handler** (lines 8583-8606):
+```javascript
+this.eventBus.on('selectUpgrade', (data) => {
+  if (!this.gameState.isLevelUp()) return;
+  if (this._isSelectingUpgrade) return;  // guard against double-fire
+  if (!this.uiManager.levelUpOptions) return;
+  this._isSelectingUpgrade = true;
+  const option = this.uiManager.levelUpOptions[index];
+  if (option && option.apply) option.apply(this);  // could throw
+  this.uiManager.hideLevelUp();
+  // ... resume game or show next level-up
+});
+```
+
+## Potential Issues Identified
+
+### Issue 1: No error handling in `option.apply()`
+If `option.apply(this)` throws an exception, `_isSelectingUpgrade` stays `true` and the game is permanently stuck. The keyboard path might not hit the same code path (different weapon/option selected).
+
+### Issue 2: Double-fire on mobile (click + touchend)
+The card has both `click` and `touchend` listeners (lines 5473-5478). On mobile, both can fire for the same tap. The `_isSelectingUpgrade` guard should prevent this, but there's a race condition if the first handler hasn't completed yet.
+
+### Issue 3: `_getUpgradeCardAt` canvas conflict
+The `InputManager._onPointerDown` (line 1890) checks `_getUpgradeCardAt(x, y)` on the canvas. If the HTML overlay doesn't properly block canvas events, both could fire.
+
+## Level 3 Weapon Unlock Flow
+
+```javascript
+// _checkWeaponUnlocks (line 9234)
+const unlockSchedule = [1, 3, 6];  // Slot 0=Lv1, Slot 1=Lv3, Slot 2=Lv6
+for (let i = 0; i < this._activeWeapons.length && i < 3; i++) {
+  const wid = this._activeWeapons[i];
+  const unlockAt = unlockSchedule[i];
+  if (level >= unlockAt && !this.weaponSystem.weaponLevels[wid]) {
+    this.weaponSystem.unlockWeapon(wid);  // Sets weaponLevels[wid] = 1
+    this.eventBus.emit('weaponUnlock', { weaponId: wid, name: wData?.name || wid });
+  }
+}
+```
+
+When a weapon unlocks at Lv3, `_showUpgradeOptions()` adds upgrade options for ALL active weapons (including the newly unlocked one at Lv1).
+
+## Upgrade Option Generation (line 9251)
+
+```javascript
+_showUpgradeOptions() {
+  const upgrades = [
+    { name: 'Damage Up', desc: '+15% base damage', apply: ... },
+    { name: 'Speed Up', desc: '+10% move speed', apply: ... },
+    { name: 'Health Up', desc: '+20 max HP & heal', apply: ... },
+  ];
+  
+  const activeWeaponIds = this._activeWeapons || Object.keys(this.weaponSystem.weaponLevels)...;
+  for (const wid of activeWeaponIds) {
+    const wLevel = this.weaponSystem.weaponLevels[wid] || 0;
+    if (wLevel > 0 && wLevel < 7) {
+      const wData = this.dataManager.weapons?.find(w => w.id === wid);
+      const nextStats = wData?.statsPerLevel?.[wLevel];
+      upgrades.push({
+        name: `${weaponNames[wid] || wid} Up`,
+        desc: `Lv ${wLevel} → ${wLevel + 1}`,
+        apply: (g) => { g.weaponSystem.levelUp(wid); },
+      });
+    }
+  }
+  // Shuffle and pick 3
+  this.uiManager.showLevelUp(upgrades.slice(0, 3));
+}
+```
+
+## Weapon Data (`public/content/weapons.json`)
+
+All 8 weapons have `statsPerLevel` arrays (7 levels each). The data looks correct.
+
+## HTML Overlay (lines 1245-1248)
+
+```html
+<div id="levelup-overlay">
+  <div id="levelup-title">LEVEL UP!</div>
+  <div id="levelup-cards"></div>
+  <div id="levelup-hint">Press 1, 2, or 3 to select</div>
+</div>
+```
+
+## CSS (lines 1174-1186)
+
+```css
+#levelup-overlay {
+  position: fixed; inset: 0;
+  display: none;
+  z-index: 50;
+  pointer-events: auto;
+  touch-action: none;
+}
+#levelup-overlay.active { display: flex; }
+```
+
+## Debugging Suggestions
+
+1. **Add try/catch** around `option.apply(this)` in the selectUpgrade handler
+2. **Add console.log** to trace which path is taken (keyboard vs click)
+3. **Check if `_isSelectingUpgrade` is stuck true** after a freeze
+4. **Test if the freeze happens with ALL weapon combinations** at Lv3, not just specific ones
+5. **Check if the `weaponLevelUp` event handler** (line 8497) throws when called for a newly unlocked weapon
+
+## Related Files
+
+- `public/game2.html` — Main game (all code inline)
+- `public/content/weapons.json` — Weapon definitions
+- `public/content/enemies.json` — Enemy definitions
+- `public/content/stages.json` — Stage definitions
+
+## Repo
+
+GitHub: https://github.com/kosryvrdrgn14/modularity-engine
+
+---
+
+*Generated by Buffy for Claude handoff — August 31, 2026*
