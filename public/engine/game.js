@@ -139,7 +139,6 @@ class Game {
       }
     });
     this.eventBus.on('arcaneShot', (data) => {
-      // W5 visual: brief flash at cast point
       if (this.renderer) {
         this.renderer.addPulseEffect(data.x, data.y, 20, data.color || '#9C27B0');
       }
@@ -157,10 +156,31 @@ class Game {
     // Initialize title BGM and menu
     this.titleBGM = new TitleBGM(this.audioManager.ctx, this.audioManager.musicGain);
     this.titleBGM.init();
-    this.titleMenu = new TitleMenu(this);
-    this.townScreen = new TownScreen(this);
+    this.titleMenu = new TitleMenu({
+      audioManager: this.audioManager,
+      gameManager: this.gameManager,
+      dataManager: this.dataManager,
+      onStart: () => this._startFromTitle(),
+      onSettings: () => this._showSettings(),
+      onTestTown: () => this._testTown(),
+    });
 
     // Show title screen (audio unlocks on first user gesture)
+    this.townScreen = new TownScreen({
+      audioManager: this.audioManager,
+      gameManager: this.gameManager,
+      eventBus: this.eventBus,
+      dataManager: this.dataManager,
+      companionSystem: this.companionSystem,
+      estateSystem: this.estateSystem,
+      affectionSystem: this.affectionSystem,
+      farmingSystem: this.farmingSystem,
+      disasterSystem: this.disasterSystem,
+      sandboxSystem: this.sandboxSystem,
+      startGame: () => this.startGame(),
+      getPendingDisaster: () => this._pendingDisaster,
+      clearPendingDisaster: () => { this._pendingDisaster = null; },
+    });
     this.gameState.setState('title');
     this.titleMenu.show();
     this.titleBGM.fadeIn(1.5);
@@ -184,7 +204,7 @@ class Game {
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
-        this.audioManager.duckForLevelUp(false);
+        this.audioManager.duckForLevelUp(false); console.log('[selectUpgrade] Game resumed');
       }
     });
 
@@ -206,17 +226,18 @@ class Game {
     });
 
     this._isSelectingUpgrade = false;
-    this.eventBus.on('selectUpgrade', (data) => {
-      console.log('[selectUpgrade] Received, index:', data.index, 'state:', this.gameState.state, 'isSelecting:', this._isSelectingUpgrade, 'hasOpts:', !!this.uiManager.levelUpOptions);
-      if (!this.gameState.isLevelUp()) { console.log('[selectUpgrade] BLOCKED: not levelUp'); return; }
-      if (this._isSelectingUpgrade) { console.log('[selectUpgrade] BLOCKED: already selecting'); return; }
-      if (!this.uiManager.levelUpOptions) { console.log('[selectUpgrade] BLOCKED: no options'); return; }
+    this.eventBus.on('selectUpgrade', (data) => { console.log('[selectUpgrade] Received:', data, 'isLevelUp:', this.gameState.isLevelUp());
+      if (!this.gameState.isLevelUp()) return;
+      if (this._isSelectingUpgrade) return;
+      if (!this.uiManager.levelUpOptions) return;
       this._isSelectingUpgrade = true;
       const index = data.index;
-      if (index < 0 || index >= this.uiManager.levelUpOptions.length) { console.log('[selectUpgrade] BLOCKED: bad index', index, 'len:', this.uiManager.levelUpOptions.length); this._isSelectingUpgrade = false; return; }
+      if (index < 0 || index >= this.uiManager.levelUpOptions.length) {
+        this._isSelectingUpgrade = false;
+        return;
+      }
       const option = this.uiManager.levelUpOptions[index];
-      console.log('[selectUpgrade] Applying:', option?.name);
-      if (option && option.apply) option.apply(this);
+      console.log('[selectUpgrade] Applying:', index, option?.name); try { if (option && option.apply) option.apply(this); } catch(e) { console.error('[selectUpgrade] threw:', e); }
       this.uiManager.hideLevelUp();
       if (this.levelingSystem.hasPendingLevelUp()) {
         this.levelingSystem.consumeLevelUp();
@@ -227,8 +248,7 @@ class Game {
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
-        this.audioManager.duckForLevelUp(false);
-        console.log('[selectUpgrade] Resumed playing');
+        this.audioManager.duckForLevelUp(false); console.log('[selectUpgrade] Game resumed');
       }
     });
 
@@ -365,7 +385,6 @@ class Game {
 
     this.weaponSystem.init(this.player);
 
-    // Spawn companions from GameManager (or dev override)
     const devCompanions = this.gameManager.get('session.dev_companions');
     let companionIds = (devCompanions && devCompanions.some(Boolean))
       ? devCompanions.filter(Boolean)
@@ -492,7 +511,6 @@ class Game {
     const stageData = this.dataManager.stages;
     if (!stageData || !stageData.bossConfig || !stageData.bossConfig.announcement) return;
     // Announcements are defined relative to boss spawn time in the data
-    // e.g. time: 230 means 10s before boss spawn at 240. We offset dynamically.
     const bossBase = 240; // Reference time the data was designed for (standard 5min)
     const bossActual = this._bossSpawnTime || 240;
     const offset = bossActual - bossBase;
@@ -954,3 +972,19 @@ class Game {
     };
   }
 }
+
+
+// ============================================================
+// TOWN SYSTEM — Post-combat hub screen
+// ============================================================
+
+
+// SVG_PORTRAITS moved to data/svgPortraits.js (loaded via <script> tag before this one)
+
+;
+
+// ============================================================
+// START
+// ============================================================
+
+// DEBUG: window.skipToBoss() to spawn boss immediately
