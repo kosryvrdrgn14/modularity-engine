@@ -35,6 +35,9 @@ class TownEngine {
     // Location manager (injected)
     this.locationManager = null;
 
+    // Dock menu
+    this.dockMenu = null;
+
     this._setupEvents();
   }
 
@@ -42,14 +45,11 @@ class TownEngine {
     this.locationManager = locationManager;
   }
 
-  _setupEvents() {
-    // Bottom dock tab switching
-    const dockTabs = ['map', 'social', 'systems', 'shop', 'combat'];
-    for (const key of dockTabs) {
-      const btn = document.getElementById('dock-' + key);
-      if (btn) btn.addEventListener('click', () => this._switchDockTab(key));
-    }
+  setDockMenu(dockMenu) {
+    this.dockMenu = dockMenu;
+  }
 
+  _setupEvents() {
     // Panel close on backdrop click
     const backdrop = document.getElementById('panel-backdrop');
     if (backdrop) backdrop.addEventListener('click', () => this._closePanels());
@@ -128,14 +128,7 @@ class TownEngine {
     }
   }
 
-  _switchDockTab(tab) {
-    this.audioManager?.playMenuSound('select');
-
-    // Update active tab
-    document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
-    const btn = document.getElementById('dock-' + tab);
-    if (btn) btn.classList.add('active');
-
+  handleTabSwitch(tab) {
     const leftPanel = document.getElementById('town-left-panel');
     const rightPanel = document.getElementById('town-right-panel');
     const backdrop = document.getElementById('panel-backdrop');
@@ -168,14 +161,11 @@ class TownEngine {
         this._activePanel = 'right';
       }
     } else if (tab === 'shop') {
-      if (this.onTabSwitch) this.onTabSwitch(tab);
+      // Shop handled by TownScreen
     } else if (tab === 'combat') {
       this.hide();
       if (this.onCombat) this.onCombat();
     }
-
-    // Notify content of tab switch
-    if (this.onTabSwitch) this.onTabSwitch(tab);
   }
 
   _closePanels() {

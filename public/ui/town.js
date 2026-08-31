@@ -18,13 +18,16 @@ class TownScreen {
     // Create Engine
     this.engine = new TownEngine({
       audioManager,
-      onTabSwitch: (tab) => this._handleTabSwitch(tab),
-      onLocationSelect: (loc) => this._handleLocationSelect(loc),
-      onBack: () => this._handleBack(),
       onCombat: () => this._handleCombat(),
-      onSandbox: () => this.shopSystem.openSandbox(this.content.sandboxSystem),
     });
     this.engine.setLocationManager(this.locationManager);
+
+    // Create Dock Menu
+    this.dockMenu = new DockMenu({
+      audioManager,
+      onTabSwitch: (tab) => this._handleTabSwitch(tab),
+    });
+    this.engine.setDockMenu(this.dockMenu);
 
     // Create Content
     this.content = new TownContent({
@@ -79,10 +82,17 @@ class TownScreen {
   }
 
   _handleTabSwitch(tab) {
+    // Handle panel switching in engine
+    this.engine.handleTabSwitch(tab);
+
+    // Handle specific tabs
     if (tab === 'shop') {
       this.shopSystem.openShop();
+    } else if (tab === 'combat') {
+      this._handleCombat();
+    } else if (tab === 'social' || tab === 'systems') {
+      // Panels handled by engine
     }
-    // Other tabs handled by engine
   }
 
   _handleLocationSelect(loc) {
