@@ -130,6 +130,20 @@ eventBus.emit('damageEntity', { entity: enemy, damage: damage });
 - No pay-to-skip timers
 - Affection earned through gameplay, not purchases
 
+### Pillar 5: Current vs Long-Term
+
+**Current implementation (v1.0.0):**
+- 8 weapons, 12 companions, 3 stages
+- Basic combat, town, dialogue
+- File split complete (275 lines + 31 files)
+
+**Long-term vision:**
+- 50-55 NPCs with affection/marriage/estate system
+- Children and bloodline system
+- Adjacency system (Backpack-style loadout grid)
+- Web tools for content creation
+- Full quest system with factions
+
 ---
 
 ## 3. Game Architecture
@@ -340,7 +354,9 @@ public/
 | Deployed (auto-clear) | Farming a stage |
 | Unavailable | Story lockout, pregnancy, personal quest |
 
-### Implemented Companions (12 total)
+### Companion Roster
+
+**Current (v1.0.0):** 12 companions implemented
 
 | Companion | Role | Ability |
 |-----------|------|---------|
@@ -356,6 +372,8 @@ public/
 | Rabbit | Speed | Movement speed boost |
 | Frog | Utility | Pickup range increase |
 | Turtle | Defense | Armor bonus |
+
+**Long-term vision:** 50-55 NPCs with affection/marriage system, tiered by story investment:
 
 ---
 
@@ -625,7 +643,7 @@ const FEATURE_DATA = {
 | Quest system | 🔄 Partial | Basic quests, no full system |
 | Skill tree | 🔄 Partial | Basic unlocks, no tree |
 | Faction system | 🔄 Partial | Basic reputation |
-| Auto-clear farming | ✅ Working | Independent timers |
+| Auto-clear farming | ✅ Working | Matches player's best time exactly |
 | Estate system | 🔄 Partial | Basic structure |
 | Marriage system | ❌ Not started | Design complete |
 | Children system | ❌ Not started | Design complete |
