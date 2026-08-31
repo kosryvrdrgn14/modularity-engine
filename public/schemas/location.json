@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Location Schema",
+  "description": "Schema for location definitions in data/locationTree.js",
+  "type": "object",
+  "required": ["regions"],
+  "properties": {
+    "regions": {
+      "type": "array",
+      "description": "Game regions",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "locations"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Region identifier (e.g., 'town')"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name (e.g., 'Town')"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Emoji icon"
+          },
+          "locations": {
+            "type": "object",
+            "description": "Locations within region",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["id", "name", "icon", "desc"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Location identifier"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Emoji icon"
+                },
+                "desc": {
+                  "type": "string",
+                  "description": "Location description"
+                },
+                "background": {
+                  "type": "string",
+                  "description": "Background image path"
+                },
+                "ambient": {
+                  "type": ["string", "null"],
+                  "description": "Ambient sound path"
+                },
+                "children": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Child location IDs"
+                },
+                "npcs": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "NPC IDs at this location"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -125,7 +125,7 @@ class WeaponSystem {
 
     if (this.cooldowns['w1_projectile'] > 0) return;
 
-    const weapon = this.dataManager.weapons[0];
+    const weapon = this.dataManager.weapons?.find(w => w.id === 'w1_projectile');
     const stats = weapon.statsPerLevel[level - 1];
     this.cooldowns['w1_projectile'] = stats.cooldown;
 
@@ -178,7 +178,7 @@ class WeaponSystem {
     const level = this.weaponLevels['w2_orbit'];
     if (!level) return;
 
-    const weapon = this.dataManager.weapons[1];
+    const weapon = this.dataManager.weapons?.find(w => w.id === 'w2_orbit');
     const stats = weapon.statsPerLevel[level - 1];
     const orbCount = stats.orbitCount;
 
@@ -223,7 +223,7 @@ class WeaponSystem {
     this.cooldowns['weapon_area_pulse'] = (this.cooldowns['weapon_area_pulse'] || 0) - dt;
     if (this.cooldowns['weapon_area_pulse'] > 0) return;
 
-    const weapon = this.dataManager.weapons[2];
+    const weapon = this.dataManager.weapons?.find(w => w.id === 'weapon_area_pulse');
     if (!weapon || !weapon.statsPerLevel) {
       console.error('[W3] Weapon data missing!', weapon);
       return;

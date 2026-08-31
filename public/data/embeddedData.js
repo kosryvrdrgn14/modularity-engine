@@ -24,7 +24,7 @@ const EMBEDDED_DATA = {
       color: "#FFD700"
     }
   },
-  recommendedWeapons: [
+  weapons: [
     {
       id: "w1_projectile",
       name: "Projectile",

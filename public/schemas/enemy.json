@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enemy Schema",
+  "description": "Schema for enemy definitions in content/enemies.json",
+  "type": "object",
+  "required": ["id", "name", "type", "stats", "behavior"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique enemy identifier (e.g., 'zombie')",
+      "pattern": "^[a-z][a-z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name (e.g., 'Zombie')"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["normal", "elite", "boss"],
+      "description": "Enemy tier"
+    },
+    "stats": {
+      "type": "object",
+      "required": ["hp", "damage", "speed", "size", "xpValue", "goldValue"],
+      "properties": {
+        "hp": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Hit points"
+        },
+        "damage": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Contact damage"
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Movement speed"
+        },
+        "size": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Collision radius"
+        },
+        "xpValue": {
+          "type": "number",
+          "minimum": 0,
+          "description": "XP dropped on death"
+        },
+        "goldValue": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Gold dropped on death"
+        },
+        "goldCoins": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "integer", "minimum": 0 },
+            "max": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "required": ["pattern"],
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "enum": ["chase", "wander", "ranged", "stationary", "charge"],
+          "description": "Movement pattern"
+        },
+        "params": {
+          "type": "object",
+          "description": "Pattern-specific parameters",
+          "properties": {
+            "chaseSpeed": { "type": "number" },
+            "wanderRadius": { "type": "number" },
+            "attackRange": { "type": "number" },
+            "chargeSpeed": { "type": "number" }
+          }
+        }
+      }
+    },
+    "drops": {
+      "type": "object",
+      "properties": {
+        "powerUpTable": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "chance": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "visual": {
+      "type": "object",
+      "properties": {
+        "shape": { "type": "string" },
+        "color": { "type": "string" },
+        "svg": { "type": "string", "description": "Base64 SVG data URL" }
+      }
+    }
+  }
+}

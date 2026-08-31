@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Stage Schema",
+  "description": "Schema for stage definitions in content/stages.json",
+  "type": "object",
+  "required": ["id", "name", "duration", "spawnConfig", "waves"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique stage identifier (e.g., 'stage_graveyard')",
+      "pattern": "^stage_[a-z][a-z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name (e.g., 'The Graveyard')"
+    },
+    "theme": {
+      "type": "string",
+      "description": "Visual theme (e.g., 'Gothic horror')"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["quick", "standard", "boss"],
+      "description": "Stage difficulty tier"
+    },
+    "duration": {
+      "type": "integer",
+      "enum": [180, 300, 600],
+      "description": "Stage duration in seconds (3min, 5min, 10min)"
+    },
+    "background": {
+      "type": "object",
+      "properties": {
+        "baseColor": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "gridColor": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "gridSize": { "type": "integer", "minimum": 10, "maximum": 100 }
+      }
+    },
+    "spawnConfig": {
+      "type": "object",
+      "required": ["minDistance", "maxDistance", "maxEnemies", "baseSpawnRate"],
+      "properties": {
+        "minDistance": { "type": "number", "description": "Min spawn distance from player" },
+        "maxDistance": { "type": "number", "description": "Max spawn distance from player" },
+        "maxEnemies": { "type": "integer", "description": "Max simultaneous enemies" },
+        "baseSpawnRate": { "type": "number", "description": "Base spawns per second" },
+        "spawnRateCap": { "type": "number", "description": "Max spawn rate" }
+      }
+    },
+    "waves": {
+      "type": "array",
+      "description": "Wave definitions",
+      "items": {
+        "type": "object",
+        "required": ["time", "enemyTypes", "spawnRate", "maxEnemies"],
+        "properties": {
+          "time": {
+            "type": "string",
+            "pattern": "^[0-9]+:[0-9]+-[0-9]+:[0-9]+$",
+            "description": "Time range (e.g., '0:00-0:30')"
+          },
+          "enemyTypes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Enemy IDs that can spawn"
+          },
+          "spawnRate": {
+            "type": "number",
+            "description": "Spawns per second"
+          },
+          "compositionWeights": {
+            "type": "object",
+            "description": "Spawn weights per enemy type"
+          },
+          "maxEnemies": {
+            "type": "integer",
+            "description": "Max enemies during this wave"
+          }
+        }
+      }
+    },
+    "bossConfig": {
+      "type": "object",
+      "description": "Boss encounter configuration",
+      "properties": {
+        "enemyId": { "type": "string", "description": "Boss enemy ID" },
+        "spawnTime": { "type": "string", "description": "When boss spawns (e.g., '4:30')" },
+        "introDuration": { "type": "number", "description": "Boss intro animation duration" }
+      }
+    },
+    "recommendedWeapons": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Suggested weapon loadout"
+    }
+  }
+}

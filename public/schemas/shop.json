@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Shop Schema",
+  "description": "Schema for shop definitions in data/shopData.js",
+  "type": "object",
+  "properties": {
+    "combat": {
+      "type": "array",
+      "description": "Combat consumables",
+      "items": { "$ref": "#/definitions/shopItem" }
+    },
+    "companion": {
+      "type": "array",
+      "description": "Companion items",
+      "items": { "$ref": "#/definitions/shopItem" }
+    },
+    "estate": {
+      "type": "array",
+      "description": "Estate items",
+      "items": { "$ref": "#/definitions/shopItem" }
+    },
+    "gifts": {
+      "type": "array",
+      "description": "Gift items",
+      "items": { "$ref": "#/definitions/shopItem" }
+    }
+  },
+  "definitions": {
+    "shopItem": {
+      "type": "object",
+      "required": ["id", "name", "icon", "desc", "cost"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique item identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Emoji icon"
+        },
+        "desc": {
+          "type": "string",
+          "description": "Item description"
+        },
+        "cost": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Gold cost"
+        },
+        "effect": {
+          "type": "string",
+          "description": "Effect identifier (e.g., 'heal_30')"
+        },
+        "affection": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Affection points (for gifts)"
+        }
+      }
+    }
+  }
+}

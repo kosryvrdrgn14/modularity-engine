@@ -1,0 +1,211 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Weapon Schema",
+  "description": "Schema for weapon definitions in content/weapons.json",
+  "type": "object",
+  "required": ["id", "name", "type", "targeting", "unlockLevel", "statsPerLevel", "visual"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique weapon identifier (e.g., 'w1_projectile')",
+      "pattern": "^w[0-9]+_[a-z_]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name (e.g., 'Projectile')"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["projectile", "orbit", "area", "cone", "chain", "melee_cone", "melee_combo", "melee_slam"],
+      "description": "Weapon behavior type"
+    },
+    "targeting": {
+      "type": "string",
+      "enum": ["nearest", "self", "player_position"],
+      "description": "How weapon targets enemies"
+    },
+    "unlockLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Player level required to unlock"
+    },
+    "orbDamageCooldown": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Cooldown between damage ticks (for orbit weapons)"
+    },
+    "statsPerLevel": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "description": "Stats for each weapon level (1-7)",
+      "items": {
+        "type": "object",
+        "required": ["level", "damage", "cooldown"],
+        "properties": {
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "damage": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Base damage per hit"
+          },
+          "cooldown": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Seconds between attacks"
+          },
+          "projectileCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of projectiles (for projectile type)"
+          },
+          "orbitCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of orbiting orbs (for orbit type)"
+          },
+          "orbitSpeed": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Orbit rotation speed (for orbit type)"
+          },
+          "orbitRadius": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Orbit radius (for orbit type)"
+          },
+          "pulseRadius": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Area pulse radius (for area type)"
+          },
+          "pulseCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of pulses (for area type)"
+          },
+          "coneAngle": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360,
+            "description": "Cone angle in degrees (for cone type)"
+          },
+          "coneRange": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Cone range (for cone type)"
+          },
+          "chainCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of chain targets (for chain type)"
+          },
+          "chainRange": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Chain range (for chain type)"
+          },
+          "hitCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of hits per attack (for melee types)"
+          },
+          "range": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Attack range (for melee types)"
+          },
+          "coneWidth": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360,
+            "description": "Melee cone width in degrees (for melee_cone type)"
+          },
+          "arcWidth": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360,
+            "description": "Arc width in degrees (for melee_combo type)"
+          },
+          "comboHits": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of combo hits (for melee_combo type)"
+          },
+          "aoeWidth": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360,
+            "description": "AOE width in degrees (for melee_slam type)"
+          },
+          "explosionDmgPct": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Explosion damage as % of base (for melee_slam at Lv4+)"
+          },
+          "explosionRadius": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Explosion radius (for melee_slam at Lv4+)"
+          },
+          "homing": {
+            "type": "boolean",
+            "description": "Whether projectiles home (for projectile type at Lv7)"
+          },
+          "homingTurnRate": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Homing turn rate (for homing projectiles)"
+          },
+          "pierceCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of enemies projectile can pierce"
+          }
+        }
+      }
+    },
+    "powerSpikes": {
+      "type": "object",
+      "description": "Special abilities unlocked at Lv4 and Lv7",
+      "properties": {
+        "level4": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "statModifiers": { "type": "object" }
+          }
+        },
+        "level7": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "statModifiers": { "type": "object" }
+          }
+        }
+      }
+    },
+    "visual": {
+      "type": "object",
+      "required": ["shape", "color"],
+      "properties": {
+        "shape": {
+          "type": "string",
+          "enum": ["square", "circle", "diamond", "triangle", "star"],
+          "description": "Visual shape for projectile/orb"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Hex color code"
+        }
+      }
+    }
+  }
+}
