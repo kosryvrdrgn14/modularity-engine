@@ -1,0 +1,377 @@
+// ============================================================
+// TOWN ENGINE — Generic town UI framework
+// Handles panels, navigation, swipe, typewriter
+// ============================================================
+
+class TownEngine {
+  constructor({ audioManager, onTabSwitch, onLocationSelect, onBack, onCombat, onSandbox }) {
+    this.audioManager = audioManager;
+    this.onTabSwitch = onTabSwitch;
+    this.onLocationSelect = onLocationSelect;
+    this.onBack = onBack;
+    this.onCombat = onCombat;
+    this.onSandbox = onSandbox;
+
+    this.dom = {
+      screen: document.getElementById('town-screen'),
+      bg: document.getElementById('town-bg'),
+      campName: document.getElementById('town-camp-name'),
+      gold: document.getElementById('town-gold'),
+      runStats: document.getElementById('town-run-stats'),
+      npcArea: document.getElementById('town-npc-area'),
+    };
+
+    this._breadcrumb = document.getElementById('town-breadcrumb');
+    this._swipeIndicator = document.getElementById('town-swipe-indicator');
+    this._regionName = document.getElementById('swipe-region-name');
+    this._typewriterTimer = null;
+    this._activePanel = null;
+
+    // Swipe state
+    this._swipeStartX = 0;
+    this._swipeStartY = 0;
+    this._swipeActive = false;
+
+    // Location manager (injected)
+    this.locationManager = null;
+
+    this._setupEvents();
+  }
+
+  setLocationManager(locationManager) {
+    this.locationManager = locationManager;
+  }
+
+  _setupEvents() {
+    // Bottom dock tab switching
+    const dockTabs = ['map', 'social', 'systems', 'shop', 'combat'];
+    for (const key of dockTabs) {
+      const btn = document.getElementById('dock-' + key);
+      if (btn) btn.addEventListener('click', () => this._switchDockTab(key));
+    }
+
+    // Panel close on backdrop click
+    const backdrop = document.getElementById('panel-backdrop');
+    if (backdrop) backdrop.addEventListener('click', () => this._closePanels());
+
+    // Left panel CTA: Enter Combat
+    const panelCombat = document.getElementById('panel-enter-combat');
+    if (panelCombat) panelCombat.addEventListener('click', () => {
+      this.audioManager?.playMenuSound('select');
+      this.hide();
+      if (this.onCombat) this.onCombat();
+    });
+
+    // Right panel: Sandbox
+    const panelSandbox = document.getElementById('panel-open-sandbox');
+    if (panelSandbox) panelSandbox.addEventListener('click', () => {
+      this.audioManager?.playMenuSound('select');
+      if (this.onSandbox) this.onSandbox();
+    });
+
+    // Back button
+    const backBtn = document.getElementById('town-back');
+    if (backBtn) backBtn.addEventListener('click', () => {
+      this.audioManager?.playMenuSound('back');
+      if (this.locationManager) this.locationManager.goBack();
+      if (this.onBack) this.onBack();
+    });
+
+    // Swipe gestures on town screen
+    const screen = this.dom.screen;
+    screen.addEventListener('touchstart', (e) => {
+      if (this.locationManager && !this.locationManager.isRoot()) return;
+      this._swipeStartX = e.touches[0].clientX;
+      this._swipeStartY = e.touches[0].clientY;
+      this._swipeActive = true;
+    }, { passive: true });
+    screen.addEventListener('touchend', (e) => {
+      if (!this._swipeActive) return;
+      this._swipeActive = false;
+      const dx = e.changedTouches[0].clientX - this._swipeStartX;
+      const dy = e.changedTouches[0].clientY - this._swipeStartY;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx > 0) this._swipePrevRegion();
+        else this._swipeNextRegion();
+      }
+    }, { passive: true });
+
+    // Breadcrumb click delegation
+    this._breadcrumb.addEventListener('click', (e) => {
+      if (e.target.classList.contains('bc-back')) {
+        this.audioManager.playMenuSound('back');
+        if (this.locationManager) this.locationManager.goBack();
+      } else if (e.target.classList.contains('bc-item') && !e.target.classList.contains('current')) {
+        this.audioManager?.playMenuSound('select');
+        const locId = e.target.dataset.locId;
+        if (locId && this.locationManager) this.locationManager.navigateTo(locId);
+      }
+    });
+  }
+
+  show() {
+    this.dom.screen.classList.add('active');
+    if (this.locationManager) {
+      this.locationManager.locationHistory = [this.locationManager.currentLocationId];
+    }
+    this.renderBreadcrumb();
+    this.renderLocationCards();
+    this.updateSwipeIndicator();
+  }
+
+  hide() {
+    this.dom.screen.classList.remove('active');
+    this._closePanels();
+    if (this._typewriterTimer) {
+      clearInterval(this._typewriterTimer);
+      this._typewriterTimer = null;
+    }
+  }
+
+  _switchDockTab(tab) {
+    this.audioManager?.playMenuSound('select');
+
+    // Update active tab
+    document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
+    const btn = document.getElementById('dock-' + tab);
+    if (btn) btn.classList.add('active');
+
+    const leftPanel = document.getElementById('town-left-panel');
+    const rightPanel = document.getElementById('town-right-panel');
+    const backdrop = document.getElementById('panel-backdrop');
+
+    if (tab === 'map') {
+      leftPanel?.classList.remove('open');
+      rightPanel?.classList.remove('open');
+      backdrop?.classList.remove('active');
+      this._activePanel = null;
+    } else if (tab === 'social') {
+      if (this._activePanel === 'left') {
+        leftPanel?.classList.remove('open');
+        backdrop?.classList.remove('active');
+        this._activePanel = null;
+      } else {
+        leftPanel?.classList.add('open');
+        rightPanel?.classList.remove('open');
+        backdrop?.classList.add('active');
+        this._activePanel = 'left';
+      }
+    } else if (tab === 'systems') {
+      if (this._activePanel === 'right') {
+        rightPanel?.classList.remove('open');
+        backdrop?.classList.remove('active');
+        this._activePanel = null;
+      } else {
+        rightPanel?.classList.add('open');
+        leftPanel?.classList.remove('open');
+        backdrop?.classList.add('active');
+        this._activePanel = 'right';
+      }
+    } else if (tab === 'shop') {
+      if (this.onTabSwitch) this.onTabSwitch(tab);
+    } else if (tab === 'combat') {
+      this.hide();
+      if (this.onCombat) this.onCombat();
+    }
+
+    // Notify content of tab switch
+    if (this.onTabSwitch) this.onTabSwitch(tab);
+  }
+
+  _closePanels() {
+    document.getElementById('town-left-panel')?.classList.remove('open');
+    document.getElementById('town-right-panel')?.classList.remove('open');
+    document.getElementById('panel-backdrop')?.classList.remove('active');
+    this._activePanel = null;
+    document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('dock-map')?.classList.add('active');
+  }
+
+  renderBreadcrumb() {
+    if (!this._breadcrumb || !this.locationManager) return;
+    this._breadcrumb.innerHTML = '';
+
+    // Back button
+    if (this.locationManager.canGoBack()) {
+      const back = document.createElement('span');
+      back.className = 'bc-back';
+      back.textContent = '◀ ';
+      this._breadcrumb.appendChild(back);
+    }
+
+    // History as breadcrumb items
+    const history = this.locationManager.locationHistory;
+    const region = this.locationManager.getCurrentRegion();
+    for (let i = 0; i < history.length; i++) {
+      const locId = history[i];
+      const loc = region.locations[locId];
+      if (!loc) continue;
+      if (i > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'bc-sep';
+        sep.textContent = ' › ';
+        this._breadcrumb.appendChild(sep);
+      }
+      const item = document.createElement('span');
+      item.className = 'bc-item' + (i === history.length - 1 ? ' current' : '');
+      item.textContent = loc.name;
+      item.dataset.locId = locId;
+      this._breadcrumb.appendChild(item);
+    }
+  }
+
+  renderLocationCards() {
+    const area = this.dom.npcArea;
+    if (!area || !this.locationManager) return;
+
+    // Prevent double-render within same frame
+    if (this._renderLock) return;
+    this._renderLock = true;
+    requestAnimationFrame(() => { this._renderLock = false; });
+
+    area.innerHTML = '';
+    const curLoc = this.locationManager.getCurrentLocation();
+    if (!curLoc) return;
+
+    // Get content renderer if available
+    const contentRenderer = this._contentRenderer;
+
+    // 1. Upgrade card at city_root (delegated to content)
+    if (curLoc.id === 'city_root' && contentRenderer?.renderUpgradeCard) {
+      contentRenderer.renderUpgradeCard(area);
+    }
+
+    // 2. NPCs at current location
+    const npcs = this.locationManager.getNPCsAtLocation(curLoc.id);
+    for (const npc of npcs) {
+      const card = contentRenderer?.createNPCCard
+        ? contentRenderer.createNPCCard(npc, false)
+        : this._createDefaultNPCCard(npc);
+      area.appendChild(card);
+    }
+
+    // 3. Location cards (children)
+    const children = this.locationManager.getChildLocations(this.locationManager.currentLocationId);
+    for (const child of children) {
+      const card = document.createElement('div');
+      card.className = 'location-card' + (child.locked ? ' locked' : '');
+      card.innerHTML = `
+        <span class="loc-icon">${child.icon}</span>
+        <div class="loc-info">
+          <div class="loc-name">${child.name}</div>
+          <div class="loc-desc">${child.locked ? '\u{1f512} ' + (child.desc || 'Locked') : child.desc || ''}</div>
+          ${child.locked ? '<div class="loc-lock">\u{1f512} Locked</div>' : ''}
+        </div>
+        ${!child.locked ? '<span class="loc-arrow">\u25b8</span>' : ''}
+      `;
+      if (!child.locked) {
+        card.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.audioManager?.playMenuSound('select');
+          this.locationManager.navigateTo(child.id);
+        });
+      }
+      area.appendChild(card);
+    }
+
+    // 4. Empty state
+    if (npcs.length === 0 && children.length === 0 && curLoc.id !== 'city_root') {
+      const emptyCard = document.createElement('div');
+      emptyCard.className = 'location-card';
+      emptyCard.innerHTML = '<span class="loc-icon">\u{1f3d5}\ufe0f</span><div class="loc-info"><div class="loc-name">Nothing here yet</div><div class="loc-desc">This location will be populated in future updates</div></div>';
+      area.appendChild(emptyCard);
+    }
+  }
+
+  _createDefaultNPCCard(npc, isLocked = false) {
+    const card = document.createElement('div');
+    card.className = 'npc-card' + (isLocked ? ' locked' : '');
+    card.innerHTML = `
+      <div class="npc-portrait" style="width:80px;height:80px;border-radius:50%;background:#333;"></div>
+      <div class="npc-info">
+        <div class="npc-name">${npc.name}</div>
+        <div class="npc-greeting">"${(npc.greeting || '').substring(0, 60)}..."</div>
+        <div class="npc-action">\u25b8 Talk</div>
+      </div>
+    `;
+    return card;
+  }
+
+  updateSwipeIndicator() {
+    if (!this._swipeIndicator || !this.locationManager) return;
+    const dots = this._swipeIndicator.querySelectorAll('.swipe-dot');
+    const regions = this.locationManager.getRegions();
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.locationManager.currentRegionIndex);
+      dot.style.display = i < regions.length ? '' : 'none';
+      if (regions[i]) dot.title = regions[i].name;
+    });
+    if (this._regionName) {
+      this._regionName.textContent = regions[this.locationManager.currentRegionIndex]?.name || '';
+    }
+  }
+
+  _swipeNextRegion() {
+    if (!this.locationManager) return;
+    const idx = this.locationManager.currentRegionIndex;
+    if (idx < this.locationManager.getRegionCount() - 1) {
+      this.audioManager.playMenuSound('select');
+      this.locationManager.switchRegion(idx + 1);
+      this.renderBreadcrumb();
+      this.renderLocationCards();
+      this.updateSwipeIndicator();
+    }
+  }
+
+  _swipePrevRegion() {
+    if (!this.locationManager) return;
+    const idx = this.locationManager.currentRegionIndex;
+    if (idx > 0) {
+      this.audioManager.playMenuSound('select');
+      this.locationManager.switchRegion(idx - 1);
+      this.renderBreadcrumb();
+      this.renderLocationCards();
+      this.updateSwipeIndicator();
+    }
+  }
+
+  _onLocationNavigate(loc) {
+    this.renderBreadcrumb();
+    this.renderLocationCards();
+    this.updateSwipeIndicator();
+  }
+
+  typewriteText(text, onComplete) {
+    if (this._typewriterTimer) {
+      clearInterval(this._typewriterTimer);
+      this._typewriterTimer = null;
+    }
+    if (!text) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const textEl = document.getElementById('dialogue-text');
+    if (!textEl) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    textEl.textContent = '';
+    let i = 0;
+    this._typewriterTimer = setInterval(() => {
+      if (i < text.length) {
+        textEl.textContent += text[i];
+        i++;
+      } else {
+        clearInterval(this._typewriterTimer);
+        this._typewriterTimer = null;
+        if (onComplete) onComplete();
+      }
+    }, 25);
+  }
+
+  setContentRenderer(renderer) {
+    this._contentRenderer = renderer;
+  }
+}
