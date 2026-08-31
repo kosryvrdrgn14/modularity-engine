@@ -191,15 +191,37 @@ this.townScreen = new TownScreen({
 });
 ```
 
+## Changes Applied to game2.html
+
+**Backup created:** `public/game2_backup_20260831_1018.html`
+
+**File size:** 10,519 → 8,996 lines (removed ~1,523 lines)
+
+**Changes made:**
+1. ✅ Removed inline TitleMenu class (lines 6727-7147)
+2. ✅ Removed inline TownScreen class (lines 8922-10046)
+3. ✅ Added script tags for refactored files (lines 1446-1447)
+4. ✅ Updated Game constructor for TitleMenu (line 8119)
+5. ✅ Updated Game constructor for TownScreen (line 8129)
+
+**Script load order:**
+```
+1433-1445: Data files (13 files)
+1446-1447: Refactored engine files (2 files)
+1448+:     Inline script (main game code)
+```
+
+**TypeScript compilation:** ✅ Passed
+
 ## Next Steps
 
 1. ✅ Audit complete
 2. ✅ TitleMenu refactored (`titleMenu_refactored.js`)
 3. ✅ TownScreen refactored (`townScreen_refactored.js`)
-4. ⏳ Apply Game-side changes (constructor updates)
-5. ⏳ Test game after each change
-6. ⏳ Remove inline classes from game2.html
-7. ⏳ Add `<script>` tags to load refactored files
+4. ✅ Apply Game-side changes (constructor updates)
+5. ✅ Remove inline classes from game2.html
+6. ✅ Add `<script>` tags to load refactored files
+7. ⏳ Test game in preview
 
 ---
 
