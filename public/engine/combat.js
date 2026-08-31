@@ -500,6 +500,12 @@ class WeaponSystem {
           }
         }
       }
+      // Visual: quick slash arc
+      this.eventBus.emit('coneAttack', {
+        x: player.x, y: player.y, angle: facingAngle,
+        range, coneAngle: coneWidth * 2,
+        damage: 0, color: '#9B59B6', level,
+      });
       this.eventBus.emit('weaponFire', { weaponId: id });
     }
   }
@@ -562,6 +568,13 @@ class WeaponSystem {
         }
       }
     }
+    // Visual: sweep arc for each combo hit
+    const hitAngle = hit.angleOffset !== null ? hit.angleOffset : 0;
+    this.eventBus.emit('coneAttack', {
+      x: player.x, y: player.y, angle: hitAngle,
+      range: combo.range, coneAngle: combo.arcWidth,
+      damage: 0, color: '#3498DB', level: combo.nextHit + 1,
+    });
     if (combo.nextHit === 0) this.eventBus.emit('weaponFire', { weaponId: 'w7_sword' });
     combo.nextHit++;
     if (combo.nextHit < combo.combos.length) {
@@ -625,6 +638,12 @@ class WeaponSystem {
     for (const e of hitEnemies) {
       this.eventBus.emit('damageEntity', { entity: e, damage, source: player });
     }
+    // Visual: ground slam shockwave
+    this.eventBus.emit('areaPulse', {
+      x: player.x, y: player.y,
+      radius: aoeWidth / 2,
+      color: '#8D6E63',
+    });
     this.eventBus.emit('weaponFire', { weaponId: id });
     // Explosion at Lv4+ — use queue instead of setTimeout
     if (stats.explosionDmgPct && hitEnemies.length > 0) {

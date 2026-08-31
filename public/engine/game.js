@@ -143,6 +143,11 @@ class Game {
         this.renderer.addPulseEffect(data.x, data.y, 20, data.color || '#9C27B0');
       }
     });
+    this.eventBus.on('areaPulse', (data) => {
+      if (this.renderer) {
+        this.renderer.addPulseEffect(data.x, data.y, data.radius, data.color || '#FF9100');
+      }
+    });
 
     // Boss intro: reset companion state
     this.eventBus.on('bossIntro', () => {
