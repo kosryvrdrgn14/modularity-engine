@@ -1501,7 +1501,11 @@ class EventBus {
     const list = this.listeners.get(event);
     if (list) {
       for (let i = 0; i < list.length; i++) {
-        list[i](data);
+        try {
+          list[i](data);
+        } catch (e) {
+          console.error(`[EventBus] Listener ${i} for '${event}' threw:`, e);
+        }
       }
     }
     this.nestingDepth--;
@@ -8558,7 +8562,7 @@ class Game {
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
-        this.audioManager.duckForLevelUp(false);
+        this.audioManager.duckForLevelUp(false); console.log('[selectUpgrade] Game resumed');
       }
     });
 
@@ -8580,7 +8584,7 @@ class Game {
     });
 
     this._isSelectingUpgrade = false;
-    this.eventBus.on('selectUpgrade', (data) => {
+    this.eventBus.on('selectUpgrade', (data) => { console.log('[selectUpgrade] Received:', data, 'isLevelUp:', this.gameState.isLevelUp());
       if (!this.gameState.isLevelUp()) return;
       if (this._isSelectingUpgrade) return;
       if (!this.uiManager.levelUpOptions) return;
@@ -8591,7 +8595,7 @@ class Game {
         return;
       }
       const option = this.uiManager.levelUpOptions[index];
-      if (option && option.apply) option.apply(this);
+      console.log('[selectUpgrade] Applying:', index, option?.name); try { if (option && option.apply) option.apply(this); } catch(e) { console.error('[selectUpgrade] threw:', e); }
       this.uiManager.hideLevelUp();
       if (this.levelingSystem.hasPendingLevelUp()) {
         this.levelingSystem.consumeLevelUp();
@@ -8602,7 +8606,7 @@ class Game {
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
-        this.audioManager.duckForLevelUp(false);
+        this.audioManager.duckForLevelUp(false); console.log('[selectUpgrade] Game resumed');
       }
     });
 
