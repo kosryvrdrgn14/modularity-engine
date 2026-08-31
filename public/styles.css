@@ -1,4 +1,4 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { 
       width: 100%; height: 100%; 
       overflow: hidden; 
@@ -1162,3 +1162,71 @@
 
     /* F1: Sandbox DPS overlay */
     #sb-difficulty, #sb-show-dps { accent-color: #FFD700; }
+
+    /* Level-Up Overlay — HTML buttons replace canvas-drawn cards */
+    #levelup-overlay {
+      position: fixed; inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 50;
+      font-family: 'Courier New', monospace;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    #levelup-overlay.active { display: flex; }
+    #levelup-title {
+      color: #3B82F6;
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+    #levelup-cards {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .levelup-card {
+      width: 160px;
+      min-height: 180px;
+      background: #1a1a2e;
+      border: 2px solid #3B82F6;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 8px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .levelup-card:active {
+      transform: scale(0.95);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    }
+    .levelup-card .card-key {
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .levelup-card .card-name {
+      color: #FFF;
+      font-size: 15px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .levelup-card .card-desc {
+      color: #AAA;
+      font-size: 11px;
+      text-align: center;
+    }
+    #levelup-hint {
+      color: #666;
+      font-size: 12px;
+    }
+
