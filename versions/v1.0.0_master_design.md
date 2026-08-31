@@ -1,0 +1,679 @@
+# Modularity Engine — Master Design Document
+
+> **Version:** 1.0.0
+> **Date:** August 31, 2026
+> **Status:** Active Reference — Update this document as design decisions are made
+> **Purpose:** Single source of truth for the entire project
+
+---
+
+## Table of Contents
+
+1. [Project Vision](#1-project-vision)
+2. [Core Design Pillars](#2-core-design-pillars)
+3. [Game Architecture](#3-game-architecture)
+4. [File Structure](#4-file-structure)
+5. [Combat System](#5-combat-system)
+6. [Weapon System](#6-weapon-system)
+7. [Companion System](#7-companion-system)
+8. [Adjacency System (Future)](#8-adjacency-system-future)
+9. [Stage System](#9-stage-system)
+10. [Town System](#10-town-system)
+11. [NPC & Dialogue System](#11-npc--dialogue-system)
+12. [Economy & Progression](#12-economy--progression)
+13. [Data-Driven Design](#13-data-driven-design)
+14. [Web Tools Intent](#14-web-tools-intent)
+15. [Implementation Status](#15-implementation-status)
+16. [Open Design Questions](#16-open-design-questions)
+17. [Version History](#17-version-history)
+
+---
+
+## 1. Project Vision
+
+### What This Game Is
+
+A **survival roguelite RPG** where the player:
+
+- **Fights** in Vampire Survivors-style combat stages
+- **Returns to town** after each run to spend gold, upgrade buildings, and talk to NPCs
+- **Builds and upgrades** a persistent town hub that unlocks new features
+- **Develops relationships** with NPCs who provide quests, items, dialogue, and abilities
+- **Progresses through a skill tree** that permanently enhances the character
+- **Completes quests** that bridge all systems together
+
+### Core Game Loop
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        PERSISTENT LAYER                         │
+│                                                                 │
+│   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐   │
+│   │  TOWN   │◄──►│   NPC   │◄──►│ SKILLS  │◄──►│  QUESTS │   │
+│   │  HUB    │    │ SYSTEM  │    │  TREE   │    │ SYSTEM  │   │
+│   └────┬────┘    └────┬────┘    └────┬────┘    └────┬────┘   │
+│        │              │              │              │          │
+│        └──────────────┴──────┬───────┴──────────────┘          │
+│                              │                                  │
+│                     ┌────────▼────────┐                         │
+│                     │  CENTRAL STORE   │                         │
+│                     │  (save_data)     │                         │
+│                     └────────┬────────┘                         │
+│                              │                                  │
+├──────────────────────────────┼──────────────────────────────────┤
+│                     EPISODIC LAYER                              │
+│                              │                                  │
+│                     ┌────────▼────────┐                         │
+│                     │ COMBAT ENGINE    │                         │
+│                     │ (feature module) │                         │
+│                     └─────────────────┘                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**The flow:**
+1. Player is in **town** → talks to NPCs, picks up quests, upgrades buildings, spends gold
+2. Player enters **stage selection** → picks a stage (unlocked by quests/NPCs)
+3. Player enters **combat** → fights enemies, earns gold/XP/items, completes quest objectives
+4. Combat ends → results written to **central store**
+5. Player returns to **town** → gold is available, quest objectives update, NPC trust may change
+6. Repeat
+
+---
+
+## 2. Core Design Pillars
+
+### Pillar 1: Engine / Content Separation
+
+**Features are defined by data, not code. Adding content should require adding data files, not modifying JavaScript.**
+
+| Approach | Bad (Code-Driven) | Good (Data-Driven) |
+|----------|-------------------|-------------------|
+| Add new weapon | Edit WeaponSystem.js | Add entry to weapons.json |
+| Add new NPC | Edit TownScreen.js | Add entry to npcData.js |
+| Add new stage | Edit SpawnSystem.js | Add entry to stages.json |
+| Add new dialogue | Edit _showChoices() | Add entry to dialogues.json |
+
+**The Pattern:**
+```
+Engine (Generic Logic) + Content (Data Files) = Feature
+```
+
+### Pillar 2: Modularity
+
+```
+public/
+├── data/           # Content definitions (JSON/JS)
+├── engine/         # Core systems (generic logic)
+├── systems/        # Game systems (feature logic)
+├── ui/             # UI components (presentation)
+└── game2.html      # Entry point (orchestrator)
+```
+
+### Pillar 3: Event-Driven Communication
+
+**Instead of:**
+```javascript
+// BAD: Direct coupling
+weaponSystem.damageEnemy(enemy, damage);
+```
+
+**Use:**
+```javascript
+// GOOD: Event-driven
+eventBus.emit('damageEntity', { entity: enemy, damage: damage });
+```
+
+### Pillar 4: No Gacha / No Pay-to-Skip
+
+- No dual premium currency
+- No energy caps
+- No pay-to-skip timers
+- Affection earned through gameplay, not purchases
+
+---
+
+## 3. Game Architecture
+
+### Centralized Data Architecture
+
+Every feature reads/writes one source of truth. No feature owns player progress — the save file does.
+
+**Why this works:**
+- Quest system knows what stage you just completed
+- NPC trust updates when you fulfill a promise
+- Skill tree knows how much gold you earned
+- Building upgrades know what you've unlocked
+
+### Save Data Structure
+
+```json
+{
+  "version": "1.0.0",
+  "player": { "level": 1, "xp": 0, "hp": 100, "totalGold": 0 },
+  "combat": { "unlockedWeapons": ["w1_projectile"], "weaponLevels": {} },
+  "skills": { "unlocked": [], "skillPoints": 0 },
+  "town": { "level": 1, "buildings": {}, "resources": {} },
+  "npcs": { "met": [], "relationships": {}, "companions": [] },
+  "quests": { "active": [], "completed": [], "log": [] },
+  "factions": {}
+}
+```
+
+### Event Bus Pattern
+
+All cross-feature communication happens through the EventBus:
+
+```javascript
+// Combat writes results
+eventBus.emit('combatComplete', { gold: 500, xp: 200, kills: 150 });
+
+// Town reads results
+eventBus.on('combatComplete', (data) => {
+  gameManager.add_currency(data.gold);
+  gameManager.add_xp(data.xp);
+});
+```
+
+---
+
+## 4. File Structure
+
+### Current Implementation (v1.0.0)
+
+```
+public/
+├── game2.html              (275 lines)  — HTML + init script
+├── styles.css              (1,232 lines) — All CSS
+│
+├── data/                   (13 files)   — Game data
+│   ├── embeddedData.js     (1,996 lines) — Weapons, enemies, stages
+│   ├── companionData.js    (216 lines)   — Companion definitions
+│   ├── npcData.js          (175 lines)   — NPC definitions
+│   ├── locationTree.js     (92 lines)    — Town locations
+│   ├── shopData.js         (30 lines)    — Shop items
+│   └── ... (8 more data files)
+│
+├── engine/                 (8 active files) — Core systems
+│   ├── core.js             (518 lines)   — EventBus, DataManager, GameState, GameLoop, Camera, InputManager
+│   ├── entities.js         (506 lines)   — EntityManager, SpawnSystem, MovementSystem
+│   ├── combat.js           (831 lines)   — CollisionSystem, WeaponSystem, DamageSystem
+│   ├── pickup.js           (547 lines)   — PickupSystem, LevelingSystem, TelegraphSystem
+│   ├── rendering.js        (573 lines)   — Renderer, FloatingTextSystem
+│   ├── game.js             (990 lines)   — Game orchestrator
+│   ├── titleMenu_refactored.js (428 lines) — Title screen
+│   └── locationManager.js  (94 lines)    — Town navigation
+│
+├── systems/                (3 files)     — Game systems
+│   ├── companion.js        (1,010 lines) — CompanionSystem (12 companions)
+│   ├── progression.js      (937 lines)   — GameManager, StorageBackend, + 7 systems
+│   └── loot.js             (102 lines)   — StarSystem, FrenzySystem, GachaProtection
+│
+└── ui/                     (7 files)     — UI components
+    ├── audio.js            (1,146 lines) — AudioManager, TitleBGM
+    ├── dockMenu.js         (86 lines)    — Bottom navigation
+    ├── game.js             (148 lines)   — UIManager (HUD, level-up)
+    ├── shop.js             (334 lines)   — ShopSystem (data-driven)
+    ├── town.js             (113 lines)   — TownScreen orchestrator
+    ├── townContent.js      (810 lines)   — Town features
+    └── townEngine.js       (367 lines)   — Town UI framework
+```
+
+### Script Load Order
+
+```
+1. Data files (13)      — Game data loaded first
+2. titleMenu_refactored — Title screen
+3. core.js              — EventBus, DataManager, GameState
+4. entities.js          — EntityManager, SpawnSystem
+5. combat.js            — CollisionSystem, WeaponSystem
+6. pickup.js            — PickupSystem, LevelingSystem
+7. rendering.js         — Renderer
+8. companion.js         — CompanionSystem
+9. progression.js       — GameManager
+10. loot.js             — StarSystem, FrenzySystem
+11. locationManager.js  — Town navigation
+12. audio.js            — AudioManager
+13. game.js (ui)        — UIManager
+14. dockMenu.js         — Bottom navigation
+15. shop.js             — ShopSystem
+16. townEngine.js       — Town UI framework
+17. townContent.js      — Town features
+18. town.js             — TownScreen orchestrator
+19. game.js (engine)    — Game orchestrator
+20. <script>            — Init code
+```
+
+---
+
+## 5. Combat System
+
+### Stage Lengths (Tied to Quest Importance)
+
+| Stage Type | Duration | Purpose |
+|------------|----------|---------|
+| Minor quest | 3 min | Quick runs, farming |
+| Story quest | 5 min | Standard gameplay |
+| Major plot battle | 10 min | Boss encounters, climactic fights |
+
+### Combat Mechanics
+
+- **Vampire Survivors-style:** Waves of enemies, auto-attacking weapons, pickups
+- **Player movement:** WASD / Arrow keys / Touch
+- **Weapons:** 3 slots, auto-attack, upgrade through level-ups
+- **Companions:** Invulnerable support NPCs with their own attacks
+
+### Star Conditions
+
+**2★ (pick one axis):**
+- Damage taken below a % threshold
+- Clear with time to spare
+- Reach minimum level by stage end
+- Collect X% of spawned pickups
+
+**3★ (stack harder or add second axis):**
+- No-hit clear
+- Clear using only starting weapon
+- Clear while underleveled
+- Kill bonus elite/miniboss
+- Overkill/combo thresholds
+
+### Frenzy Mode
+
+- **Trigger:** Totem that only appears after a stage has been 3-starred
+- **Effect:** Decouples stage from timed spawns into max-spawn dump mode
+- **Purpose:** Chased manually for faster clear times and better loot
+
+### Rare Drop Soft-Pity
+
+- Starts at ~1% base rate
+- Ramps per consecutive clear without a drop
+- ~25% by clear 4, ~99% by clear 5
+- Counter resets on successful drop
+
+---
+
+## 6. Weapon System
+
+### Core Design
+
+- Player brings **3 weapon slots**
+- Power spikes at **level 4 and level 7 (max)**
+- Some weapons peak early, some scale hard by level 7
+
+### Weapon Types (Implemented)
+
+| Weapon | Type | Behavior |
+|--------|------|----------|
+| Projectile | Ranged | Fires bullets at nearest enemy |
+| Orbit | Melee | Orbits around player |
+| Area Pulse | AoE | Damages all enemies in radius |
+| Flame Wave | Ranged | Wave of fire in direction |
+| Arcane Bolt | Ranged | Homing magic missile |
+| Sword | Melee | Swing in front of player |
+| Dagger | Melee | Quick stab attack |
+| Whip | Melee | Long-range swing |
+
+### Weapon Evolution
+
+- Evolutions are RNG-influenced but companion pairing reduces randomness
+- Each weapon upgrade slightly buffs paired companion's attack
+- **Adjacency system (future):** Placement in loadout grid affects power
+
+---
+
+## 7. Companion System
+
+### Core Design
+
+- Player starts with **dog companion** only
+- Companions take no damage
+- Have their own attacks/buffs
+- Modify and can evolve the player's weapons
+- **1:1 slot mapping:** 3 weapon slots, 1 companion slot per weapon
+
+### Companion Status States
+
+| State | Description |
+|-------|-------------|
+| Available | Ready to deploy |
+| Deployed (combat) | In active party |
+| Deployed (auto-clear) | Farming a stage |
+| Unavailable | Story lockout, pregnancy, personal quest |
+
+### Implemented Companions (12 total)
+
+| Companion | Role | Ability |
+|-----------|------|---------|
+| Dog | Starter | Chase and bite enemies |
+| Wolf | Tank | Soaks damage, growl debuff |
+| Hawk | Scout | Aerial attacks, vision boost |
+| Cat | Stealth | Critical hit buff |
+| Bear | Tank | High HP, slow attacks |
+| Snake | Debuffer | Poison damage over time |
+| Fox | Support | Gold find bonus |
+| Owl | Mage | Magic damage boost |
+| Deer | Healer | HP regen aura |
+| Rabbit | Speed | Movement speed boost |
+| Frog | Utility | Pickup range increase |
+| Turtle | Defense | Armor bonus |
+
+---
+
+## 8. Adjacency System (Future)
+
+> **Status:** Design only — Do not implement until core systems are stable
+
+### Grid Layout
+
+```
+┌─────┬─────┬─────┬─────┬─────┬─────┐
+│ C1  │ W1  │ W2  │ W3  │ C2  │ C3  │
+└─────┴─────┴─────┴─────┴─────┴─────┘
+```
+
+### Key Insight
+
+- W2 and W3 are most connected — receive buffs from both sides
+- C2 sits between W3 and C3, creating secondary power center
+- Placement matters — same loadout produces different builds
+
+### Item Tags/Properties
+
+| Tag | Effect on Adjacent |
+|-----|-------------------|
+| 🔥 Fire | +10% fire damage |
+| ❄️ Ice | +10% slow effect |
+| ⚡ Lightning | +10% chain chance |
+| 🛡️ Defense | +10 armor |
+| ❤️ Life | +5% HP regen |
+| 💨 Speed | +10% move speed |
+
+---
+
+## 9. Stage System
+
+### Stage Structure
+
+Each stage defines:
+- **Enemies:** Which enemies spawn, in what waves
+- **Timer:** Duration (3/5/10 minutes)
+- **Boss:** Boss encounter at end
+- **Pickups:** Drop rates and types
+- **Environment:** Visual theme, hazards
+
+### Implemented Stages
+
+| Stage | Duration | Enemies | Boss |
+|-------|----------|---------|------|
+| Graveyard | 5 min | Skeletons, Zombies, Ghosts | Lich King |
+| Forest | 5 min | Wolves, Bears, Spiders | Spider Queen |
+| Cave | 5 min | Bats, Slimes, Golems | Crystal Golem |
+
+### Star Rewards
+
+| Stars | Bonus |
+|-------|-------|
+| 1★ | Base loot |
+| 2★ | +25% gold, +1 rare material |
+| 3★ | +50% gold, +2 rare materials, unlock auto-clear |
+
+---
+
+## 10. Town System
+
+### Growth Stages
+
+| Stage | Name | Unlocks |
+|-------|------|---------|
+| 1 | Refugee Camp | Basic NPCs, campfire |
+| 2 | Hamlet | First named NPCs, market |
+| 3 | Village | Districts, crafting |
+| 4 | Town | Full features, sub-locations |
+| 5 | City | Endgame content |
+
+### Districts
+
+| District | Function |
+|----------|----------|
+| Market/Trade | Buy/sell items |
+| Residential | Houses, families |
+| Government | Quests, reputation |
+| Artisan/Crafting | Weapon evolution |
+| Garrison | Combat modifiers |
+| Scholar | Research, stage variants |
+| Temple | Morale, faction choice |
+| Outskirts | Passive resources |
+| Tavern | Side quests, rumors |
+
+### Town UI Architecture
+
+```
+ui/townEngine.js      → Panels, navigation, swipe, typewriter
+ui/townContent.js     → Dialogue, farming, estate, disasters
+data/locationTree.js  → Location hierarchy
+data/npcData.js       → NPC definitions
+```
+
+---
+
+## 11. NPC & Dialogue System
+
+### NPC Types
+
+| Type | Purpose |
+|------|---------|
+| Quest Givers | Provide missions |
+| Merchants | Buy/sell items |
+| Companions | Join combat party |
+| Story NPCs | Drive narrative |
+| Townsfolk | Flavor, ambient dialogue |
+
+### Dialogue Structure
+
+```javascript
+{
+  id: 'blacksmith',
+  name: 'Gorn',
+  greeting: 'Welcome, adventurer!',
+  topics: [
+    {
+      text: 'Got any work?',
+      response: 'Indeed! The graveyard needs clearing...',
+      flag: 'blacksmith_quest_available',
+      affection: 5
+    }
+  ]
+}
+```
+
+### Affection Tiers
+
+| Tier | Name | Requirements |
+|------|------|--------------|
+| 1 | Interest | Discovery quest or combat encounter |
+| 2 | Respect | Capability check quest |
+| 3 | Trust | Resource/rare-fetch quest |
+| 4 | Claim | Rite-of-passage quest |
+
+---
+
+## 12. Economy & Progression
+
+### Currency Types
+
+| Currency | Source | Use |
+|----------|--------|-----|
+| Gold | Combat, quests, farming | Buy items, upgrade buildings |
+| Wood | Farming, gathering | Build structures |
+| Stone | Mining, quests | Build structures |
+| Herbs | Gathering, estates | Crafting, potions |
+| Ore | Mining, quests | Crafting, weapons |
+
+### Gold Sinks
+
+| Sink | Purpose |
+|------|---------|
+| Combat boosts | Temporarily boost output |
+| Wife gifts | Romance progression |
+| Disaster response | Narrative events |
+| Building upgrades | Town progression |
+| Skill points | Permanent upgrades |
+
+### Progression Milestones
+
+| Milestone | Unlocks |
+|-----------|---------|
+| First 3★ clear | Auto-clear farming |
+| Hamlet | Named NPCs, market |
+| Village | Crafting, districts |
+| Town | Full features |
+| Max affection | Marriage, estates |
+| Children | Legacy system |
+
+---
+
+## 13. Data-Driven Design
+
+### Data Schema Standards
+
+**File Naming:**
+- `data/[feature]Data.js` — Main data file
+- `data/[feature]Config.js` — Configuration file
+
+**Data Structure:**
+```javascript
+const FEATURE_DATA = {
+  [unique_id]: {
+    id: 'unique_id',
+    name: 'Display Name',
+    description: 'What this does',
+    // Feature-specific properties
+  },
+};
+```
+
+### Current Data Files
+
+| File | Purpose | Lines |
+|------|---------|-------|
+| embeddedData.js | Weapons, enemies, stages | 1,996 |
+| companionData.js | Companion definitions | 216 |
+| npcData.js | NPC definitions | 175 |
+| locationTree.js | Town locations | 92 |
+| shopData.js | Shop items | 30 |
+| assetMap.js | Asset paths | 24 |
+| farmingConfig.js | Farming settings | 15 |
+| svgPortraits.js | Character portraits | 15 |
+| sandboxDefaults.js | Sandbox config | 13 |
+| affectionTiers.js | Affection levels | 9 |
+| disasterEvents.js | Disaster definitions | 9 |
+| estateTiers.js | Estate upgrades | 9 |
+| childGrowthStages.js | Child growth | 3 |
+
+---
+
+## 14. Web Tools Intent
+
+### Vision
+
+> **Non-developers should be able to create game content using visual web tools, without touching code.**
+
+### Tool Categories
+
+| Tool | Purpose | Data Files |
+|------|---------|------------|
+| NPC Creator | Create/edit NPCs | npcData.js, svgPortraits.js |
+| Location Creator | Create/edit locations | locationTree.js |
+| Quest Creator | Create/edit quests | quests.js (future) |
+| Shop Creator | Create/edit shop items | shopData.js |
+| Weapon Creator | Create/edit weapons | weapons.json |
+| Enemy Creator | Create/edit enemies | enemies.json |
+| Stage Creator | Create/edit stages | stages.json |
+
+### Workflow
+
+1. **Open Tool:** Creator loads in browser
+2. **Edit Content:** Fill forms, use visual editors
+3. **Preview:** See changes in real-time
+4. **Export:** Generate data file
+5. **Import:** Add file to `data/` folder
+6. **Play:** Game loads new content automatically
+
+---
+
+## 15. Implementation Status
+
+### Completed (v1.0.0)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| File split | ✅ Complete | 10,519 → 275 lines |
+| Combat engine | ✅ Working | Basic weapons, enemies, pickups |
+| Weapon system | ✅ Working | 8 weapons, upgrades, evolutions |
+| Companion system | ✅ Working | 12 companions, deployment |
+| Stage system | ✅ Working | 3 stages, star conditions |
+| Town system | ✅ Working | Location navigation, panels |
+| NPC dialogue | ✅ Working | Typewriter, choices |
+| Shop system | ✅ Working | Data-driven, multiple modes |
+| Level-up system | ✅ Working | Weapon upgrades, power spikes |
+| Audio system | ✅ Working | SFX, music, ducking |
+
+### In Progress
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Quest system | 🔄 Partial | Basic quests, no full system |
+| Skill tree | 🔄 Partial | Basic unlocks, no tree |
+| Faction system | 🔄 Partial | Basic reputation |
+| Auto-clear farming | ✅ Working | Independent timers |
+| Estate system | 🔄 Partial | Basic structure |
+| Marriage system | ❌ Not started | Design complete |
+| Children system | ❌ Not started | Design complete |
+
+### Not Started
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Adjacency system | ❌ Not started | Design complete |
+| Web tools | ❌ Not started | Design complete |
+| Multi-character scenes | ❌ Not started | Design complete |
+
+---
+
+## 16. Open Design Questions
+
+1. **Frenzy mode:** Should it be achievable alongside clean/no-hit 3★ run, or are they separate goals?
+2. **Sub-3★-time rare drop:** Permanent standing perk once achieved?
+3. **Children:** Do they have gameplay function beyond combat-NPC/flavor?
+4. **Rare-drop pity curve:** Linear ramp vs. long-flat-then-spike?
+5. **Auto-clear slots:** Concurrency cap scaling by town tier?
+
+---
+
+## 17. Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v0.2.0 | Aug 21 | Early prototype (2,479 lines) |
+| v0.7.0 | Aug 26 | Mid-development |
+| v0.9.0 | Aug 31 | Last monolithic version (10,519 lines) |
+| v1.0.0 | Aug 31 | File split complete (275 lines + 31 files) |
+
+---
+
+## Appendix A: Related Documents
+
+| Document | Purpose |
+|----------|---------|
+| vs_plan.md | Original design plan |
+| game_frame.md | Detailed game framework |
+| design-goal-scope.md | Design goals and scope |
+| DESIGN_PRINCIPLES.md | Data-driven design principles |
+| FILE_SPLIT_REPORT.md | File split documentation |
+| CHANGELOG.md | Version history |
+| game_bugs.md | Bug tracking |
+| 01-32_*_spec.md | Detailed feature specs |
+
+---
+
+*This document is the single source of truth for the Modularity Engine project. Update it as design decisions are made.*
