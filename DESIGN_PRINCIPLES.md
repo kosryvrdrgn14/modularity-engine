@@ -42,13 +42,20 @@ data/enemies.json     → Enemy definitions (stats, patterns, drops)
 data/stages.json      → Stage configurations (waves, timers, bosses)
 ```
 
-**Example: Town System (Proposed)**
+**Example: Town System**
 ```
 ui/townEngine.js      → Panels, navigation, swipe, typewriter
 ui/townContent.js     → Dialogue, farming, estate, disasters
 data/npcData.js       → NPC definitions (dialogue, locations)
 data/locationTree.js  → Location hierarchy
 data/farmingConfig.js → Farming settings
+```
+
+**Example: Shop System**
+```
+ui/shop.js            → Shop overlay, tabs, rendering
+data/shopData.js      → Item definitions (cost, effects, categories)
+Result: Add new item = add entry to shopData.js
 ```
 
 **Example: Companion System**

@@ -9,9 +9,11 @@ class TownScreen {
     this.eventBus = eventBus;
     this.startGame = startGame;
 
-    // Create LocationManager and ShopSystem
+    // Create LocationManager
     this.locationManager = new LocationManager(gameManager);
-    this.shopSystem = new ShopSystem(gameManager, eventBus);
+    
+    // Create ShopSystem (new data-driven version)
+    this.shopSystem = new ShopSystem({ gameManager, eventBus, audioManager });
 
     // Create Engine
     this.engine = new TownEngine({
@@ -20,7 +22,7 @@ class TownScreen {
       onLocationSelect: (loc) => this._handleLocationSelect(loc),
       onBack: () => this._handleBack(),
       onCombat: () => this._handleCombat(),
-      onSandbox: () => this.content.openSandbox(),
+      onSandbox: () => this.shopSystem.openSandbox(this.content.sandboxSystem),
     });
     this.engine.setLocationManager(this.locationManager);
 
@@ -78,8 +80,7 @@ class TownScreen {
 
   _handleTabSwitch(tab) {
     if (tab === 'shop') {
-      this.engine.hide();
-      this.shopSystem.open();
+      this.shopSystem.openShop();
     }
     // Other tabs handled by engine
   }
