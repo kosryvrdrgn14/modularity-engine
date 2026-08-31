@@ -1,6 +1,8 @@
 # Meta-Systems Design Doc — Town, Combat Loop, Affection & Economy
 
-**Status:** Target design for full interconnected system. Current prototype only implements a minimal slice (see "Current Prototype vs Target Scope" at bottom). This doc exists to sync design intent across all standalone feature markdowns — treat it as the top-level reference, not a replacement for the detailed docs.
+> ⚠️ **SUPERSEDED** — This document is historical. For current design, see `MASTER_DESIGN.md`.
+> **Status:** Historical Reference Only
+> This doc exists to sync design intent across all standalone feature markdowns — treat it as the top-level reference, not a replacement for the detailed docs.
 
 ---
 

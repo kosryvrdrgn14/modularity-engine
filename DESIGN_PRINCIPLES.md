@@ -1,8 +1,8 @@
 # Design Principles — Modularity Engine
 
-**Date:** August 31, 2026
-**Purpose:** Guide future development decisions
-**Status:** Active — Reference this document before making architectural changes
+> ⚠️ **SUPERSEDED** — This document is historical. For current design, see `MASTER_DESIGN.md`.
+> **Date:** August 31, 2026
+> **Status:** Historical Reference Only
 
 ---
 

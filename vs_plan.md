@@ -1,8 +1,9 @@
 # Modularity Engine — Design Plan
 
-> **Version:** 1.0 (Prototype)
+> ⚠️ **SUPERSEDED** — This document is historical. For current design, see `MASTER_DESIGN.md`.
+> **Original Version:** 1.0 (Prototype)
 > **Last Updated:** 2026-08-20
-> **Status:** Planning
+> **Status:** Historical Reference Only
 
 ---
 

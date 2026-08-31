@@ -1,8 +1,9 @@
 # Modularity Engine — Game Framework
 
-> **Version:** 0.4.0 (Design Decisions Locked)
+> ⚠️ **SUPERSEDED** — This document is historical. For current design, see `MASTER_DESIGN.md`.
+> **Original Version:** 0.4.0 (Design Decisions Locked)
 > **Date:** August 26, 2026
-> **Status:** Design Document
+> **Status:** Historical Reference Only
 > **Predecessor:** `extract_engine.html` (combat engine extraction plan)
 
 ---
