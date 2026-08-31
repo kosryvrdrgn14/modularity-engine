@@ -1,0 +1,202 @@
+{
+  "fire": {
+    "id": "fire",
+    "name": "Fire",
+    "icon": "🔥",
+    "color": "#FF4500",
+    "description": "Burns enemies over time",
+    "damageType": "dot",
+    "baseDamage": 5,
+    "damagePerLevel": 2,
+    "duration": 3.0,
+    "stacks": 3,
+    "visual": {
+      "projectile": "fireball",
+      "orb": "fire_ring",
+      "effect": "explosion_small",
+      "particles": "fire",
+      "hitEffect": "fire_burst",
+      "dotEffect": "flames"
+    },
+    "sound": {
+      "hit": "fire_hit",
+      "dot": "fire_burn",
+      "expire": "fire_expire"
+    },
+    "interactions": {
+      "ice": { "effect": "steam", "damageBonus": 0.5 },
+      "water": { "effect": "steam", "damageReduction": 0.5 },
+      "lightning": { "effect": "explosion", "damageBonus": 1.0 }
+    }
+  },
+  "ice": {
+    "id": "ice",
+    "name": "Ice",
+    "icon": "❄️",
+    "color": "#00BFFF",
+    "description": "Slows enemies",
+    "damageType": "slow",
+    "baseDamage": 3,
+    "damagePerLevel": 1,
+    "slowAmount": 0.3,
+    "slowDuration": 2.0,
+    "stacks": 5,
+    "visual": {
+      "projectile": "ice_shard",
+      "orb": "ice_ring",
+      "effect": "shatter",
+      "particles": "frost",
+      "hitEffect": "frost_burst",
+      "dotEffect": "frozen"
+    },
+    "sound": {
+      "hit": "ice_hit",
+      "dot": "ice_crack",
+      "expire": "ice_shatter"
+    },
+    "interactions": {
+      "fire": { "effect": "steam", "damageReduction": 0.5 },
+      "lightning": { "effect": "freeze", "stunDuration": 1.0 }
+    }
+  },
+  "lightning": {
+    "id": "lightning",
+    "name": "Lightning",
+    "icon": "⚡",
+    "color": "#FFFF00",
+    "description": "Chance to stun enemies",
+    "damageType": "stun",
+    "baseDamage": 8,
+    "damagePerLevel": 3,
+    "stunChance": 0.2,
+    "stunDuration": 0.5,
+    "chainCount": 2,
+    "visual": {
+      "projectile": "lightning_bolt",
+      "orb": "lightning_ring",
+      "effect": "shock",
+      "particles": "spark",
+      "hitEffect": "spark_burst",
+      "dotEffect": "shock"
+    },
+    "sound": {
+      "hit": "lightning_hit",
+      "dot": "lightning_crack",
+      "expire": "lightning_fade"
+    },
+    "interactions": {
+      "fire": { "effect": "explosion", "damageBonus": 1.0 },
+      "ice": { "effect": "freeze", "stunDuration": 1.0 },
+      "water": { "effect": "chain", "chainBonus": 2 }
+    }
+  },
+  "poison": {
+    "id": "poison",
+    "name": "Poison",
+    "icon": "☠️",
+    "color": "#00FF00",
+    "description": "Deals damage over time",
+    "damageType": "dot",
+    "baseDamage": 4,
+    "damagePerLevel": 1.5,
+    "duration": 5.0,
+    "stacks": 10,
+    "visual": {
+      "projectile": "poison_cloud",
+      "orb": "poison_orb",
+      "effect": "cloud",
+      "particles": "poison",
+      "hitEffect": "toxic_burst",
+      "dotEffect": "poisoned"
+    },
+    "sound": {
+      "hit": "poison_hit",
+      "dot": "poison_sizzle",
+      "expire": "poison_fade"
+    },
+    "interactions": {
+      "fire": { "effect": "explosion", "damageBonus": 1.5 },
+      "ice": { "effect": "preserved", "durationBonus": 2.0 }
+    }
+  },
+  "dark": {
+    "id": "dark",
+    "name": "Dark",
+    "icon": "🌑",
+    "color": "#800080",
+    "description": "Drains enemy health",
+    "damageType": "drain",
+    "baseDamage": 6,
+    "damagePerLevel": 2,
+    "drainPercent": 0.3,
+    "visual": {
+      "projectile": "dark_orb",
+      "orb": "dark_ring",
+      "effect": "drain",
+      "particles": "shadow",
+      "hitEffect": "dark_burst",
+      "dotEffect": "draining"
+    },
+    "sound": {
+      "hit": "dark_hit",
+      "dot": "dark_hum",
+      "expire": "dark_fade"
+    },
+    "interactions": {
+      "light": { "effect": "void", "damageBonus": 2.0 },
+      "holy": { "effect": "weakness", "damageReduction": 0.5 }
+    }
+  },
+  "holy": {
+    "id": "holy",
+    "name": "Holy",
+    "icon": "✨",
+    "color": "#FFD700",
+    "description": "Extra damage to undead",
+    "damageType": "bonus",
+    "baseDamage": 7,
+    "damagePerLevel": 2.5,
+    "bonusVsUndead": 2.0,
+    "visual": {
+      "projectile": "holy_bolt",
+      "orb": "holy_ring",
+      "effect": "smite",
+      "particles": "heal",
+      "hitEffect": "holy_burst",
+      "dotEffect": "blessed"
+    },
+    "sound": {
+      "hit": "holy_hit",
+      "dot": "holy_hum",
+      "expire": "holy_fade"
+    },
+    "interactions": {
+      "dark": { "effect": "void", "damageBonus": 2.0 },
+      "undead": { "effect": "smite", "damageBonus": 2.0 }
+    }
+  },
+  "physical": {
+    "id": "physical",
+    "name": "Physical",
+    "icon": "⚔️",
+    "color": "#A0A0A0",
+    "description": "Standard damage",
+    "damageType": "direct",
+    "baseDamage": 10,
+    "damagePerLevel": 3,
+    "visual": {
+      "projectile": "arrow",
+      "orb": "blade",
+      "effect": "slash_white",
+      "particles": null,
+      "hitEffect": "hit_spark",
+      "dotEffect": null
+    },
+    "sound": {
+      "hit": "physical_hit",
+      "dot": null,
+      "expire": null
+    },
+    "interactions": {}
+  }
+}

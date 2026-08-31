@@ -1,0 +1,284 @@
+{
+  "projectiles": {
+    "arrow": {
+      "type": "projectile",
+      "shape": "triangle",
+      "width": 8,
+      "height": 16,
+      "rotation": "facing",
+      "trail": false
+    },
+    "bullet": {
+      "type": "projectile",
+      "shape": "circle",
+      "radius": 4,
+      "trail": true,
+      "trailColor": "#FFD700",
+      "trailLength": 5
+    },
+    "magic_bolt": {
+      "type": "projectile",
+      "shape": "diamond",
+      "width": 12,
+      "height": 12,
+      "glow": true,
+      "glowRadius": 8,
+      "trail": true,
+      "trailColor": "#9C27B0",
+      "trailLength": 8
+    },
+    "fireball": {
+      "type": "projectile",
+      "shape": "circle",
+      "radius": 10,
+      "glow": true,
+      "glowRadius": 15,
+      "glowColor": "#FF4500",
+      "trail": true,
+      "trailColor": "#FF6B00",
+      "trailLength": 12,
+      "particles": {
+        "type": "fire",
+        "count": 3,
+        "spread": 20
+      }
+    },
+    "ice_shard": {
+      "type": "projectile",
+      "shape": "triangle",
+      "width": 6,
+      "height": 18,
+      "rotation": "facing",
+      "glow": true,
+      "glowColor": "#00BFFF",
+      "trail": true,
+      "trailColor": "#ADD8E6",
+      "trailLength": 6,
+      "particles": {
+        "type": "frost",
+        "count": 2,
+        "spread": 15
+      }
+    },
+    "lightning_bolt": {
+      "type": "projectile",
+      "shape": "line",
+      "width": 3,
+      "glow": true,
+      "glowColor": "#FFFF00",
+      "trail": false,
+      "particles": {
+        "type": "spark",
+        "count": 5,
+        "spread": 30
+      }
+    },
+    "poison_cloud": {
+      "type": "projectile",
+      "shape": "circle",
+      "radius": 15,
+      "glow": true,
+      "glowColor": "#00FF00",
+      "trail": true,
+      "trailColor": "#32CD32",
+      "trailLength": 10,
+      "particles": {
+        "type": "poison",
+        "count": 4,
+        "spread": 25
+      }
+    },
+    "dark_orb": {
+      "type": "projectile",
+      "shape": "circle",
+      "radius": 8,
+      "glow": true,
+      "glowColor": "#800080",
+      "trail": true,
+      "trailColor": "#4B0082",
+      "trailLength": 15,
+      "particles": {
+        "type": "shadow",
+        "count": 3,
+        "spread": 20
+      }
+    }
+  },
+  "orbs": {
+    "blade": {
+      "type": "orb",
+      "shape": "triangle",
+      "width": 16,
+      "height": 8,
+      "rotation": "orbital",
+      "trail": false
+    },
+    "shield": {
+      "type": "orb",
+      "shape": "circle",
+      "radius": 12,
+      "trail": false,
+      "glow": true,
+      "glowRadius": 5
+    },
+    "fire_ring": {
+      "type": "orb",
+      "shape": "circle",
+      "radius": 8,
+      "glow": true,
+      "glowColor": "#FF4500",
+      "trail": true,
+      "trailColor": "#FF6B00",
+      "trailLength": 10,
+      "particles": {
+        "type": "fire",
+        "count": 2,
+        "spread": 15
+      }
+    },
+    "ice_ring": {
+      "type": "orb",
+      "shape": "diamond",
+      "width": 12,
+      "height": 12,
+      "glow": true,
+      "glowColor": "#00BFFF",
+      "trail": true,
+      "trailColor": "#ADD8E6",
+      "trailLength": 8,
+      "particles": {
+        "type": "frost",
+        "count": 2,
+        "spread": 10
+      }
+    },
+    "lightning_ring": {
+      "type": "orb",
+      "shape": "star",
+      "points": 6,
+      "radius": 10,
+      "glow": true,
+      "glowColor": "#FFFF00",
+      "trail": false,
+      "particles": {
+        "type": "spark",
+        "count": 4,
+        "spread": 25
+      }
+    }
+  },
+  "effects": {
+    "slash_white": {
+      "type": "slash",
+      "color": "#FFFFFF",
+      "opacity": 0.8,
+      "width": 4,
+      "length": 80,
+      "duration": 0.15
+    },
+    "slash_blue": {
+      "type": "slash",
+      "color": "#3498DB",
+      "opacity": 0.7,
+      "width": 6,
+      "length": 100,
+      "duration": 0.2
+    },
+    "slash_purple": {
+      "type": "slash",
+      "color": "#9B59B6",
+      "opacity": 0.7,
+      "width": 5,
+      "length": 70,
+      "duration": 0.12
+    },
+    "explosion_small": {
+      "type": "explosion",
+      "color": "#FF6B00",
+      "opacity": 0.8,
+      "radius": 40,
+      "duration": 0.3
+    },
+    "explosion_large": {
+      "type": "explosion",
+      "color": "#FF4500",
+      "opacity": 0.9,
+      "radius": 80,
+      "duration": 0.5
+    },
+    "shockwave": {
+      "type": "shockwave",
+      "color": "#FFFFFF",
+      "opacity": 0.6,
+      "radius": 100,
+      "duration": 0.4,
+      "thickness": 10
+    },
+    "beam": {
+      "type": "beam",
+      "color": "#00BFFF",
+      "opacity": 0.8,
+      "width": 20,
+      "length": 300,
+      "duration": 0.2
+    }
+  },
+  "particles": {
+    "fire": {
+      "colors": ["#FF4500", "#FF6B00", "#FFD700"],
+      "size": { "min": 2, "max": 6 },
+      "lifetime": { "min": 0.2, "max": 0.5 },
+      "speed": { "min": 20, "max": 50 },
+      "gravity": -50,
+      "fade": true
+    },
+    "frost": {
+      "colors": ["#00BFFF", "#ADD8E6", "#FFFFFF"],
+      "size": { "min": 1, "max": 4 },
+      "lifetime": { "min": 0.3, "max": 0.7 },
+      "speed": { "min": 10, "max": 30 },
+      "gravity": 20,
+      "fade": true
+    },
+    "spark": {
+      "colors": ["#FFFF00", "#FFD700", "#FFFFFF"],
+      "size": { "min": 1, "max": 3 },
+      "lifetime": { "min": 0.1, "max": 0.3 },
+      "speed": { "min": 50, "max": 150 },
+      "gravity": 100,
+      "fade": true
+    },
+    "poison": {
+      "colors": ["#00FF00", "#32CD32", "#90EE90"],
+      "size": { "min": 3, "max": 8 },
+      "lifetime": { "min": 0.5, "max": 1.0 },
+      "speed": { "min": 5, "max": 15 },
+      "gravity": -10,
+      "fade": true
+    },
+    "shadow": {
+      "colors": ["#800080", "#4B0082", "#000000"],
+      "size": { "min": 2, "max": 5 },
+      "lifetime": { "min": 0.3, "max": 0.6 },
+      "speed": { "min": 10, "max": 30 },
+      "gravity": 0,
+      "fade": true
+    },
+    "heal": {
+      "colors": ["#00FF00", "#90EE90", "#FFFFFF"],
+      "size": { "min": 2, "max": 4 },
+      "lifetime": { "min": 0.4, "max": 0.8 },
+      "speed": { "min": 15, "max": 40 },
+      "gravity": -80,
+      "fade": true
+    },
+    "critical": {
+      "colors": ["#FF0000", "#FF4500", "#FFD700"],
+      "size": { "min": 3, "max": 7 },
+      "lifetime": { "min": 0.2, "max": 0.5 },
+      "speed": { "min": 30, "max": 80 },
+      "gravity": 50,
+      "fade": true
+    }
+  }
+}

@@ -1,0 +1,283 @@
+{
+  "cone_narrow": {
+    "type": "cone",
+    "description": "Narrow cone, widens with levels",
+    "params": {
+      "baseAngle": 45,
+      "baseRange": 60,
+      "anglePerLevel": 5,
+      "rangePerLevel": 5
+    },
+    "visual": {
+      "fillOpacity": 0.3,
+      "strokeWidth": 2,
+      "animation": "pulse"
+    }
+  },
+  "cone_wide": {
+    "type": "cone",
+    "description": "Wide cone, reaches further",
+    "params": {
+      "baseAngle": 90,
+      "baseRange": 50,
+      "anglePerLevel": 3,
+      "rangePerLevel": 8
+    },
+    "visual": {
+      "fillOpacity": 0.25,
+      "strokeWidth": 3,
+      "animation": "sweep"
+    }
+  },
+  "cone_flame": {
+    "type": "cone",
+    "description": "Flame breath cone",
+    "params": {
+      "baseAngle": 60,
+      "baseRange": 70,
+      "anglePerLevel": 4,
+      "rangePerLevel": 6
+    },
+    "visual": {
+      "fillOpacity": 0.4,
+      "strokeWidth": 2,
+      "animation": "flicker",
+      "gradient": ["#FF4500", "#FF6B00", "#FFD700"]
+    }
+  },
+  "circle_small": {
+    "type": "circle",
+    "description": "Small expanding circle",
+    "params": {
+      "baseRadius": 60,
+      "radiusPerLevel": 10
+    },
+    "visual": {
+      "fillOpacity": 0.2,
+      "strokeWidth": 3,
+      "animation": "expand"
+    }
+  },
+  "circle_medium": {
+    "type": "circle",
+    "description": "Medium AoE",
+    "params": {
+      "baseRadius": 100,
+      "radiusPerLevel": 15
+    },
+    "visual": {
+      "fillOpacity": 0.25,
+      "strokeWidth": 4,
+      "animation": "expand"
+    }
+  },
+  "circle_large": {
+    "type": "circle",
+    "description": "Large AoE",
+    "params": {
+      "baseRadius": 150,
+      "radiusPerLevel": 20
+    },
+    "visual": {
+      "fillOpacity": 0.2,
+      "strokeWidth": 5,
+      "animation": "expand"
+    }
+  },
+  "circle_nova": {
+    "type": "circle",
+    "description": "Nova burst from center",
+    "params": {
+      "baseRadius": 80,
+      "radiusPerLevel": 12
+    },
+    "visual": {
+      "fillOpacity": 0.1,
+      "strokeWidth": 8,
+      "animation": "nova",
+      "gradient": ["#FFFFFF", "#ADD8E6", "#0000FF"]
+    }
+  },
+  "arc_slash": {
+    "type": "arc",
+    "description": "Wide slash arc",
+    "params": {
+      "baseArc": 120,
+      "baseRange": 100,
+      "arcPerLevel": 10,
+      "rangePerLevel": 5
+    },
+    "visual": {
+      "fillOpacity": 0.3,
+      "strokeWidth": 4,
+      "animation": "sweep"
+    }
+  },
+  "arc_narrow": {
+    "type": "arc",
+    "description": "Narrow precision slash",
+    "params": {
+      "baseArc": 60,
+      "baseRange": 120,
+      "arcPerLevel": 5,
+      "rangePerLevel": 8
+    },
+    "visual": {
+      "fillOpacity": 0.4,
+      "strokeWidth": 2,
+      "animation": "sweep"
+    }
+  },
+  "arc_whip": {
+    "type": "arc",
+    "description": "Long-range whip arc",
+    "params": {
+      "baseArc": 45,
+      "baseRange": 180,
+      "arcPerLevel": 3,
+      "rangePerLevel": 10
+    },
+    "visual": {
+      "fillOpacity": 0.2,
+      "strokeWidth": 3,
+      "animation": "lash"
+    }
+  },
+  "crescent": {
+    "type": "crescent",
+    "description": "Crescent moon blade",
+    "params": {
+      "baseArc": 180,
+      "baseRange": 80,
+      "thickness": 30,
+      "arcPerLevel": 5,
+      "rangePerLevel": 5
+    },
+    "visual": {
+      "fillOpacity": 0.35,
+      "strokeWidth": 2,
+      "animation": "slice"
+    }
+  },
+  "crescent_large": {
+    "type": "crescent",
+    "description": "Large crescent wave",
+    "params": {
+      "baseArc": 200,
+      "baseRange": 120,
+      "thickness": 50,
+      "arcPerLevel": 5,
+      "rangePerLevel": 8
+    },
+    "visual": {
+      "fillOpacity": 0.25,
+      "strokeWidth": 3,
+      "animation": "slice"
+    }
+  },
+  "cross": {
+    "type": "cross",
+    "description": "Rotating cross pattern",
+    "params": {
+      "armLength": 100,
+      "armWidth": 40,
+      "rotation": true,
+      "rotationSpeed": 2
+    },
+    "visual": {
+      "fillOpacity": 0.3,
+      "strokeWidth": 2,
+      "animation": "spin"
+    }
+  },
+  "spiral": {
+    "type": "spiral",
+    "description": "Spiral outward",
+    "params": {
+      "baseRadius": 50,
+      "radiusPerLevel": 20,
+      "rotations": 2
+    },
+    "visual": {
+      "fillOpacity": 0.2,
+      "strokeWidth": 3,
+      "animation": "spiral"
+    }
+  },
+  "line": {
+    "type": "line",
+    "description": "Straight line beam",
+    "params": {
+      "baseLength": 200,
+      "lengthPerLevel": 30,
+      "width": 20
+    },
+    "visual": {
+      "fillOpacity": 0.5,
+      "strokeWidth": 2,
+      "animation": "beam"
+    }
+  },
+  "line_pierce": {
+    "type": "line",
+    "description": "Piercing beam",
+    "params": {
+      "baseLength": 300,
+      "lengthPerLevel": 50,
+      "width": 15
+    },
+    "visual": {
+      "fillOpacity": 0.6,
+      "strokeWidth": 1,
+      "animation": "beam"
+    }
+  },
+  "ring": {
+    "type": "ring",
+    "description": "Expanding ring shockwave",
+    "params": {
+      "baseRadius": 80,
+      "radiusPerLevel": 15,
+      "thickness": 20
+    },
+    "visual": {
+      "fillOpacity": 0,
+      "strokeWidth": 20,
+      "animation": "expand",
+      "gradient": ["#FFFFFF", "#FFD700"]
+    }
+  },
+  "ring_fire": {
+    "type": "ring",
+    "description": "Fire ring shockwave",
+    "params": {
+      "baseRadius": 100,
+      "radiusPerLevel": 18,
+      "thickness": 25
+    },
+    "visual": {
+      "fillOpacity": 0,
+      "strokeWidth": 25,
+      "animation": "expand",
+      "gradient": ["#FF4500", "#FF6B00", "#FFD700"]
+    }
+  },
+  "custom_polygon": {
+    "type": "polygon",
+    "description": "Custom polygon shape (define vertices)",
+    "params": {
+      "vertices": [
+        { "x": 0, "y": 0 },
+        { "x": 50, "y": -30 },
+        { "x": 100, "y": 0 },
+        { "x": 50, "y": 30 }
+      ],
+      "scalePerLevel": 1.1
+    },
+    "visual": {
+      "fillOpacity": 0.3,
+      "strokeWidth": 2,
+      "animation": "pulse"
+    }
+  }
+}

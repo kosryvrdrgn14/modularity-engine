@@ -191,21 +191,53 @@
         }
       }
     },
-    "visual": {
-      "type": "object",
-      "required": ["shape", "color"],
-      "properties": {
-        "shape": {
+    "attackArea": {
+      "type": ["string", "object"],
+      "description": "Attack area reference or inline definition",
+      "oneOf": [
+        {
           "type": "string",
-          "enum": ["square", "circle", "diamond", "triangle", "star"],
-          "description": "Visual shape for projectile/orb"
+          "description": "Reference to attackAreas.json (e.g., 'cone_narrow')"
         },
-        "color": {
-          "type": "string",
-          "pattern": "^#[0-9A-Fa-f]{6}$",
-          "description": "Hex color code"
+        {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["cone", "circle", "arc", "crescent", "cross", "spiral", "line", "ring", "polygon"] },
+            "params": { "type": "object" }
+          }
         }
-      }
+      ]
+    },
+    "visual": {
+      "type": ["string", "object"],
+      "description": "Visual reference or inline definition",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Reference to visuals.json (e.g., 'fireball')"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "shape": { "type": "string", "enum": ["square", "circle", "diamond", "triangle", "star"] },
+            "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "glow": { "type": "boolean" },
+            "trail": { "type": "boolean" },
+            "particles": { "type": "string", "description": "Reference to particles in visuals.json" }
+          }
+        }
+      ]
+    },
+    "element": {
+      "type": ["string", "null"],
+      "description": "Elemental type reference (e.g., 'fire', 'ice', 'lightning')",
+      "enum": ["fire", "ice", "lightning", "poison", "dark", "holy", "physical", null]
+    },
+    "elementStacks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Number of elemental stacks applied per hit"
     }
   }
 }

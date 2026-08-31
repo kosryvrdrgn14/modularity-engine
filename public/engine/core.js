@@ -86,6 +86,9 @@ class DataManager {
       { key: 'stages', path: 'content/stages.json' },
       { key: 'pickups', path: 'content/pickups.json' },
       { key: 'leveling', path: 'content/leveling.json' },
+      { key: 'attackAreas', path: 'content/attackAreas.json' },
+      { key: 'visuals', path: 'content/visuals.json' },
+      { key: 'elements', path: 'content/elements.json' },
     ];
 
     const results = await Promise.all(
