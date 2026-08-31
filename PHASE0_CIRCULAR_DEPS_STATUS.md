@@ -1,7 +1,7 @@
 # Phase 0: Circular Dependencies — Status Report
 
 **Date:** August 31, 2026
-**Status:** Audit complete, TitleMenu refactored, TownScreen pending
+**Status:** Audit complete, TitleMenu ✅, TownScreen ✅
 
 ---
 
@@ -12,7 +12,7 @@
 | Class | Lines | `this.game.*` refs | Status |
 |-------|-------|-------------------|--------|
 | **TitleMenu** | 6731-7155 | 12 | ✅ Refactored |
-| **TownScreen** | 9347-10519 | 58 | ⏳ Pending |
+| **TownScreen** | 9347-10519 | 58 | ✅ Refactored |
 
 ### Classes With NO Circular Dependencies ✅
 
@@ -97,32 +97,42 @@ this.titleMenu = new TitleMenu({
 
 ---
 
-## TownScreen Refactoring (Pending)
+## TownScreen Refactoring ✅
 
-**Complexity:** 58 `this.game.*` references across 1173 lines
+**File:** `public/engine/townScreen_refactored.js`
 
-**Dependencies to inject:**
+**Constructor change:**
 ```javascript
+// OLD (circular):
 class TownScreen {
-  constructor({
-    audioManager,
-    gameManager,
-    eventBus,
-    companionSystem,
-    estateSystem,
-    affectionSystem,
-    farmingSystem,
-    disasterSystem,
-    sandboxSystem,
-    dataManager,
-    startGame,      // callback
-  }) {
+  constructor(game) {
+    this.game = game;
+    ...
+  }
+}
+
+// NEW (no circular):
+class TownScreen {
+  constructor({ audioManager, gameManager, eventBus, dataManager, companionSystem, estateSystem, affectionSystem, farmingSystem, disasterSystem, sandboxSystem, startGame, getPendingDisaster, clearPendingDisaster }) {
+    this.audioManager = audioManager;
+    this.gameManager = gameManager;
+    this.eventBus = eventBus;
+    this.dataManager = dataManager;
+    this.companionSystem = companionSystem;
+    this.estateSystem = estateSystem;
+    this.affectionSystem = affectionSystem;
+    this.farmingSystem = farmingSystem;
+    this.disasterSystem = disasterSystem;
+    this.sandboxSystem = sandboxSystem;
+    this.startGame = startGame;
+    this.getPendingDisaster = getPendingDisaster;
+    this.clearPendingDisaster = clearPendingDisaster;
     ...
   }
 }
 ```
 
-**Properties accessed:**
+**All 58 `this.game.*` references replaced:**
 - `this.game.audioManager` → `this.audioManager`
 - `this.game.gameManager` → `this.gameManager`
 - `this.game.eventBus` → `this.eventBus`
@@ -134,15 +144,58 @@ class TownScreen {
 - `this.game.sandboxSystem` → `this.sandboxSystem`
 - `this.game.dataManager` → `this.dataManager`
 - `this.game.startGame()` → `this.startGame()`
-- `this.game._pendingDisaster` → `this._pendingDisaster` (or inject via constructor)
+- `this.game._pendingDisaster` → `this.getPendingDisaster()` / `this.clearPendingDisaster()`
 
 ---
+
+## Game-Side Changes Needed
+
+When ready to apply, update `game2.html`:
+
+### TitleMenu (line 8538)
+```javascript
+// OLD:
+this.titleMenu = new TitleMenu(this);
+
+// NEW:
+this.titleMenu = new TitleMenu({
+  audioManager: this.audioManager,
+  gameManager: this.gameManager,
+  dataManager: this.dataManager,
+  onStart: () => this._startFromTitle(),
+  onSettings: () => this._showSettings(),
+  onTestTown: () => this._testTown(),
+});
+```
+
+### TownScreen (line 8539)
+```javascript
+// OLD:
+this.townScreen = new TownScreen(this);
+
+// NEW:
+this.townScreen = new TownScreen({
+  audioManager: this.audioManager,
+  gameManager: this.gameManager,
+  eventBus: this.eventBus,
+  dataManager: this.dataManager,
+  companionSystem: this.companionSystem,
+  estateSystem: this.estateSystem,
+  affectionSystem: this.affectionSystem,
+  farmingSystem: this.farmingSystem,
+  disasterSystem: this.disasterSystem,
+  sandboxSystem: this.sandboxSystem,
+  startGame: () => this.startGame(),
+  getPendingDisaster: () => this._pendingDisaster,
+  clearPendingDisaster: () => { this._pendingDisaster = null; },
+});
+```
 
 ## Next Steps
 
 1. ✅ Audit complete
 2. ✅ TitleMenu refactored (`titleMenu_refactored.js`)
-3. ⏳ TownScreen refactoring (58 refs, ~1173 lines)
+3. ✅ TownScreen refactored (`townScreen_refactored.js`)
 4. ⏳ Apply Game-side changes (constructor updates)
 5. ⏳ Test game after each change
 6. ⏳ Remove inline classes from game2.html
@@ -154,7 +207,7 @@ class TownScreen {
 
 All refactored files are created in `public/engine/` alongside the originals:
 - `public/engine/titleMenu_refactored.js` ✅
-- `public/engine/townScreen_refactored.js` ⏳
+- `public/engine/townScreen_refactored.js` ✅
 
 **game2.html is NOT modified yet.** When ready, we'll:
 1. Remove inline TitleMenu class (lines 6731-7155)
