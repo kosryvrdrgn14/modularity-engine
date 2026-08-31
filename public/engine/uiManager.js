@@ -5,14 +5,48 @@ class UIManager {
     this.eventBus = eventBus;
     this.levelUpOptions = null;
     this.endScreen = null;
+    // HTML overlay for level-up (reliable click/touch)
+    this._levelupOverlay = document.getElementById('levelup-overlay');
+    this._levelupCards = document.getElementById('levelup-cards');
   }
 
   showLevelUp(options) {
     this.levelUpOptions = options;
+    this._showLevelUpOverlay(options);
   }
 
   hideLevelUp() {
     this.levelUpOptions = null;
+    this._hideLevelUpOverlay();
+  }
+
+  _showLevelUpOverlay(options) {
+    if (!this._levelupOverlay || !this._levelupCards) return;
+    // Build HTML cards
+    this._levelupCards.innerHTML = '';
+    options.forEach((opt, i) => {
+      const card = document.createElement('div');
+      card.className = 'levelup-card';
+      card.innerHTML = `<div class="card-key">[${i + 1}]</div><div class="card-name">${opt.name || 'Upgrade'}</div><div class="card-desc">${opt.desc || ''}</div>`;
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.eventBus.emit('selectUpgrade', { index: i });
+      });
+      card.addEventListener('touchend', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.eventBus.emit('selectUpgrade', { index: i });
+      });
+      this._levelupCards.appendChild(card);
+    });
+    this._levelupOverlay.classList.add('active');
+  }
+
+  _hideLevelUpOverlay() {
+    if (!this._levelupOverlay) return;
+    this._levelupOverlay.classList.remove('active');
+    this._levelupCards.innerHTML = '';
   }
 
   showEndScreen(result, stats) {
@@ -28,49 +62,12 @@ class UIManager {
   }
 
   render() {
-    if (this.levelUpOptions) this._renderLevelUp();
+    // Level-up uses HTML overlay now, no canvas drawing needed
     if (this.endScreen) this._renderEndScreen();
   }
 
   _renderLevelUp() {
-    const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
-
-    // Overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(0, 0, w, h);
-
-    // Title
-    ctx.fillStyle = '#3B82F6';
-    ctx.font = 'bold 32px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('LEVEL UP!', w / 2, h / 2 - 120);
-
-    // Cards
-    const cardWidth = 160;
-    const cardHeight = 200;
-    const spacing = 20;
-    const startX = (w - (cardWidth * 3 + spacing * 2)) / 2;
-
-    for (let i = 0; i < 3; i++) {
-      const x = startX + i * (cardWidth + spacing);
-      const y = h / 2 - 80;
-
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(x, y, cardWidth, cardHeight);
-      ctx.strokeStyle = '#3B82F6';
-      ctx.strokeRect(x, y, cardWidth, cardHeight);
-
-      ctx.fillStyle = '#FFF';
-      ctx.font = '14px monospace';
-      ctx.fillText(`[${i + 1}]`, x + cardWidth / 2, y + 30);
-      ctx.fillText(this.levelUpOptions[i]?.name || 'Upgrade', x + cardWidth / 2, y + 60);
-    }
-
-    ctx.fillStyle = '#666';
-    ctx.font = '12px monospace';
-    ctx.fillText('Press 1, 2, or 3 to select', w / 2, h / 2 + 140);
+    // Deprecated: level-up now uses HTML overlay
   }
 
   _renderEndScreen() {
@@ -107,7 +104,6 @@ class UIManager {
         const starY = h / 2 + 140;
         const starSize = 24;
         const starSpacing = 40;
-        const startX = w / 2 - (starCount * starSpacing) / 2;
 
         for (let i = 0; i < 3; i++) {
           const sx = w / 2 - (3 * starSpacing) / 2 + i * starSpacing + starSpacing / 2;
@@ -144,7 +140,3 @@ class UIManager {
     ctx.fillText('Click to restart', w / 2, h / 2 + 190);
   }
 }
-
-// ============================================================
-// PHASE 14: AUDIO SYSTEM (Full Implementation)
-// ============================================================

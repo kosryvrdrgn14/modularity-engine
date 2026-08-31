@@ -1170,10 +1170,83 @@
     /* F1: Sandbox DPS overlay */
     #sb-difficulty, #sb-show-dps { accent-color: #FFD700; }
 
+    /* Level-Up Overlay — HTML buttons replace canvas-drawn cards */
+    #levelup-overlay {
+      position: fixed; inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 50;
+      font-family: 'Courier New', monospace;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    #levelup-overlay.active { display: flex; }
+    #levelup-title {
+      color: #3B82F6;
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+    #levelup-cards {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .levelup-card {
+      width: 160px;
+      min-height: 180px;
+      background: #1a1a2e;
+      border: 2px solid #3B82F6;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 8px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .levelup-card:active {
+      transform: scale(0.95);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    }
+    .levelup-card .card-key {
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .levelup-card .card-name {
+      color: #FFF;
+      font-size: 15px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .levelup-card .card-desc {
+      color: #AAA;
+      font-size: 11px;
+      text-align: center;
+    }
+    #levelup-hint {
+      color: #666;
+      font-size: 12px;
+    }
+
   </style>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
+  <!-- Level-Up Overlay (HTML buttons for reliable click/touch) -->
+  <div id="levelup-overlay">
+    <div id="levelup-title">LEVEL UP!</div>
+    <div id="levelup-cards"></div>
+    <div id="levelup-hint">Press 1, 2, or 3 to select</div>
+  </div>
   <div id="loading-screen">
     <h1>MODULARITY ENGINE</h1>
     <div style="font-size: 12px; color: #666; margin-bottom: 20px;">v0.3.0</div>
@@ -5371,14 +5444,48 @@ class UIManager {
     this.eventBus = eventBus;
     this.levelUpOptions = null;
     this.endScreen = null;
+    // HTML overlay for level-up (reliable click/touch)
+    this._levelupOverlay = document.getElementById('levelup-overlay');
+    this._levelupCards = document.getElementById('levelup-cards');
   }
 
   showLevelUp(options) {
     this.levelUpOptions = options;
+    this._showLevelUpOverlay(options);
   }
 
   hideLevelUp() {
     this.levelUpOptions = null;
+    this._hideLevelUpOverlay();
+  }
+
+  _showLevelUpOverlay(options) {
+    if (!this._levelupOverlay || !this._levelupCards) return;
+    // Build HTML cards
+    this._levelupCards.innerHTML = '';
+    options.forEach((opt, i) => {
+      const card = document.createElement('div');
+      card.className = 'levelup-card';
+      card.innerHTML = `<div class="card-key">[${i + 1}]</div><div class="card-name">${opt.name || 'Upgrade'}</div><div class="card-desc">${opt.desc || ''}</div>`;
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.eventBus.emit('selectUpgrade', { index: i });
+      });
+      card.addEventListener('touchend', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.eventBus.emit('selectUpgrade', { index: i });
+      });
+      this._levelupCards.appendChild(card);
+    });
+    this._levelupOverlay.classList.add('active');
+  }
+
+  _hideLevelUpOverlay() {
+    if (!this._levelupOverlay) return;
+    this._levelupOverlay.classList.remove('active');
+    this._levelupCards.innerHTML = '';
   }
 
   showEndScreen(result, stats) {
@@ -5394,49 +5501,12 @@ class UIManager {
   }
 
   render() {
-    if (this.levelUpOptions) this._renderLevelUp();
+    // Level-up uses HTML overlay now, no canvas drawing needed
     if (this.endScreen) this._renderEndScreen();
   }
 
   _renderLevelUp() {
-    const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
-
-    // Overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(0, 0, w, h);
-
-    // Title
-    ctx.fillStyle = '#3B82F6';
-    ctx.font = 'bold 32px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('LEVEL UP!', w / 2, h / 2 - 120);
-
-    // Cards
-    const cardWidth = 160;
-    const cardHeight = 200;
-    const spacing = 20;
-    const startX = (w - (cardWidth * 3 + spacing * 2)) / 2;
-
-    for (let i = 0; i < 3; i++) {
-      const x = startX + i * (cardWidth + spacing);
-      const y = h / 2 - 80;
-
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(x, y, cardWidth, cardHeight);
-      ctx.strokeStyle = '#3B82F6';
-      ctx.strokeRect(x, y, cardWidth, cardHeight);
-
-      ctx.fillStyle = '#FFF';
-      ctx.font = '14px monospace';
-      ctx.fillText(`[${i + 1}]`, x + cardWidth / 2, y + 30);
-      ctx.fillText(this.levelUpOptions[i]?.name || 'Upgrade', x + cardWidth / 2, y + 60);
-    }
-
-    ctx.fillStyle = '#666';
-    ctx.font = '12px monospace';
-    ctx.fillText('Press 1, 2, or 3 to select', w / 2, h / 2 + 140);
+    // Deprecated: level-up now uses HTML overlay
   }
 
   _renderEndScreen() {
