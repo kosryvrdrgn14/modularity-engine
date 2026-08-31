@@ -110,6 +110,157 @@ class TownContent {
     }
   }
 
+  // --- Panel Rendering (Left & Right) ---
+
+  renderLeftPanel() {
+    const questArea = document.getElementById('panel-quests');
+    const npcArea = document.getElementById('panel-npcs');
+    const compArea = document.getElementById('panel-companions');
+    if (!questArea || !npcArea) return;
+
+    // Quests (priority)
+    questArea.innerHTML = '';
+    const pinnedQuest = '<div class="panel-card"><span class="panel-card-icon">⚔️</span><div class="panel-card-info"><div class="panel-card-name">Clear the Graveyard</div><div class="panel-card-desc">Survive and defeat the boss</div></div><span class="panel-card-badge gold">Active</span></div>';
+    questArea.innerHTML = pinnedQuest;
+
+    // NPCs at current location
+    npcArea.innerHTML = '';
+    const curLoc = this.locationManager?.getCurrentLocation();
+    const npcs = curLoc ? (this.locationManager.getNPCsAtLocation(curLoc.id) || []) : [];
+    for (const npc of npcs.slice(0, 3)) {
+      const svg = SVG_PORTRAITS[npc.id] || '<div style="width:36px;height:36px;border-radius:50%;background:#333;"></div>';
+      const svgSmall = svg.replace('<svg ', '<svg style="width:36px;height:36px;" ');
+      const locked = npc.locked && !this.gameManager?.get_flag(npc.unlockCondition);
+      const card = document.createElement('div');
+      card.className = 'panel-card' + (locked ? ' locked' : '');
+      card.innerHTML = `<span class="panel-card-icon">${svgSmall}</span><div class="panel-card-info"><div class="panel-card-name">${npc.name}</div><div class="panel-card-desc">${locked ? '🔒 Locked' : '💬 Tap to talk'}</div></div>`;
+      if (!locked) {
+        card.addEventListener('click', () => {
+          if (this._engine) this._engine._closePanels();
+          this.openDialogue(npc);
+        });
+      }
+      npcArea.appendChild(card);
+    }
+
+    // Companion status
+    if (compArea) {
+      compArea.innerHTML = '';
+      const companions = this.companionSystem?.companions || [];
+      for (const [id, comp] of Object.entries(companions)) {
+        const status = this.gameManager?.getCompanionDeployStatus(id) || 'available';
+        const card = document.createElement('div');
+        card.className = 'panel-card';
+        card.innerHTML = `<span class="panel-card-icon">🐕</span><div class="panel-card-info"><div class="panel-card-name">${comp.name || id}</div><div class="panel-card-desc">Status: ${status}</div></div><span class="panel-card-badge ${status === 'deployed_combat' ? 'green' : ''}">${status}</span>`;
+        compArea.appendChild(card);
+      }
+      if (Object.keys(companions).length === 0) {
+        compArea.innerHTML = '<div class="panel-card locked"><span class="panel-card-icon">🐕</span><div class="panel-card-info"><div class="panel-card-name">No companions</div><div class="panel-card-desc">Pet the dog at camp to recruit</div></div></div>';
+      }
+    }
+  }
+
+  renderRightPanel() {
+    const locArea = document.getElementById('panel-locations');
+    const farmArea = document.getElementById('panel-farming');
+    if (!locArea) return;
+
+    // Locations
+    locArea.innerHTML = '';
+    const children = this.locationManager?.getChildLocations(this.locationManager.currentLocationId) || [];
+
+    // Current location
+    const curCard = document.createElement('div');
+    curCard.className = 'panel-card current';
+    curCard.innerHTML = '<span class="panel-card-icon">📍</span><div class="panel-card-info"><div class="panel-card-name">Current Location</div></div><span class="panel-card-badge">●</span>';
+    locArea.appendChild(curCard);
+
+    // Child locations
+    for (const child of children) {
+      const locked = child.locked && !this.gameManager?.get_flag(child.unlockCondition);
+      const card = document.createElement('div');
+      card.className = 'panel-card' + (locked ? ' locked' : '');
+      card.innerHTML = `<span class="panel-card-icon">${child.icon || '📍'}</span><div class="panel-card-info"><div class="panel-card-name">${child.name}</div><div class="panel-card-desc">${locked ? '🔒 Locked' : child.desc || 'Tap to visit'}</div></div>`;
+      if (!locked) {
+        card.addEventListener('click', () => {
+          this.locationManager.navigateTo(child.id);
+          if (this._engine) this._engine._closePanels();
+          this.updateDisplay();
+          if (this._engine) {
+            this._engine.renderBreadcrumb();
+            this._engine.renderLocationCards();
+          }
+        });
+      }
+      locArea.appendChild(card);
+    }
+
+    // Farming
+    if (farmArea) {
+      farmArea.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        const status = this.farmingSystem?.getSlotStatus(i + 1);
+        const label = ['🐕 Companion', '⚔️ Adventurer', '🔄 Flexible'][i];
+        const card = document.createElement('div');
+        card.className = 'panel-card' + (status?.status === 'locked' ? ' locked' : '');
+        if (status?.status === 'running') {
+          const pct = Math.round(status.progress * 100);
+          card.innerHTML = `<span class="panel-card-icon">⏳</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">${pct}% complete</div></div><span class="panel-card-badge">Running</span>`;
+        } else if (status?.status === 'complete') {
+          card.innerHTML = `<span class="panel-card-icon">✅</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">Loot ready!</div></div><span class="panel-card-badge green">Collect</span>`;
+          card.addEventListener('click', () => {
+            this._collectFarmingSlot(i + 1);
+            this.renderRightPanel();
+          });
+        } else if (status?.status === 'idle') {
+          card.innerHTML = `<span class="panel-card-icon">${label.split(' ')[0]}</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">Tap to assign</div></div>`;
+          card.addEventListener('click', () => {
+            this._assignFarmingSlot(i + 1);
+            this.renderRightPanel();
+          });
+        } else {
+          card.innerHTML = `<span class="panel-card-icon">🔒</span><div class="panel-card-info"><div class="panel-card-name">${label}</div><div class="panel-card-desc">Complete 3★ to unlock</div></div>`;
+        }
+        farmArea.appendChild(card);
+      }
+    }
+  }
+
+  _collectFarmingSlot(slotId) {
+    const loot = this.farmingSystem?.collectSlot(slotId);
+    if (loot) {
+      this.eventBus.emit('farmingLootCollected', { slotId, loot });
+    }
+  }
+
+  _assignFarmingSlot(slotId) {
+    const stageId = 'stage_graveyard';
+    const companions = this.gameManager.get_companions();
+    const slotTypes = ['companion', 'adventurer', 'flexible'];
+    const slotType = slotTypes[slotId - 1];
+    let unitType = slotType;
+    let unitId = null;
+
+    if (slotType === 'companion' && companions.length > 0) {
+      for (const cid of companions) {
+        if (this.gameManager.getCompanionDeployStatus(cid) === 'available') {
+          unitId = cid;
+          unitType = 'companion';
+          break;
+        }
+      }
+    } else if (slotType === 'adventurer') {
+      unitType = 'adventurer';
+      unitId = 'hired_' + slotId;
+    } else {
+      unitType = 'flexible';
+      unitId = companions.find(c => this.gameManager.getCompanionDeployStatus(c) === 'available') || 'hired_flex';
+    }
+
+    if (!unitId) return;
+    this.farmingSystem?.assignSlot(slotId, stageId, unitType, unitId);
+  }
+
   // --- NPC System ---
 
   openDialogue(npc) {

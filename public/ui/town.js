@@ -63,8 +63,9 @@ class TownScreen {
     this.content._lastRunStats = runStats;
     this.engine.show();
     this.content.updateDisplay();
+    this.content.renderLeftPanel();
+    this.content.renderRightPanel();
     this.content.renderFarmingSlotsButton();
-    this.content.renderCompanionSlots();
     this.content.renderCompanionSlots();
   }
 
@@ -85,13 +86,13 @@ class TownScreen {
     // Handle panel switching in engine
     this.engine.handleTabSwitch(tab);
 
-    // Handle specific tabs
+    // Handle specific tabs (engine already handles combat hide + onCombat)
     if (tab === 'shop') {
       this.shopSystem.openShop();
-    } else if (tab === 'combat') {
-      this._handleCombat();
-    } else if (tab === 'social' || tab === 'systems') {
-      // Panels handled by engine
+    } else if (tab === 'social') {
+      this.content.renderLeftPanel();
+    } else if (tab === 'systems') {
+      this.content.renderRightPanel();
     }
   }
 
