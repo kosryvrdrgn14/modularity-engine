@@ -2,6 +2,47 @@
 
 ---
 
+## v1.0.0 — File Split Complete
+**Date:** August 31, 2026
+**Status:** ✅ Complete — Game fully modular
+
+### What Changed
+- **game2.html:** 10,519 lines → 249 lines (97.6% reduction)
+- **Classes:** 38 inline → 0 inline (100% extracted)
+- **Files:** 1 → 28+ modular files
+
+### File Structure Created
+```
+public/
+├── game2.html          # 249 lines (HTML + init only)
+├── styles.css          # 1,232 lines (all CSS)
+├── data/               # 13 files (game data)
+├── engine/             # 8 files (core systems)
+├── systems/            # 3 files (game systems)
+└── ui/                 # 3 files (UI components)
+```
+
+### Key Accomplishments
+1. **Broke circular dependencies** — TitleMenu and TownScreen refactored with dependency injection
+2. **Extracted data layer** — 13 JSON/JS data files
+3. **Split engine core** — 6 core classes, 3 entity classes, 3 combat classes, 3 pickup classes, 2 rendering classes
+4. **Split systems** — Companion, progression (9 classes), loot (3 classes)
+5. **Split UI** — Audio (2 classes), game HUD, town navigation
+6. **Extracted CSS** — All styles to external file
+7. **Slimmed game2.html** — Only HTML structure + initialization
+
+### Bug Fixes
+- **#61:** Upgrade freeze bug fixed (EventBus try/catch)
+- **#62:** Diagnostic logging added to selectUpgrade handler
+
+### Files Created
+- `FILE_SPLIT_REPORT.md` — Complete split documentation
+- `FILE_SPLIT_PLAN.md` — Split plan summary
+- `PHASE0_CIRCULAR_DEPS_STATUS.md` — Circular dependency docs
+- `Claude_Handoff_File_Split.md` — Handoff for Claude review
+
+---
+
 ## v0.4.0 — Design Decisions Locked (D1-D8)
 **Date:** August 26, 2026
 **Status:** All 8 core design decisions resolved, game_frame.md updated

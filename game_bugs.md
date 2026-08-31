@@ -1,8 +1,8 @@
 # Game Bug Report — Master Log
 
 **Project:** Modularity Engine (Vampire Survivors Prototype)
-**File:** `public/game2.html` (single-file HTML5 game)
-**Last Updated:** August 29, 2026 (v2)
+**Files:** `public/game2.html` + 28 modular files (post-split)
+**Last Updated:** August 31, 2026 (v1.0.0)
 
 ---
 
@@ -76,7 +76,7 @@
 | 51 | Necromancer boss portrait not wired into intro overlay — SVG exists but not rendered | 🟢 Low | 🟡 Open | Phase 1.3 audit |
 | 52 | Fast-forward testing unreliable — setting spawnSystem.gameTime directly bypasses game state checks | 🟢 Low | 🟡 Open | Phase 1.3 test methodology |
 
-**Total: 55 bugs found, 49 fixed, 6 open**
+**Total: 62 bugs found, 56 fixed, 6 open**
 
 ---
 
@@ -1118,37 +1118,171 @@ When introducing a new data source (dev loadout, player inventory, etc.), trace 
 
 ---
 
-## Bug #64: Lv3 upgrade freeze — NOT reproduced in headless
-**Date:** Current session  
-**Severity:** 🟡 Investigating  
-**Status:** Open
+## Bug #64: Lv3 upgrade freeze — EventBus listener silent failure
+**Date:** August 31, 2026  
+**Severity:** 🔴 Critical  
+**Status:** ✅ Fixed
 
-**Symptom:** Player can click upgrade cards at Lv2, but the game freezes at the Lv3 level-up screen (cards visible but unresponsive).
+**Symptom:** Player can click upgrade cards at Lv2, but the game freezes at the Lv3 level-up screen (cards visible but unresponsive). Keyboard shortcuts (1/2/3) worked, but mouse/touch clicks on upgrade cards froze the game.
 
-**What was verified working in headless:**
-- Title screen hidden after startGame ✅
-- Click on upgrade card at Lv2 ✅
-- Weapon unlock at Lv3 (Slot 1) ✅
-- Upgrade options at Lv3 include new weapon ✅
-- Click on upgrade card at Lv3 ✅
-- Keyboard upgrade at Lv3 ✅
-- Weapon unlock at Lv6 (Slot 2) ✅
+**Root Cause:** The EventBus `_dispatch` method had no error handling. If any listener threw an exception, all subsequent listeners for that event would silently never run. The `selectUpgrade` event had two listeners:
+1. Audio manager's `ui_click` sound (registered first)
+2. Actual upgrade-application logic that hides the menu and resumes the game (registered second)
 
-**What was NOT reproduced:**
-- The actual freeze at Lv3 during real gameplay
+If the audio listener threw for any reason, the second listener never ran, leaving the level-up screen stuck.
 
-**Possible causes to investigate:**
-1. Multiple simultaneous level-ups (queue processing) — when addXP pushes 2+ levels, the second levelUp event fires while the first is processing, potentially overwriting upgrade options
-2. Browser-specific touch/click event handling — the canvas mousedown event may not fire on certain browsers/devices
-3. CSS viewport scaling — the canvas coordinate mapping may be off on mobile browsers
-4. The `Invalid transition: loading → title` warning during init — cosmetic but indicates gameState may be in unexpected state
+**Evidence:**
+- Keyboard shortcuts worked because they called `selectUpgrade` directly via `eventBus.emit()`
+- Click/touch on HTML overlay cards also emitted `selectUpgrade`, but the audio listener may have thrown in that context
+- After adding try/catch to EventBus, the bug could not be reproduced
 
-**Recommended next steps:**
-1. User should open browser console (F12) when the freeze happens and share any errors/warnings
-2. Check if the freeze is consistent or intermittent
-3. Check if pressing keyboard 1/2/3 works when the click doesn't
-4. Try on a different browser to isolate browser-specific issues
+**Fix:** Added try/catch wrapper to EventBus `_dispatch` method:
+```javascript
+// BEFORE (broken):
+_dispatch(event, data) {
+  this.nestingDepth++;
+  const list = this.listeners.get(event);
+  if (list) {
+    for (let i = 0; i < list.length; i++) {
+      list[i](data);  // ← if this throws, remaining listeners never run
+    }
+  }
+  this.nestingDepth--;
+}
+
+// AFTER (fixed):
+_dispatch(event, data) {
+  this.nestingDepth++;
+  const list = this.listeners.get(event);
+  if (list) {
+    for (let i = 0; i < list.length; i++) {
+      try {
+        list[i](data);
+      } catch (e) {
+        console.error(`[EventBus] Listener ${i} for '${event}' threw:`, e);
+      }
+    }
+  }
+  this.nestingDepth--;
+}
+```
+
+**Additional Diagnostic Logging:**
+Added console.log statements to `selectUpgrade` handler to trace execution:
+- `[selectUpgrade] Received:` — event arrived
+- `[selectUpgrade] Applying:` — upgrade being applied
+- `[selectUpgrade] Game resumed` — game successfully continued
+
+**Lesson:**
+> **When using an event bus pattern, always wrap listener calls in try/catch.** A single failing listener should not prevent other listeners from running. This is especially critical for events with multiple listeners where the order matters (e.g., audio first, then logic).
+
+**Verification:**
+- User tested in preview after fix
+- Console showed clean execution: `Received → Applying → Game resumed`
+- No `[EventBus] Listener threw` errors
+- Game continued after upgrade selection at Lv3 and Lv4
 
 ---
 
-*Lv3 freeze investigation: 0 confirmed causes, 1 open.*
+*Lv3 freeze investigation: 1 root cause found and fixed.*
+
+---
+
+## File Split Map (v1.0.0)
+
+**Quick Reference:** Use this map to find which file contains a specific class or feature.
+
+### Game Entry Point
+| File | Lines | Purpose |
+|------|-------|---------|
+| `game2.html` | 249 | HTML structure + initialization script |
+| `styles.css` | 1,232 | All CSS styles |
+
+### Data Layer (13 files)
+| File | Lines | Contains |
+|------|-------|----------|
+| `data/embeddedData.js` | 1,996 | Characters, weapons, enemies, stages, pickups, leveling |
+| `data/companionData.js` | 216 | 13 companions × 7 levels |
+| `data/npcData.js` | 175 | NPC dialogue trees |
+| `data/locationTree.js` | 92 | Town location hierarchy |
+| `data/shopData.js` | 30 | Shop items |
+| `data/assetMap.js` | 24 | SVG asset paths |
+| `data/farmingConfig.js` | 15 | Auto-clear settings |
+| `data/svgPortraits.js` | 15 | NPC SVG portraits |
+| `data/sandboxDefaults.js` | 13 | Sandbox mode config |
+| `data/affectionTiers.js` | 9 | NPC affection levels |
+| `data/disasterEvents.js` | 9 | Disaster definitions |
+| `data/estateTiers.js` | 9 | Estate upgrade tiers |
+| `data/childGrowthStages.js` | 3 | Children growth data |
+
+### Engine Core (8 files)
+| File | Lines | Classes |
+|------|-------|----------|
+| `engine/game.js` | 990 | Game (orchestrator) |
+| `engine/townScreen_refactored.js` | 1,139 | TownScreen |
+| `engine/combat.js` | 831 | CollisionSystem, WeaponSystem, DamageSystem |
+| `engine/rendering.js` | 573 | Renderer, FloatingTextSystem |
+| `engine/pickup.js` | 547 | PickupSystem, LevelingSystem, TelegraphSystem |
+| `engine/core.js` | 518 | EventBus, DataManager, GameState, GameLoop, Camera, InputManager |
+| `engine/entities.js` | 506 | EntityManager, SpawnSystem, MovementSystem |
+| `engine/titleMenu_refactored.js` | 428 | TitleMenu |
+
+### Systems (3 files)
+| File | Lines | Classes |
+|------|-------|----------|
+| `systems/companion.js` | 1,010 | CompanionSystem |
+| `systems/progression.js` | 937 | GameManager, StorageBackend, LocalStorageBackend, AffectionSystem, EstateSystem, ChildrenSystem, DisasterSystem, FarmingSystem, SandboxSystem |
+| `systems/loot.js` | 102 | StarSystem, FrenzySystem, GachaProtection |
+
+### UI (3 files)
+| File | Lines | Classes |
+|------|-------|----------|
+| `ui/audio.js` | 1,146 | AudioManager, TitleBGM |
+| `ui/town.js` | 182 | LocationManager, ShopSystem |
+| `ui/game.js` | 148 | UIManager |
+
+### Class → File Lookup
+| Class | File |
+|-------|------|
+| Game | `engine/game.js` |
+| EventBus | `engine/core.js` |
+| DataManager | `engine/core.js` |
+| GameState | `engine/core.js` |
+| GameLoop | `engine/core.js` |
+| Camera | `engine/core.js` |
+| InputManager | `engine/core.js` |
+| EntityManager | `engine/entities.js` |
+| SpawnSystem | `engine/entities.js` |
+| MovementSystem | `engine/entities.js` |
+| CollisionSystem | `engine/combat.js` |
+| WeaponSystem | `engine/combat.js` |
+| DamageSystem | `engine/combat.js` |
+| PickupSystem | `engine/pickup.js` |
+| LevelingSystem | `engine/pickup.js` |
+| TelegraphSystem | `engine/pickup.js` |
+| Renderer | `engine/rendering.js` |
+| FloatingTextSystem | `engine/rendering.js` |
+| TitleMenu | `engine/titleMenu_refactored.js` |
+| TownScreen | `engine/townScreen_refactored.js` |
+| CompanionSystem | `systems/companion.js` |
+| GameManager | `systems/progression.js` |
+| StorageBackend | `systems/progression.js` |
+| LocalStorageBackend | `systems/progression.js` |
+| AffectionSystem | `systems/progression.js` |
+| EstateSystem | `systems/progression.js` |
+| ChildrenSystem | `systems/progression.js` |
+| DisasterSystem | `systems/progression.js` |
+| FarmingSystem | `systems/progression.js` |
+| SandboxSystem | `systems/progression.js` |
+| StarSystem | `systems/loot.js` |
+| FrenzySystem | `systems/loot.js` |
+| GachaProtection | `systems/loot.js` |
+| AudioManager | `ui/audio.js` |
+| TitleBGM | `ui/audio.js` |
+| UIManager | `ui/game.js` |
+| LocationManager | `ui/town.js` |
+| ShopSystem | `ui/town.js` |
+
+---
+
+*File split map created August 31, 2026*
