@@ -254,6 +254,12 @@ class Game {
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
         this.audioManager.duckForLevelUp(false); console.log('[selectUpgrade] Game resumed');
+        // Process queued boss intro if one was waiting during level-up
+        if (this._queuedBossIntro) {
+          const queued = this._queuedBossIntro;
+          this._queuedBossIntro = null;
+          this.startBossIntro(queued);
+        }
       }
     });
 
@@ -285,11 +291,13 @@ class Game {
     });
 
     this.eventBus.on('bossSpawn', (data) => {
-      this.renderer.bossEntity = data.boss;
-      // Check if boss has intro config
-      const bossData = this.dataManager.enemies.find(e => e.type === 'boss');
-      if (bossData && bossData.intro) {
-        this.startBossIntro(bossData.intro);
+      // data.entity = the actual spawned entity (from entityManager.create)
+      // data.boss = the enemy definition (from dataManager.enemies)
+      this.renderer.bossEntity = data.entity || data.boss;
+      // Check if THIS boss has intro config (use definition data)
+      const bossDef = data.boss || this.dataManager.enemies.find(e => e.id === data.entity?.enemyData?.id);
+      if (bossDef && bossDef.intro) {
+        this.startBossIntro(bossDef.intro);
       } else {
         this.camera.shake(8, 0.5);
       }
@@ -528,6 +536,11 @@ class Game {
         if (ann.type === 'text' || ann.type === 'boss_name') {
           this.renderer.showAnnouncement(ann.text, ann.styling || {});
         }
+        if (ann.type === 'shake') {
+          // Show text if provided, plus camera shake
+          if (ann.text) this.renderer.showAnnouncement(ann.text, ann.styling || {});
+          this.camera.shake(ann.styling?.shakeIntensity || 8, ann.styling?.shakeDuration || 0.5);
+        }
         if (ann.type === 'dim') {
           this.renderer.startDimming(ann.brightness || 0.8);
         }
@@ -536,8 +549,8 @@ class Game {
   }
 
   startBossIntro(introConfig) {
-    // Queue if currently in level-up
-    if (this.gameState.isLevelUp()) {
+    // Queue if currently in level-up or already in bossIntro
+    if (this.gameState.isLevelUp() || this.gameState.isBossIntro()) {
       this._queuedBossIntro = introConfig;
       return;
     }

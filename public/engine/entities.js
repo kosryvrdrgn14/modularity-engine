@@ -230,7 +230,7 @@ class SpawnSystem {
     const px = player ? player.x : 0;
     const py = player ? player.y : 0;
     
-    this.entityManager.create('enemy', {
+    const entity = this.entityManager.create('enemy', {
       x: px + Math.cos(angle) * dist,
       y: py + Math.sin(angle) * dist,
       hp: boss.stats.hp,
@@ -242,7 +242,7 @@ class SpawnSystem {
       visual: boss.visual || { shape: 'circle', color: '#4A0000' },
     });
     
-    this.eventBus.emit('bossSpawn', { boss });
+    this.eventBus.emit('bossSpawn', { boss, entity });
   }
 
 
