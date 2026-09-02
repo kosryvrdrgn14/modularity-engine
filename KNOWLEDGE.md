@@ -129,3 +129,25 @@ a shrinking budget and risk acting on a partial view of the codebase. This
 is exactly how the false circular-dependency analysis happened: an
 architecture claim was made without the room left to actually verify it
 against the current source.
+
+## 11. Watch for confusingly similar object names
+
+This project has three objects with easily-confused names:
+- **`Game`** — the main orchestrator, owns `this.dataManager`
+- **`GameManager`** (commonly held as `this.gameManager`) — save data, flags,
+  currency (`systems/progression.js`)
+- **`DataManager`** (commonly held as `this.dataManager`) — JSON content
+  loading (`engine/core.js`)
+
+`Game.gameManager !== Game.dataManager`. Before passing a dependency by a
+variable named `gameManager` or `dataManager`, verify which actual class
+instance it refers to — don't assume from the name alone. This exact mixup
+caused the town screen to render empty after the location/NPC schema
+migration: `LocationManager` received `GameManager` where it needed
+`DataManager`, and the two objects share no properties, so the failure was
+silent rather than a crash.
+
+If a constructor needs two or more same-shaped dependencies (multiple
+"manager" objects), prefer a destructured options object over positional
+arguments — swapping positional argument order is an easy, silent mistake
+with no type system to catch it.
