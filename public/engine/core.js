@@ -180,7 +180,7 @@ class GameState {
       bossIntro: ['playing'],
       gameOver: ['endScreen'],
       endScreen: ['town', 'menu', 'playing'],
-      town: ['combat', 'title', 'town'],
+      town: ['combat', 'title', 'town', 'playing'],
     };
   }
 
