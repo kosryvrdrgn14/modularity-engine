@@ -108,6 +108,11 @@ class TownScreen {
   }
 
   _handleCombat() {
+    // Set stage from current location before starting combat
+    const curLoc = this.locationManager?.getCurrentLocation();
+    if (curLoc?.stageId) {
+      this.gameManager.set('session.selected_stage_id', curLoc.stageId);
+    }
     this.hide();
     this.startGame();
   }
