@@ -429,6 +429,7 @@ class Game {
 
     this.gameTime += dt;
 
+    try {
     // Check pre-boss announcements
     this._updateAnnouncements();
 
@@ -458,6 +459,7 @@ class Game {
       this.camera.follow(this.player);
     }
     this.camera.update(dt);
+    } catch (e) { console.error('[UPDATE ERROR]', e); this.gameLoop.paused = true; }
 
     // Check game over conditions
     if (this.gameTime >= 300) {
@@ -829,6 +831,7 @@ class Game {
   }
 
   render(interp) {
+    try {
     // Tick boss intro timer even when game loop is paused
     if (this.gameState.isBossIntro() && this.introOverlay) {
       const now = performance.now();
@@ -894,6 +897,7 @@ class Game {
 
     // Always render UI (includes end screen overlay when game over)
     this.uiManager.render();
+    } catch (e) { console.error('[RENDER ERROR]', e); }
   }
 
   _checkWeaponUnlocks() {
