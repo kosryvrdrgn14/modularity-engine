@@ -875,6 +875,46 @@ const FEATURE_DATA = {
 
 ---
 
+## 17. Godot Migration Considerations
+
+### Region Transition: Parallax (Deferred from Web)
+
+The web version uses a **Slide + Zoom Punch** CSS animation for region transitions (280ms, cubic-bezier ease-out). This was chosen over parallax because:
+
+- Web backgrounds are single SVG files, not layered
+- Splitting SVGs into foreground/midground/background layers would triple the asset count per location
+- CSS transform + SVG compositing on mobile has performance risks
+
+**When migrating to Godot**, replace with **horizontal layer-based parallax**:
+
+| Layer | Speed | Content |
+|-------|-------|---------|
+| Background | 20% | Sky, distant mountains, clouds |
+| Midground | 60% | Main landmarks, buildings, trees |
+| Foreground | 100% | UI elements, ground details, close foliage |
+
+**Transition spec:**
+- Duration: 250–350ms (never exceed 400ms)
+- Easing: Cubic ease-out (fast start, smooth decelerate)
+- Incoming scene enters from the right at matching layer speeds
+- Directional motion blur (10–15px) during mid-transition
+- UI cards fade out 50ms before slide, bounce back 50ms after settle
+
+**Asset format for Godot:**
+- Each location exports as 3 PNG layers: `{location}_bg.png`, `{location}_mid.png`, `{location}_fg.png`
+- Web tools should export all 3 layers when creating a new location
+- Godot scene uses `ParallaxBackground` + `ParallaxLayer` nodes with motion_scale set per layer
+
+### Background Art: SVG → Sprites
+
+Web version uses inline SVG for backgrounds (procedural, lightweight). Godot should use:
+- Hand-drawn or AI-generated sprite sheets
+- Separate layers for parallax
+- Consistent 1280×720 base resolution
+- Exported from the same visual design as the SVG versions
+
+---
+
 ## 20. Version History
 
 | Version | Date | Changes |
@@ -884,6 +924,7 @@ const FEATURE_DATA = {
 | v0.9.0 | Aug 31 | Last monolithic version (10,519 lines) |
 | v1.0.0 | Aug 31 | File split complete (275 lines + 31 files) |
 | v1.1.0 | Aug 31 | Content system: attack areas, visuals, elements, schemas |
+| v1.2.0 | Sep 2 | Loadout screen, boss fixes, region backgrounds, slide+zoom transitions |
 
 ---
 

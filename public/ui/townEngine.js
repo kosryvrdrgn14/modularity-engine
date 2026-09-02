@@ -384,27 +384,76 @@ class TownEngine {
   }
 
   _swipeNextRegion() {
-    if (!this.locationManager) return;
+    if (!this.locationManager || this._transitioning) return;
     const idx = this.locationManager.currentRegionIndex;
     if (idx < this.locationManager.getRegionCount() - 1) {
       this.audioManager.playMenuSound('select');
-      this.locationManager.switchRegion(idx + 1);
-      this.renderBreadcrumb();
-      this.renderLocationCards();
-      this.updateSwipeIndicator();
+      this._transitionRegion(1);
     }
   }
 
   _swipePrevRegion() {
-    if (!this.locationManager) return;
+    if (!this.locationManager || this._transitioning) return;
     const idx = this.locationManager.currentRegionIndex;
     if (idx > 0) {
       this.audioManager.playMenuSound('select');
-      this.locationManager.switchRegion(idx - 1);
+      this._transitionRegion(-1);
+    }
+  }
+
+  // Slide + Zoom Punch region transition
+  // direction: 1 = next (slide left), -1 = prev (slide right)
+  _transitionRegion(direction) {
+    if (this._transitioning) return;
+    this._transitioning = true;
+    const bg = this.dom.bg;
+    const screen = this.dom.screen;
+    if (!bg || !screen) { this._transitioning = false; return; }
+
+    // 1. Fade out UI elements
+    screen.classList.add('town-transitioning');
+    screen.classList.remove('town-transition-fadein');
+
+    // 2. Start exit animation on current background
+    const exitClass = direction > 0 ? 'bg-slide-out-left' : 'bg-slide-out-right';
+    bg.classList.add(exitClass);
+
+    // 3. At the midpoint (120ms), swap the image
+    setTimeout(() => {
+      // Switch region data
+      const idx = this.locationManager.currentRegionIndex;
+      this.locationManager.switchRegion(idx + direction);
+
+      // Swap background image
+      const regions = this.locationManager.getRegions();
+      const curRegion = regions[this.locationManager.currentRegionIndex];
+      if (curRegion) {
+        const bgUrl = this._regionBgs[curRegion.id];
+        if (bgUrl) bg.src = bgUrl;
+      }
+
+      // Remove exit class, add enter class
+      bg.classList.remove(exitClass);
+      const enterClass = direction > 0 ? 'bg-slide-in-right' : 'bg-slide-in-left';
+      bg.classList.add(enterClass);
+
+      // Update content
       this.renderBreadcrumb();
       this.renderLocationCards();
       this.updateSwipeIndicator();
-    }
+
+      // 4. After enter animation completes, clean up
+      setTimeout(() => {
+        bg.classList.remove(enterClass);
+        bg.style.transform = '';
+        bg.style.filter = '';
+        screen.classList.remove('town-transitioning');
+        screen.classList.add('town-transition-fadein');
+        // Remove fadein class after it settles
+        setTimeout(() => screen.classList.remove('town-transition-fadein'), 200);
+        this._transitioning = false;
+      }, 250);
+    }, 120);
   }
 
   _onLocationNavigate(loc) {
