@@ -206,16 +206,10 @@ class TitleMenu {
     const overlay = document.getElementById('dev-stage-overlay');
     if (!overlay) return;
 
-    const allWeaponDefs = [
-      { id: 'w1_projectile', name: 'Projectile', icon: '\u{1f3f9}', type: 'ranged', unlockLevel: 1 },
-      { id: 'w2_orbit', name: 'Orbit', icon: '\u{1f504}', type: 'ranged', unlockLevel: 3 },
-      { id: 'weapon_area_pulse', name: 'Area', icon: '\u{1f4a5}', type: 'ranged', unlockLevel: 6 },
-      { id: 'w4_flame_wave', name: 'Flame Wave', icon: '\u{1f525}', type: 'ranged', unlockLevel: 4 },
-      { id: 'w5_arcane_bolt', name: 'Arcane Bolt', icon: '\u26a1', type: 'ranged', unlockLevel: 5 },
-      { id: 'w6_dagger', name: 'Dagger', icon: '\u{1f5e1}\ufe0f', type: 'melee', unlockLevel: 1 },
-      { id: 'w7_sword', name: 'Sword', icon: '\u2694\ufe0f', type: 'melee', unlockLevel: 1 },
-      { id: 'w8_claymore', name: 'Claymore', icon: '\u{1fa93}', type: 'melee', unlockLevel: 1 },
-    ];
+    // Read weapons from DataManager (data-driven, no hardcoded list)
+    const allWeaponDefs = (this.dataManager?.weapons || []).map(w => ({
+      id: w.id, name: w.name, icon: w.icon || '?', type: w.type || '', unlockLevel: w.unlockLevel || 1
+    }));
 
     const stageData = this.dataManager?.stages;
     const tierCfg = stageData?.tierConfig?.[stageTier];
@@ -285,7 +279,7 @@ class TitleMenu {
 
       if (canLaunch) {
         overlay.querySelector('.dev-launch-btn').addEventListener('click', () => {
-          self.gameManager.set('session.dev_weapons', [...selected]);
+          self.gameManager.set('session.loadout_weapons', [...selected]);
           self.audioManager?.playMenuSound('select');
           self._showCompanionSelector(stageId, stageTier);
         });
@@ -300,24 +294,14 @@ class TitleMenu {
     const overlay = document.getElementById('dev-stage-overlay');
     if (!overlay) return;
 
-    const allCompanions = [
-      { id: 'dog', name: 'Dog', icon: '\u{1f415}', desc: 'Melee AoE \u00b7 loot', available: true },
-      { id: 'healer', name: 'Healer', icon: '\u{1f49a}', desc: 'Threshold heals + regen', available: true },
-      { id: 'archer', name: 'Archer', icon: '\u{1f3f9}', desc: 'Ranged \u00b7 slow + poison', available: true },
-      { id: 'mage', name: 'Mage', icon: '\u{1f9d9}', desc: 'Chain lightning + vuln', available: true },
-      { id: 'knight', name: 'Knight', icon: '\u2694\ufe0f', desc: 'Tank \u00b7 armor shred', available: true },
-      { id: 'panther', name: 'Panther', icon: '\u{1f408}', desc: 'Chain melee \u00b7 fast', available: true },
-      { id: 'spider', name: 'Spider', icon: '\u{1f577}\ufe0f', desc: 'Stacking poison DoT', available: true },
-      { id: 'hawk', name: 'Hawk', icon: '\u{1f985}', desc: 'Dive bomb AoE', available: true },
-      { id: 'turtle', name: 'Turtle', icon: '\u{1f422}', desc: 'Shield + knockback', available: true },
-      { id: 'owl', name: 'Owl', icon: '\u{1f989}', desc: 'Damage amplifier', available: true },
-      { id: 'rat', name: 'Rat', icon: '\u{1f400}', desc: 'Summon swarm', available: true },
-      { id: 'frog', name: 'Frog', icon: '\u{1f438}', desc: 'Leap + slow + knockback', available: true },
-      { id: 'bat', name: 'Bat', icon: '\u{1f987}', desc: 'Lifesteal + speed buff', available: true },
-    ];
+    // Read companions from DataManager/COMPANION_DATA (data-driven, no hardcoded list)
+    const companionSource = this.dataManager?.companions || (typeof COMPANION_DATA !== 'undefined' ? COMPANION_DATA : {});
+    const allCompanions = Object.values(companionSource).map(c => ({
+      id: c.id, name: c.name, icon: c.icon || '?', desc: c.desc || c.role || '', available: true
+    }));
 
     const selected = [null, null, null];
-    const savedCompanions = this.gameManager.get('session.dev_companions');
+    const savedCompanions = this.gameManager.get('session.loadout_companions');
     if (savedCompanions && savedCompanions.length > 0) {
       for (let i = 0; i < 3; i++) selected[i] = savedCompanions[i] || null;
     } else {
@@ -386,7 +370,7 @@ class TitleMenu {
       });
 
       overlay.querySelector('.dev-launch-btn').addEventListener('click', () => {
-        self.gameManager.set('session.dev_companions', [...selected]);
+        self.gameManager.set('session.loadout_companions', [...selected]);
         self.audioManager?.playMenuSound('select');
         overlay.style.display = 'none';
         self.onStart();

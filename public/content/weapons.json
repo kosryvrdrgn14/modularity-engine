@@ -70,7 +70,8 @@
     "visual": {
       "shape": "square",
       "color": "#FFD700"
-    }
+    },
+    "icon": "🏹"
   },
   {
     "id": "w2_orbit",
@@ -157,7 +158,8 @@
     "visual": {
       "shape": "circle",
       "color": "#4FC3F7"
-    }
+    },
+    "icon": "🔄"
   },
   {
     "id": "weapon_area_pulse",
@@ -237,7 +239,8 @@
     "visual": {
       "shape": "circle",
       "color": "#FF9100"
-    }
+    },
+    "icon": "💥"
   },
   {
     "id": "w4_flame_wave",
@@ -319,7 +322,8 @@
     "visual": {
       "shape": "cone",
       "color": "#FF4500"
-    }
+    },
+    "icon": "🔥"
   },
   {
     "id": "w5_arcane_bolt",
@@ -401,7 +405,8 @@
     "visual": {
       "shape": "diamond",
       "color": "#9C27B0"
-    }
+    },
+    "icon": "⚡"
   },
   {
     "id": "w6_dagger",
@@ -484,7 +489,8 @@
     "visual": {
       "shape": "triangle",
       "color": "#9B59B6"
-    }
+    },
+    "icon": "🗡️"
   },
   {
     "id": "w7_sword",
@@ -565,7 +571,8 @@
     "visual": {
       "shape": "arc",
       "color": "#3498DB"
-    }
+    },
+    "icon": "⚔️"
   },
   {
     "id": "w8_claymore",
@@ -647,6 +654,7 @@
     "visual": {
       "shape": "rectangle",
       "color": "#7F8C8D"
-    }
+    },
+    "icon": "🪓"
   }
 ]

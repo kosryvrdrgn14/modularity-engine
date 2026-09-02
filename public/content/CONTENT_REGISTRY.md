@@ -238,25 +238,29 @@
 ---
 
 ### 8. Companions
-**File:** `data/companionData.js`
+**File:** `content/companions.json`
+**Schema:** `schemas/companion.json` (planned)
 **How to Add:**
 1. Copy an existing companion entry
 2. Change `id` to unique value
-3. Adjust `name`, `stats`, `ability`
+3. Adjust `name`, `role`, `visual`, `statsPerLevel`, `icon`, `desc`
 
 **Required Fields:**
 - `id` — Unique identifier
 - `name` — Display name
-- `stats` — Combat stats per level
-- `ability` — Special ability
+- `role` — Role label (e.g. "Melee AoE", "Support")
+- `visual` — Shape and color for rendering
+- `statsPerLevel` — Array of stat objects per level (0-6)
+- `icon` — Emoji icon for loadout UI
+- `desc` — Short description for loadout UI
 
 ---
 
 ## Content Loading Order
 
 ```
-1. data/*.js (script tags) — Shop, companions, farming, SVG portraits, etc.
-2. content/*.json (DataManager fetch) — Locations, NPCs, weapons, enemies, stages, pickups, attack areas, visuals, elements
+1. data/*.js (script tags) — Shop, farming, SVG portraits, etc.
+2. content/*.json (DataManager fetch) — Locations, NPCs, weapons, enemies, stages, companions, pickups, attack areas, visuals, elements
 3. engine/*.js (script tags) — Game systems
 ```
 

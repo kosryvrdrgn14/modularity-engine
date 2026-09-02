@@ -1279,3 +1279,158 @@
       font-size: 12px;
     }
 
+    /* ═══════════════════════════════════════════════
+       LOADOUT SCREEN — Pre-combat weapon & companion selection
+       ═══════════════════════════════════════════════ */
+    .loadout-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9500;
+      background: rgba(0, 0, 0, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .loadout-overlay.hidden {
+      display: none;
+    }
+    .loadout-panel {
+      background: #111122;
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 14px;
+      padding: 20px;
+      width: 90%;
+      max-width: 420px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    }
+    .loadout-header {
+      text-align: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .loadout-back {
+      position: absolute;
+      left: 0;
+      top: 0;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+    .loadout-back:hover { color: #FFD700; }
+    .loadout-title {
+      color: #FFD700;
+      font-size: 18px;
+      font-weight: 700;
+      display: block;
+    }
+    .loadout-subtitle {
+      color: #666;
+      font-size: 12px;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* Slot indicators */
+    .loadout-slots {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .loadout-slot {
+      flex: 1;
+      background: #0a0a18;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 10px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .loadout-slot:hover { border-color: #FFD700; }
+    .loadout-slot.filled {
+      border-color: #4CAF50;
+      background: rgba(76, 175, 80, 0.08);
+    }
+    .loadout-slot-label {
+      color: #555;
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+    .loadout-slot-value {
+      color: #ccc;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .loadout-slot.filled .loadout-slot-value { color: #4CAF50; }
+    .loadout-slot-hint {
+      color: #666;
+      font-size: 9px;
+      margin-top: 3px;
+    }
+
+    /* Card grid */
+    .loadout-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .loadout-card {
+      background: #0a0a18;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 10px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .loadout-card:hover { border-color: #FFD700; background: rgba(255, 215, 0, 0.05); }
+    .loadout-card.selected {
+      border-color: #4CAF50;
+      background: rgba(76, 175, 80, 0.12);
+    }
+    .loadout-card-icon { font-size: 22px; }
+    .loadout-card-name {
+      color: #ddd;
+      font-size: 11px;
+      margin-top: 3px;
+    }
+    .loadout-card-meta {
+      color: #666;
+      font-size: 9px;
+      margin-top: 2px;
+    }
+
+    /* Confirm / Next button */
+    .loadout-confirm {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #0a0a18;
+      color: #555;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: default;
+      transition: all 0.15s;
+    }
+    .loadout-confirm.active {
+      border-color: #4CAF50;
+      background: rgba(76, 175, 80, 0.15);
+      color: #4CAF50;
+      cursor: pointer;
+    }
+    .loadout-confirm.active:hover {
+      background: rgba(76, 175, 80, 0.25);
+    }
+

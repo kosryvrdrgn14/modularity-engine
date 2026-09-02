@@ -91,6 +91,7 @@ class DataManager {
       { key: 'attackAreas', path: 'content/attackAreas.json' },
       { key: 'visuals', path: 'content/visuals.json' },
       { key: 'elements', path: 'content/elements.json' },
+      { key: 'companions', path: 'content/companions.json' },
     ];
 
     const results = await Promise.all(
@@ -115,6 +116,11 @@ class DataManager {
       } else {
         this[result.key] = this.getEmbeddedData(result.key);
       }
+    }
+
+    // Populate COMPANION_DATA global for systems/companion.js and systems/progression.js
+    if (this.companions && typeof window !== 'undefined') {
+      window.COMPANION_DATA = this.companions;
     }
 
     // Support stages as array - select by ID

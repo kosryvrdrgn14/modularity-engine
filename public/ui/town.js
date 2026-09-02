@@ -13,6 +13,9 @@ class TownScreen {
     // Create LocationManager — pass dataManager for JSON content access
     this.locationManager = new LocationManager({ gameManager, dataManager });
     
+    // Create LoadoutScreen (pre-combat weapon & companion selection)
+    this.loadoutScreen = new LoadoutScreen({ gameManager, dataManager, audioManager });
+
     // Create ShopSystem (new data-driven version)
     this.shopSystem = new ShopSystem({ gameManager, eventBus, audioManager });
 
@@ -115,7 +118,23 @@ class TownScreen {
     if (curLoc?.stageId) {
       this.gameManager.set('session.selected_stage_id', curLoc.stageId);
     }
+    // Tier is already set by battle card click in townEngine
+    const tier = this.gameManager.get('session.current_stage_tier') || 'standard';
+
+    // Show loadout screen instead of jumping straight to combat
     this.hide();
-    this.startGame();
+    this.loadoutScreen.show({
+      stageId: curLoc?.stageId,
+      stageTier: tier,
+      onConfirm: ({ weapons, companions }) => {
+        this.gameManager.set('session.loadout_weapons', weapons);
+        this.gameManager.set('session.loadout_companions', companions);
+        this.startGame();
+      },
+      onBack: () => {
+        // Return to town screen
+        this.show({});
+      },
+    });
   }
 }

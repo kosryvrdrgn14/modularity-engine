@@ -346,7 +346,7 @@ class Game {
     const stageData = this.dataManager.stages;
     const tierConfig = stageData?.tierConfig?.[stageTier];
     // Loadout comes exclusively from player selection (stored in session)
-    const devWeapons = this.gameManager.get('session.dev_weapons');
+    const devWeapons = this.gameManager.get('session.loadout_weapons');
     if (devWeapons && devWeapons.length > 0) {
       this._activeWeapons = devWeapons.filter(Boolean);
     } else {
@@ -390,7 +390,7 @@ class Game {
 
     this.weaponSystem.init(this.player);
 
-    const devCompanions = this.gameManager.get('session.dev_companions');
+    const devCompanions = this.gameManager.get('session.loadout_companions');
     let companionIds = (devCompanions && devCompanions.some(Boolean))
       ? devCompanions.filter(Boolean)
       : this.gameManager.get_companions();
