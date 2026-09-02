@@ -821,25 +821,30 @@ const FEATURE_DATA = {
 
 ## 15. Implementation Status
 
-### Completed (v1.1.0)
+### Completed (v1.2.0)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | File split | ✅ Complete | 10,519 → 275 lines |
 | Combat engine | ✅ Working | Basic weapons, enemies, pickups |
 | Weapon system | ✅ Working | 8 weapons, upgrades, evolutions |
-| Attack areas | ✅ Complete | 20 predefined shapes |
+| Attack areas | ✅ Complete | 19 predefined shapes |
 | Visual system | ✅ Complete | 8 projectiles, 5 orbs, 7 effects, 7 particles |
 | Element system | ✅ Complete | 7 elements with interactions |
-| Companion system | ✅ Working | 12 companions, deployment |
-| Stage system | ✅ Working | 3 stages, star conditions |
-| Town system | ✅ Working | Location navigation, panels |
-| NPC dialogue | ✅ Working | Typewriter, choices |
+| Companion system | ✅ Working | 13 companions, data-driven |
+| Stage system | ✅ Working | 2 stages, star conditions |
+| Town system | ✅ Working | 3 regions, navigation, panels |
+| Region backgrounds | ✅ Complete | Unique SVG per region, slide+zoom transition |
+| NPC dialogue | ✅ Working | 10 NPCs, typewriter, choices |
+| Loadout screen | ✅ Working | Pre-combat weapon + companion selection |
 | Shop system | ✅ Working | Data-driven, multiple modes |
 | Level-up system | ✅ Working | Weapon upgrades, power spikes |
+| Boss system | ✅ Working | Charge AI, phases, intro sequences |
 | Audio system | ✅ Working | SFX, music, ducking |
 | Content schemas | ✅ Complete | 6 schemas for validation |
-| Content registry | ✅ Complete | Documentation for content creators |
+| Content registry | ✅ Complete | 12 content types documented |
+| Data migration | ✅ Complete | locations, npcs, companions → JSON |
+| Region transitions | ✅ Complete | Slide+zoom punch, 370ms |
 
 ### In Progress
 
@@ -938,7 +943,7 @@ Web version uses inline SVG for backgrounds (procedural, lightweight). Godot sho
 | DESIGN_PRINCIPLES.md | Data-driven design principles |
 | FILE_SPLIT_REPORT.md | File split documentation |
 | CHANGELOG.md | Version history |
-| game_bugs.md | Bug tracking |
+| public/BUGS_AND_ISSUES.md | Active bug tracker |
 | 01-32_*_spec.md | Detailed feature specs |
 
 ---

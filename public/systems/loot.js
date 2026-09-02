@@ -97,6 +97,6 @@ class GachaProtection {
 // LOCATION MANAGER — Hierarchical navigation (D1/D2)
 // ============================================================
 
-// LOCATION_TREE moved to data/locationTree.js (loaded via <script> tag before this one)
+// LOCATION_TREE moved to content/locations.json (loaded via DataManager fetch)
 
 
