@@ -1,0 +1,173 @@
+{
+  "old_man": {
+    "id": "old_man",
+    "name": "Elder Rowan",
+    "portraitKey": "old_man",
+    "location": "city_root",
+    "unlocked": true,
+    "greeting": "Welcome back, traveler. The road has been dangerous, but we are alive.",
+    "topics": [
+      {
+        "id": "about_camp",
+        "text": "Tell me about the camp.",
+        "response": "We were farmers, merchants, refugees... The Gravekeeper rise drove us here. These tents are all we have left. But you — you fight. That gives us hope.",
+        "affection": 0
+      },
+      {
+        "id": "about_graveyard",
+        "text": "Have you seen anything strange?",
+        "response": "The graveyard to the east... The dead do not rest easy there. Something ancient keeps them rising. Be careful if you go back.",
+        "affection": 0,
+        "flag": "graveyard_warning"
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  },
+  "cute_girl": {
+    "id": "cute_girl",
+    "name": "Lina",
+    "portraitKey": "cute_girl",
+    "location": "city_root",
+    "unlocked": false,
+    "unlockCondition": "town_camp_upgraded",
+    "greeting": "Oh! You fixed up the camp! I am... I am Lina. Thank you for making this place safer.",
+    "topics": [
+      {
+        "id": "about_herself",
+        "text": "How did you end up here?",
+        "response": "I was a baker daughter in the city. When the dead started walking, we fled. My family... I do not know if they made it. But I am grateful to be alive.",
+        "affection": 1
+      },
+      {
+        "id": "help",
+        "text": "Is there anything I can do to help?",
+        "response": "If you could clear the graveyard, maybe we could rebuild the city road. People would start coming back. Please... be careful out there.",
+        "affection": 1,
+        "flag": "lina_quest_hint"
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  },
+  "blacksmith": {
+    "id": "blacksmith",
+    "name": "Garret the Blacksmith",
+    "portraitKey": "blacksmith",
+    "location": "blacksmith",
+    "unlocked": true,
+    "greeting": "Hmph. Another traveler. If you need weapons forged, you have come to the right place. I used to make plows and horseshoes. Now it is all swords and shields.",
+    "topics": [
+      {
+        "id": "about_weapons",
+        "text": "Can you forge me something special?",
+        "response": "I can forge decent blades, but the real materials... they are buried in the graveyard. Bring me rare metal and I will make you something legendary.",
+        "affection": 0
+      },
+      {
+        "id": "about_himself",
+        "text": "How did you end up here?",
+        "response": "I was the finest smith in the valley. When the dead rose, my forge was the first thing they destroyed. I have been tempering steel and tempering my patience ever since.",
+        "affection": 0
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  },
+  "tavern_keeper": {
+    "id": "tavern_keeper",
+    "name": "Mira the Tavern Keeper",
+    "portraitKey": "tavern_keeper",
+    "location": "tavern",
+    "unlocked": true,
+    "greeting": "Welcome, weary soul! Sit down, have a drink. Well... we are out of ale. But I have got stories, and those are free.",
+    "topics": [
+      {
+        "id": "rumors",
+        "text": "Any rumors from the road?",
+        "response": "Travelers say the Gravekeeper was not always a monster. Some say he was a good man once, until something broke inside him. Tragic, really.",
+        "affection": 0
+      },
+      {
+        "id": "about_tavern",
+        "text": "This place used to be lively, huh?",
+        "response": "Lively? It was the heart of the village! Singing, dancing, feasts every fortnight. Now it is just me and the rats. But we keep the lights on. Hope is important.",
+        "affection": 1
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  },
+  "worried_refugee": {
+    "id": "worried_refugee",
+    "name": "Anxious Refugee",
+    "portraitKey": "worried_refugee",
+    "location": "residential",
+    "unlocked": true,
+    "greeting": "*shivers* Did you hear that last night? Groaning from the graveyard. They are getting closer every day...",
+    "topics": [
+      {
+        "id": "weather",
+        "text": "How are you holding up?",
+        "response": "The nights are getting colder. My children are sick. I do not know how much longer we can survive here. But at least you fight for us. That means something.",
+        "affection": 0
+      },
+      {
+        "id": "zombies",
+        "text": "Are the zombies really getting closer?",
+        "response": "Every night I hear them. Scratching at the walls, moaning. Elder Rowan says we are safe, but I have seen them in the treeline. They are watching us.",
+        "affection": 0
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  },
+  "weather_watcher": {
+    "id": "weather_watcher",
+    "name": "Old Sarah",
+    "portraitKey": "weather_watcher",
+    "location": "residential",
+    "unlocked": true,
+    "greeting": "Rain is coming. My bones always know. *looks at the sky* Dark clouds gathering over the graveyard...",
+    "topics": [
+      {
+        "id": "weather",
+        "text": "What do you think about the weather?",
+        "response": "Storm is brewing. Good for the crops — if we had any left. Bad for morale. People get anxious when the sky goes dark. Reminds them of... you know.",
+        "affection": 0
+      },
+      {
+        "id": "old_days",
+        "text": "Tell me about the old days.",
+        "response": "Oh honey, I remember when this was all green fields. Markets full of flowers, children laughing. Now look at us. Huddled around campfires, jumping at shadows.",
+        "affection": 0
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  }
+}

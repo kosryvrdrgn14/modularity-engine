@@ -7,8 +7,18 @@ class LocationManager {
     this.onNavigate = null; // callback
   }
 
+  /** Get locations data from DataManager (JSON) or fallback to global LOCATION_TREE */
+  _getLocationsData() {
+    const dm = this.gameManager?.dataManager;
+    if (dm?.locations) return dm.locations;
+    // Fallback for legacy JS global (during migration)
+    if (typeof LOCATION_TREE !== 'undefined') return LOCATION_TREE;
+    return { regions: [] };
+  }
+
   getCurrentRegion() {
-    return LOCATION_TREE.regions[this.currentRegionIndex] || LOCATION_TREE.regions[0];
+    const data = this._getLocationsData();
+    return data.regions[this.currentRegionIndex] || data.regions[0];
   }
 
   getCurrentLocation() {
@@ -16,9 +26,9 @@ class LocationManager {
     return region.locations[this.currentLocationId] || null;
   }
 
-  getRegions() { return LOCATION_TREE.regions; }
+  getRegions() { return this._getLocationsData().regions; }
 
-  getRegionCount() { return LOCATION_TREE.regions.length; }
+  getRegionCount() { return this._getLocationsData().regions.length; }
 
   navigateTo(locationId) {
     const region = this.getCurrentRegion();
@@ -52,10 +62,11 @@ class LocationManager {
   isRoot() { return this.locationHistory.length <= 1; }
 
   switchRegion(index) {
-    if (index < 0 || index >= LOCATION_TREE.regions.length) return false;
+    const data = this._getLocationsData();
+    if (index < 0 || index >= data.regions.length) return false;
     this.currentRegionIndex = index;
-    this.currentLocationId = LOCATION_TREE.regions[index].locations[
-      Object.keys(LOCATION_TREE.regions[index].locations)[0]
+    this.currentLocationId = data.regions[index].locations[
+      Object.keys(data.regions[index].locations)[0]
     ]?.id || 'city_root';
     this.locationHistory = [this.currentLocationId];
     const loc = this.getCurrentLocation();
@@ -75,11 +86,21 @@ class LocationManager {
     }).filter(Boolean);
   }
 
+  /** Get NPCs data from DataManager (JSON) or fallback to global NPC_DATA */
+  _getNPCsData() {
+    const dm = this.gameManager?.dataManager;
+    if (dm?.npcs) return dm.npcs;
+    // Fallback for legacy JS global (during migration)
+    if (typeof NPC_DATA !== 'undefined') return NPC_DATA;
+    return {};
+  }
+
   getNPCsAtLocation(locationId) {
     // Filter NPCs by their assigned location (default: city_root)
+    const npcsData = this._getNPCsData();
     const npcs = [];
-    for (const key in NPC_DATA) {
-      const npc = NPC_DATA[key];
+    for (const key in npcsData) {
+      const npc = npcsData[key];
       const loc = npc.location || 'city_root';
       if (loc === locationId && npc.unlocked) npcs.push(npc);
     }

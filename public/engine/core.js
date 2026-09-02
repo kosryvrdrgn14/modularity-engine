@@ -80,6 +80,8 @@ class DataManager {
 
   async loadAll(onProgress) {
     const files = [
+      { key: 'locations', path: 'content/locations.json' },
+      { key: 'npcs', path: 'content/npcs.json' },
       { key: 'characters', path: 'content/characters.json' },
       { key: 'weapons', path: 'content/weapons.json' },
       { key: 'enemies', path: 'content/enemies.json' },

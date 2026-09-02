@@ -624,7 +624,8 @@ class Game {
       this.gameManager.add_currency(100, 'debug');
       this.gameManager.set('persistent.town.phase', 1);
       this.gameManager.set_flag('town_camp_upgraded', false);
-      NPC_DATA.cute_girl.unlocked = false;
+      const _npcs = this.dataManager?.npcs || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
+      if (_npcs.cute_girl) _npcs.cute_girl.unlocked = false;
     }
     this.gameState.setState('town');
     this.townScreen.show({ time: '4:32', level: 8, kills: 20, gold: 100 });

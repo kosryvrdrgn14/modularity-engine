@@ -73,8 +73,9 @@ class TownContent {
     }
 
     // Update unlocked NPCs
-    for (const key in NPC_DATA) {
-      const npc = NPC_DATA[key];
+    const _npcsData = this.locationManager?._getNPCsData() || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
+    for (const key in _npcsData) {
+      const npc = _npcsData[key];
       if (npc.unlockCondition) {
         npc.unlocked = !!gm.get_flag(npc.unlockCondition);
       }
@@ -128,7 +129,7 @@ class TownContent {
     const curLoc = this.locationManager?.getCurrentLocation();
     const npcs = curLoc ? (this.locationManager.getNPCsAtLocation(curLoc.id) || []) : [];
     for (const npc of npcs.slice(0, 3)) {
-      const svg = SVG_PORTRAITS[npc.id] || '<div style="width:36px;height:36px;border-radius:50%;background:#333;"></div>';
+      const svg = SVG_PORTRAITS[npc.portraitKey || npc.id] || '<div style="width:36px;height:36px;border-radius:50%;background:#333;"></div>';
       const svgSmall = svg.replace('<svg ', '<svg style="width:36px;height:36px;" ');
       const locked = npc.locked && !this.gameManager?.get_flag(npc.unlockCondition);
       const card = document.createElement('div');
@@ -268,7 +269,7 @@ class TownContent {
     this._lastDialogueNpcId = npc.id;
 
     // Use inline SVG for reliable rendering
-    const svgHtml = SVG_PORTRAITS[npc.id] || '';
+    const svgHtml = SVG_PORTRAITS[npc.portraitKey || npc.id] || '';
     if (svgHtml && this.dom.dialoguePortrait) {
       const styled = svgHtml.replace('<svg ', '<svg style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(255,215,0,0.2);flex-shrink:0;" ');
       this.dom.dialoguePortrait.innerHTML = styled;
@@ -430,7 +431,7 @@ class TownContent {
   createNPCCard(npc, isLocked) {
     const card = document.createElement('div');
     card.className = 'npc-card' + (isLocked ? ' locked' : '');
-    const svgHtml = SVG_PORTRAITS[npc.id] || '<div class="npc-portrait"></div>';
+    const svgHtml = SVG_PORTRAITS[npc.portraitKey || npc.id] || '<div class="npc-portrait"></div>';
     const svgWithClass = isLocked
       ? svgHtml.replace('<svg ', '<svg class="npc-portrait" style="filter: grayscale(1); opacity: 0.5;" ')
       : svgHtml.replace('<svg ', '<svg class="npc-portrait" ');
@@ -483,7 +484,8 @@ class TownContent {
         gm.spend_currency(100, 'camp_upgrade');
         gm.set_flag('town_camp_upgraded', true);
         gm.set('persistent.town.phase', 2);
-        NPC_DATA.cute_girl.unlocked = true;
+        const _npcsUpgrade = this.locationManager?._getNPCsData() || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
+        if (_npcsUpgrade.cute_girl) _npcsUpgrade.cute_girl.unlocked = true;
         this.updateDisplay();
         if (this._engine) this._engine.renderLocationCards();
       });
