@@ -8,6 +8,12 @@ class TownEngine {
     this.audioManager = audioManager;
     this.dataManager = dataManager || null;
     this.gameManager = gameManager || null;
+    // Region → background image mapping
+    this._regionBgs = {
+      town: 'assets/town_refugee_camp.svg',
+      graveyard: 'assets/town_graveyard.svg',
+      forest: 'assets/town_forest.svg',
+    };
     this.onTabSwitch = onTabSwitch;
     this.onLocationSelect = onLocationSelect;
     this.onBack = onBack;
@@ -360,6 +366,14 @@ class TownEngine {
     });
     if (this._regionName) {
       this._regionName.textContent = regions[this.locationManager.currentRegionIndex]?.name || '';
+    }
+    // Update background image for current region
+    const curRegion = regions[this.locationManager.currentRegionIndex];
+    if (curRegion && this.dom.bg) {
+      const bgUrl = this._regionBgs[curRegion.id];
+      if (bgUrl && this.dom.bg.src !== new URL(bgUrl, location.href).href) {
+        this.dom.bg.src = bgUrl;
+      }
     }
     // Update arrow visibility
     const idx = this.locationManager.currentRegionIndex;

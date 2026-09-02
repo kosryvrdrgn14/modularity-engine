@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="forestSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#080E08"/>
+      <stop offset="40%" stop-color="#0A1A0E"/>
+      <stop offset="100%" stop-color="#0D2012"/>
+    </linearGradient>
+    <radialGradient id="moonGlow4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#88BB88" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#88BB88" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mushGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#44DDAA" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#44DDAA" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fireflyGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#AAFF88" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#AAFF88" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Deep forest sky -->
+  <rect width="800" height="450" fill="url(#forestSky)"/>
+
+  <!-- Canopy filter — dark green overlay at top -->
+  <rect width="800" height="120" fill="#061008" opacity="0.6"/>
+
+  <!-- Faint stars through canopy gaps -->
+  <circle cx="150" cy="35" r="0.7" fill="#88AA88" opacity="0.3"/>
+  <circle cx="400" cy="20" r="0.9" fill="#88AA88" opacity="0.25"/>
+  <circle cx="600" cy="45" r="0.6" fill="#88AA88" opacity="0.3"/>
+
+  <!-- Moon through canopy -->
+  <circle cx="500" cy="55" r="22" fill="url(#moonGlow4)"/>
+  <circle cx="500" cy="55" r="10" fill="#88AA88" opacity="0.35"/>
+  <circle cx="504" cy="52" r="8.5" fill="#0A1A0E"/>
+
+  <!-- Ground — forest floor -->
+  <path d="M0 345 Q100 340 200 343 Q300 338 400 341 Q500 336 600 339 Q700 334 800 336 L800 450 L0 450 Z" fill="#0D1A0E"/>
+  <path d="M0 358 Q100 355 200 357 Q300 352 400 354 Q500 350 600 352 Q700 348 800 350 L800 450 L0 450 Z" fill="#0A150B"/>
+
+  <!-- Big tree 1 (left) — thick trunk -->
+  <rect x="60" y="200" width="20" height="150" fill="#1A2A12" rx="3"/>
+  <path d="M50 220 Q30 180 45 140 Q60 100 70 140 Q80 100 95 140 Q110 180 90 220 Z" fill="#142210"/>
+  <path d="M55 210 Q40 175 52 145 Q65 115 70 145 Q75 115 88 145 Q100 175 85 210 Z" fill="#1A2E14" opacity="0.7"/>
+
+  <!-- Big tree 2 (right) -->
+  <rect x="690" y="210" width="22" height="140" fill="#1A2A12" rx="3"/>
+  <path d="M680 230 Q660 185 675 145 Q690 105 700 145 Q710 105 725 145 Q740 185 720 230 Z" fill="#142210"/>
+  <path d="M685 220 Q670 188 682 155 Q694 125 700 155 Q706 125 718 155 Q730 188 715 220 Z" fill="#1A2E14" opacity="0.7"/>
+
+  <!-- Medium trees (mid-ground) -->
+  <rect x="250" y="250" width="14" height="100" fill="#152510" rx="2"/>
+  <path d="M243 265 Q230 235 240 210 Q250 185 257 210 Q264 185 274 210 Q285 235 272 265 Z" fill="#12200E"/>
+
+  <rect x="530" y="240" width="16" height="110" fill="#152510" rx="2"/>
+  <path d="M522 258 Q508 225 520 198 Q532 170 538 198 Q544 170 556 198 Q568 225 554 258 Z" fill="#12200E"/>
+
+  <!-- Small trees (background) -->
+  <path d="M380 300 L375 280 L370 300 L365 265 L360 300" fill="#0E1A0A" opacity="0.6"/>
+  <path d="M440 295 L436 278 L432 295 L428 260 L424 295" fill="#0E1A0A" opacity="0.5"/>
+
+  <!-- Ferns on ground -->
+  <path d="M130 355 Q140 345 150 355" fill="none" stroke="#1A3A18" stroke-width="1.5" opacity="0.6"/>
+  <path d="M135 355 Q145 340 155 355" fill="none" stroke="#1A3A18" stroke-width="1" opacity="0.5"/>
+  <path d="M550 350 Q560 340 570 350" fill="none" stroke="#1A3A18" stroke-width="1.5" opacity="0.6"/>
+  <path d="M555 350 Q565 338 575 350" fill="none" stroke="#1A3A18" stroke-width="1" opacity="0.5"/>
+
+  <!-- Glowing mushrooms cluster 1 -->
+  <ellipse cx="180" cy="358" rx="8" ry="4" fill="url(#mushGlow)"/>
+  <ellipse cx="180" cy="355" rx="5" ry="3" fill="#226644" opacity="0.7"/>
+  <ellipse cx="175" cy="357" rx="3" ry="2" fill="#226644" opacity="0.6"/>
+  <circle cx="180" cy="353" r="1" fill="#44DDAA" opacity="0.5"/>
+
+  <!-- Glowing mushrooms cluster 2 -->
+  <ellipse cx="480" cy="352" rx="10" ry="5" fill="url(#mushGlow)"/>
+  <ellipse cx="480" cy="349" rx="6" ry="3.5" fill="#226644" opacity="0.7"/>
+  <ellipse cx="487" cy="351" rx="4" ry="2.5" fill="#226644" opacity="0.6"/>
+  <circle cx="480" cy="347" r="1.2" fill="#44DDAA" opacity="0.5"/>
+  <circle cx="487" cy="349" r="0.8" fill="#44DDAA" opacity="0.4"/>
+
+  <!-- Fireflies -->
+  <circle cx="200" cy="280" r="1.5" fill="url(#fireflyGlow)">
+    <animate attributeName="cx" values="200;210;195;200" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="280;270;285;280" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.6;0.2;0.8;0.6" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="600" cy="250" r="1.2" fill="url(#fireflyGlow)">
+    <animate attributeName="cx" values="600;608;595;600" dur="5s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="250;240;255;250" dur="5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0.1;0.7;0.5" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="350" cy="300" r="1" fill="url(#fireflyGlow)">
+    <animate attributeName="cx" values="350;358;345;350" dur="3.5s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="300;292;305;300" dur="3.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.4;0.15;0.6;0.4" dur="2.8s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="720" cy="290" r="0.9" fill="url(#fireflyGlow)">
+    <animate attributeName="cx" values="720;726;715;720" dur="4.5s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="290;282;295;290" dur="4.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0.1;0.6;0.5" dur="3.2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Fallen log -->
+  <ellipse cx="350" cy="368" rx="35" ry="4" fill="#1A2512" opacity="0.6"/>
+  <ellipse cx="350" cy="367" rx="33" ry="3" fill="#1E2E16" opacity="0.5"/>
+
+  <!-- Roots near big tree -->
+  <path d="M60 350 Q50 348 40 350" fill="none" stroke="#1A2A12" stroke-width="2.5" opacity="0.5"/>
+  <path d="M80 350 Q90 347 100 350" fill="none" stroke="#1A2A12" stroke-width="2" opacity="0.4"/>
+
+  <!-- Moss on ground -->
+  <ellipse cx="300" cy="370" rx="25" ry="5" fill="#1A3A18" opacity="0.2"/>
+  <ellipse cx="600" cy="365" rx="30" ry="6" fill="#1A3A18" opacity="0.15"/>
+
+  <!-- Canopy branches (top corners) -->
+  <path d="M0 0 Q30 30 0 60" fill="none" stroke="#0A1A0A" stroke-width="3" opacity="0.5"/>
+  <path d="M800 0 Q770 35 800 65" fill="none" stroke="#0A1A0A" stroke-width="3" opacity="0.5"/>
+  <path d="M100 0 Q120 25 100 50" fill="none" stroke="#0A1A0A" stroke-width="2" opacity="0.4"/>
+  <path d="M700 0 Q680 28 700 55" fill="none" stroke="#0A1A0A" stroke-width="2" opacity="0.4"/>
+
+  <!-- Hanging vines -->
+  <path d="M120 0 Q118 20 122 40 Q119 55 121 70" fill="none" stroke="#142810" stroke-width="1" opacity="0.4"/>
+  <path d="M680 0 Q682 25 678 50 Q681 65 679 80" fill="none" stroke="#142810" stroke-width="1" opacity="0.4"/>
+</svg>
