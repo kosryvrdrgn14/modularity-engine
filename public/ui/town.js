@@ -7,10 +7,11 @@ class TownScreen {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
     this.eventBus = eventBus;
+    this.dataManager = dataManager;
     this.startGame = startGame;
 
-    // Create LocationManager
-    this.locationManager = new LocationManager(gameManager);
+    // Create LocationManager — pass dataManager for JSON content access
+    this.locationManager = new LocationManager(gameManager, dataManager);
     
     // Create ShopSystem (new data-driven version)
     this.shopSystem = new ShopSystem({ gameManager, eventBus, audioManager });

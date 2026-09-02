@@ -212,7 +212,10 @@ class TownEngine {
 
   renderLocationCards() {
     const area = this.dom.npcArea;
-    if (!area || !this.locationManager) return;
+    if (!area || !this.locationManager) {
+      console.warn('[TownEngine] renderLocationCards early return:', !!area, !!this.locationManager);
+      return;
+    }
 
     // Prevent double-render within same frame
     if (this._renderLock) return;
@@ -221,7 +224,11 @@ class TownEngine {
 
     area.innerHTML = '';
     const curLoc = this.locationManager.getCurrentLocation();
-    if (!curLoc) return;
+    if (!curLoc) {
+      console.warn('[TownEngine] No current location found');
+      return;
+    }
+    console.log('[TownEngine] Rendering location:', curLoc.id, curLoc.name);
 
     // Get content renderer if available
     const contentRenderer = this._contentRenderer;
@@ -233,6 +240,7 @@ class TownEngine {
 
     // 2. NPCs at current location
     const npcs = this.locationManager.getNPCsAtLocation(curLoc.id);
+    console.log('[TownEngine] NPCs at', curLoc.id, ':', npcs.length, npcs.map(n => n.id));
     for (const npc of npcs) {
       const card = contentRenderer?.createNPCCard
         ? contentRenderer.createNPCCard(npc, false)
@@ -242,6 +250,7 @@ class TownEngine {
 
     // 3. Location cards (children)
     const children = this.locationManager.getChildLocations(this.locationManager.currentLocationId);
+    console.log('[TownEngine] Children at', curLoc.id, ':', children.length, children.map(c => c.id));
     for (const child of children) {
       const card = document.createElement('div');
       card.className = 'location-card' + (child.locked ? ' locked' : '');

@@ -1,6 +1,7 @@
 class LocationManager {
-  constructor(gameManager) {
+  constructor(gameManager, dataManager) {
     this.gameManager = gameManager;
+    this.dataManager = dataManager || null;
     this.currentRegionIndex = 0;
     this.currentLocationId = 'city_root';
     this.locationHistory = ['city_root'];
@@ -9,10 +10,10 @@ class LocationManager {
 
   /** Get locations data from DataManager (JSON) or fallback to global LOCATION_TREE */
   _getLocationsData() {
-    const dm = this.gameManager?.dataManager;
-    if (dm?.locations) return dm.locations;
+    if (this.dataManager?.locations) return this.dataManager.locations;
     // Fallback for legacy JS global (during migration)
     if (typeof LOCATION_TREE !== 'undefined') return LOCATION_TREE;
+    console.warn('[LocationManager] No locations data found. dataManager:', !!this.dataManager, 'locations:', !!this.dataManager?.locations);
     return { regions: [] };
   }
 
@@ -88,10 +89,10 @@ class LocationManager {
 
   /** Get NPCs data from DataManager (JSON) or fallback to global NPC_DATA */
   _getNPCsData() {
-    const dm = this.gameManager?.dataManager;
-    if (dm?.npcs) return dm.npcs;
+    if (this.dataManager?.npcs) return this.dataManager.npcs;
     // Fallback for legacy JS global (during migration)
     if (typeof NPC_DATA !== 'undefined') return NPC_DATA;
+    console.warn('[LocationManager] No NPCs data found. dataManager:', !!this.dataManager, 'npcs:', !!this.dataManager?.npcs);
     return {};
   }
 
