@@ -173,7 +173,14 @@ class SpawnSystem {
 
   _spawnEnemy(wave) {
     const enemies = this.dataManager.enemies.filter(e => e.type === 'normal');
-    const weights = wave.compositionWeights;
+    // Fall back to equal weights from enemyTypes if compositionWeights is missing
+    let weights = wave.compositionWeights;
+    if (!weights && wave.enemyTypes && wave.enemyTypes.length > 0) {
+      const equal = 1 / wave.enemyTypes.length;
+      weights = {};
+      for (const t of wave.enemyTypes) weights[t] = equal;
+    }
+    if (!weights) return;
     
     // Weighted random selection
     let totalWeight = 0;

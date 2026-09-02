@@ -156,7 +156,14 @@
           "caster"
         ],
         "spawnRate": 2,
-        "maxEnemies": 150
+        "maxEnemies": 150,
+        "compositionWeights": {
+          "zombie": 0.25,
+          "bat": 0.2,
+          "skeleton": 0.2,
+          "ghost": 0.15,
+          "caster": 0.2
+        }
       },
       {
         "time": "4:30-5:00",
@@ -168,7 +175,14 @@
           "caster"
         ],
         "spawnRate": 1.5,
-        "maxEnemies": 120
+        "maxEnemies": 120,
+        "compositionWeights": {
+          "zombie": 0.3,
+          "bat": 0.2,
+          "skeleton": 0.2,
+          "ghost": 0.15,
+          "caster": 0.15
+        }
       }
     ],
     "bossConfig": {

@@ -459,7 +459,7 @@ class Game {
       this.camera.follow(this.player);
     }
     this.camera.update(dt);
-    } catch (e) { console.error('[UPDATE ERROR]', e); this.gameLoop.paused = true; }
+    } catch (e) { console.error('[UPDATE ERROR]', e); }
 
     // Check game over conditions
     if (this.gameTime >= 300) {
