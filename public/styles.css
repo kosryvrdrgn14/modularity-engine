@@ -606,6 +606,25 @@
     }
     .swipe-dot.active { background: #FFD700; }
 
+    /* Town navigation arrows */
+    .town-arrow {
+      position: absolute;
+      bottom: 8px;
+      z-index: 4;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.3);
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: opacity 0.3s, color 0.3s;
+      padding: 8px;
+      line-height: 1;
+    }
+    .town-arrow:hover { color: rgba(255,255,255,0.7); }
+    .town-arrow:disabled { opacity: 0; pointer-events: none; }
+    #town-arrow-left { left: 12px; }
+    #town-arrow-right { right: 12px; }
+
     /* ============================================================
        ZONE 5: BOTTOM DOCK
        ============================================================ */

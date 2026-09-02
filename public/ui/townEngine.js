@@ -107,6 +107,12 @@ class TownEngine {
         if (locId && this.locationManager) this.locationManager.navigateTo(locId);
       }
     });
+
+    // Navigation arrows
+    const arrowLeft = document.getElementById('town-arrow-left');
+    const arrowRight = document.getElementById('town-arrow-right');
+    if (arrowLeft) arrowLeft.addEventListener('click', () => this._swipePrevRegion());
+    if (arrowRight) arrowRight.addEventListener('click', () => this._swipeNextRegion());
   }
 
   show() {
@@ -299,6 +305,12 @@ class TownEngine {
     if (this._regionName) {
       this._regionName.textContent = regions[this.locationManager.currentRegionIndex]?.name || '';
     }
+    // Update arrow visibility
+    const idx = this.locationManager.currentRegionIndex;
+    const arrowLeft = document.getElementById('town-arrow-left');
+    const arrowRight = document.getElementById('town-arrow-right');
+    if (arrowLeft) arrowLeft.style.visibility = idx > 0 ? 'visible' : 'hidden';
+    if (arrowRight) arrowRight.style.visibility = idx < regions.length - 1 ? 'visible' : 'hidden';
   }
 
   _swipeNextRegion() {
