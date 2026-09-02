@@ -19,6 +19,8 @@ class TownScreen {
     // Create Engine
     this.engine = new TownEngine({
       audioManager,
+      dataManager,
+      gameManager,
       onCombat: () => this._handleCombat(),
     });
     this.engine.setLocationManager(this.locationManager);

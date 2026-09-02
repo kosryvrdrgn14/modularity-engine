@@ -4,8 +4,10 @@
 // ============================================================
 
 class TownEngine {
-  constructor({ audioManager, onTabSwitch, onLocationSelect, onBack, onCombat, onSandbox }) {
+  constructor({ audioManager, dataManager, gameManager, onTabSwitch, onLocationSelect, onBack, onCombat, onSandbox }) {
     this.audioManager = audioManager;
+    this.dataManager = dataManager || null;
+    this.gameManager = gameManager || null;
     this.onTabSwitch = onTabSwitch;
     this.onLocationSelect = onLocationSelect;
     this.onBack = onBack;
@@ -252,6 +254,52 @@ class TownEngine {
         ? contentRenderer.createNPCCard(npc, false)
         : this._createDefaultNPCCard(npc);
       area.appendChild(card);
+    }
+
+    // 2b. Battle card (if location has a stageId)
+    if (curLoc.stageId && this.dataManager) {
+      const stages = this.dataManager._allStages || (Array.isArray(this.dataManager.stages) ? this.dataManager.stages : [this.dataManager.stages]);
+      const stage = stages?.find(s => s.id === curLoc.stageId);
+      if (stage) {
+        const card = document.createElement('div');
+        card.className = 'battle-card';
+        const tiers = curLoc.stageConfig?.tiers || ['standard'];
+        const weapons = curLoc.stageConfig?.recommendedWeapons || [];
+        const weaponNames = weapons.map(wid => {
+          const w = this.dataManager.weapons?.find(w => w.id === wid);
+          return w?.name || wid;
+        });
+        card.innerHTML = `
+          <div class="battle-card-header">
+            <span class="battle-card-icon">⚔️</span>
+            <div class="battle-card-info">
+              <div class="battle-card-name">${stage.name}</div>
+              <div class="battle-card-desc">${stage.description || ''}</div>
+            </div>
+          </div>
+          <div class="battle-card-tiers">
+            ${tiers.map(t => `<button class="battle-tier-btn${t === 'standard' ? ' active' : ''}" data-tier="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
+          </div>
+          ${weaponNames.length ? `<div class="battle-card-weapons">Recommended: ${weaponNames.join(', ')}</div>` : ''}
+        `;
+        // Tier button clicks
+        card.querySelectorAll('.battle-tier-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            card.querySelectorAll('.battle-tier-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          });
+        });
+        // Card click starts combat
+        card.addEventListener('click', () => {
+          this.audioManager?.playMenuSound('select');
+          // Set selected tier
+          const activeTier = card.querySelector('.battle-tier-btn.active')?.dataset.tier || 'standard';
+          this.gameManager?.set('session.current_stage_tier', activeTier);
+          this.onCombat();
+        });
+        area.appendChild(card);
+      }
     }
 
     // 3. Location cards (children)

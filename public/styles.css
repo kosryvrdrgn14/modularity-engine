@@ -1107,6 +1107,36 @@
     .location-card.locked .loc-desc { color: #555; }
     .location-card .loc-lock { color: #886644; font-size: 0.75rem; }
 
+    /* Battle card */
+    .battle-card {
+      background: rgba(255, 60, 60, 0.12);
+      border: 1px solid rgba(255, 60, 60, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .battle-card:hover { border-color: rgba(255, 60, 60, 0.6); background: rgba(255, 60, 60, 0.18); }
+    .battle-card-header { display: flex; align-items: center; gap: 10px; }
+    .battle-card-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .battle-card-info { flex: 1; }
+    .battle-card-name { color: #ff6b6b; font-size: 0.95rem; font-weight: 600; }
+    .battle-card-desc { color: #aaa; font-size: 0.75rem; margin-top: 2px; }
+    .battle-card-tiers { display: flex; gap: 6px; margin-top: 8px; }
+    .battle-tier-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .battle-tier-btn:hover { color: #ccc; border-color: rgba(255,255,255,0.25); }
+    .battle-tier-btn.active { color: #ff6b6b; border-color: rgba(255,60,60,0.4); background: rgba(255,60,60,0.1); }
+    .battle-card-weapons { color: #666; font-size: 0.7rem; margin-top: 6px; }
+
     /* D2: Swipe indicator */
     #town-swipe-indicator {
       position: relative; z-index: 2;
