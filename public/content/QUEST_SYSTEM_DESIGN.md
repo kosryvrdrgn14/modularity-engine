@@ -1,8 +1,8 @@
 # Quest, Flag & Lock/Unlock System — Design Document
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** September 2, 2026  
-**Status:** Draft — pending review  
+**Status:** Resolved — pending final review  
 
 ---
 
@@ -64,7 +64,7 @@ This system adds a story-driven quest layer that gates content via flags. The pl
       "unlocks_on_complete": {
         "flags": ["met_stranger", "graveyard_cleared"],
         "weapons": ["w2_orbit"],
-        "companions": ["companion_dog"],
+        "companions": ["dog"],
         "locations": ["cemetery"],
         "npcs": ["stranger"],
         "dialogue": ["old_man_post_graveyard"]
@@ -126,13 +126,19 @@ Maps content IDs to the flags/quests required to access them:
 {
   "weapons": {
     "w2_orbit": { "unlock_flag": "mq_01_stranger_arrives" },
-    "w3_pulse": { "unlock_flag": "sq_02_arena_challenge" },
+    "weapon_area_pulse": { "unlock_flag": "sq_02_arena_challenge" },
     "w4_flame_wave": { "unlock_flag": "chapter2_unlocked" },
-    "w5_arcane_bolt": { "unlock_flag": "met_mage" }
+    "w5_arcane_bolt": { "unlock_flag": "met_mage" },
+    "w6_dagger": { "unlock_flag": "chapter3_unlocked" },
+    "w7_sword": { "unlock_flag": "forge_access" },
+    "w8_claymore": { "unlock_flag": "guild_joined" }
   },
   "companions": {
-    "companion_dog": { "unlock_flag": "mq_01_stranger_arrives" },
-    "companion_archer": { "unlock_flag": "guild_joined" }
+    "dog": { "unlock_flag": "mq_01_stranger_arrives" },
+    "archer": { "unlock_flag": "guild_joined" },
+    "mage": { "unlock_flag": "met_mage" },
+    "knight": { "unlock_flag": "chapter2_unlocked" },
+    "healer": { "unlock_flag": "herbalist_ingredient_found" }
   },
   "stages": {
     "stage_graveyard": { "unlock_flag": null },
@@ -145,8 +151,9 @@ Maps content IDs to the flags/quests required to access them:
     "deep_woods": { "unlock_flag": "chapter2_unlocked" }
   },
   "npcs": {
-    "stranger": { "unlock_flag": "met_stranger", "temp_disable_flag": "stranger_scouting" },
-    "hunter": { "unlock_flag": "guild_joined" }
+    "cute_girl": { "unlock_flag": "town_camp_upgraded" },
+    "hunter": { "unlock_flag": "guild_joined" },
+    "grave_digger": { "unlock_flag": "graveyard_cleared" }
   },
   "dialogue_branches": {
     "old_man_post_graveyard": { "unlock_flag": "graveyard_cleared" },
@@ -430,3 +437,37 @@ window.QUEST_DEBUG = {
 ### Phase 5: Storyline Content
 1. User creates basic storyline in `quests.json`
 2. Test full flow: quest → flags → unlocks → content availability
+
+---
+
+## 12. Issue Resolution Log
+
+| # | Original Issue | Resolution |
+|---|---|---|
+| 1 | Double-listen risk (19 listeners in Game constructor) | QuestSystem stores handler refs in `_handlers{}`. On `destroy()`, calls `eventBus.off(event, handler)` for each. Game.destroy() calls `questSystem.destroy()` before reinstantiating. |
+| 2 | Flag setting bypass in progression.js:344 | `progression.process_combat_result()` now calls `questSystem.setFlag()` instead of writing `store.flags` directly. The `set_flag()` method on gameManager is deprecated for quest-relevant flags — questSystem.setFlag() is the single entry point. |
+| 3 | Content gate collision (3 different check paths) | `content_gates.json` is the single source of truth. Old `unlockCondition` fields on NPC/location JSON are preserved for backward compat but `isContentUnlocked()` takes priority. locationManager.js and townContent.js both route through `questSystem.isContentUnlocked()`. |
+| 4 | Loadout null safety | `getAvailableWeapons()` / `getAvailableCompanions()` include `if (!this.questSystem)` guard returning full list. No crash on early load. |
+| 5 | Hardcoded quest card | Replaced with `questSystem.getActiveQuests().slice(0, 3)` dynamic render. Empty state shows "No active quests" placeholder. |
+| 6 | Time event clock drift | `processPendingTimeEvents()` compares `fireAt <= Date.now()`. Events with `fireAt` more than 7 days in the future are ignored (clock rollback protection). Events older than 30 days are auto-purged. |
+| 7 | Save migration | `save_version` bumped to 3. `_migrate()` v3 adds: `quests.objectives = {}`, `quests.timeEvents = []`, `quests.failed = []`. |
+| 8 | Loading order | `systems/quest.js` script tag placed after `systems/progression.js` in game2.html. QuestSystem.init() is called from Game constructor AFTER DataManager.loadAll() resolves. |
+| 9 | EventBus `off()` method | Already exists at core.js:17. No action needed. |
+| 10 | Debug log leaks | `selectUpgrade` debug logs at game.js:234,245,256 flagged for removal. New quest debug logs gated behind `if (window.__QUEST_DEBUG__)`. |
+| 11 | COMPANION_DATA global | Gate filtering only happens in `getAvailableCompanions()` at UI level. `COMPANION_DATA` global remains unmodified — companion system continues to read full data. |
+| 12 | Save version bump | Added `_migrate()` case for v < 3 that initializes new quest fields with safe defaults. |
+
+---
+
+## 13. Scaffolding Simulation — Resolved Plan
+
+### New Issues Found After Resolution
+
+| # | Issue | Severity | Fix |
+|---|---|---|---|
+| R1 | **QuestSystem depends on EventBus, gameManager, dataManager** — if any is null at init, questSystem crashes | 🟡 Medium | `init()` must null-check all three, log warning if missing, enter degraded mode (all content unlocked) |
+| R2 | **questSystem.setFlag() called before questSystem.init()** — progression.js may process combat results before Game constructor finishes | 🟡 Medium | Add `_initialized` flag. `setFlag()` queues changes if not initialized, replays on init. |
+| R3 | **content_gates.json references content IDs that may not exist in DataManager** — e.g. `w2_orbit` gate exists but weapon data might not be loaded yet | 🟢 Low | `isContentUnlocked()` silently returns true for unknown content IDs (fail-open) |
+| R4 | **Double-set flag protection** — `setFlag('met_stranger', true)` called twice emits two events, two re-evaluations | 🟢 Low | Guard: `if (this.gameManager.get_flag(flag) === value) return` (skip no-op sets) |
+| R5 | **Quest objective types need a registry** — `kill_count`, `talk_to`, `complete_stage` are hardcoded type strings | 🟡 Medium | Create `_objectiveHandlers{}` map in QuestSystem. Each handler is a function. Unknown types log error. |
+| R6 | **Time events fire silently on reload** — player may not notice NPC vanished until they visit town | 🟢 Low | Emit `quest:time_event` event so UI can show notification |
