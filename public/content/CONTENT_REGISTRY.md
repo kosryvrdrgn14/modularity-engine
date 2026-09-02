@@ -1,7 +1,7 @@
 # Content Registry — Modularity Engine
 
 > **Purpose:** Single reference for all content types and how to add them
-> **Last Updated:** August 31, 2026
+> **Last Updated:** September 2, 2026
 
 ---
 
@@ -25,12 +25,16 @@
 - `statsPerLevel` — Array of 7 level stats
 - `visual` — Shape and color
 
+**Optional Fields:**
+- `attackArea` — Reference to `attackAreas.json` key (e.g., `"cone_flame"`, `"circle_medium"`), or null for weapons without a static area
+
 **Example:**
 ```json
 {
   "id": "w9_lightning_orb",
   "name": "Lightning Orb",
   "type": "orbit",
+  "attackArea": null,
   "targeting": "self",
   "unlockLevel": 5,
   "statsPerLevel": [...],
@@ -55,6 +59,7 @@
 - `type` — Tier (normal, elite, boss)
 - `stats` — HP, damage, speed, size, XP, gold
 - `behavior` — Movement pattern
+- `visual` — Shape and color (e.g., `{ "shape": "circle", "color": "#3B8A30" }`)
 
 **Example:**
 ```json
@@ -63,6 +68,7 @@
   "name": "Fire Elemental",
   "type": "elite",
   "stats": { "hp": 50, "damage": 15, "speed": 60, "size": 15, "xpValue": 10, "goldValue": 8 },
+  "visual": { "shape": "circle", "color": "#FF4500" },
   "behavior": { "pattern": "chase", "params": { "chaseSpeed": 60 } }
 }
 ```
@@ -181,7 +187,38 @@ blacksmith: {
 
 ---
 
-### 7. Companions
+### 7. Attack Areas
+**File:** `content/attackAreas.json`
+**How to Add:**
+1. Copy an existing area entry
+2. Change key to unique value (e.g., `"cone_fire_breath"`)
+3. Set `type` (cone, circle, arc, crescent, cross, spiral, line, ring, polygon)
+4. Define `params` with base values and per-level scaling
+5. Reference from a weapon via `"attackArea": "your_key"`
+
+**Structure:**
+```json
+"cone_fire_breath": {
+  "type": "cone",
+  "description": "Wide fire breath",
+  "params": {
+    "baseAngle": 60,
+    "baseRange": 70,
+    "anglePerLevel": 4,
+    "rangePerLevel": 6
+  },
+  "visual": {
+    "fillOpacity": 0.4,
+    "strokeWidth": 2,
+    "animation": "flicker",
+    "gradient": ["#FF4500", "#FF6B00", "#FFD700"]
+  }
+}
+```
+
+---
+
+### 8. Companions
 **File:** `data/companionData.js`
 **How to Add:**
 1. Copy an existing companion entry

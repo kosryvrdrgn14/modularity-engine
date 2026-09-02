@@ -192,8 +192,8 @@
       }
     },
     "attackArea": {
-      "type": ["string", "object"],
-      "description": "Attack area reference or inline definition",
+      "type": ["string", "object", "null"],
+      "description": "Reference to attackAreas.json key, inline definition, or null if weapon has no area",
       "oneOf": [
         {
           "type": "string",

@@ -687,6 +687,21 @@ class WeaponSystem {
     return weapon.statsPerLevel[level - 1] || weapon.statsPerLevel[0];
   }
 
+  /**
+   * Look up attack area data from attackAreas.json for a given weapon.
+   * Returns { type, params, visual } from attackAreas.json, or null.
+   * The weapon's inline per-level stats (coneAngle, pulseRadius, etc.) take
+   * precedence — this method provides the structured area config for future
+   * use (e.g., visual telegraphs, area type classification).
+   */
+  _getAttackAreaData(weapon) {
+    const areaId = weapon?.attackArea;
+    if (!areaId || typeof areaId !== 'string') return null;
+    const areas = this.dataManager.attackAreas;
+    if (!areas || !areas[areaId]) return null;
+    return areas[areaId];
+  }
+
   levelUp(weaponId) {
     const current = this.weaponLevels[weaponId] || 0;
     if (current < 7) {

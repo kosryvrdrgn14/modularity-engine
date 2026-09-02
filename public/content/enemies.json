@@ -15,6 +15,10 @@
         "max": 2
       }
     },
+    "visual": {
+      "shape": "circle",
+      "color": "#3B8A30"
+    },
     "behavior": {
       "pattern": "chase",
       "params": {
@@ -50,6 +54,10 @@
         "max": 1
       }
     },
+    "visual": {
+      "shape": "diamond",
+      "color": "#6B3FA0"
+    },
     "behavior": {
       "pattern": "swarm",
       "params": {
@@ -84,6 +92,10 @@
         "min": 2,
         "max": 3
       }
+    },
+    "visual": {
+      "shape": "circle",
+      "color": "#C0392B"
     },
     "behavior": {
       "pattern": "chase",
@@ -124,6 +136,10 @@
         "max": 3
       }
     },
+    "visual": {
+      "shape": "diamond",
+      "color": "#8E44AD"
+    },
     "behavior": {
       "pattern": "wander_chase",
       "params": {
@@ -163,6 +179,10 @@
         "min": 3,
         "max": 4
       }
+    },
+    "visual": {
+      "shape": "circle",
+      "color": "#2E86C1"
     },
     "behavior": {
       "pattern": "ranged",
@@ -205,6 +225,10 @@
         "max": 1
       }
     },
+    "visual": {
+      "shape": "diamond",
+      "color": "#8B6914"
+    },
     "behavior": {
       "pattern": "swarm",
       "params": {
@@ -244,6 +268,10 @@
         "max": 5
       }
     },
+    "visual": {
+      "shape": "circle",
+      "color": "#2D4A1E"
+    },
     "behavior": {
       "pattern": "chase",
       "params": {
@@ -282,6 +310,10 @@
         "min": 20,
         "max": 30
       }
+    },
+    "visual": {
+      "shape": "circle",
+      "color": "#4A0000"
     },
     "behavior": {
       "pattern": "boss_charge",
@@ -354,6 +386,10 @@
         "min": 25,
         "max": 35
       }
+    },
+    "visual": {
+      "shape": "circle",
+      "color": "#6A0DAD"
     },
     "behavior": {
       "pattern": "boss_charge",
@@ -471,6 +507,10 @@
         "min": 15,
         "max": 20
       }
+    },
+    "visual": {
+      "shape": "circle",
+      "color": "#5B2C6F"
     },
     "behavior": {
       "pattern": "ghoul_lunge",

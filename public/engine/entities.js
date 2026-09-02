@@ -209,7 +209,7 @@ class SpawnSystem {
       speed: selected.stats.speed,
       size: selected.stats.size,
       enemyData: selected,
-      visual: { shape: 'square', color: this._getEnemyColor(selected.id) },
+      visual: selected.visual || { shape: 'circle', color: '#555' },
     });
   }
 
@@ -239,27 +239,13 @@ class SpawnSystem {
       size: boss.stats.size,
       enemyData: boss,
       isBoss: true,
-      visual: { shape: 'square', color: this._getEnemyColor(boss.id) || '#4A0000' },
+      visual: boss.visual || { shape: 'circle', color: '#4A0000' },
     });
     
     this.eventBus.emit('bossSpawn', { boss });
   }
 
-  _getEnemyColor(id) {
-    const colors = {
-      zombie: '#3B8A30',   // Brighter green — visible against dark bg
-      bat: '#6B3FA0',      // Purple — was invisible (matched bg color)
-      skeleton: '#C0392B', // Bright red
-      ghost: '#8E44AD',    // Light purple
-      caster: '#2E86C1',   // Blue
-      rat: '#8B6914',      // Brown - fast swarm
-      brute: '#2D4A1E',    // Dark green - beefy tank
-      ghoul: '#5B2C6F',    // Dark purple - miniboss
-      boss_necromancer: '#6A0DAD', // Deep purple - necromancer boss
-      boss_gravekeeper: '#4A0000', // Crimson - gravekeeper boss
-    };
-    return colors[id] || '#555';
-  }
+
 
   reset(bossSpawnTime) {
     this.spawnTimer = 0;
