@@ -169,5 +169,69 @@
         "close": true
       }
     ]
+  },
+  "nervous_guard": {
+    "id": "nervous_guard",
+    "name": "Guard Cedric",
+    "portraitKey": "nervous_guard",
+    "location": "graveyard_entrance",
+    "unlocked": true,
+    "greeting": "*grips spear tightly* You... you are heading in there? I was posted here three days ago. I have not slept since. The sounds at night... you would not believe.",
+    "topics": [
+      {
+        "id": "about_graveyard",
+        "text": "What have you seen in there?",
+        "response": "Shadows moving between the tombstones. Things crawling out of fresh graves. And the whispering... always whispering. Like they are calling to someone. Do not go in after dark. Please.",
+        "affection": 0,
+        "flag": "graveyard_warning"
+      },
+      {
+        "id": "about_duty",
+        "text": "Why do you stay if it is so dangerous?",
+        "response": "Someone has to watch the gate. If I leave, they will pour into the camp while you sleep. I am not brave — I am just too scared to abandon my post. There is a difference.",
+        "affection": 1
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  },
+  "grave_digger": {
+    "id": "grave_digger",
+    "name": "Old Mortimer",
+    "portraitKey": "grave_digger",
+    "location": "cemetery",
+    "unlocked": true,
+    "greeting": "*taps shovel on ground* Another visitor to the resting place. Do not mind me — just keeping the plots tidy. Though half of them do not stay tidy for long, if you catch my meaning.",
+    "topics": [
+      {
+        "id": "about_graves",
+        "text": "Do the dead really rise here?",
+        "response": "Rise? They dance, friend. I have seen bones walk out of coffins, flesh reattach itself. The Gravekeeper did something to this ground. Cursed it. Every grave I dig, I wonder if the occupant will thank me or try to eat me.",
+        "affection": 0
+      },
+      {
+        "id": "about_work",
+        "text": "How long have you been doing this?",
+        "response": "Forty years I have been digging graves. Started when I was younger than you. Back then it was peaceful work — quiet, respectful. Now? Now I carry a shovel in one hand and a blade in the other. Times change.",
+        "affection": 0
+      },
+      {
+        "id": "rumors",
+        "text": "Any rumors about what is deeper in the graveyard?",
+        "response": "The crypt. Below the cemetery. I have heard noises from down there — grinding stone, chanting. Something ancient sleeps beneath us. If you are foolish enough to go looking, bring friends. And weapons. Lots of weapons.",
+        "affection": 0,
+        "flag": "graveyard_crypt_hint"
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
   }
 }
