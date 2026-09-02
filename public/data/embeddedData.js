@@ -1992,5 +1992,9 @@ const EMBEDDED_DATA = {
       passiveStats: 0.3,
       specialAbilities: 0.3
     }
-  }
+  },
+
+  // --- Fallback data for locations and NPCs (minimal, prevents crash if JSON fetch fails) ---
+  locations: { regions: [] },
+  npcs: {}
 };

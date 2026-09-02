@@ -1,5 +1,5 @@
 class LocationManager {
-  constructor(gameManager, dataManager) {
+  constructor({ gameManager, dataManager }) {
     this.gameManager = gameManager;
     this.dataManager = dataManager || null;
     this.currentRegionIndex = 0;
@@ -13,17 +13,20 @@ class LocationManager {
     if (this.dataManager?.locations) return this.dataManager.locations;
     // Fallback for legacy JS global (during migration)
     if (typeof LOCATION_TREE !== 'undefined') return LOCATION_TREE;
-    console.warn('[LocationManager] No locations data found. dataManager:', !!this.dataManager, 'locations:', !!this.dataManager?.locations);
     return { regions: [] };
   }
 
   getCurrentRegion() {
     const data = this._getLocationsData();
+    if (!data.regions || data.regions.length === 0) {
+      return { id: 'unknown', name: 'Unknown', icon: '❓', locations: {} };
+    }
     return data.regions[this.currentRegionIndex] || data.regions[0];
   }
 
   getCurrentLocation() {
     const region = this.getCurrentRegion();
+    if (!region || !region.locations) return null;
     return region.locations[this.currentLocationId] || null;
   }
 
@@ -92,7 +95,6 @@ class LocationManager {
     if (this.dataManager?.npcs) return this.dataManager.npcs;
     // Fallback for legacy JS global (during migration)
     if (typeof NPC_DATA !== 'undefined') return NPC_DATA;
-    console.warn('[LocationManager] No NPCs data found. dataManager:', !!this.dataManager, 'npcs:', !!this.dataManager?.npcs);
     return {};
   }
 

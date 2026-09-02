@@ -122,16 +122,31 @@ When passing dependencies, always verify which object you're passing. `Game.game
 | `ui/town.js` | Store `dataManager`, pass to LocationManager |
 | `ui/townEngine.js` | Added debug logs (can be removed after verification) |
 
-## Debug Logs Added (Remove After Verification)
+## Additional Hardening (Applied After Initial Fix)
 
-LocationManager and TownEngine have temporary `console.warn`/`console.log` calls that should be removed once the fix is confirmed working:
-- `[LocationManager] No locations data found`
-- `[LocationManager] No NPCs data found`
-- `[TownEngine] renderLocationCards early return`
-- `[TownEngine] No current location found`
-- `[TownEngine] Rendering location: ...`
-- `[TownEngine] NPCs at ...`
-- `[TownEngine] Children at ...`
+### EMBEDDED_DATA fallback
+Added `locations: { regions: [] }` and `npcs: {}` to `data/embeddedData.js` so a fetch failure doesn't leave DataManager with `undefined` content.
+
+### Defensive getCurrentRegion()/getCurrentLocation()
+Both methods now handle empty/missing data gracefully instead of crashing:
+```javascript
+getCurrentRegion() {
+  const data = this._getLocationsData();
+  if (!data.regions || data.regions.length === 0) {
+    return { id: 'unknown', name: 'Unknown', icon: '❓', locations: {} };
+  }
+  return data.regions[this.currentRegionIndex] || data.regions[0];
+}
+```
+
+### Destructured constructor pattern
+LocationManager now uses `constructor({ gameManager, dataManager })` instead of positional args, preventing argument-swap bugs.
+
+### Debug logs removed
+All temporary `console.warn`/`console.log` calls removed from locationManager.js and townEngine.js.
+
+### KNOWLEDGE.md created
+Documents the naming lesson (Game vs GameManager vs DataManager) and defensive coding patterns.
 
 ## Verification
 

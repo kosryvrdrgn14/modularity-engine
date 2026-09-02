@@ -11,7 +11,7 @@ class TownScreen {
     this.startGame = startGame;
 
     // Create LocationManager — pass dataManager for JSON content access
-    this.locationManager = new LocationManager(gameManager, dataManager);
+    this.locationManager = new LocationManager({ gameManager, dataManager });
     
     // Create ShopSystem (new data-driven version)
     this.shopSystem = new ShopSystem({ gameManager, eventBus, audioManager });
