@@ -2,6 +2,28 @@
 
 ---
 
+## v1.3.0 — Orphan Cleanup + Boss Fixes + Loadout System
+**Date:** September 2, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Boss freeze bug fixed** — Missing `compositionWeights` in late-game waves + entity vs definition mixup
+- **Loadout screen** — Pre-combat weapon/companion selection wired into town combat flow
+- **New region backgrounds** — Graveyard + Forest SVGs with atmosphere (fog, fireflies, tombstones)
+- **Slide + Zoom transition** — Region switching with snappy 370ms animation
+- **8 bugs fixed** (BUG-007 through BUG-012)
+
+### Orphan Cleanup
+Archived 50+ unused files to reduce context noise:
+- `screenshots/` → `archive/screenshots/` (20+ test PNGs)
+- 30 unused SVG assets → `archive/assets/` (rendering uses inline base64)
+- `versions/` → `archive/versions/` (historical snapshots, 400KB+)
+- `README.md` → `archive/` (template boilerplate)
+- Deleted orphaned `data/npcData.js` and `data/locationTree.js`
+- Total archive size: ~4MB
+
+---
+
 ## v1.0.0 — File Split Complete
 **Date:** August 31, 2026
 **Status:** ✅ Complete — Game fully modular
