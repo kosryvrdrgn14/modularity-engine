@@ -816,6 +816,8 @@ class Game {
     
     // Show end screen with result and stats
     this.uiManager.showEndScreen(result, stats);
+    // Move to endScreen state (gameOver → endScreen is valid; gameOver → town is not)
+    this.gameState.setState('endScreen');
     
     // Wire "Return to Title" — after 2 seconds, show a button or auto-transition
     this._gameOverReturnTimer = setTimeout(() => {
