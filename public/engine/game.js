@@ -168,6 +168,7 @@ class Game {
       onStart: () => this._startFromTitle(),
       onSettings: () => this._showSettings(),
       onTestTown: () => this._testTown(),
+      onStoryMode: () => this._startStoryMode(),
     });
 
     // Show title screen (audio unlocks on first user gesture)
@@ -644,6 +645,37 @@ class Game {
     }
     this.gameState.setState('town');
     this.townScreen.show({ time: '4:32', level: 8, kills: 20, gold: 100 });
+  }
+
+  _startStoryMode() {
+    // Story Mode: Initialize quest system and go to town
+    this.titleMenu.hide();
+    this.titleBGM.stop();
+    this.audioManager.resume();
+
+    // Initialize quest system if not already done
+    if (!this.questSystem) {
+      this.questSystem = new QuestSystem();
+    }
+    this.questSystem.init(this.gameManager, this.dataManager, this.eventBus);
+
+    // Set initial story flags if fresh start
+    if (this.gameManager && !this.gameManager.get_flag('story_started')) {
+      this.gameManager.set_flag('story_started', true);
+      // Grant starting weapon
+      if (!this.gameManager.store.persistent.combat.unlocked_weapons.includes('w1_projectile')) {
+        this.gameManager.unlock_weapon('w1_projectile');
+      }
+    }
+
+    // Enable quest debug logging
+    window.__QUEST_DEBUG__ = true;
+    this.questSystem.debug();
+
+    console.log('[STORY] Story Mode started');
+
+    this.gameState.setState('town');
+    this.townScreen.show({});
   }
 
   _startFromTitle() {

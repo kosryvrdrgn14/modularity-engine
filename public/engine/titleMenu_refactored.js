@@ -4,13 +4,14 @@
 // ============================================================
 
 class TitleMenu {
-  constructor({ audioManager, gameManager, dataManager, onStart, onSettings, onTestTown }) {
+  constructor({ audioManager, gameManager, dataManager, onStart, onSettings, onTestTown, onStoryMode }) {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
     this.dataManager = dataManager;
     this.onStart = onStart;
     this.onSettings = onSettings;
     this.onTestTown = onTestTown;
+    this.onStoryMode = onStoryMode;
 
     this.selectedIndex = 0;
     this.items = [
@@ -18,6 +19,7 @@ class TitleMenu {
       { action: 'characters', locked: true },
       { action: 'stages', locked: true },
       { action: 'settings', locked: false },
+      { action: 'story-mode', locked: false },
       { action: 'test-town', locked: false },
       { action: 'dev-stage', locked: false },
     ];
@@ -130,6 +132,9 @@ class TitleMenu {
         break;
       case 'settings':
         this.onSettings();
+        break;
+      case 'story-mode':
+        if (this.onStoryMode) this.onStoryMode();
         break;
       case 'test-town':
         this.onTestTown();
