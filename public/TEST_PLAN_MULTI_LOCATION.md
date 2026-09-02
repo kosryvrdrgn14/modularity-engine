@@ -2,6 +2,7 @@
 
 > **Workflow:** Implement Phase → Run Tests → Fix Issues → Next Phase
 > **Created:** September 2, 2026
+> **Updated:** September 2, 2026 — Added Phase 0 (data migration)
 
 ---
 
@@ -12,6 +13,140 @@
 - [ ] Game loads on preview without console errors
 - [ ] Title menu renders and "New Game" works
 - [ ] Town screen loads after character selection
+
+---
+
+## Phase 0A: Schema Fix — Add stageId to Location Schema
+
+### Implementation
+Add `stageId`, `stageConfig`, `locked`, and `unlockCondition` fields to `schemas/location.json`.
+
+### Test Cases
+
+| # | Test | Steps | Expected Result | Pass/Fail |
+|---|---|---|---|---|
+| 0A.1 | Schema validates current data | Run JSON Schema validator on LOCATION_TREE against schema | All existing locations pass validation | |
+| 0A.2 | stageId field accepted | Validate a location with `"stageId": "stage_graveyard"` | Passes validation | |
+| 0A.3 | stageId null accepted | Validate a location with `"stageId": null` | Passes validation | |
+| 0A.4 | stageConfig accepted | Validate with `"stageConfig": { "tiers": ["quick", "standard"] }` | Passes validation | |
+| 0A.5 | locked/unlockCondition accepted | Validate with `"locked": true, "unlockCondition": "flag_name"` | Passes validation | |
+
+### Console Checks
+- [ ] No schema validation errors
+
+---
+
+## Phase 0B: Migrate LOCATION_TREE to JSON
+
+### Implementation
+Convert `data/locationTree.js` (JS global) to `content/locations.json` (pure JSON). Update `DataManager` to fetch it. Update all references from `LOCATION_TREE` to `this.dataManager.locations`.
+
+### Files Changed
+- **New:** `content/locations.json` — pure JSON version of LOCATION_TREE
+- **Modified:** `engine/core.js` — add `locations` to fetch targets
+- **Modified:** `engine/locationManager.js` — read from `gameManager._dataManager.locations` instead of global `LOCATION_TREE`
+- **Modified:** `game2.html` — remove `<script src="data/locationTree.js">` tag
+- **Archived:** `data/locationTree.js` → `archive/data/locationTree.js`
+
+### Test Cases
+
+| # | Test | Steps | Expected Result | Pass/Fail |
+|---|---|---|---|---|
+| 0B.1 | locations.json loads | Start game, check `dataManager.locations` | Object with `regions` array containing 3 regions | |
+| 0B.2 | Old script tag removed | Check game2.html | No `<script src="data/locationTree.js">` tag | |
+| 0B.3 | No global LOCATION_TREE reference | `grep -rn 'LOCATION_TREE' engine/ ui/` | No references found (only in archive) | |
+| 0B.4 | Town screen loads | Navigate to town | Screen renders correctly with all regions | |
+| 0B.5 | Region switching works | Swipe or use dots to switch regions | All 3 regions load with correct content | |
+| 0B.6 | Location navigation works | Click into Town → Trade District → Blacksmith | Breadcrumb updates, location cards show | |
+| 0B.7 | Back button works | Navigate deep, click back | Returns to previous location | |
+| 0B.8 | Locked locations respect flags | Navigate to locked location without flag | Location shows as locked | |
+| 0B.9 | NPC assignment works | Navigate to city_root | Elder Rowan and Lina visible (if unlocked) | |
+| 0B.10 | JSON is valid | `node -e "JSON.parse(...)"` | No parse errors | |
+
+### Console Checks
+- [ ] No `LOCATION_TREE is not defined` errors
+- [ ] DataManager fetches `content/locations.json` successfully (check network tab)
+- [ ] No `Cannot read property of undefined` in LocationManager
+
+---
+
+## Phase 0C: Migrate NPC_DATA to JSON
+
+### Implementation
+Convert `data/npcData.js` (JS global) to `content/npcs.json` (pure JSON). Update DataManager to fetch it. Update all references from `NPC_DATA` to data manager lookups. Handle SVG portraits via `data/svgPortraits.js` (keep as separate JS for now — base64 SVGs are too large for JSON).
+
+### Files Changed
+- **New:** `content/npcs.json` — pure JSON version of NPC_DATA (without portrait base64)
+- **Modified:** `engine/core.js` — add `npcs` to fetch targets
+- **Modified:** `engine/locationManager.js` — read NPCs from `dataManager.npcs` instead of global `NPC_DATA`
+- **Modified:** `ui/townContent.js` — read NPCs from data manager
+- **Modified:** `ui/townEngine.js` — NPC rendering reads from data manager
+- **Modified:** `game2.html` — remove `<script src="data/npcData.js">` tag
+- **Kept:** `data/svgPortraits.js` — remains as JS (base64 SVGs stay inline)
+- **Archived:** `data/npcData.js` → `archive/data/npcData.js`
+
+### NPC JSON Structure (without portraits)
+```json
+{
+  "old_man": {
+    "id": "old_man",
+    "name": "Elder Rowan",
+    "portraitKey": "old_man",
+    "location": "city_root",
+    "unlocked": true,
+    "greeting": "Welcome back, traveler...",
+    "topics": [...]
+  }
+}
+```
+Note: `portrait` field replaced with `portraitKey` that references `SVG_PORTRAITS[key]`.
+
+### Test Cases
+
+| # | Test | Steps | Expected Result | Pass/Fail |
+|---|---|---|---|---|
+| 0C.1 | npcs.json loads | Start game, check `dataManager.npcs` | Object with all NPC entries | |
+| 0C.2 | Old script tag removed | Check game2.html | No `<script src="data/npcData.js">` tag | |
+| 0C.3 | No global NPC_DATA reference | `grep -rn 'NPC_DATA' engine/ ui/` | No references found (only in archive) | |
+| 0C.4 | Elder Rowan appears | Navigate to Town → Refugee Camp | NPC card visible with portrait and name | |
+| 0C.5 | Lina appears (if unlocked) | Upgrade camp, return to town | Lina NPC card visible | |
+| 0C.6 | Blacksmith appears | Navigate to Trade District → Blacksmith | NPC card visible | |
+| 0C.7 | Tavern Keeper appears | Navigate to Trade District → Tavern | NPC card visible | |
+| 0C.8 | NPC dialogue works | Click any NPC, select topic | Dialogue opens, response shows, affection updates | |
+| 0C.9 | Dialogue close works | Click [End Conversation] | Overlay closes | |
+| 0C.10 | Dog dialogue triggers | Talk to Lina, end conversation | Dog dialogue appears | |
+| 0C.11 | Portrait renders correctly | Check any NPC card | SVG portrait visible (not broken image) | |
+| 0C.12 | Location filtering works | Navigate to different locations | Only NPCs assigned to that location appear | |
+| 0C.13 | JSON is valid | `node -e "JSON.parse(...)"` | No parse errors | |
+
+### Console Checks
+- [ ] No `NPC_DATA is not defined` errors
+- [ ] DataManager fetches `content/npcs.json` successfully
+- [ ] Portrait lookup works (`SVG_PORTRAITS[key]` returns SVG string)
+
+---
+
+## Phase 0D: Add stageId to Location Data
+
+### Implementation
+Update `content/locations.json` to include `stageId` on locations that have combat stages.
+
+### Location → Stage Mapping
+| Location | stageId | Stage Name |
+|---|---|---|
+| `cemetery` | `stage_graveyard` | The Graveyard (5 min) |
+| `crypt` | `stage_graveyard_extended` | The Graveyard Extended (10 min) |
+| All others | `null` | No combat |
+
+### Test Cases
+
+| # | Test | Steps | Expected Result | Pass/Fail |
+|---|---|---|---|---|
+| 0D.1 | Cemetery has stageId | Load game, check `dataManager.locations` | `cemetery.stageId === 'stage_graveyard'` | |
+| 0D.2 | Crypt has stageId | Check locations data | `crypt.stageId === 'stage_graveyard_extended'` | |
+| 0D.3 | Town locations have null stageId | Check `city_root`, `trade_district` | `stageId === null` | |
+| 0D.4 | Forest locations have null stageId | Check `forest_edge`, `deep_woods` | `stageId === null` | |
+| 0D.5 | JSON still valid | Parse locations.json | No errors | |
 
 ---
 
@@ -72,7 +207,7 @@ Add ArrowLeft/ArrowRight key support when town screen is active.
 ## Phase 3: Link Stages to Locations
 
 ### Implementation
-Add `stageId` to location tree entries, wire combat to use current location's stage.
+Wire combat to use the current location's `stageId` when starting a game.
 
 ### Test Cases
 
@@ -99,7 +234,7 @@ Add `stageId` to location tree entries, wire combat to use current location's st
 ## Phase 4: Graveyard NPCs
 
 ### Implementation
-Add 2-3 NPCs to Graveyard locations in npcData.js.
+Add 2-3 NPCs to Graveyard locations in content/npcs.json.
 
 ### Test Cases
 
@@ -111,10 +246,10 @@ Add 2-3 NPCs to Graveyard locations in npcData.js.
 | 4.4 | NPC dialogue works | Click gate guard NPC | Dialogue overlay opens with greeting | |
 | 4.5 | Dialogue choices work | Select a topic | Response displays, affection updates | |
 | 4.6 | Dialogue close works | Click [End Conversation] | Overlay closes, return to location view | |
-| 4.7 | NPC location field correct | Check NPC_DATA entries | Each graveyard NPC has `location: 'graveyard_entrance'` or `location: 'cemetery'` | |
+| 4.7 | NPC location field correct | Check npcs.json entries | Each graveyard NPC has correct `location` field matching location IDs | |
 | 4.8 | NPCs not in other regions | Navigate to Forest | Graveyard NPCs not shown | |
 | 4.9 | NPC count badge updates | Navigate to region with NPCs | Dock NPCs badge shows correct count | |
-| 4.10 | Locked NPC shows lock | If any NPC has `locked: true` | Card shows lock icon, clicking does nothing | |
+| 4.10 | Locked NPC shows lock | If any NPC has `"unlocked": false` | Card shows lock icon, clicking does nothing | |
 
 ### Console Checks
 - [ ] No `Cannot read property of undefined` on NPC render
@@ -144,14 +279,14 @@ Add placeholder NPCs to Forest, unlock region for testing.
 
 ### Console Checks
 - [ ] No errors during region switching
-- [ ] `LOCATION_TREE.regions` has 3 entries
+- [ ] `dataManager.locations.regions` has 3 entries
 
 ---
 
 ## Phase 6: Battle Card UI
 
 ### Implementation
-Show a "⚔️ Battle" card in locations that have a linked stage.
+Show a "⚔️ Battle" card in locations that have a linked `stageId`.
 
 ### Test Cases
 
@@ -159,7 +294,7 @@ Show a "⚔️ Battle" card in locations that have a linked stage.
 |---|---|---|---|---|
 | 6.1 | Battle card at Cemetery | Navigate to Graveyard → Cemetery | Battle card visible with stage name "The Graveyard" | |
 | 6.2 | Battle card at Crypt | Navigate to Graveyard → Crypt | Battle card visible with "The Graveyard (Extended)" | |
-| 6.3 | No battle card at Town root | Navigate to Town → Refugee Camp | No battle card (no stageId on location) | |
+| 6.3 | No battle card at Town root | Navigate to Town → Refugee Camp | No battle card (stageId is null) | |
 | 6.4 | No battle card at Trade District | Navigate to Town → Trade District | No battle card | |
 | 6.5 | Battle card shows tier options | Look at battle card | Quick / Standard / Highlight tiers displayed | |
 | 6.6 | Battle card click starts combat | Click battle card | Combat starts with correct stage | |
@@ -189,9 +324,11 @@ Show a "⚔️ Battle" card in locations that have a linked stage.
 | F.7 | Shop accessible from any region | Open shop from any region | Shop opens correctly | |
 | F.8 | Systems panel accessible from any region | Open Systems from any region | Panel opens correctly | |
 | F.9 | Sandbox mode from any region | Open sandbox from any region | Sandbox works, combat starts correctly | |
-| F.10 | No orphan references | Grep for removed methods (`_getEnemyColor`) | None found | |
+| F.10 | No orphan references | Grep for old global variable names (`LOCATION_TREE`, `NPC_DATA`) | Only in archive folder | |
 | F.11 | File sizes within limits | `wc -l` all modified files | All under 2,000 lines | |
 | F.12 | Full JS syntax check | `node --check` all engine/ui/data files | All pass | |
+| F.13 | All JSON valid | Parse all content/*.json files | No errors | |
+| F.14 | DataManager loads all content | Check network tab | All 10+ JSON files loaded successfully | |
 
 ---
 

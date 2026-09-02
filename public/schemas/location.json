@@ -64,6 +64,34 @@
                   "type": "array",
                   "items": { "type": "string" },
                   "description": "NPC IDs at this location"
+                },
+                "stageId": {
+                  "type": ["string", "null"],
+                  "description": "Stage ID linked to this location (e.g., 'stage_graveyard'). Null if no combat stage."
+                },
+                "stageConfig": {
+                  "type": "object",
+                  "description": "Stage display config for the battle card UI",
+                  "properties": {
+                    "tiers": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "description": "Available difficulty tiers (e.g., ['quick', 'standard', 'highlight'])"
+                    },
+                    "recommendedWeapons": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "description": "Weapon IDs recommended for this stage"
+                    }
+                  }
+                },
+                "locked": {
+                  "type": "boolean",
+                  "description": "Whether location is locked by default"
+                },
+                "unlockCondition": {
+                  "type": "string",
+                  "description": "Game flag required to unlock this location"
                 }
               }
             }

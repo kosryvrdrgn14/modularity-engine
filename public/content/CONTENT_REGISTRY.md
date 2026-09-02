@@ -2,6 +2,7 @@
 
 > **Purpose:** Single reference for all content types and how to add them
 > **Last Updated:** September 2, 2026
+> **Migration Note:** LOCATION_TREE and NPC_DATA migrated from JS globals to JSON files loaded via DataManager.
 
 ---
 
@@ -107,29 +108,34 @@
 ---
 
 ### 4. NPCs
-**File:** `data/npcData.js`
+**File:** `content/npcs.json`
 **Schema:** `schemas/npc.json`
 **How to Add:**
 1. Copy an existing NPC entry
 2. Change `id` to unique value
-3. Adjust `name`, `greeting`, `topics`
-4. Add SVG portrait to `data/svgPortraits.js`
+3. Adjust `name`, `greeting`, `topics`, `location`
+4. Add SVG portrait key to `data/svgPortraits.js`
 
 **Required Fields:**
 - `id` — Unique identifier
 - `name` — Display name
+- `portraitKey` — Key into SVG_PORTRAITS object
+- `location` — Location ID where NPC appears
 - `greeting` — First dialogue line
 - `topics` — Dialogue options
 
 **Example:**
-```javascript
-blacksmith: {
-  id: 'blacksmith',
-  name: 'Garret the Blacksmith',
-  greeting: "Hmph. Another traveler.",
-  topics: [
-    { id: 'about_weapons', text: 'Can you forge me something?', response: "Bring me rare metal..." },
-    { id: 'end', text: '[End Conversation]', close: true }
+```json
+{
+  "id": "blacksmith",
+  "name": "Garret the Blacksmith",
+  "portraitKey": "blacksmith",
+  "location": "blacksmith",
+  "unlocked": true,
+  "greeting": "Hmph. Another traveler.",
+  "topics": [
+    { "id": "about_weapons", "text": "Can you forge me something?", "response": "Bring me rare metal..." },
+    { "id": "end", "text": "[End Conversation]", "close": true }
   ]
 }
 ```
@@ -137,13 +143,14 @@ blacksmith: {
 ---
 
 ### 5. Locations
-**File:** `data/locationTree.js`
+**File:** `content/locations.json`
 **Schema:** `schemas/location.json`
 **How to Add:**
 1. Add new location to appropriate region
 2. Set `id`, `name`, `icon`, `desc`
 3. Add `children` for sub-locations
-4. Add `npcs` for NPC placement
+4. Link a `stageId` if the location has combat
+5. Set `locked` and `unlockCondition` for progression gates
 
 **Required Fields:**
 - `id` — Unique identifier
@@ -151,16 +158,28 @@ blacksmith: {
 - `icon` — Emoji icon
 - `desc` — Description
 
+**Optional Fields:**
+- `stageId` — Stage ID for combat (e.g., `"stage_graveyard"`), or null
+- `stageConfig` — Tier options and recommended weapons
+- `children` — Child location IDs
+- `locked` — Whether location is locked by default
+- `unlockCondition` — Game flag to unlock
+
 **Example:**
-```javascript
-blacksmith: {
-  id: 'blacksmith',
-  name: 'Blacksmith',
-  icon: '🔨',
-  desc: 'Weapons and armor',
-  background: 'assets/town_blacksmith.svg',
-  children: [],
-  npcs: ['blacksmith']
+```json
+{
+  "id": "cemetery",
+  "name": "Cemetery",
+  "icon": "🪦",
+  "desc": "Rows of weathered tombstones",
+  "background": "assets/town_refugee_camp.svg",
+  "stageId": "stage_graveyard",
+  "stageConfig": {
+    "tiers": ["quick", "standard", "highlight"],
+    "recommendedWeapons": ["w1_projectile", "w2_orbit", "weapon_area_pulse"]
+  },
+  "children": [],
+  "locked": false
 }
 ```
 
@@ -236,10 +255,12 @@ blacksmith: {
 ## Content Loading Order
 
 ```
-1. data/*.js (script tags) — NPCs, locations, shop, companions
-2. content/*.json (fetch) — Weapons, enemies, stages, pickups
+1. data/*.js (script tags) — Shop, companions, farming, SVG portraits, etc.
+2. content/*.json (DataManager fetch) — Locations, NPCs, weapons, enemies, stages, pickups, attack areas, visuals, elements
 3. engine/*.js (script tags) — Game systems
 ```
+
+**Note:** Locations and NPCs are now loaded as JSON via DataManager, not as JS globals. Web tools should generate pure JSON files that pass schema validation.
 
 ---
 
