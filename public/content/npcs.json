@@ -233,5 +233,75 @@
         "close": true
       }
     ]
+  },
+  "hunter": {
+    "id": "hunter",
+    "name": "Finn the Hunter",
+    "portraitKey": "hunter",
+    "location": "forest_edge",
+    "unlocked": true,
+    "greeting": "*nocks an arrow* Easy now — I almost took you for a wolf. These woods have been restless lately. More beasts than I have seen in twenty years of hunting.",
+    "topics": [
+      {
+        "id": "about_forest",
+        "text": "What is happening in the forest?",
+        "response": "The dead are not just in the graveyard anymore. I have seen them in the treeline — shambling through the undergrowth. Something is drawing them here. The forest has always been old, but now it feels... hungry.",
+        "affection": 0
+      },
+      {
+        "id": "about_hunting",
+        "text": "Are you hunting the undead?",
+        "response": "I hunt what pays. Wolves, boar, deer — and now these things. They do not bleed like living creatures, but they still fall if you split them open. Silver tip arrows help. Old trick from my grandmother.",
+        "affection": 0
+      },
+      {
+        "id": "supplies",
+        "text": "Can you supply me with anything?",
+        "response": "I have some spare arrows and dried meat. Not much, but I can trade if you bring me wolf pelts. The wolves are aggressive right now — probably the same magic rot that raised the dead.",
+        "affection": 1,
+        "flag": "hunter_trade_hint"
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
+  },
+  "herbalist": {
+    "id": "herbalist",
+    "name": "Briar",
+    "portraitKey": "herbalist",
+    "location": "deep_woods",
+    "unlocked": true,
+    "greeting": "*crushes leaves between fingers* Ah, a traveler. You smell of campfire and iron. Come — sit. The forest speaks if you know how to listen.",
+    "topics": [
+      {
+        "id": "about_herself",
+        "text": "Who are you? What are you doing out here?",
+        "response": "I am Briar. I was a healer in the city before... everything. Now I live here, among the roots. The forest still grows, even with the dead walking. Life finds a way. Always.",
+        "affection": 1
+      },
+      {
+        "id": "about_medicine",
+        "text": "Can you make medicine?",
+        "response": "I can brew remedies for most wounds. The forest has what I need — moonpetal, ghostmoss, shadowbark. Bring me ingredients and I will make you potions that no blacksmith can forge.",
+        "affection": 0,
+        "flag": "herbalist_potions_hint"
+      },
+      {
+        "id": "about_magic",
+        "text": "Do you know anything about the magic raising the dead?",
+        "response": "*pauses* The forest remembers. Old magic — older than the Gravekeeper. He did not create it. He found it. Buried deep, where even I dare not go. The roots know. The roots fear it.",
+        "affection": 0
+      },
+      {
+        "id": "end",
+        "text": "[End Conversation]",
+        "response": null,
+        "close": true
+      }
+    ]
   }
 }

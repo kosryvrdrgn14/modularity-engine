@@ -12,7 +12,11 @@
           "desc": "A small camp with campfires and tents",
           "background": "assets/town_refugee_camp.svg",
           "ambient": null,
-          "children": ["trade_district", "residential", "wilderness"],
+          "children": [
+            "trade_district",
+            "residential",
+            "wilderness"
+          ],
           "stageId": null,
           "locked": false
         },
@@ -22,7 +26,10 @@
           "icon": "🏪",
           "desc": "Merchants and craftsmen",
           "background": "assets/town_refugee_camp.svg",
-          "children": ["blacksmith", "tavern"],
+          "children": [
+            "blacksmith",
+            "tavern"
+          ],
           "stageId": null,
           "locked": false
         },
@@ -80,7 +87,10 @@
           "icon": "🚪",
           "desc": "The entrance to the old graveyard",
           "background": "assets/town_refugee_camp.svg",
-          "children": ["cemetery", "crypt"],
+          "children": [
+            "cemetery",
+            "crypt"
+          ],
           "stageId": null,
           "locked": false
         },
@@ -93,8 +103,16 @@
           "children": [],
           "stageId": "stage_graveyard",
           "stageConfig": {
-            "tiers": ["quick", "standard", "highlight"],
-            "recommendedWeapons": ["w1_projectile", "w2_orbit", "weapon_area_pulse"]
+            "tiers": [
+              "quick",
+              "standard",
+              "highlight"
+            ],
+            "recommendedWeapons": [
+              "w1_projectile",
+              "w2_orbit",
+              "weapon_area_pulse"
+            ]
           },
           "locked": false
         },
@@ -107,8 +125,16 @@
           "children": [],
           "stageId": "stage_graveyard_extended",
           "stageConfig": {
-            "tiers": ["quick", "standard", "highlight"],
-            "recommendedWeapons": ["w1_projectile", "w5_arcane_bolt", "weapon_area_pulse"]
+            "tiers": [
+              "quick",
+              "standard",
+              "highlight"
+            ],
+            "recommendedWeapons": [
+              "w1_projectile",
+              "w5_arcane_bolt",
+              "weapon_area_pulse"
+            ]
           },
           "locked": true,
           "unlockCondition": "graveyard_warning"
@@ -126,10 +152,11 @@
           "icon": "🌿",
           "desc": "Where the trees begin",
           "background": "assets/town_refugee_camp.svg",
-          "children": ["deep_woods"],
+          "children": [
+            "deep_woods"
+          ],
           "stageId": null,
-          "locked": true,
-          "unlockCondition": "town_forest_unlocked"
+          "locked": false
         },
         "deep_woods": {
           "id": "deep_woods",
@@ -139,8 +166,7 @@
           "background": "assets/town_refugee_camp.svg",
           "children": [],
           "stageId": null,
-          "locked": true,
-          "unlockCondition": "town_forest_unlocked"
+          "locked": false
         }
       }
     }
