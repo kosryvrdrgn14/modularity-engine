@@ -1,0 +1,52 @@
+{
+  "weapons": {
+    "w1_projectile": {},
+    "w2_orbit": { "unlock_flag": "mq_01_stranger_arrives" },
+    "weapon_area_pulse": { "unlock_flag": "sq_02_arena_challenge" },
+    "w4_flame_wave": { "unlock_flag": "chapter2_unlocked" },
+    "w5_arcane_bolt": { "unlock_flag": "met_mage" },
+    "w6_dagger": { "unlock_flag": "chapter3_unlocked" },
+    "w7_sword": { "unlock_flag": "forge_access" },
+    "w8_claymore": { "unlock_flag": "guild_joined" }
+  },
+  "companions": {
+    "dog": { "unlock_flag": "mq_01_stranger_arrives" },
+    "healer": { "unlock_flag": "herbalist_ingredient_found" },
+    "archer": { "unlock_flag": "guild_joined" },
+    "mage": { "unlock_flag": "met_mage" },
+    "knight": { "unlock_flag": "chapter2_unlocked" },
+    "panther": { "unlock_flag": "chapter3_unlocked" },
+    "spider": { "unlock_flag": "graveyard_warning" },
+    "hawk": { "unlock_flag": "guild_joined" },
+    "turtle": { "unlock_flag": "chapter2_unlocked" },
+    "owl": { "unlock_flag": "met_mage" },
+    "rat": { "unlock_flag": "met_herbalist" },
+    "frog": { "unlock_flag": "chapter2_unlocked" },
+    "bat": { "unlock_flag": "graveyard_cleared" }
+  },
+  "stages": {
+    "stage_graveyard": {},
+    "stage_graveyard_extended": { "unlock_flag": "graveyard_cleared" }
+  },
+  "locations": {
+    "cemetery": { "unlock_flag": "graveyard_cleared" },
+    "crypt": { "unlock_flag": "graveyard_warning" },
+    "deep_woods": { "unlock_flag": "chapter2_unlocked" }
+  },
+  "npcs": {
+    "old_man": {},
+    "cute_girl": { "unlock_flag": "town_camp_upgraded" },
+    "blacksmith": {},
+    "tavern_keeper": {},
+    "worried_refugee": {},
+    "weather_watcher": {},
+    "nervous_guard": {},
+    "grave_digger": { "unlock_flag": "graveyard_cleared" },
+    "hunter": { "unlock_flag": "guild_joined" },
+    "herbalist": {}
+  },
+  "dialogue_branches": {
+    "old_man_post_graveyard": { "unlock_flag": "graveyard_cleared" },
+    "herbalist_grateful": { "unlock_flag": "herbalist_ingredient_found" }
+  }
+}

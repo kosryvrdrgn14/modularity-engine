@@ -1,0 +1,42 @@
+{
+  "main_quests": [],
+  "side_quests": [],
+  "_schema": {
+    "main_quests[]": {
+      "id": "string — unique quest ID (mq_XX_name)",
+      "name": "string — display name",
+      "chapter": "number — story chapter",
+      "order": "number — sort order within chapter",
+      "type": "main",
+      "description": "string — quest description for UI",
+      "objectives[]": {
+        "type": "kill_count | talk_to | complete_stage | collect_item | reach_location",
+        "target": "string — content ID to target",
+        "count": "number — required count (kill_count, collect_item only)",
+        "tier": "string — stage tier (complete_stage only)",
+        "description": "string — objective text for UI"
+      },
+      "prerequisites[]": "string — flag names required to see this quest",
+      "unlocks_on_complete": {
+        "flags[]": "string — flags set on completion",
+        "weapons[]": "string — weapon IDs unlocked",
+        "companions[]": "string — companion IDs unlocked",
+        "locations[]": "string — location IDs unlocked",
+        "npcs[]": "string — NPC IDs unlocked",
+        "dialogue[]": "string — dialogue branch IDs unlocked"
+      },
+      "time_events[]": {
+        "trigger": "on_complete",
+        "delay_seconds": "number — seconds after quest completion",
+        "flag": "string — flag to set when timer fires",
+        "description": "string — what happens"
+      },
+      "rewards": {
+        "gold": "number",
+        "xp": "number"
+      },
+      "repeatable": "boolean — default false"
+    },
+    "side_quests[]": "same schema as main_quests but type = 'side'"
+  }
+}

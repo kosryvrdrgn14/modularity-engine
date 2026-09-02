@@ -1997,5 +1997,16 @@ const EMBEDDED_DATA = {
   // --- Fallback data for locations and NPCs (minimal, prevents crash if JSON fetch fails) ---
   locations: { regions: [] },
   npcs: {},
-  companions: {}
+  companions: {},
+
+  // --- Fallback data for quest system ---
+  quests: { main_quests: [], side_quests: [] },
+  contentGates: {
+    weapons: {},
+    companions: {},
+    stages: {},
+    locations: {},
+    npcs: {},
+    dialogue_branches: {}
+  }
 };

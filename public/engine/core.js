@@ -92,6 +92,8 @@ class DataManager {
       { key: 'visuals', path: 'content/visuals.json' },
       { key: 'elements', path: 'content/elements.json' },
       { key: 'companions', path: 'content/companions.json' },
+      { key: 'quests', path: 'content/quests.json' },
+      { key: 'contentGates', path: 'content/content_gates.json' },
     ];
 
     const results = await Promise.all(
