@@ -113,6 +113,14 @@ class TownEngine {
     const arrowRight = document.getElementById('town-arrow-right');
     if (arrowLeft) arrowLeft.addEventListener('click', () => this._swipePrevRegion());
     if (arrowRight) arrowRight.addEventListener('click', () => this._swipeNextRegion());
+
+    // Keyboard navigation (ArrowLeft/ArrowRight)
+    document.addEventListener('keydown', (e) => {
+      if (!this.dom.screen?.classList.contains('active')) return;
+      if (!this.locationManager?.isRoot()) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); this._swipePrevRegion(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); this._swipeNextRegion(); }
+    });
   }
 
   show() {
