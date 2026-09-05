@@ -70,7 +70,12 @@ class TownScreen {
   }
 
   show(runStats) {
-    this.content._lastRunStats = runStats;
+    // Empty object (Story Mode) means "no run just finished" — don't render undefined stats
+    if (runStats && Object.keys(runStats).length > 0) {
+      this.content._lastRunStats = runStats;
+    } else {
+      this.content._lastRunStats = null;
+    }
     this.engine.show();
     this.content.updateDisplay();
     this.content.renderLeftPanel();

@@ -87,6 +87,18 @@
 - **Root Cause:** State machine didn't include `playing` in `town`'s allowed transitions.
 - **Fix:** Added `'playing'` to `town: ['combat', 'title', 'town', 'playing']`.
 
+### BUG-013: Town Side Panels Partially Blocked by Header (September 5, 2026)
+- **Severity:** Low (cosmetic)
+- **Symptom:** The top of the left/right town panels (quest cards on the NPCs sidebar) was partially covered by the top header bar.
+- **Root Cause:** `#town-left-panel` / `#town-right-panel` are `position: absolute; top: 0` with `z-index: 8`, while `#town-header` is z-index 10 in normal flow — the panels' top edge rendered underneath the header.
+- **Fix:** Set both panels to `top: 48px` to clear the header. Verified: panel top edge now sits at/below the header bottom. (Was flagged as "can wait until after quest phases" — fixed immediately since it affected quest-panel visibility during playtesting.)
+
+### BUG-014: "undefined Lundefined Lundefined" in Town Header (September 5, 2026)
+- **Severity:** Low (cosmetic)
+- **Symptom:** Header run-stats chip showed `⏱ undefined  Lundefined  ☠ undefined` after entering Story Mode.
+- **Root Cause:** `_startStoryMode` calls `townScreen.show({})`; the empty object passed the `if (this._lastRunStats)` guard, then `time/level/kills` were undefined when rendered.
+- **Fix:** `TownScreen.show()` now treats an empty stats object as "no run finished" (`_lastRunStats = null`), and `updateDisplay()` only renders the chip when all three fields exist, otherwise resets to the default `⚔Lv1`.
+
 ---
 
 ## Potential Issues (Watch List)
@@ -108,4 +120,4 @@
 
 ---
 
-*Last updated: September 2, 2026*
+*Last updated: September 5, 2026*

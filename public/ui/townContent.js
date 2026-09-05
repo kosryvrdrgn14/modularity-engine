@@ -93,8 +93,13 @@ class TownContent {
     if (goldEl) goldEl.textContent = `💰 ${gold}`;
     if (bgEl) bgEl.src = phase >= 2 ? 'assets/town_wooden_shacks.svg' : 'assets/town_refugee_camp.svg';
 
-    if (this._lastRunStats && runStatsEl) {
-      runStatsEl.textContent = `⏱ ${this._lastRunStats.time}  Lv${this._lastRunStats.level}  ☠ ${this._lastRunStats.kills}`;
+    if (runStatsEl) {
+      const s = this._lastRunStats;
+      if (s && s.time !== undefined && s.level !== undefined && s.kills !== undefined) {
+        runStatsEl.textContent = `⏱ ${s.time}  Lv${s.level}  ☠ ${s.kills}`;
+      } else {
+        runStatsEl.textContent = '⚔Lv1';
+      }
     }
 
     // Update unlocked NPCs
