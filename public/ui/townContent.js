@@ -156,7 +156,11 @@ class TownContent {
     // NPCs at current location
     npcArea.innerHTML = '';
     const curLoc = this.locationManager?.getCurrentLocation();
-    const npcs = curLoc ? (this.locationManager.getNPCsAtLocation(curLoc.id) || []) : [];
+    let npcs = curLoc ? (this.locationManager.getNPCsAtLocation(curLoc.id) || []) : [];
+    // Gate filter (Story Mode): hide NPCs the quest system has locked
+    if (this.questSystem && this.questSystem._initialized) {
+      npcs = npcs.filter(n => this.questSystem.isContentUnlocked('npcs', n.id));
+    }
     for (const npc of npcs.slice(0, 3)) {
       const svg = SVG_PORTRAITS[npc.portraitKey || npc.id] || '<div style="width:36px;height:36px;border-radius:50%;background:#333;"></div>';
       const svgSmall = svg.replace('<svg ', '<svg style="width:36px;height:36px;" ');

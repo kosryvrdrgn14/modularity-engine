@@ -67,6 +67,9 @@ class TownScreen {
 
   setQuestSystem(questSystem) {
     this.content.setQuestSystem(questSystem);
+    this.loadoutScreen.setQuestSystem(questSystem);
+    // Region gate checks in locationManager (Story Mode)
+    this.locationManager.questSystem = questSystem;
   }
 
   show(runStats) {

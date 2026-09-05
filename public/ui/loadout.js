@@ -9,6 +9,9 @@ class LoadoutScreen {
     this.dataManager = dataManager;
     this.audioManager = audioManager;
 
+    // Quest system (set via setQuestSystem — gates the available list in Story Mode)
+    this.questSystem = null;
+
     this.selectedWeapons = [null, null, null];
     this.selectedCompanions = [null, null, null];
     this.phase = 'weapons'; // 'weapons' | 'companions'
@@ -59,19 +62,30 @@ class LoadoutScreen {
 
   // ── Data Sources (redirectable for future progression) ──
 
+  setQuestSystem(questSystem) {
+    this.questSystem = questSystem;
+  }
+
+  // In Story Mode, only gate-unlocked content is offered.
+  // No quest system (dev/Test-Town) → everything available.
   getAvailableWeapons() {
-    return this.dataManager?.weapons || [];
+    const all = this.dataManager?.weapons || [];
+    if (!this.questSystem || !this.questSystem._initialized) return all;
+    return all.filter(w => this.questSystem.isContentUnlocked('weapons', w.id));
   }
 
   getAvailableCompanions() {
+    let all;
     // Read from DataManager (JSON) or fall back to global
     if (this.dataManager?.companions) {
-      return Object.values(this.dataManager.companions);
+      all = Object.values(this.dataManager.companions);
+    } else if (typeof COMPANION_DATA !== 'undefined') {
+      all = Object.values(COMPANION_DATA);
+    } else {
+      all = [];
     }
-    if (typeof COMPANION_DATA !== 'undefined') {
-      return Object.values(COMPANION_DATA);
-    }
-    return [];
+    if (!this.questSystem || !this.questSystem._initialized) return all;
+    return all.filter(c => this.questSystem.isContentUnlocked('companions', c.id));
   }
 
   // ── Internal ────────────────────────────────────────────

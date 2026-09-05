@@ -1,8 +1,8 @@
 # Quest, Flag & Lock/Unlock System — Design Document
 
-**Version:** 1.4  
+**Version:** 1.5  
 **Date:** September 5, 2026  
-**Status:** Phase 1 (player-facing quest UI) complete — ready for Phase 2  
+**Status:** Phase 2 (gating enforcement) complete — ready for Phase 3  
 
 ---
 
@@ -515,6 +515,22 @@ Implemented the town quest panel and acceptance flow:
 | **Styling** | `quest-available` (green border), `quest-active` (gold left edge), `quest-completed` (dimmed), accept button, objective lines |
 
 **Design decision — auto-complete:** quests complete the moment their last objective is done (no manual turn-in step). The story uses no "return to quest giver" pattern, so this keeps the flow tight: talk/fight → reward + unlock → next quest available. If turn-in quests are ever wanted, add a `turn_in: "npc_id"` objective type in Phase 5+.
+
+**Backlog (user-requested):** unlock notifications — when a quest grants a weapon/companion/region, show a toast/banner ("New weapon unlocked: Orbit!") so players *see* what they earned. Currently unlocks are only visible via the loadout/panel. Candidate hook: `quest:completed` listener in a small notification UI (Phase 4 polish or alongside web tools).
+
+---
+
+## 12.95 Phase 2 — Gating Enforcement (2026-09-05)
+
+The gate rules existed since Phase 0.75 — this phase wires the UI to *obey* them:
+
+| # | Integration | Detail |
+|---|---|---|
+| 1 | **Loadout filtering** | `getAvailableWeapons()` / `getAvailableCompanions()` filter through `isContentUnlocked()` when a quest system is attached. Fresh story start: only `w1_projectile` (companions list empty until dog unlocks via mq_01) |
+| 2 | **Forwarding** | `TownScreen.setQuestSystem()` also forwards to `loadoutScreen` and sets `locationManager.questSystem` |
+| 3 | **NPC panel filter** | NPCs sidebar hides gate-locked NPCs (Story Mode); explicit `unlockCondition` checks remain as fallback |
+| 4 | **Region gating** | `LocationManager.switchRegion()` refuses locked regions; town swipe/arrows/keyboard play a 'back' sound and stay put instead of transitioning. Regions unlock via quests (graveyard ← mq_01, forest ← mq_04) |
+| 5 | **Dev mode preserved** | No quest system attached (Test Town / Stage Select dev) → all content available, regions unrestricted |
 
 ---
 

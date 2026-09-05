@@ -75,6 +75,11 @@ class LocationManager {
   switchRegion(index) {
     const data = this._getLocationsData();
     if (index < 0 || index >= data.regions.length) return false;
+    // Story-mode region gating — questSystem (if attached) is authoritative
+    if (this.questSystem && this.questSystem._initialized) {
+      const region = data.regions[index];
+      if (region && !this.questSystem.isContentUnlocked('regions', region.id)) return false;
+    }
     this.currentRegionIndex = index;
     this.currentLocationId = data.regions[index].locations[
       Object.keys(data.regions[index].locations)[0]

@@ -387,6 +387,12 @@ class TownEngine {
     if (!this.locationManager || this._transitioning) return;
     const idx = this.locationManager.currentRegionIndex;
     if (idx < this.locationManager.getRegionCount() - 1) {
+      // Story-mode gate: silently refuse locked regions (next region stays visible on arrows)
+      const next = this.locationManager.getRegions()[idx + 1];
+      if (next && this.locationManager.questSystem && !this.locationManager.questSystem.isContentUnlocked('regions', next.id)) {
+        this.audioManager.playMenuSound('back');
+        return;
+      }
       this.audioManager.playMenuSound('select');
       this._transitionRegion(1);
     }
@@ -396,6 +402,11 @@ class TownEngine {
     if (!this.locationManager || this._transitioning) return;
     const idx = this.locationManager.currentRegionIndex;
     if (idx > 0) {
+      const prev = this.locationManager.getRegions()[idx - 1];
+      if (prev && this.locationManager.questSystem && !this.locationManager.questSystem.isContentUnlocked('regions', prev.id)) {
+        this.audioManager.playMenuSound('back');
+        return;
+      }
       this.audioManager.playMenuSound('select');
       this._transitionRegion(-1);
     }

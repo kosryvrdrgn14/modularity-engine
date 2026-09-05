@@ -2,6 +2,20 @@
 
 ---
 
+## v1.6.0 — Gating Enforcement (Phase 2)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Loadout gating** — story mode offers only unlocked weapons/companions (dev/Test-Town unchanged: everything available)
+- **NPC panel gating** — locked NPCs hidden from the Residents sidebar in Story Mode
+- **Region gating** — town swipe/arrows refuse locked regions (graveyard ← mq_01, forest ← mq_04); `switchRegion` is authoritative
+- **Backlog noted** — unlock notification toasts added to design doc (user request)
+- **Also fixed this session** — BUG-013 (side panels clipped by header) and BUG-014 (undefined run-stats chip in Story Mode)
+- **Verified** — 10/10 headless browser checks: swipe blocked → unlocked after mq_01, loadout lists gated, real UI loadout omits locked weapons, dev mode unaffected
+
+---
+
 ## v1.5.0 — Quest UI + Acceptance Flow (Phase 1)
 **Date:** September 5, 2026
 **Status:** ✅ Complete
