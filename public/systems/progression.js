@@ -80,7 +80,9 @@ class GameManager {
       session: {
         current_stage_id: null,
         run_in_progress: false,
-        run_data: { time_survived: 0, kills: 0, gold_earned: 0, level_reached: 1 },
+        // §21 chunk 3: run journal — mid-run snapshot for crash recovery.
+        // Same shape run_data had before (which was never written); now live.
+        run_data: GameManager._emptyRunData(),
       },
       world: {
         currentRegion: "town",
@@ -183,6 +185,13 @@ class GameManager {
       q.timeEvents = q.timeEvents || [];
       data.persistent.quests = q;
       data.save_version = 3;
+    }
+    // §21 chunk 3 (additive, safe for all v3 saves): run journal fields.
+    // No version bump — missing fields only mean "no journal", which is the
+    // correct default for every pre-journal save.
+    if (data.session && data.session.run_in_progress === undefined) {
+      data.session.run_in_progress = false;
+      data.session.run_data = GameManager._emptyRunData();
     }
     return data;
   }
@@ -422,9 +431,9 @@ class GameManager {
       }
     }
 
-    // Clear session
+    // Clear session (journal cleared — a finished run needs no recovery)
     s.run_in_progress = false;
-    s.run_data = { time_survived: 0, kills: 0, gold_earned: 0, level_reached: 1 };
+    s.run_data = GameManager._emptyRunData();
 
     // Emit events
     this.eventBus.emit('combat:sessionEnd', result);
