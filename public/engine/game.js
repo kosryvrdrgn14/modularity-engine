@@ -189,6 +189,7 @@ class Game {
       startGame: () => this.startGame(),
       getPendingDisaster: () => this._pendingDisaster,
       clearPendingDisaster: () => { this._pendingDisaster = null; },
+      onExitToTitle: () => this._exitTownToTitle(),
     });
     this.gameState.setState('title');
     this.titleMenu.show();
@@ -810,6 +811,15 @@ class Game {
       }
     };
     document.addEventListener('keydown', escHandler);
+  }
+
+  /** Town Systems-tab exit: stop town BGM, reset state, show title menu.
+   *  (Save is handled by the caller in townContent before this runs.) */
+  _exitTownToTitle() {
+    this.titleBGM.fadeIn(1.5);
+    this.gameState.setState('title');
+    this.townScreen.hide();
+    this.titleMenu.show();
   }
 
   _returnToTitle() {

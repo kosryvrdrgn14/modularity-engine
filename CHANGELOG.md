@@ -2,6 +2,17 @@
 
 ---
 
+## v1.8.1 — Exit to Title (completes slot-swap loop)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Exit to Title card** in town Systems tab — saves the active slot, stops town BGM, returns to the title menu
+- Fills the missing half of the slot workflow: town → title → switch slot → Story Mode is now fully player-reachable
+- **Verified** — 10/10 headless browser checks: exit saves progress to disk, slot isolation holds after round-trip, zero errors
+
+---
+
 ## v1.8.0 — 3-Slot Pseudo Save System + Double-Listener Fix
 **Date:** September 5, 2026
 **Status:** ✅ Complete

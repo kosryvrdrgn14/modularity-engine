@@ -3,7 +3,7 @@
 // ============================================================
 
 class TownScreen {
-  constructor({ audioManager, gameManager, eventBus, dataManager, companionSystem, estateSystem, affectionSystem, farmingSystem, disasterSystem, sandboxSystem, startGame, getPendingDisaster, clearPendingDisaster }) {
+  constructor({ audioManager, gameManager, eventBus, dataManager, companionSystem, estateSystem, affectionSystem, farmingSystem, disasterSystem, sandboxSystem, startGame, getPendingDisaster, clearPendingDisaster, onExitToTitle }) {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
     this.eventBus = eventBus;
@@ -50,6 +50,7 @@ class TownScreen {
       shopSystem: this.shopSystem,
       getPendingDisaster,
       clearPendingDisaster,
+      onExitToTitle: onExitToTitle || null,
     });
     this.content.setEngine(this.engine);
 

@@ -4,7 +4,7 @@
 // ============================================================
 
 class TownContent {
-  constructor({ audioManager, gameManager, eventBus, companionSystem, estateSystem, affectionSystem, farmingSystem, disasterSystem, sandboxSystem, locationManager, shopSystem, getPendingDisaster, clearPendingDisaster }) {
+  constructor({ audioManager, gameManager, eventBus, companionSystem, estateSystem, affectionSystem, farmingSystem, disasterSystem, sandboxSystem, locationManager, shopSystem, getPendingDisaster, clearPendingDisaster, onExitToTitle }) {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
     this.eventBus = eventBus;
@@ -18,6 +18,7 @@ class TownContent {
     this.shopSystem = shopSystem;
     this.getPendingDisaster = getPendingDisaster;
     this.clearPendingDisaster = clearPendingDisaster;
+    this.onExitToTitle = onExitToTitle || null;
 
     this._lastRunStats = null;
     this._lastDialogueNpcId = null;
@@ -418,6 +419,20 @@ class TownContent {
         }
         farmArea.appendChild(card);
       }
+    }
+
+    // Exit to Title (SLOT flow: lets the player return to the title screen to
+    // switch save slots — saving first so progress is never lost on exit)
+    if (this.onExitToTitle) {
+      const exitCard = document.createElement('div');
+      exitCard.className = 'panel-card exit-title';
+      exitCard.innerHTML = '<span class="panel-card-icon">🚪</span><div class="panel-card-info"><div class="panel-card-name">Exit to Title</div><div class="panel-card-desc">Save & return to the main menu</div></div>';
+      exitCard.addEventListener('click', () => {
+        if (this.audioManager) this.audioManager.playMenuSound('back');
+        if (this.gameManager) this.gameManager.save();
+        this.onExitToTitle();
+      });
+      locArea.appendChild(exitCard);
     }
   }
 

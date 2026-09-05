@@ -1553,6 +1553,20 @@
     }
 
 /* ============================================================
+   TOWN SYSTEMS PANEL — Exit to Title card
+   ============================================================ */
+.panel-card.exit-title {
+  border-color: rgba(255, 82, 82, 0.3);
+  margin-top: 6px;
+}
+.panel-card.exit-title .panel-card-name {
+  color: #ff8a80;
+}
+.panel-card.exit-title:hover {
+  background: rgba(255, 82, 82, 0.08);
+}
+
+/* ============================================================
    SLOT PICKER — story save slots (title screen overlay)
    ============================================================ */
 #slot-picker-overlay {
