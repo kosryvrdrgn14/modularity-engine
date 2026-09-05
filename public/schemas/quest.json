@@ -1,0 +1,174 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quest Schema",
+  "description": "Schema for quest definitions in content/quests.json. Gate rules for quest-granted content are auto-derived from unlocks_on_complete at load time.",
+  "type": "object",
+  "required": ["main_quests", "side_quests"],
+  "properties": {
+    "main_quests": {
+      "type": "array",
+      "description": "Main story quests (array placement determines quest type)",
+      "items": { "$ref": "#/definitions/quest" }
+    },
+    "side_quests": {
+      "type": "array",
+      "description": "Side quests (array placement determines quest type)",
+      "items": { "$ref": "#/definitions/quest" }
+    }
+  },
+  "definitions": {
+    "quest": {
+      "type": "object",
+      "required": ["id", "name", "chapter", "order", "description", "objectives"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique quest identifier",
+          "pattern": "^(mq|sq)_[a-z0-9_]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "chapter": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Story chapter"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Sort order within chapter"
+        },
+        "description": {
+          "type": "string",
+          "description": "Quest description for UI"
+        },
+        "objectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/objective" }
+        },
+        "prerequisites": {
+          "type": "array",
+          "description": "Flag names required to see this quest (all must be set)",
+          "items": { "type": "string" }
+        },
+        "unlocks_on_complete": {
+          "type": "object",
+          "description": "Content granted when the quest completes — auto-derives content gates",
+          "properties": {
+            "flags": {
+              "type": "array",
+              "description": "Flags set on completion",
+              "items": { "type": "string" }
+            },
+            "weapons": {
+              "type": "array",
+              "description": "Weapon IDs unlocked (must exist in weapons.json)",
+              "items": { "type": "string" }
+            },
+            "stages": {
+              "type": "array",
+              "description": "Stage IDs unlocked (must exist in stages.json)",
+              "items": { "type": "string" }
+            },
+            "regions": {
+              "type": "array",
+              "description": "Region ids unlocked (town | graveyard | forest)",
+              "items": { "type": "string" }
+            },
+            "locations": {
+              "type": "array",
+              "description": "Location ids (cemetery | crypt | deep_woods)",
+              "items": { "type": "string" }
+            },
+            "companions": {
+              "type": "array",
+              "description": "Companion IDs unlocked (must exist in companions.json)",
+              "items": { "type": "string" }
+            },
+            "npcs": {
+              "type": "array",
+              "description": "NPC IDs unlocked (must exist in npcs.json)",
+              "items": { "type": "string" }
+            },
+            "dialogue": {
+              "type": "array",
+              "description": "Dialogue branch IDs unlocked",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "time_events": {
+          "type": "array",
+          "description": "Delayed flag events scheduled on completion (quest TOP level)",
+          "items": {
+            "type": "object",
+            "required": ["trigger", "delay_seconds", "flag"],
+            "properties": {
+              "trigger": {
+                "type": "string",
+                "enum": ["on_complete"]
+              },
+              "delay_seconds": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "flag": {
+                "type": "string",
+                "description": "Flag to set when the timer fires"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rewards": {
+          "type": "object",
+          "properties": {
+            "gold": { "type": "number", "minimum": 0 },
+            "xp": { "type": "number", "minimum": 0 }
+          }
+        },
+        "notes": {
+          "type": "string",
+          "description": "Design/test notes — ignored by the engine"
+        },
+        "repeatable": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "objective": {
+      "type": "object",
+      "required": ["type", "target", "description"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["kill_count", "talk_to", "complete_stage", "collect_item", "reach_location"],
+          "description": "Objective type — each maps to a registered handler in QuestSystem"
+        },
+        "target": {
+          "type": "string",
+          "description": "Content ID to target — enemy id, npc id, stage id, or location id (canonical field; complete_stage also accepts stage_id as an alias)"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Required count (kill_count, collect_item only)"
+        },
+        "tier": {
+          "type": "string",
+          "description": "Stage tier (optional, not enforced yet)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Objective text for UI"
+        }
+      }
+    }
+  }
+}

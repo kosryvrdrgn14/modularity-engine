@@ -1,8 +1,8 @@
 # Quest, Flag & Lock/Unlock System — Design Document
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Date:** September 5, 2026  
-**Status:** Phase 0.5 (scaffold update) complete — ready for Phase 1  
+**Status:** Phase 0.75 (single-source gates + quest schema) complete — ready for Phase 1  
 
 ---
 
@@ -483,6 +483,20 @@ Applied after reviewing the first real story JSON against the Phase 0 skeleton:
 | `complete_stage` | `combat:sessionEnd` | `{ stageId, stage_completed, … }` |
 | `talk_to` | `npc:talked` | `{ npcId }` |
 | `reach_location` | `location:navigated` | `{ locationId, regionId }` |
+
+---
+
+## 12.75 Phase 0.75 — Single-Source Gates + Quest Schema (2026-09-05)
+
+Applied after the feasibility review (roadblocks R2 + R7):
+
+| # | Fix | Detail |
+|---|---|---|
+| R2 | **Gates auto-derived from quests** | `QuestSystem._buildDerivedGates()` scans every quest's `unlocks_on_complete` and builds the content→granting-quest map at load. `isContentUnlocked()` is now: quest-granted content unlocks when ANY granting quest completes (authoritative) → explicit `content_gates.json` rules apply only to non-quest content → `temp_disable_flag` applies to any source. `getUnlockedContent()` returns the union of derived + explicit ids. Story authors write ONE file (quests.json); gates can never drift |
+| R7 | **`schemas/quest.json` created** | Draft-07 schema matching existing schema style (enemy/stage/npc/…). Covers quest, objectives (type enum + target/count/tier), unlocks, time_events, rewards. The web-tool validator and the game validate against the same contract |
+| — | **content_gates.json pruned** | Now the OVERRIDE layer only: `cute_girl → town_camp_upgraded` (non-quest game gate) + 2 dialogue-branch gates. All weapon/companion/stage/region/location gates removed (auto-derived). Embedded fallback synced |
+
+**Note on temp-disable:** the mechanism is supported in code (`temp_disable_flag`) and unit-tested, but no NPC uses it yet. Deliberate — mq_01's `stranger_scouting` time event would hide Elder Rowan and stall mq_04 if it fires before the player reports back. Revisit when time events tick live (Phase 3).
 
 ---
 

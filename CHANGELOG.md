@@ -2,6 +2,18 @@
 
 ---
 
+## v1.4.1 — Single-Source Gates + Quest Schema (Phase 0.75)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Gates auto-derived from quests** — `QuestSystem._buildDerivedGates()` builds the content→granting-quest map from `unlocks_on_complete`; `isContentUnlocked()` checks quest completion first, explicit gates only for non-quest content, temp-disable last. One source of truth — story authors write only quests.json
+- **`content_gates.json` pruned to override layer** — non-quest gates + dialogue branches only; embedded fallback synced
+- **`schemas/quest.json` created** — draft-07 quest contract (objectives enum, unlocks, time_events) for the future web-tool validator
+- **Verified** — full 13-quest arc + gate on/off transitions + explicit-gate + temp-disable checks
+
+---
+
 ## v1.4.0 — Quest Scaffold Update (Phase 0.5)
 **Date:** September 5, 2026
 **Status:** ✅ Complete

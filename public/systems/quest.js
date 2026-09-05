@@ -15,8 +15,11 @@ class QuestSystem {
     this.sideQuests = [];
     this.allQuests = [];
 
-    // Gate rules (loaded from content/content_gates.json)
+    // Gate rules (loaded from content/content_gates.json — OVERRIDE layer only)
     this.gates = {};
+
+    // Derived gates — auto-built from quest unlocks_on_complete (single source of truth)
+    this._derivedGates = {};
 
     // Handler refs for cleanup
     this._handlers = {};
@@ -55,8 +58,15 @@ class QuestSystem {
       this.allQuests = [...this.mainQuests, ...this.sideQuests];
     }
 
-    // Load gate rules
+    // Load explicit gate rules (override layer)
     this.gates = dataManager.contentGates || {};
+    // Strip metadata/doc keys (e.g. "_note") so they never pollute gate lookups
+    for (const key of Object.keys(this.gates)) {
+      if (key.startsWith('_')) delete this.gates[key];
+    }
+
+    // Build derived gates from quest unlocks — quests are the single source of truth
+    this._buildDerivedGates();
 
     // Register event listeners
     this._registerListeners();
@@ -71,7 +81,31 @@ class QuestSystem {
     // Re-evaluate availability
     this._reevaluateAvailability();
 
-    console.log(`[QUEST] Initialized — ${this.allQuests.length} quests, ${Object.keys(this.gates).length} gate categories`);
+    const derivedCount = Object.values(this._derivedGates)
+      .reduce((n, map) => n + Object.keys(map).length, 0);
+    console.log(`[QUEST] Initialized — ${this.allQuests.length} quests, ${derivedCount} derived gates, ${Object.keys(this.gates).length} explicit gate categories`);
+  }
+
+  // Build content gates automatically from quest unlocks_on_complete.
+  // Content granted by a quest becomes available when that quest completes.
+  // content_gates.json remains an OVERRIDE layer for non-quest gates
+  // (e.g. cute_girl → town_camp_upgraded) and temp-disable rules.
+  _buildDerivedGates() {
+    const cats = ['weapons', 'stages', 'regions', 'locations', 'companions', 'npcs', 'dialogue_branches'];
+    const derived = {};
+    for (const cat of cats) derived[cat] = {};
+
+    for (const quest of this.allQuests) {
+      const u = quest.unlocks_on_complete || {};
+      for (const cat of cats) {
+        for (const id of (u[cat] || [])) {
+          if (!derived[cat][id]) derived[cat][id] = [];
+          derived[cat][id].push(quest.id);
+        }
+      }
+    }
+
+    this._derivedGates = derived;
   }
 
   // ── Event Listeners ────────────────────────────────────
@@ -156,30 +190,32 @@ class QuestSystem {
   // ── Content Gate Resolution ────────────────────────────
 
   isContentUnlocked(contentType, contentId) {
-    const categoryGates = this.gates[contentType];
-    if (!categoryGates) return true; // Unknown category — fail open
-
-    const gate = categoryGates[contentId];
-    if (!gate) return true; // No gate defined — unlocked by default
-
-    // Check primary unlock flag
-    if (gate.unlock_flag) {
-      if (!this.getFlag(gate.unlock_flag)) return false;
+    // 1. Derived rule (single source of truth for quest-granted content):
+    //    content granted by a quest unlocks when ANY granting quest is completed.
+    const granting = (this._derivedGates[contentType] || {})[contentId];
+    if (granting && granting.length > 0) {
+      const store = this._getQuestStore();
+      const anyComplete = granting.some(qid => store.completed.includes(qid));
+      if (!anyComplete) return false;
+    } else {
+      // 2. Explicit override (content_gates.json) — for content NOT granted by quests
+      const gate = (this.gates[contentType] || {})[contentId];
+      if (gate && gate.unlock_flag && !this.getFlag(gate.unlock_flag)) return false;
     }
 
-    // Check temp disable flag (for NPCs/companions that temporarily leave)
-    if (gate.temp_disable_flag) {
-      if (this.getFlag(gate.temp_disable_flag)) return false;
-    }
+    // 3. Temp disable (NPCs/companions that temporarily leave) — applies to any source
+    const disableGate = (this.gates[contentType] || {})[contentId];
+    if (disableGate && disableGate.temp_disable_flag && this.getFlag(disableGate.temp_disable_flag)) return false;
 
     return true;
   }
 
   getUnlockedContent(contentType) {
-    const categoryGates = this.gates[contentType];
-    if (!categoryGates) return [];
-
-    return Object.keys(categoryGates).filter(id => this.isContentUnlocked(contentType, id));
+    // Union of derived + explicit gate ids
+    const ids = new Set();
+    for (const id of Object.keys(this._derivedGates[contentType] || {})) ids.add(id);
+    for (const id of Object.keys(this.gates[contentType] || {})) ids.add(id);
+    return [...ids].filter(id => this.isContentUnlocked(contentType, id));
   }
 
   // ── Quest State Management ─────────────────────────────
@@ -548,6 +584,7 @@ class QuestSystem {
       unlock: (flag) => this.setFlag(flag, true, 'debug'),
       lock: (flag) => this.setFlag(flag, false, 'debug'),
       gates: () => console.table(this.gates),
+      derivedGates: () => console.table(this._derivedGates),
       reset: () => {
         if (this.gameManager) {
           this.gameManager.store.persistent.quests = { active: [], completed: [], failed: [], objectives: {}, timeEvents: [] };

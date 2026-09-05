@@ -2001,12 +2001,11 @@ const EMBEDDED_DATA = {
 
   // --- Fallback data for quest system ---
   quests: { main_quests: [], side_quests: [] },
+  // Override layer only — quest-granted gates are auto-derived from quests.json
   contentGates: {
-    weapons: {},
-    companions: {},
-    stages: {},
-    locations: {},
-    npcs: {},
+    npcs: {
+      cute_girl: { unlock_flag: 'town_camp_upgraded' }
+    },
     dialogue_branches: {}
   }
 };

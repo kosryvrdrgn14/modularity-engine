@@ -1,7 +1,7 @@
 {
   "main_quests": [
     {
-      "id": "mq_01_newArrival",
+      "id": "mq_01_new_arrival",
       "name": "New Arrival",
       "chapter": 1,
       "order": 1,
@@ -301,6 +301,7 @@
     }
   ],
   "_schema": {
+    "_note": "Gate rules are AUTO-DERIVED from unlocks_on_complete at load time (QuestSystem._buildDerivedGates) — content listed here becomes available when this quest completes. content_gates.json holds only non-quest overrides and temp-disable rules.",
     "main_quests[]": {
       "id": "string — unique quest ID (mq_XX_name)",
       "name": "string — display name",

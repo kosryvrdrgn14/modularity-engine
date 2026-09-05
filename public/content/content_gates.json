@@ -1,54 +1,7 @@
 {
-  "weapons": {
-    "w1_projectile": {},
-    "w2_orbit": { "unlock_flag": "met_stranger" },
-    "weapon_area_pulse": { "unlock_flag": "guard_training_done" },
-    "w4_flame_wave": { "unlock_flag": "graveyard_cleared" },
-    "w5_arcane_bolt": { "unlock_flag": "met_mage" },
-    "w6_dagger": { "unlock_flag": "ancient_threat_defeated" },
-    "w7_sword": { "unlock_flag": "forest_heart_recovered" },
-    "w8_claymore": { "unlock_flag": "shadow_fallen" }
-  },
-  "companions": {
-    "dog": { "unlock_flag": "met_stranger" },
-    "healer": { "unlock_flag": "herbalist_ingredient" },
-    "archer": { "unlock_flag": "met_mage" },
-    "mage": { "unlock_flag": "forest_cleared" },
-    "knight": { "unlock_flag": "graveyard_cleared" },
-    "panther": { "unlock_flag": "ancient_threat_defeated" },
-    "spider": { "unlock_flag": "forest_heart_recovered" },
-    "hawk": { "unlock_flag": "hunter_challenger_done" },
-    "turtle": { "unlock_flag": "shadow_fallen" },
-    "owl": { "unlock_flag": "forest_cleared" },
-    "rat": { "unlock_flag": "final_defense_complete" },
-    "frog": { "unlock_flag": "final_defense_complete" },
-    "bat": { "unlock_flag": "final_defense_complete" }
-  },
-  "stages": {
-    "stage_graveyard": {},
-    "stage_graveyard_extended": { "unlock_flag": "graveyard_warning" }
-  },
-  "regions": {
-    "town": {},
-    "graveyard": { "unlock_flag": "met_stranger" },
-    "forest": { "unlock_flag": "chapter2_unlocked" }
-  },
-  "locations": {
-    "cemetery": { "unlock_flag": "graveyard_cleared" },
-    "crypt": { "unlock_flag": "graveyard_warning" },
-    "deep_woods": { "unlock_flag": "forest_cleared" }
-  },
+  "_note": "OVERRIDE LAYER ONLY. Gates for quest-granted content are auto-derived from quests.json unlocks_on_complete at load time (QuestSystem._buildDerivedGates). This file holds only non-quest gates and temp-disable rules. A gate here supports: unlock_flag (content requires this flag) and temp_disable_flag (content temporarily hidden while this flag is set).",
   "npcs": {
-    "old_man": {},
-    "cute_girl": { "unlock_flag": "town_camp_upgraded" },
-    "blacksmith": {},
-    "tavern_keeper": {},
-    "worried_refugee": {},
-    "weather_watcher": {},
-    "nervous_guard": {},
-    "grave_digger": { "unlock_flag": "graveyard_cleared" },
-    "hunter": { "unlock_flag": "met_mage" },
-    "herbalist": {}
+    "cute_girl": { "unlock_flag": "town_camp_upgraded" }
   },
   "dialogue_branches": {
     "old_man_post_graveyard": { "unlock_flag": "graveyard_cleared" },
