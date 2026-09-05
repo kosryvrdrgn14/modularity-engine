@@ -139,6 +139,13 @@
 - **CONFIRMED LIVE (Sep 5 slot trace):** headless reproduction shows quest completion in town + page refresh (no exit-card save) = quest progress lost — "back to the starting quest" symptom. This is the unsaved-progress window, not a slot-isolation bug; slot machinery verified correct across plain and reload-variant traces. Exit-to-title now saves (v1.8.2); full fix = §21 event checkpoints.
 - **RESOLVED for town/quest progress (v1.9.0):** §21 chunks 1, 2, 4 implemented — quest/unlock/level events save instantly, 30s combat heartbeat, 15s town heartbeat, lifecycle saves on refresh/hide/close. Browser-verified: quest completed in town survives a RAW refresh. Remaining gap: mid-run combat-only progress (chunk 3 run journal, planned).
 
+### SLOT-UI: Wiped Storage Masqueraded as Saves in Slot Picker (September 5, 2026)
+- **Severity:** Low (display honesty; the underlying wipe was INFRA/origin-scoped, not game code)
+- **Symptom:** Slot 1 displayed "Lv1 / 0 / 0 quests" with a Continue button right after the user had played it — looked like a lost save.
+- **Diagnosis (3-way headless):** UI↔disk link verified perfect (seeded progress renders exactly); wiped-localStorage boot reproduces the screenshot bit-for-bit. The storage was emptied — consistent with a preview-origin rotation during the 502s (localStorage is origin-scoped).
+- **Fix (v1.9.1):** Slot picker now labels by ACTUAL progress, not file existence — three states: **Continue** (progress or story_started), **✦ New Game / Fresh Start** (persisted default), **✦ New Game / Empty** (never persisted). A wiped or boot-fresh slot can no longer masquerade as a save.
+- **User action if old saves are wanted:** they may still exist under the previous preview origin; not recoverable from the current origin.
+
 ### POT-001: NPC Portraits Still Base64 in svgPortraits.js
 - **Status:** NPC_DATA migrated to JSON with `portraitKey`, but SVG_PORTRAITS remains JS global
 - **Remaining:** Full migration needs asset path references or portrait loading system

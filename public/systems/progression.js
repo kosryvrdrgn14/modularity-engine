@@ -553,11 +553,19 @@ class GameManager {
     const out = [];
     for (let n = 1; n <= GameManager.SLOT_COUNT; n++) {
       const raw = this.backend.load(this._slotKey(n));
-      if (!raw) { out.push({ slot: n, exists: false }); continue; }
+      if (!raw) { out.push({ slot: n, exists: false, hasProgress: false }); continue; }
       const s = this._migrate(raw);
+      // SLOT-UI fix: a persisted-but-never-played store (fresh default created
+      // at boot or by slot entry) must not masquerade as a save. Label by
+      // actual progress so wiped/fresh slots show "New Game", not "Continue".
+      const hasProgress = (s?.persistent?.player?.level ?? 1) > 1
+        || (s?.persistent?.currency ?? 0) > 0
+        || (s?.persistent?.quests?.completed || []).length > 0
+        || !!s?.flags?.story_started;
       out.push({
         slot: n,
         exists: true,
+        hasProgress,
         level: s?.persistent?.player?.level ?? 1,
         gold: s?.persistent?.currency ?? s?.persistent?.town?.resources?.gold ?? 0,
         questsDone: (s?.persistent?.quests?.completed || []).length,

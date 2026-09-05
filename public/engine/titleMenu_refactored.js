@@ -167,20 +167,24 @@ class TitleMenu {
     html += '<div class="slot-picker-grid">';
     for (const s of summaries) {
       const isActive = s.slot === active;
+      // SLOT-UI fix: label by ACTUAL progress, not file existence — a wiped or
+      // boot-created fresh store persisted on disk would otherwise show
+      // "Continue Lv1 0 0" and look like a lost save.
+      const real = !!s.exists && !!s.hasProgress;
       const exists = !!s.exists;
       html += `<div class="slot-card${isActive ? ' active' : ''}${exists ? '' : ' empty'}" data-slot="${s.slot}">`;
       html += `<div class="slot-head">Slot ${s.slot}${isActive ? ' <span class="slot-badge">CURRENT</span>' : ''}</div>`;
-      if (exists) {
+      if (real) {
         html += `<div class="slot-stats">`;
         html += `<span>⚔ Lv${s.level ?? 1}</span><span>💰 ${s.gold ?? 0}</span><span>🏆 ${s.questsDone ?? 0} quests</span>`;
         html += `</div>`;
         html += `<div class="slot-loc">${regionNames[s.region] || s.region}</div>`;
       } else {
-        html += `<div class="slot-loc">— Empty —</div>`;
+        html += `<div class="slot-loc">${exists ? '— Fresh Start —' : '— Empty —'}</div>`;
       }
       html += `<div class="slot-actions">`;
-      html += `<button class="slot-btn play" data-play="${s.slot}">${exists ? '▶ Continue' : '✦ New Game'}</button>`;
-      if (exists) html += `<button class="slot-btn wipe" data-wipe="${s.slot}">🗑</button>`;
+      html += `<button class="slot-btn play" data-play="${s.slot}">${real ? '▶ Continue' : '✦ New Game'}</button>`;
+      if (real) html += `<button class="slot-btn wipe" data-wipe="${s.slot}">🗑</button>`;
       html += `</div></div>`;
     }
     html += '</div>';

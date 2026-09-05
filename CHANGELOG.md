@@ -2,6 +2,18 @@
 
 ---
 
+## v1.9.1 — Slot Picker Truth-in-Labeling (SLOT-UI fix)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **User report**: slot 1 showed no progress (Lv1/0/0 + Continue) after play; verified screenshots matched a wiped-storage state, not a UI-link bug
+- **Three-way headless diagnostic**: (A) UI↔disk link perfect — seeded progress renders exactly; (B) legacy adoption path exercised; (C) wiped localStorage reproduces the screenshot precisely — storage was emptied (origin rotation during 502s is the prime suspect; localStorage is origin-scoped)
+- **Real UX flaw fixed**: a persisted-but-never-played store displayed "▶ Continue / Lv1 0 0" — indistinguishable from a lost save. Picker now labels three states: **Continue** (real progress or story started), **✦ New Game + Fresh Start** (persisted default), **✦ New Game + Empty** (never persisted)
+- **Verified** — three-state rendering + wipe-reproduction in headless browser
+
+---
+
 ## v1.9.0 — Auto-Save: Event Checkpoints + Heartbeats + Lifecycle Saves (§21 chunks 1, 2, 4)
 **Date:** September 5, 2026
 **Status:** ✅ Complete
