@@ -331,12 +331,29 @@ class Game {
       }
     });
 
+    // BUG-022 fix: restart is only valid from an ended run. The InputManager
+    // now state-guards its emitters, but any future unguarded emitter would
+    // otherwise start a ghost run under the town/title UI.
     this.eventBus.on('restart', () => {
-      this.startGame();
+      if (this.gameState.isGameOver() || this.gameState.isEndScreen()) {
+        this.startGame();
+      }
     });
   }
 
   startGame() {
+    // BUG-022 fix: full teardown of the previous run's UI leftovers. Without
+    // this, a stale auto-return timer could fire mid-run (slapping the town UI
+    // over a live fight) and the victory overlay / level-up cards stayed
+    // rendered over every subsequent run.
+    if (this._gameOverReturnTimer) {
+      clearTimeout(this._gameOverReturnTimer);
+      this._gameOverReturnTimer = null;
+    }
+    this.uiManager.hideEndScreen();
+    this.uiManager.hideLevelUp();
+    this._isSelectingUpgrade = false;
+    this.inputManager._isPaused = false;
     this.titleMenu.hide();
     this.gameState.reset();
     this.renderer.bossEntity = null;
@@ -952,16 +969,23 @@ class Game {
     // Move to endScreen state (gameOver → endScreen is valid; gameOver → town is not)
     this.gameState.setState('endScreen');
     
-    // Wire "Return to Title" — after 2 seconds, show a button or auto-transition
+    // Auto-return to town after a delay. BUG-023 feedback: 1.5s was barely
+    // enough time to see the stats — 4s lets the player actually read them.
+    if (this._gameOverReturnTimer) clearTimeout(this._gameOverReturnTimer);
     this._gameOverReturnTimer = setTimeout(() => {
+      this._gameOverReturnTimer = null;
       this._showGameOverReturnOption();
-    }, 1500);
+    }, 4000);
   }
 
   _showGameOverReturnOption() {
-    // Transition to town screen after a brief delay
+    // BUG-022 fix: only auto-return if the end screen is still up. If the
+    // player already restarted, firing this transition slapped the town UI
+    // over a live combat run — the "ghost run".
+    if (!this.gameState.isEndScreen()) return;
     const stats = this._getStats();
     this.gameState.setState('town');
+    this.uiManager.hideEndScreen();
     this.townScreen.show(stats);
   }
 

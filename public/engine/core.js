@@ -428,8 +428,10 @@ class InputManager {
       if ((e.code === 'Enter' || e.code === 'Space') && this._game && this._game.gameState.isBossIntro()) {
         this._game._skipIntroQueued = true;
       }
-      // Restart on end screen
-      if (e.code === 'Enter' || e.code === 'Space') {
+      // Restart on end screen (state-guarded — an unconditional emit here
+      // started ghost runs underneath the town/title UI: BUG-022)
+      if ((e.code === 'Enter' || e.code === 'Space') && this._game &&
+          (this._game.gameState.isGameOver() || this._game.gameState.isEndScreen())) {
         this.eventBus.emit('restart');
       }
     });

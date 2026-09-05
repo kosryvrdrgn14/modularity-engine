@@ -145,6 +145,25 @@
 - **Fix:** Run end reads `_activeRunDuration` (stage tierConfig duration) set at `startGame()`.
 - **Lesson:** Same class as BUG-007 — wave/boss data extending past hardcoded time assumptions. Any new stage MUST declare realistic `tierConfig.*.duration` values.
 
+### BUG-022: Ghost Run — Old Combat Kept Running Under Town/New Stage (September 5, 2026)
+- **Severity:** Critical (this session's headline bug)
+- **Symptoms (user-verified with screenshots):** (1) Zombie quest counter ticked up while standing in town; rat side-quest stayed 0/10. (2) Entering the extended stage showed a LEVEL UP screen immediately plus the previous run's frozen "VICTORY — Time 4:43 / Level 11" overlay permanently on top of a live fight. (3) Victory screen auto-dismissed to town "barely readable".
+- **Root Cause (traced, 3 defects compounding):**
+  1. `hideEndScreen()` existed but was NEVER called — after the first run ended, the canvas victory overlay rendered every frame forever, under every later screen.
+  2. `InputManager` emitted `restart` on EVERY Enter/Space keypress and canvas click UNCONDITIONALLY (no state guard), and the `restart` listener called `startGame()` with no guard either — a live run could start underneath the town/title UI.
+  3. `_gameOverReturnTimer` (1.5s auto-return to town) fired even after a restart had begun; from `playing` state the `setState('town')` transition was rejected but `townScreen.show()` ran anyway — slapping the town UI over a live fight. Enemies spawned around the idle player, auto-weapons killed them → zombie quest ticked in town.
+- **Why rats never ticked:** rats first spawn at 1:30 on the wave clock; every ghost restart reset `gameTime` to 0. Kill attribution itself was correct (verified: quest target `rat` matches enemies.json id; rats present in both Graveyard wave tables from 1:30).
+- **Fix (all three):**
+  1. Input emitters state-guarded (only fire `restart` from `gameOver`/`endScreen`); `restart` listener double-guarded.
+  2. `startGame()` now does full teardown: clears `_gameOverReturnTimer`, hides end screen + level-up overlay, resets `_isSelectingUpgrade`/`_isPaused`.
+  3. `_showGameOverReturnOption()` no-ops unless state is still `endScreen`.
+- **Lesson:** Any auto-timer that mutates UI must re-validate game state when it fires; restart paths need teardown + guards at BOTH the emitter and the listener.
+
+### BUG-023: End Screen Auto-Dismiss Too Fast to Read (September 5, 2026)
+- **Severity:** Low (UX)
+- **Symptom:** Victory screen auto-returned to town after 1.5s — "barely any time to even read the victory screen".
+- **Fix:** Auto-return delay raised 1.5s → 4s. Click/Enter still restarts immediately (state-guarded per BUG-022). Later option: add an explicit button and drop the auto-return entirely.
+
 ---
 
 ## Potential Issues (Watch List)
