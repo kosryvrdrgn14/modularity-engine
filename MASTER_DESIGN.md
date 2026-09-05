@@ -29,6 +29,7 @@
 18. [Implementation Status](#18-implementation-status)
 19. [Open Design Questions](#19-open-design-questions)
 20. [Version History](#20-version-history)
+21. [Auto-Save System (Planned)](#21-auto-save-system-planned)
 
 ---
 
@@ -930,6 +931,110 @@ Web version uses inline SVG for backgrounds (procedural, lightweight). Godot sho
 | v1.0.0 | Aug 31 | File split complete (275 lines + 31 files) |
 | v1.1.0 | Aug 31 | Content system: attack areas, visuals, elements, schemas |
 | v1.2.0 | Sep 2 | Loadout screen, boss fixes, region backgrounds, slide+zoom transitions |
+| v1.8.x | Sep 5 | Quest system phases 0–3, gating, toasts, 3-slot saves, BUG-015 loadout gate leak fix |
+| plan | Sep 5 | §21 Auto-Save System (planned): event checkpoints + debounced combat heartbeat + run journal + lifecycle hooks |
+
+---
+
+## 21. Auto-Save System (Planned)
+
+> Status: PLANNED — not yet implemented. This section is the implementation contract.
+> Add to CHANGELOG + flip status when built.
+
+### 21.1 Current State & The Gap
+
+Audited September 5, 2026. Actual save points today:
+
+| Trigger | Persists? |
+|---|---|
+| Combat session end (win/lose) | ✅ `applySessionResult()` → `save()` |
+| Explicit town actions (quest rewards, shop purchases, camp upgrade, Exit to Title) | ✅ direct `save()` calls |
+| 60-second auto-save timer (`GameManager.update`) | ❌ **NEVER FIRES** — `SpawnSystem.update()` calls `this.gameManager.update(dt)` but `SpawnSystem` is constructed without a `gameManager` reference (`engine/entities.js:17`, `engine/game.js:17`). The call site is dead code; the timer never ticks. |
+| Page close / tab hide / crash | ❌ No `beforeunload` / `visibilitychange` handlers exist |
+
+**Consequence:** a crash, 502, or accidental close mid-run loses the entire run (kills, gold, level-ups, quest objective progress). During long story runs this is the single biggest progress-loss risk in the project.
+
+### 21.2 Design Principles (Non-Negotiable)
+
+1. **Combat is sacred.** No synchronous disk writes inside the frame loop, no save-related GC pauses, no UI elements during combat. The player must never perceive a save happening mid-fight.
+2. **Never lose more than 60s of town progress, never more than one objective-event of combat progress.**
+3. **Snapshotted stores only.** `save()` writes `JSON.stringify(store)` — a partial in-memory store can never be persisted torn.
+4. **Fail-safe, not fail-loud.** Any save error is swallowed + counted; the game never blocks or pops an error on the player.
+5. **No new UI in combat.** Any save indicator lives in town/header only.
+
+### 21.3 Architecture: Event-Driven Checkpointing + Debounced Combat Snapshots
+
+Replace the (dead) time-based auto-save with **two complementary mechanisms**:
+
+**A. Town/event-driven checkpoints (instant, off the combat path)**
+
+Persist immediately (synchronous `save()` is fine — store is ~2KB, sub-millisecond) on high-value
+milestone events via ONE central listener on the EventBus (in `Game._setupEvents()`, single
+registration point — KNOWLEDGE.md §double-listener rule applies):
+
+| Event | Why save here |
+|---|---|
+| `quest:started` | quest state changed |
+| `quest:completed` | high-value milestone — must survive crash |
+| `quest:flag_set` | gates/locks depend on flags |
+| `quest:time_event` | one-shot story beat — must not re-fire after crash |
+| `quest:objective_progress` | debounced 3s (can fire dozens of times/min during combat) |
+| `unlock:weapon` / `unlock:stage` / `unlock:feature` | permanent unlocks |
+| `player:levelUp` | permanent stat change |
+| `save:slotSwitched` / `save:slotWiped` | slot state changed |
+
+**B. Combat: debounced micro-journal + belt-and-suspenders timers**
+
+During combat (state === 'playing'), instead of saving the full store on a timer:
+
+1. **Debounced dirty-flush (the "heartbeat"):** keep the existing `_dirty` flag mechanism, but
+   relocate the tick out of SpawnSystem into `Game.update()` (which already runs every frame and
+   owns the try/catch boundary). Flush at most every **30s** during combat — one synchronous
+   ~2KB `localStorage.setItem` per 30s is imperceptible (<1ms, no allocation churn, runs between
+   entity updates at the top of the frame, not mid-physics).
+2. **Run-journal (crash recovery for the current run):** in-memory-only journal object updated on
+   run milestones — `{ stageId, tier, gameTime, kills, gold_earned, level, weaponLevels,
+   questObjectiveDeltas[] }`. Written into the store (`session.run_journal`) with the same 30s
+   flush, and additionally on: boss spawn, level-up pause, and wave transitions. If a crash
+   happens mid-run, the next boot finds a run journal newer than the last committed result and
+   offers (town banner, non-blocking): **"Resume interrupted run?"** — restoring the journaled
+   run state. Decline = discard journal, normal fresh run. Accept = re-enter the stage at the
+   journaled time/kills/level with loadout re-selected from the journal (weapons at journaled
+   levels).
+3. **Page-lifecycle hooks:** `visibilitychange → hidden` and `beforeunload` both call
+   `save()` synchronously (allowed: these handlers run outside the frame loop; 2KB write is
+   guaranteed to complete). `pagehide` used as extra fallback for iOS Safari.
+
+**C. What is NOT saved mid-combat (deliberate):** enemy positions, active projectiles/particles,
+pickup field state, cooldown timers, camera. Combat is re-entered via the journal, not replayed.
+
+### 21.4 Implementation Plan (4 small, testable chunks)
+
+| # | Chunk | Files | Tests |
+|---|---|---|---|
+| 1 | **Wire the dead tick:** pass `gameManager` into `SpawnSystem` constructor AND relocate the dirty-flush tick into `Game.update()` (belt-and-suspenders: keep SpawnSystem line too). 30s combat / 15s town cadence via two accumulators | `engine/game.js`, `engine/entities.js` | Node: fake 31s of dt → save called once; 29s → not called |
+| 2 | **Event checkpoint listener:** central `_registerAutoSaveEvents()` in `Game._setupEvents()` (table in §21.3A); debounce 3s on `objective_progress`; all others immediate. Guard: skip entirely when `state === 'gameOver'` (end-of-run save path owns that moment) | `engine/game.js` | Node: emit each event → backend.save called; 5 rapid objective events → 1 save |
+| 3 | **Run journal:** `session.run_journal` written on milestones + flushed with the heartbeat; boot-time detection in `GameManager.init()` emitting `save:runInterrupted` (if journal present and `run_in_progress` false) → town banner with Resume/Discard; resume path reconstructs run from journal (weapon levels, kills, gold, time) | `engine/game.js`, `systems/progression.js`, `ui/townContent.js` | Node: journal round-trip; browser: kill mid-run, reload → banner appears → resume restores state |
+| 4 | **Lifecycle hooks:** `visibilitychange`/`pagehide`/`beforeunload` → `save()` (guard: only when store exists; never during `loading`) | `engine/game.js` | Browser: navigate away mid-run → reload → progress present |
+
+Estimated size: ~120 lines total, zero combat-loop allocation, no UI changes in combat.
+
+### 21.5 Intrusiveness Analysis (the design review that matters)
+
+- **Frame budget:** the heartbeat save is one `JSON.stringify` (~2KB store) + one `setItem` —
+  measured sub-millisecond on commodity hardware; scheduled at frame top, never mid-update-chain.
+- **Cadence:** town saves are event-driven (only on real milestones — typically <1/min); combat
+  flush is max once/30s; the journal update is an in-memory mutation that rides the same flush.
+- **No motion in combat:** zero canvas/UI work, zero DOM touches during combat saves.
+- **Crash window math:** worst-case loss today = entire run; after = ≤30s of run progress + all
+  completed-objective/quest/flag state (those save instantly on event).
+
+### 21.6 Open Questions (decide at build time)
+
+1. Resume banner copy + icon (needs to fit town header style).
+2. Should resuming a run re-grant the run's interim level-up choices, or hold them pending
+   (`levelingSystem.hasPendingLevelUp` on resume)? Recommendation: hold pending.
+3. Journal retention: keep last journal only (recommended) vs. per-run history (unnecessary).
 
 ---
 

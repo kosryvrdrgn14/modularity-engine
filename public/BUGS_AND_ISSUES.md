@@ -130,6 +130,14 @@
 
 ## Potential Issues (Watch List)
 
+### POT-008: Auto-Save Timer Has Never Fired (September 5, 2026)
+- **Severity:** High (silent — the only mid-run protection the game appears to have does not exist)
+- **Symptom:** None visible. Found by audit while drafting the auto-save design plan (MASTER_DESIGN §21).
+- **Root Cause:** `SpawnSystem.update()` calls `this.gameManager.update(dt)` (the 60s auto-save tick), but `SpawnSystem` is constructed as `new SpawnSystem(entityManager, dataManager, eventBus)` — `gameManager` is never assigned, so `this.gameManager` is always undefined and the timer never ticks. No `beforeunload`/`visibilitychange` handlers exist either.
+- **Impact:** A crash/502/accidental close mid-run loses the entire run. Only combat-end and some explicit town actions persist.
+- **Fix:** Planned as MASTER_DESIGN.md §21 (Auto-Save System) — chunks 1–4: wire the dead tick, event-driven checkpoints, run journal with crash recovery, page-lifecycle saves.
+- **Priority:** High — recommend implementing before story content grows further
+
 ### POT-001: NPC Portraits Still Base64 in svgPortraits.js
 - **Status:** NPC_DATA migrated to JSON with `portraitKey`, but SVG_PORTRAITS remains JS global
 - **Remaining:** Full migration needs asset path references or portrait loading system
