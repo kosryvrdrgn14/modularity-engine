@@ -48,6 +48,13 @@ class LocationManager {
       if (this.locationHistory.length > 10) this.locationHistory.shift();
     }
     this.currentLocationId = locationId;
+    // Report to quest system (reach_location objectives)
+    if (this.gameManager && this.gameManager.eventBus) {
+      this.gameManager.eventBus.emit('location:navigated', {
+        locationId,
+        regionId: this.getCurrentRegion()?.id,
+      });
+    }
     if (this.onNavigate) this.onNavigate(loc);
     return true;
   }

@@ -2,6 +2,24 @@
 
 ---
 
+## v1.4.0 — Quest Scaffold Update (Phase 0.5)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Scaffold audited against first real story JSON** — 6 skeleton defects found and fixed before Phase 1
+- **`kill_count` payload fix** — death events carry `entity.enemyData.id`; handler now matches real enemies
+- **`complete_stage` robustness** — accepts `target` or `stage_id` alias; lost runs no longer count (`stage_completed` check)
+- **Unlock handling** — `stages` → `unlock_stage()`, `regions` → `unlockRegion()` + flags, `locations` → `location_unlocked_<id>` (was wrongly calling `unlock_stage`); nested `time_events` accepted
+- **Objective emitters wired** — `npc:talked` from dialogue open, `location:navigated` from location navigation; unified `_onObjectiveEvent` dispatcher
+- **Save migration v3** — `quests.failed/objectives/timeEvents` added to default store + `_migrate()`
+- **`quest:available` spam guard** — only emits on state change
+- **Gates aligned to story flags** — `content_gates.json` now references story flags (`met_stranger`, `graveyard_cleared`, …); added `regions` category
+- **Stage id fix** — combat results now report `session.selected_stage_id` instead of hardcoded `stage_graveyard`
+- **Verified** — 38/38 Node unit tests + 14/14 headless browser assertions, zero console errors
+
+---
+
 ## v1.3.0 — Orphan Cleanup + Boss Fixes + Loadout System
 **Date:** September 2, 2026
 **Status:** ✅ Complete

@@ -43,7 +43,7 @@ class GameManager {
 
   _createDefault() {
     return {
-      save_version: 2,
+      save_version: 3,
       session: {
         current_stage_id: null,
         run_in_progress: false,
@@ -65,7 +65,7 @@ class GameManager {
         town: { level: 1, population: 0, popCap: 5, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 }, workers: { farmers: 0, miners: 0, builders: 0, idle: 0 } },
         npcs: { met: [], relationships: {}, companions: [], companionStatus: {} },
         factions: { wanderers_guild: { reputation: 0, rank: "unknown" }, shadow_covenant: { reputation: 0, rank: "unknown" }, forge_brotherhood: { reputation: 0, rank: "unknown" } },
-        quests: { active: [], completed: [] },
+        quests: { active: [], completed: [], failed: [], objectives: {}, timeEvents: [] },
         unlocks: { stages: ["stage_graveyard"], items: [], features: ["town_basic", "combat_basic"] },
         estates: [],
         family: { wives: [], children: [] },
@@ -138,6 +138,18 @@ class GameManager {
         data.persistent.factions.forge_brotherhood = data.persistent.factions.forge_brotherhood || { reputation: 0, rank: "unknown" };
       }
       data.save_version = 2;
+    }
+    if (v < 3) {
+      // Quest system state (v3) — active/completed quests, objective progress, pending time events
+      if (!data.persistent) data.persistent = {};
+      const q = data.persistent.quests || {};
+      q.active = q.active || [];
+      q.completed = q.completed || [];
+      q.failed = q.failed || [];
+      q.objectives = q.objectives || {};
+      q.timeEvents = q.timeEvents || [];
+      data.persistent.quests = q;
+      data.save_version = 3;
     }
     return data;
   }

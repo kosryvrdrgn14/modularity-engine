@@ -268,6 +268,9 @@ class TownContent {
     if (!npc || !npc.topics) return;
     this._lastDialogueNpcId = npc.id;
 
+    // Report to quest system (talk_to objectives)
+    if (this.eventBus) this.eventBus.emit('npc:talked', { npcId: npc.id });
+
     // Use inline SVG for reliable rendering
     const svgHtml = SVG_PORTRAITS[npc.portraitKey || npc.id] || '';
     if (svgHtml && this.dom.dialoguePortrait) {

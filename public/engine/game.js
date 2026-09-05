@@ -788,7 +788,7 @@ class Game {
     const result = this.gameState.endResult || 'defeat';
     if (this.gameManager) {
       const combatResult = this.gameManager._buildResult({
-        stageId: 'stage_graveyard',
+        stageId: this.gameManager.get('session.selected_stage_id') || 'stage_graveyard',
         stage_completed: result === 'victory',
         time_survived: this.gameTime,
         player_level: this.levelingSystem.level,

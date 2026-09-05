@@ -21,6 +21,9 @@ class QuestSystem {
     // Handler refs for cleanup
     this._handlers = {};
 
+    // Tracking for quest:available event spam guard
+    this._lastAvailableIds = new Set();
+
     // Objective handlers registry
     this._objectiveHandlers = {
       kill_count: this._handleKillCount.bind(this),
@@ -74,24 +77,38 @@ class QuestSystem {
   // ── Event Listeners ────────────────────────────────────
 
   _registerListeners() {
-    // Listen for combat deaths to update kill_count objectives
+    // Combat deaths → kill_count objectives
     this._handlers.death = (data) => {
       if (data.type === 'player') return;
-      this._onEnemyKilled(data);
+      this._onObjectiveEvent('kill_count', data);
     };
     this.eventBus.on('death', this._handlers.death);
 
-    // Listen for combat session end to check stage completion objectives
+    // Combat session end → complete_stage objectives
     this._handlers.combatEnd = (data) => {
-      this._onCombatEnd(data);
+      this._onObjectiveEvent('complete_stage', data);
     };
     this.eventBus.on('combat:sessionEnd', this._handlers.combatEnd);
+
+    // NPC dialogue opened → talk_to objectives (emitted by TownContent.openDialogue)
+    this._handlers.npcTalked = (data) => {
+      this._onObjectiveEvent('talk_to', data);
+    };
+    this.eventBus.on('npc:talked', this._handlers.npcTalked);
+
+    // Location entered → reach_location objectives (emitted by LocationManager.navigateTo)
+    this._handlers.locationNavigated = (data) => {
+      this._onObjectiveEvent('reach_location', data);
+    };
+    this.eventBus.on('location:navigated', this._handlers.locationNavigated);
   }
 
   destroy() {
     if (this.eventBus) {
       if (this._handlers.death) this.eventBus.off('death', this._handlers.death);
       if (this._handlers.combatEnd) this.eventBus.off('combat:sessionEnd', this._handlers.combatEnd);
+      if (this._handlers.npcTalked) this.eventBus.off('npc:talked', this._handlers.npcTalked);
+      if (this._handlers.locationNavigated) this.eventBus.off('location:navigated', this._handlers.locationNavigated);
     }
     this._handlers = {};
     this._initialized = false;
@@ -268,12 +285,21 @@ class QuestSystem {
       (u.weapons || []).forEach(w => {
         if (this.gameManager) this.gameManager.unlock_weapon(w);
       });
+      (u.stages || []).forEach(s => {
+        if (this.gameManager) this.gameManager.unlock_stage(s);
+      });
+      (u.regions || []).forEach(r => {
+        const regionId = this._normalizeId(r);
+        if (this.gameManager?.unlockRegion) this.gameManager.unlockRegion(regionId);
+        this.setFlag(`region_${regionId}_unlocked`, true, questId);
+      });
       (u.companions || []).forEach(c => {
         // Companion unlock handled by progression system
         this.setFlag(`companion_unlocked_${c}`, true, questId);
       });
       (u.locations || []).forEach(l => {
-        if (this.gameManager) this.gameManager.unlock_stage(l);
+        // Locations gate via unlockCondition flags — this flag is for future content_gates use
+        this.setFlag(`location_unlocked_${this._normalizeId(l)}`, true, questId);
       });
       (u.npcs || []).forEach(n => {
         this.setFlag(`npc_unlocked_${n}`, true, questId);
@@ -293,12 +319,11 @@ class QuestSystem {
       }
     }
 
-    // Schedule time events
-    if (quest.time_events) {
-      for (const te of quest.time_events) {
-        if (te.trigger === 'on_complete') {
-          this._scheduleTimeEvent(questId, te);
-        }
+    // Schedule time events (top-level; nested unlocks_on_complete.time_events also accepted)
+    const timeEvents = quest.time_events || (quest.unlocks_on_complete && quest.unlocks_on_complete.time_events) || [];
+    for (const te of timeEvents) {
+      if (te.trigger === 'on_complete') {
+        this._scheduleTimeEvent(questId, te);
       }
     }
 
@@ -314,47 +339,27 @@ class QuestSystem {
 
   // ── Objective Tracking ─────────────────────────────────
 
-  _onEnemyKilled(data) {
+  // Generic dispatcher: routes any objective event to the matching handler
+  // for every active quest. Handlers return true when progress changed.
+  _onObjectiveEvent(type, data) {
     const store = this._getQuestStore();
+    const handler = this._objectiveHandlers[type];
+    if (!handler) return;
+
     for (const questId of store.active) {
       const quest = this.allQuests.find(q => q.id === questId);
       if (!quest) continue;
 
       quest.objectives.forEach((obj, i) => {
-        if (obj.type === 'kill_count') {
-          const handler = this._objectiveHandlers.kill_count;
-          if (handler && handler(questId, i, obj, data)) {
-            this._markDirty();
-            this.eventBus.emit('quest:objective_progress', {
-              questId,
-              objectiveIndex: i,
-              current: store.objectives[questId][i].current,
-              required: store.objectives[questId][i].required,
-            });
-          }
-        }
-      });
-    }
-  }
-
-  _onCombatEnd(data) {
-    const store = this._getQuestStore();
-    for (const questId of store.active) {
-      const quest = this.allQuests.find(q => q.id === questId);
-      if (!quest) continue;
-
-      quest.objectives.forEach((obj, i) => {
-        if (obj.type === 'complete_stage') {
-          const handler = this._objectiveHandlers.complete_stage;
-          if (handler && handler(questId, i, obj, data)) {
-            this._markDirty();
-            this.eventBus.emit('quest:objective_progress', {
-              questId,
-              objectiveIndex: i,
-              current: store.objectives[questId][i].current,
-              required: store.objectives[questId][i].required,
-            });
-          }
+        if (obj.type !== type) return;
+        if (handler(questId, i, obj, data)) {
+          this._markDirty();
+          this.eventBus.emit('quest:objective_progress', {
+            questId,
+            objectiveIndex: i,
+            current: store.objectives[questId][i].current,
+            required: store.objectives[questId][i].required,
+          });
         }
       });
     }
@@ -363,8 +368,12 @@ class QuestSystem {
   // ── Objective Handlers ─────────────────────────────────
 
   _handleKillCount(questId, index, obj, data) {
-    if (!data.enemyId && !data.type) return false;
-    if (obj.target && data.enemyId !== obj.target && data.type !== obj.target) return false;
+    // death events carry { entity, killer, position } — entity.enemyData.id is the content id
+    const enemyId = (data && data.enemyId)
+      || (data && data.entity && (data.entity.enemyData && data.entity.enemyData.id) || (data && data.entity && data.entity.enemyId))
+      || (data && data.entity && data.entity.type !== 'player' ? data.entity.type : null);
+    if (!enemyId) return false;
+    if (obj.target && enemyId !== obj.target) return false;
 
     const store = this._getQuestStore();
     const progress = store.objectives[questId][index];
@@ -388,7 +397,11 @@ class QuestSystem {
 
   _handleCompleteStage(questId, index, obj, data) {
     if (!data || !data.stageId) return false;
-    if (obj.target && data.stageId !== obj.target) return false;
+    // A lost run must not count — sessionEnd passes stage_completed only on victory
+    if (data.stage_completed === false) return false;
+    // Accept both `target` (canonical) and `stage_id` (alias used in early drafts)
+    const targetId = obj.target || obj.stage_id;
+    if (targetId && data.stageId !== targetId) return false;
 
     const store = this._getQuestStore();
     const progress = store.objectives[questId][index];
@@ -481,9 +494,19 @@ class QuestSystem {
 
   _reevaluateAvailability() {
     const available = this.getAvailableQuests();
+    const currentIds = new Set(available.map(q => q.id));
+
+    // Only emit for quests that just became available (spam guard)
     for (const quest of available) {
+      if (this._lastAvailableIds.has(quest.id)) continue;
       this.eventBus.emit('quest:available', { questId: quest.id });
     }
+
+    // Track state — drop ids no longer available (started/completed)
+    for (const id of this._lastAvailableIds) {
+      if (!currentIds.has(id)) this._lastAvailableIds.delete(id);
+    }
+    for (const id of currentIds) this._lastAvailableIds.add(id);
   }
 
   // ── Helpers ────────────────────────────────────────────
@@ -502,6 +525,11 @@ class QuestSystem {
   _getRequired(obj) {
     if (obj.count) return obj.count;
     return 1;
+  }
+
+  // Normalize display names to stable content ids: "Deep Woods" → "deep_woods"
+  _normalizeId(value) {
+    return String(value).toLowerCase().replace(/\s+/g, '_');
   }
 
   _markDirty() {

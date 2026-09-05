@@ -11,17 +11,19 @@
       "description": "string — quest description for UI",
       "objectives[]": {
         "type": "kill_count | talk_to | complete_stage | collect_item | reach_location",
-        "target": "string — content ID to target",
+        "target": "string — content ID to target (canonical; complete_stage also accepts stage_id as an alias)",
         "count": "number — required count (kill_count, collect_item only)",
-        "tier": "string — stage tier (complete_stage only)",
+        "tier": "string — stage tier (optional, not enforced yet)",
         "description": "string — objective text for UI"
       },
       "prerequisites[]": "string — flag names required to see this quest",
       "unlocks_on_complete": {
         "flags[]": "string — flags set on completion",
         "weapons[]": "string — weapon IDs unlocked",
+        "stages[]": "string — stage IDs unlocked",
+        "regions[]": "string — region names/ids unlocked (normalized to lowercase ids)",
         "companions[]": "string — companion IDs unlocked",
-        "locations[]": "string — location IDs unlocked",
+        "locations[]": "string — location names/ids (normalized; real gate is via unlockCondition flags)",
         "npcs[]": "string — NPC IDs unlocked",
         "dialogue[]": "string — dialogue branch IDs unlocked"
       },

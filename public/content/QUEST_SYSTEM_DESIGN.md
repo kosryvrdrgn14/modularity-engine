@@ -1,8 +1,8 @@
 # Quest, Flag & Lock/Unlock System — Design Document
 
-**Version:** 1.1  
-**Date:** September 2, 2026  
-**Status:** Resolved — pending final review  
+**Version:** 1.2  
+**Date:** September 5, 2026  
+**Status:** Phase 0.5 (scaffold update) complete — ready for Phase 1  
 
 ---
 
@@ -456,6 +456,33 @@ window.QUEST_DEBUG = {
 | 10 | Debug log leaks | `selectUpgrade` debug logs at game.js:234,245,256 flagged for removal. New quest debug logs gated behind `if (window.__QUEST_DEBUG__)`. |
 | 11 | COMPANION_DATA global | Gate filtering only happens in `getAvailableCompanions()` at UI level. `COMPANION_DATA` global remains unmodified — companion system continues to read full data. |
 | 12 | Save version bump | Added `_migrate()` case for v < 3 that initializes new quest fields with safe defaults. |
+
+---
+
+## 12.5 Phase 0.5 — Scaffold Update (2026-09-05)
+
+Applied after reviewing the first real story JSON against the Phase 0 skeleton:
+
+| # | Fix | Detail |
+|---|---|---|
+| S1 | `kill_count` payload mismatch | Death events emit `{entity, killer, position}`. Handler now reads `entity.enemyData.id` (falls back to `enemyId`/`enemyId` prop/entity type) |
+| S2 | `complete_stage` robustness | Accepts `target` (canonical) or `stage_id` alias; requires `stage_completed !== false` so lost runs don't count |
+| S3 | Unlock handling in `completeQuest` | `stages` → `unlock_stage()`; `regions` → `unlockRegion()` + `region_<id>_unlocked` flag; `locations` → `location_unlocked_<id>` flag (was wrongly calling `unlock_stage`); `time_events` accepted at quest top level OR nested in `unlocks_on_complete` |
+| S4 | Objective emitters wired | `npc:talked` (from `TownContent.openDialogue`) → `talk_to`; `location:navigated` (from `LocationManager.navigateTo`) → `reach_location`. Objective dispatch refactored to one generic `_onObjectiveEvent(type, data)` |
+| S5 | Save migration v3 | `_createDefault` → `save_version: 3` with `quests.failed/objectives/timeEvents`; `_migrate()` v3 case initializes the new quest fields on existing saves |
+| S6 | `quest:available` spam guard | `_reevaluateAvailability` tracks last-emitted ids and only emits on state change |
+| S7 | Gates aligned to story flags | `content_gates.json` now references the story flags (`met_stranger`, `graveyard_cleared`, `met_mage`, `shadow_fallen`, …). Added `regions` category. No code reads gates yet (Phase 2) |
+| S8 | Schema doc updated | `quests.json` `_schema` documents `stage_id` alias, nested time_events, `stages[]`/`regions[]` unlock keys |
+| S9 | Hardcoded stage id in results | `_buildResult` call now reads `session.selected_stage_id` instead of always `'stage_graveyard'` — required for `complete_stage` objectives on other stages |
+
+**Objective event map (final):**
+
+| Objective type | Event | Payload |
+|---|---|---|
+| `kill_count` | `death` | `{ entity, killer, position }` (match `entity.enemyData.id`) |
+| `complete_stage` | `combat:sessionEnd` | `{ stageId, stage_completed, … }` |
+| `talk_to` | `npc:talked` | `{ npcId }` |
+| `reach_location` | `location:navigated` | `{ locationId, regionId }` |
 
 ---
 
