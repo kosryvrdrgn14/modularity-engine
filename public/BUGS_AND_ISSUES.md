@@ -2,7 +2,7 @@
 
 > **Purpose:** Track known bugs, fixed bugs, and potential issues across all sessions
 > **Created:** September 2, 2026
-> **Last Updated:** September 2, 2026
+> **Last Updated:** September 5, 2026
 
 ---
 
@@ -125,6 +125,40 @@
 - **Status:** `COMPANION_DATA` populated from JSON but accessed as global by companion.js and progression.js
 - **Remaining:** Should pass DataManager reference instead of relying on window global
 - **Priority:** Low — works, just not clean
+
+### POT-004: Extended Stage Boss Timing Mismatch (verified in data, September 5, 2026)
+- **Status:** `stage_graveyard_extended` has `bossConfig.spawnTime: "4:00"` but its announcement timeline fires "Dark energy..." at 510s and "Lilith the Necromancer appears!" at 515s (~8:35)
+- **Behavior:** Spawn is driven by `spawnTime` (SpawnSystem line ~151: `_bossSpawnTime || 240`) — Lilith appears at 4:00 **unannounced**, then the announcement sequence plays at ~8:30 for a boss that's already been fighting the player
+- **Impact:** mq_07 (kill Lilith) depends on this stage; confusing presentation but not blocking
+- **Fix options:** align `spawnTime` to ~8:30, or retime the announcement block to lead the 4:00 spawn (e.g. text at 210s, shake at 235s, boss_spawn at 240s)
+- **Priority:** Medium — must resolve before sq_02/mq_07 testing on the extended stage
+
+### POT-005: Weapon Unlock Domain Has Code/Metadata Duplication (September 5, 2026)
+- **Status:** Three disconnected sources describe weapon availability: (1) quest gates (authoritative, works), (2) `unlockSchedule = [1, 3, 6]` hardcoded in `game.js _checkWeaponUnlocks()` — the in-combat slot pacing, (3) `unlockLevel` field in weapons.json — display-only, nothing reads it functionally
+- **Risk:** Numbers can drift between data and code (KNOWLEDGE.md §7 violation); `unlockLevel: 6` on Area *coincidentally* matches the hardcoded slot-2 unlock at Lv6
+- **Recommended:** Move slot schedule to stage `tierConfig.slotUnlockLevels: [1, 3, 6]` (per-stage pacing becomes a JSON edit); either wire `unlockLevel` into display or drop it
+- **Priority:** Medium — do during the config-extraction pass; no gameplay change if numbers copied as-is
+
+### POT-006: embeddedData.js Mirrors All Content Files (September 5, 2026)
+- **Status:** `data/embeddedData.js` (~2,000+ lines) hand-maintains fallback copies of every content JSON for offline/failure resilience
+- **Risk:** Every content edit must be mirrored or the fallback diverges from the real files (has already needed 3 sync edits: locations/npcs, companions, gates)
+- **Recommended:** Auto-generate the fallback from content files at build time, or accept as documented safety net with a sync-check in the web tools
+- **Priority:** Medium — grows with every content addition; blocks clean modding workflow
+
+### POT-007: Quest Objective Progress Keyed by Array Index (September 5, 2026)
+- **Status:** `quest.js _getQuestStore` keys objective progress as `objectives[questId][0]`, `[1]`, …
+- **Risk:** Editing/reordering objectives of a quest that any save has *in progress* silently corrupts that save's progress (e.g. old objective 1's count applies to new objective 1)
+- **Recommended:** Give objectives stable ids (`obj_id` per objective) and key progress by those; migration v4 when done. Interim rule: **never reorder objectives of a shipped quest** — add a new objective at the end instead
+- **Priority:** Medium — matters the moment quest content is edited post-launch (web tools make this likely)
+
+---
+
+## Environment Notes (Not Game Bugs)
+
+### INFRA-001: Preview 502 Errors During Combat (September 5, 2026)
+- **Symptom:** `statusCode: 502` while testing combat in the preview
+- **Diagnosis:** Game is fully client-side static files — nothing in the game code can produce a 502. Source is the Freebuff preview proxy/dev server (transient infra restart)
+- **Impact:** A 502 mid-combat loses that run's progress (saves commit at combat end). No action possible in game code; retry after the preview recovers
 
 ---
 
