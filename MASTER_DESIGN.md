@@ -936,10 +936,10 @@ Web version uses inline SVG for backgrounds (procedural, lightweight). Godot sho
 
 ---
 
-## 21. Auto-Save System (Planned)
+## 21. Auto-Save System
 
-> Status: PLANNED — not yet implemented. This section is the implementation contract.
-> Add to CHANGELOG + flip status when built.
+> Status: PARTIALLY IMPLEMENTED (v1.9.0) — chunks 1, 2 and 4 are live and verified.
+> Chunk 3 (run journal + resume banner) remains planned — it is the only piece still missing.
 
 ### 21.1 Current State & The Gap
 

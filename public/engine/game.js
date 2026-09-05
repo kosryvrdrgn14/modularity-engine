@@ -191,6 +191,12 @@ class Game {
       clearPendingDisaster: () => { this._pendingDisaster = null; },
       onExitToTitle: () => this._exitTownToTitle(),
     });
+
+    // AUTOSAVE §21 (chunks 1+2+4): event checkpoints, town heartbeat timer,
+    // and page-lifecycle saves. The combat heartbeat lives in update().
+    this._setupAutoSave();
+    this._setupLifecycleSaves();
+
     this.gameState.setState('title');
     this.titleMenu.show();
     this.titleBGM.fadeIn(1.5);
@@ -431,6 +437,14 @@ class Game {
     if (!this.gameState.isPlaying()) return;
     // Guard: prevent updates after game over
     if (this.gameState.isGameOver()) return;
+
+    // AUTOSAVE §21 chunk 1: combat heartbeat — flush the dirty store at most
+    // every 30s, at frame top (before system updates), sub-ms for a ~2KB store.
+    this._combatSaveAccum = (this._combatSaveAccum || 0) + dt;
+    if (this._combatSaveAccum >= 30) {
+      this._combatSaveAccum = 0;
+      if (this.gameManager?._dirty) this.gameManager.save();
+    }
 
     this.gameTime += dt;
 
@@ -1002,6 +1016,65 @@ class Game {
     // Always render UI (includes end screen overlay when game over)
     this.uiManager.render();
     } catch (e) { console.error('[RENDER ERROR]', e); }
+  }
+
+  // ── AUTOSAVE (MASTER_DESIGN §21) ────────────────
+  // Chunks 1+2+4 of the §21 plan. See design doc for the intrusiveness
+  // analysis; combat impact is one sub-ms ~2KB localStorage write per 30s.
+  _setupAutoSave() {
+    const gm = this.gameManager;
+    if (!gm) return;
+
+    // Town heartbeat (chunk 1): the game loop early-returns outside 'playing',
+    // and isn't even started on the title screen — a timer is the only tick
+    // town can rely on. Boolean check 4x/min is free.
+    this._townSaveTimer = setInterval(() => {
+      if (this.gameState.state === 'town' && gm._dirty) gm.save();
+    }, 15000);
+
+    // Event checkpoints (chunk 2): one central registration (KNOWLEDGE.md
+    // double-listener rule). Milestone events save instantly — quest rewards,
+    // flags, unlocks and level-ups can never be lost to a crash/refresh.
+    const checkpoint = () => {
+      if (this.gameState.state === 'loading' || this.gameState.isGameOver()) return;
+      gm.save();
+    };
+    this._autosaveHandlers = [
+      ['quest:started', checkpoint],
+      ['quest:completed', checkpoint],
+      ['quest:flag_set', checkpoint],
+      ['quest:time_event', checkpoint],
+      ['unlock:weapon', checkpoint],
+      ['unlock:stage', checkpoint],
+      ['unlock:feature', checkpoint],
+      ['player:levelUp', checkpoint],
+    ];
+    for (const [evt, fn] of this._autosaveHandlers) this.eventBus.on(evt, fn);
+
+    // Objective progress can fire dozens of times per minute during combat —
+    // debounce to one save per 3s window.
+    this._objectiveSaveTimer = null;
+    this.eventBus.on('quest:objective_progress', () => {
+      if (this.gameState.state === 'loading' || this.gameState.isGameOver()) return;
+      if (this._objectiveSaveTimer) return;
+      this._objectiveSaveTimer = setTimeout(() => {
+        this._objectiveSaveTimer = null;
+        if (gm._dirty) gm.save();
+      }, 3000);
+    });
+  }
+
+  /** Chunk 4: page lifecycle saves. Refreshing/closing/hiding the preview
+   *  must never lose persisted progress. These handlers run OUTSIDE the
+   *  frame loop, so a synchronous save is safe here. */
+  _setupLifecycleSaves() {
+    const saveNow = () => {
+      const gm = this.gameManager;
+      if (gm && gm.store && this.gameState.state !== 'loading') gm.save();
+    };
+    document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+    window.addEventListener('pagehide', saveNow);
+    window.addEventListener('beforeunload', saveNow);
   }
 
   _checkWeaponUnlocks() {

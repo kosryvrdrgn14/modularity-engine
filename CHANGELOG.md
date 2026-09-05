@@ -2,6 +2,21 @@
 
 ---
 
+## v1.9.0 — Auto-Save: Event Checkpoints + Heartbeats + Lifecycle Saves (§21 chunks 1, 2, 4)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Event checkpoints** — quest started/completed/flag set/time events, all unlocks and level-ups save instantly (quest rewards can no longer be lost to a refresh/crash)
+- **Objective debounce** — `quest:objective_progress` saves at most once per 3s during combat
+- **Combat heartbeat** — dirty store flushed at most every 30s at frame top (sub-ms, ~2KB); idle combat writes nothing (ceiling, not metronome)
+- **Town heartbeat** — 15s interval (game loop early-returns in town, so a timer is the only tick available)
+- **Lifecycle saves** — visibilitychange/pagehide/beforeunload persist synchronously (the preview-refresh defense)
+- **Verified** — 17/17 Node + 10/10 browser checks, including the exact reported loss scenario: quest completed in town → RAW refresh → progress intact, quest panel continues from the saved state
+- **Chunk 3 (run journal + resume banner)** remains planned — see MASTER_DESIGN §21.4
+
+---
+
 ## v1.8.2 — Slot Trace Investigation + Exit-Save Hardening
 **Date:** September 5, 2026
 **Status:** ✅ Complete

@@ -137,7 +137,7 @@
 - **Impact:** A crash/502/accidental close mid-run loses the entire run. Only combat-end and some explicit town actions persist.
 - **Fix:** Planned as MASTER_DESIGN.md §21 (Auto-Save System) — chunks 1–4: wire the dead tick, event-driven checkpoints, run journal with crash recovery, page-lifecycle saves.
 - **CONFIRMED LIVE (Sep 5 slot trace):** headless reproduction shows quest completion in town + page refresh (no exit-card save) = quest progress lost — "back to the starting quest" symptom. This is the unsaved-progress window, not a slot-isolation bug; slot machinery verified correct across plain and reload-variant traces. Exit-to-title now saves (v1.8.2); full fix = §21 event checkpoints.
-- **Priority:** High — recommend implementing before story content grows further
+- **RESOLVED for town/quest progress (v1.9.0):** §21 chunks 1, 2, 4 implemented — quest/unlock/level events save instantly, 30s combat heartbeat, 15s town heartbeat, lifecycle saves on refresh/hide/close. Browser-verified: quest completed in town survives a RAW refresh. Remaining gap: mid-run combat-only progress (chunk 3 run journal, planned).
 
 ### POT-001: NPC Portraits Still Base64 in svgPortraits.js
 - **Status:** NPC_DATA migrated to JSON with `portraitKey`, but SVG_PORTRAITS remains JS global

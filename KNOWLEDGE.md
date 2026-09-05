@@ -151,3 +151,24 @@ If a constructor needs two or more same-shaped dependencies (multiple
 "manager" objects), prefer a destructured options object over positional
 arguments — swapping positional argument order is an easy, silent mistake
 with no type system to catch it.
+
+---
+
+## 12. The preview window refreshes constantly — treat memory as disposable
+
+The Freebuff preview window reloads **almost continuously** while the agent
+works (and 502 incidents can rotate the origin, which also wipes
+localStorage, since it is scoped per-origin).
+
+Consequences for how we build and verify:
+
+- **Never rely on the user's preview holding state** across a turn — not
+  screen state, not in-memory progress, not even localStorage guarantees.
+- In-memory-only progress is lost on every refresh. Anything the player (or
+  the user testing) would mourn losing must be **persisted at the moment it
+  is earned**, not at the next natural save point (see MASTER_DESIGN §21).
+- When the user reports "lost progress / reset state", first ask: refresh
+  wipe? origin rotation? unsaved-progress window? — before suspecting slot
+  or save-format logic (the Sep 5 slot trace showed slot machinery was fine).
+- Automated browser tests must boot their own in-process server + fresh
+  context and never assume anything about the live preview's storage.
