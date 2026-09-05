@@ -813,9 +813,11 @@ class Game {
     document.addEventListener('keydown', escHandler);
   }
 
-  /** Town Systems-tab exit: stop town BGM, reset state, show title menu.
-   *  (Save is handled by the caller in townContent before this runs.) */
+  /** Town Systems-tab exit: SAVE, stop town BGM, reset state, show title menu.
+   *  Save lives here (not in the card's click handler) so every current and
+   *  future exit path through this method persists the active slot. */
   _exitTownToTitle() {
+    if (this.gameManager) this.gameManager.save();
     this.titleBGM.fadeIn(1.5);
     this.gameState.setState('title');
     this.townScreen.hide();

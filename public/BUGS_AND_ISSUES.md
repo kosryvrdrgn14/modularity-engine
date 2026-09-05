@@ -136,6 +136,7 @@
 - **Root Cause:** `SpawnSystem.update()` calls `this.gameManager.update(dt)` (the 60s auto-save tick), but `SpawnSystem` is constructed as `new SpawnSystem(entityManager, dataManager, eventBus)` — `gameManager` is never assigned, so `this.gameManager` is always undefined and the timer never ticks. No `beforeunload`/`visibilitychange` handlers exist either.
 - **Impact:** A crash/502/accidental close mid-run loses the entire run. Only combat-end and some explicit town actions persist.
 - **Fix:** Planned as MASTER_DESIGN.md §21 (Auto-Save System) — chunks 1–4: wire the dead tick, event-driven checkpoints, run journal with crash recovery, page-lifecycle saves.
+- **CONFIRMED LIVE (Sep 5 slot trace):** headless reproduction shows quest completion in town + page refresh (no exit-card save) = quest progress lost — "back to the starting quest" symptom. This is the unsaved-progress window, not a slot-isolation bug; slot machinery verified correct across plain and reload-variant traces. Exit-to-title now saves (v1.8.2); full fix = §21 event checkpoints.
 - **Priority:** High — recommend implementing before story content grows further
 
 ### POT-001: NPC Portraits Still Base64 in svgPortraits.js

@@ -2,6 +2,17 @@
 
 ---
 
+## v1.8.2 — Slot Trace Investigation + Exit-Save Hardening
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Slot-save trace** (headless, snapshot-per-step): user-reported loss sequence reproduced 5 ways — plain, and with full page reloads between steps. Slot isolation, pointer persistence, and quest-state loading verified correct in all passes
+- **Real hole found + fixed**: save lived in the Systems-card click handler; `_exitTownToTitle()` itself did not save. Any exit path bypassing the card lost unsaved progress. Save moved into the method (all current/future exit paths persist)
+- **Assessment of reported loss**: machinery is sound; loss pattern matches the unsaved-progress window (town progress persists only at exit/auto-save — refreshing directly after playing loses it) and/or preview-origin localStorage wipe from the 502 incidents (INFRA-001). Both addressed by MASTER_DESIGN §21 auto-save (planned)
+
+---
+
 ## v1.8.1 — Exit to Title (completes slot-swap loop)
 **Date:** September 5, 2026
 **Status:** ✅ Complete
