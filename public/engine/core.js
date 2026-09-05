@@ -175,7 +175,8 @@ class GameState {
     this.transitions = {
       loading: ['menu', 'playing', 'title'],
       menu: ['playing', 'title'],
-      title: ['playing'],
+      // 'town' allowed: Story Mode / Test Town enter the town hub from title
+      title: ['playing', 'town'],
       playing: ['paused', 'levelUp', 'gameOver', 'bossIntro'],
       paused: ['playing'],
       levelUp: ['playing'],

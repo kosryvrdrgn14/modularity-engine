@@ -8,7 +8,7 @@
 
 ## Active Issues
 
-*None — all known issues have been resolved as of September 2, 2026.*
+*None — all known issues have been resolved as of September 5, 2026.*
 
 ---
 
@@ -106,6 +106,25 @@
 - **Fix (3 layers):** (1) `_prefillFromStage()` now filters recommendations through `getAvailableWeapons()` (same gate filter as the card list); (2) confirm sanitizes the shipped loadout against the gates (belt-and-suspenders); (3) slot requirement relaxed from "exactly 3" to "at least 1" — a fresh story player has 1 weapon, and 3 was only reachable via the leak itself.
 - **Note:** Dev/Test-Town mode (no quest system) is unaffected — prefill still fills all 3 recommended weapons there.
 - **Verified:** 7/7 Node unit checks + 9/9 headless browser checks (fresh story → prefill = w1 only; Next enabled with 1 weapon; hostile injection stripped at confirm; zero JS errors).
+
+### BUG-016: Story Mode Re-Entry Double-Registered Quest Listeners (September 5, 2026)
+- **Severity:** Medium (latent — never triggered in normal play before slot system)
+- **Symptom:** None observed yet; found by trace during slot-system design. Title → Story Mode → title → Story Mode left the first QuestSystem's listeners attached while a second QuestSystem also registered — kill-count objectives would progress 2× per kill.
+- **Root Cause:** `_startStoryMode()` called `questSystem.init()` on a surviving instance; `init()` registers event listeners unconditionally.
+- **Fix:** `_startStoryMode()` now destroys the old QuestSystem and creates a fresh one per entry (`destroy()` cleanup verified in Phase 0.5 tests).
+- **Discovered by:** slot-system scaffold review (this flow becomes routine once slots exist)
+
+### BUG-017: title → town Transition Missing (September 5, 2026)
+- **Severity:** Low (worked by accident via DOM; console warned every time)
+- **Symptom:** `Invalid transition: title → town` on every Story Mode / Test Town entry.
+- **Root Cause:** State machine's `title` row only allowed `['playing']`. Same class as BUG-009/BUG-012.
+- **Fix:** Added `'town'` to title's allowed transitions.
+
+### BUG-018: Settings "Reset Progress" Did Not Clear Slot Saves (September 5, 2026)
+- **Severity:** Medium (data integrity after slot migration)
+- **Symptom:** Reset button removed the retired legacy key `modularity_engine_save`; the active slot's real save stayed on disk until an auto-save cycle re-wrote it.
+- **Root Cause:** Hardcoded legacy key outlived its storage format (found during slot-system damage sweep).
+- **Fix:** Reset now calls `wipeSlot(activeSlot)` — slot-aware, resets live store, persists immediately.
 
 ---
 

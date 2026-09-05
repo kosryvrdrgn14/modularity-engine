@@ -1552,3 +1552,115 @@
       background: rgba(76, 175, 80, 0.25);
     }
 
+/* ============================================================
+   SLOT PICKER — story save slots (title screen overlay)
+   ============================================================ */
+#slot-picker-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.85);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+#slot-picker-overlay.active {
+  display: flex;
+}
+.slot-picker-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #FFD700;
+  letter-spacing: 0.5px;
+}
+.slot-picker-grid {
+  display: flex;
+  gap: 16px;
+}
+.slot-card {
+  width: 190px;
+  padding: 14px;
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 12px;
+  background: rgba(20, 20, 35, 0.95);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.slot-card.active {
+  border-color: rgba(76, 175, 80, 0.6);
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.15);
+}
+.slot-card.empty {
+  border-style: dashed;
+  opacity: 0.85;
+}
+.slot-head {
+  font-weight: 700;
+  color: #eee;
+  font-size: 0.95rem;
+}
+.slot-badge {
+  font-size: 0.6rem;
+  color: #4CAF50;
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.slot-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: #bbb;
+}
+.slot-loc {
+  font-size: 0.78rem;
+  color: #888;
+}
+.slot-actions {
+  display: flex;
+  gap: 8px;
+}
+.slot-btn {
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.slot-btn.play {
+  background: rgba(76, 175, 80, 0.2);
+  color: #7Ce87c;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+.slot-btn.play:hover {
+  background: rgba(76, 175, 80, 0.35);
+}
+.slot-btn.wipe {
+  flex: 0 0 34px;
+  background: rgba(255, 82, 82, 0.12);
+  color: #ff8a80;
+  border: 1px solid rgba(255, 82, 82, 0.35);
+}
+.slot-btn.wipe:hover {
+  background: rgba(255, 82, 82, 0.3);
+}
+.slot-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ccc;
+  border-radius: 6px;
+  padding: 8px 22px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.slot-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+

@@ -169,6 +169,9 @@ class Game {
       onSettings: () => this._showSettings(),
       onTestTown: () => this._testTown(),
       onStoryMode: () => this._startStoryMode(),
+      onSlotPlay: (n) => this._onStorySlotSelected(n),
+      onSlotWipe: (n) => this.gameManager.wipeSlot(n),
+      getSlotSummaries: () => this.gameManager.getSlotSummaries(),
     });
 
     // Show title screen (audio unlocks on first user gesture)
@@ -647,6 +650,52 @@ class Game {
     this.townScreen.show({ time: '4:32', level: 8, kills: 20, gold: 100 });
   }
 
+  // ── Save-slot orchestration (title-screen only) ──
+  _onStorySlotSelected(n) {
+    if (n !== this.gameManager.getActiveSlot()) {
+      if (!this.switchToSlot(n)) return;
+    }
+    this._startStoryMode();
+  }
+
+  switchToSlot(n) {
+    // Guard: swapping the live store mid-run recreates BUG-003's class of
+    // reference bugs. Only title screen is safe.
+    if (this.gameState.state !== 'title') {
+      console.warn('[SLOT] Switch blocked — title screen only (state: ' + this.gameState.state + ')');
+      return false;
+    }
+    this.gameManager.switchToSlot(n);
+    this._resyncWorldFromStore();
+    console.log('[SLOT] Switched to slot', n);
+    return true;
+  }
+
+  /** locationManager holds runtime mirrors (currentRegionIndex/currentLocationId)
+   *  that are NOT persisted. After a store swap they must be reset so the
+   *  incoming slot starts at its own saved position (v1: town root). */
+  _resyncWorldFromStore() {
+    const lm = this.locationManager;
+    if (!lm) return;
+    const world = this.gameManager.store.world || {};
+    const data = lm._getLocationsData();
+    const regions = data.regions || [];
+    let idx = typeof world.regionIndex === 'number' ? world.regionIndex : 0;
+    if (world.currentRegion) {
+      const byId = regions.findIndex(r => r.id === world.currentRegion);
+      if (byId >= 0) idx = byId;
+    }
+    idx = Math.min(Math.max(idx, 0), Math.max(regions.length - 1, 0));
+    lm.currentRegionIndex = idx;
+    const region = regions[idx];
+    let locId = world.currentLocation;
+    if (!region || !region.locations || !region.locations[locId]) {
+      locId = region ? Object.keys(region.locations)[0] : 'city_root';
+    }
+    lm.currentLocationId = locId;
+    lm.locationHistory = [locId];
+  }
+
   _startStoryMode() {
     // Story Mode: Initialize quest system and go to town
     this.titleMenu.hide();
@@ -654,9 +703,13 @@ class Game {
     this.audioManager.resume();
 
     // Initialize quest system if not already done
-    if (!this.questSystem) {
-      this.questSystem = new QuestSystem();
+    // SLOT-002 fix: destroy + recreate per Story Mode entry. init() registers
+    // event listeners; re-init without destroy() double-registers them and
+    // multiplies objective progress (kill counts ticked 2x per kill).
+    if (this.questSystem) {
+      this.questSystem.destroy();
     }
+    this.questSystem = new QuestSystem();
     this.questSystem.init(this.gameManager, this.dataManager, this.eventBus);
 
     // Give the town screen access to the quest system (quest panel)
@@ -734,13 +787,13 @@ class Game {
       screen.classList.remove('active');
     };
 
-    // Reset progress
+    // Reset progress (SLOT-aware: wipes the ACTIVE slot's stored save, not the
+    // removed legacy key — the old code left the slot file on disk untouched)
     const resetBtn = document.getElementById('reset-progress');
     resetBtn.onclick = () => {
       if (confirm('Reset all progress? This cannot be undone.')) {
         if (this.gameManager) {
-          this.gameManager.backend.remove('modularity_engine_save');
-          this.gameManager.store = this.gameManager._createDefault();
+          this.gameManager.wipeSlot(this.gameManager.getActiveSlot());
           this.titleMenu._updateInfo();
           this.audioManager.playMenuSound('select');
         }

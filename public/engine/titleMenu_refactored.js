@@ -4,7 +4,7 @@
 // ============================================================
 
 class TitleMenu {
-  constructor({ audioManager, gameManager, dataManager, onStart, onSettings, onTestTown, onStoryMode }) {
+  constructor({ audioManager, gameManager, dataManager, onStart, onSettings, onTestTown, onStoryMode, onSlotPlay, onSlotWipe, getSlotSummaries }) {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
     this.dataManager = dataManager;
@@ -12,6 +12,11 @@ class TitleMenu {
     this.onSettings = onSettings;
     this.onTestTown = onTestTown;
     this.onStoryMode = onStoryMode;
+    // SLOT system: optional slot-picker hooks (absent in tests → falls through
+    // to direct Story Mode entry, preserving legacy behavior)
+    this.onSlotPlay = onSlotPlay || null;
+    this.onSlotWipe = onSlotWipe || null;
+    this.getSlotSummaries = getSlotSummaries || null;
 
     this.selectedIndex = 0;
     this.items = [
@@ -134,7 +139,8 @@ class TitleMenu {
         this.onSettings();
         break;
       case 'story-mode':
-        if (this.onStoryMode) this.onStoryMode();
+        if (this.onSlotPlay && this.getSlotSummaries) this._showSlotPicker();
+        else if (this.onStoryMode) this.onStoryMode();
         break;
       case 'test-town':
         this.onTestTown();
@@ -142,6 +148,79 @@ class TitleMenu {
       case 'dev-stage':
         this._showStageSelector();
         break;
+    }
+  }
+
+  // ── SLOT: story save-slot picker ──
+  _showSlotPicker() {
+    let overlay = document.getElementById('slot-picker-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'slot-picker-overlay';
+      document.body.appendChild(overlay);
+    }
+    const summaries = this.getSlotSummaries();
+    const active = this.gameManager.getActiveSlot();
+    const regionNames = { town: ' Refugee Camp', graveyard: '🪦 Graveyard', forest: '🌲 Forest' };
+
+    let html = '<div class="slot-picker-title">📁 Choose Save Slot</div>';
+    html += '<div class="slot-picker-grid">';
+    for (const s of summaries) {
+      const isActive = s.slot === active;
+      const exists = !!s.exists;
+      html += `<div class="slot-card${isActive ? ' active' : ''}${exists ? '' : ' empty'}" data-slot="${s.slot}">`;
+      html += `<div class="slot-head">Slot ${s.slot}${isActive ? ' <span class="slot-badge">CURRENT</span>' : ''}</div>`;
+      if (exists) {
+        html += `<div class="slot-stats">`;
+        html += `<span>⚔ Lv${s.level ?? 1}</span><span>💰 ${s.gold ?? 0}</span><span>🏆 ${s.questsDone ?? 0} quests</span>`;
+        html += `</div>`;
+        html += `<div class="slot-loc">${regionNames[s.region] || s.region}</div>`;
+      } else {
+        html += `<div class="slot-loc">— Empty —</div>`;
+      }
+      html += `<div class="slot-actions">`;
+      html += `<button class="slot-btn play" data-play="${s.slot}">${exists ? '▶ Continue' : '✦ New Game'}</button>`;
+      if (exists) html += `<button class="slot-btn wipe" data-wipe="${s.slot}">🗑</button>`;
+      html += `</div></div>`;
+    }
+    html += '</div>';
+    html += '<button class="slot-close" id="slot-picker-close">✕ Cancel</button>';
+    overlay.innerHTML = html;
+    overlay.classList.add('active');
+
+    overlay.querySelectorAll('[data-play]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.audioManager) this.audioManager.playMenuSound('select');
+        this._hideSlotPicker();
+        const n = parseInt(btn.dataset.play, 10);
+        if (this.onSlotPlay) this.onSlotPlay(n);
+        else if (this.onStoryMode) this.onStoryMode();
+      });
+    });
+    overlay.querySelectorAll('[data-wipe]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const n = parseInt(btn.dataset.wipe, 10);
+        if (window.confirm(`Wipe Slot ${n}? All progress in this slot will be lost.`)) {
+          if (this.audioManager) this.audioManager.playMenuSound('back');
+          if (this.onSlotWipe) this.onSlotWipe(n);
+          this._showSlotPicker(); // re-render with fresh summaries
+        }
+      });
+    });
+    const closeBtn = document.getElementById('slot-picker-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+      if (this.audioManager) this.audioManager.playMenuSound('back');
+      this._hideSlotPicker();
+    });
+  }
+
+  _hideSlotPicker() {
+    const overlay = document.getElementById('slot-picker-overlay');
+    if (overlay) {
+      overlay.classList.remove('active');
+      overlay.innerHTML = '';
     }
   }
 

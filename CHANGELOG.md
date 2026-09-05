@@ -2,6 +2,21 @@
 
 ---
 
+## v1.8.0 — 3-Slot Pseudo Save System + Double-Listener Fix
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **3 save slots** — Story Mode opens a slot picker (Continue / New / 🗑 Wipe per slot); storage = `me_save_slot1..3` + `me_active_slot` pointer
+- **Legacy adoption** — existing single-key save auto-imports as slot 1 once; zero progress lost
+- **Title-screen-only switching** — in-place store swap with locationManager runtime re-sync; blocked outside title (guard verified)
+- **SLOT-002 fix** — QuestSystem is destroy+recreated per Story Mode entry; previously re-entering Story Mode double-registered listeners (kill objectives progressed 2x per kill)
+- **STATE-003 fix** — `title → town` added to the state machine (was silently rejecting with a console warning)
+- **Settings Reset repaired** — was removing the retired legacy key; now wipes the active slot
+- **Verified** — 30/30 Node + 17/17 headless browser checks; quest auto-complete flow re-verified on a fresh slot
+
+---
+
 ## v1.7.1 — BUG-015: Loadout Prefill Bypassed Story Gates (Fix)
 **Date:** September 5, 2026
 **Status:** ✅ Complete

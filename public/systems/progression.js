@@ -31,12 +31,45 @@ class GameManager {
     this._autoSaveTimer = 0;
   }
 
+  // ── Save slots (SLOT system) ──────────────────
+  // Layout: me_save_slot1..3 hold full stores; me_active_slot is the pointer.
+  // Legacy single key ('modularity_engine_save') is adopted into slot 1 once.
+  static SLOT_COUNT = 3;
+  static SLOT_KEY(n) { return `me_save_slot${n}`; }
+  static ACTIVE_KEY = 'me_active_slot';
+  static LEGACY_KEY = 'modularity_engine_save';
+
+  _slotKey(n) { return GameManager.SLOT_KEY(n); }
+
+  _readActiveSlot() {
+    const raw = this.backend.load(GameManager.ACTIVE_KEY);
+    const n = typeof raw === 'number' ? raw : parseInt(raw, 10);
+    return (n >= 1 && n <= GameManager.SLOT_COUNT) ? n : 1;
+  }
+
+  _writeActiveSlot(n) { this.backend.save(GameManager.ACTIVE_KEY, n); }
+
   init() {
-    const saved = this.backend.load('modularity_engine_save');
+    // Legacy adoption: an old single-key save becomes slot 1 exactly once,
+    // so no existing player progress is lost when the slot system lands.
+    const legacy = this.backend.load(GameManager.LEGACY_KEY);
+    const slot1Raw = this.backend.load(this._slotKey(1));
+    if (legacy && !slot1Raw) {
+      this.backend.save(this._slotKey(1), this._migrate(legacy));
+    }
+    if (legacy && slot1Raw) {
+      // Both exist — legacy is superseded; drop it so adoption never re-fires
+      // after a slot-1 wipe.
+      this.backend.remove(GameManager.LEGACY_KEY);
+    }
+
+    this.activeSlot = this._readActiveSlot();
+    const saved = this.backend.load(this._slotKey(this.activeSlot));
     if (saved) {
       this.store = this._migrate(saved);
     } else {
       this.store = this._createDefault();
+      this.save();
     }
     this._dirty = true;
   }
@@ -475,7 +508,7 @@ class GameManager {
 
   // ── Save/Load ──────────────────────────────────
   save() {
-    this.backend.save('modularity_engine_save', this.store);
+    this.backend.save(this._slotKey(this.activeSlot || 1), this.store);
     this._dirty = false;
   }
 
@@ -483,6 +516,55 @@ class GameManager {
     this.store = this._createDefault();
     this.save();
     this.eventBus.emit('save:reset');
+  }
+
+  // ── Slot management API ────────────────────────
+  getActiveSlot() { return this.activeSlot || 1; }
+
+  /** Load another slot's store into this manager IN PLACE (reference kept).
+   *  Callers own orchestration (quest system, world re-sync) around this. */
+  switchToSlot(n) {
+    n = (n >= 1 && n <= GameManager.SLOT_COUNT) ? n : 1;
+    // Persist current state first so the outgoing slot is never stale.
+    this.save();
+    this.activeSlot = n;
+    this._writeActiveSlot(n);
+    const saved = this.backend.load(this._slotKey(n));
+    this.store = saved ? this._migrate(saved) : this._createDefault();
+    this._dirty = true;
+    this.eventBus.emit('save:slotSwitched', { slot: n });
+    return this.store;
+  }
+
+  /** Wipe a slot to a fresh default. If it is the ACTIVE slot, the live
+   *  store is replaced (same in-place semantics as switchToSlot). */
+  wipeSlot(n) {
+    n = (n >= 1 && n <= GameManager.SLOT_COUNT) ? n : 1;
+    if (n === this.getActiveSlot()) {
+      this.reset();
+    } else {
+      this.backend.remove(this._slotKey(n));
+    }
+    this.eventBus.emit('save:slotWiped', { slot: n });
+  }
+
+  /** Lightweight summaries for the picker UI (never mutates stores). */
+  getSlotSummaries() {
+    const out = [];
+    for (let n = 1; n <= GameManager.SLOT_COUNT; n++) {
+      const raw = this.backend.load(this._slotKey(n));
+      if (!raw) { out.push({ slot: n, exists: false }); continue; }
+      const s = this._migrate(raw);
+      out.push({
+        slot: n,
+        exists: true,
+        level: s?.persistent?.player?.level ?? 1,
+        gold: s?.persistent?.currency ?? s?.persistent?.town?.resources?.gold ?? 0,
+        questsDone: (s?.persistent?.quests?.completed || []).length,
+        region: s?.world?.currentRegion || 'town',
+      });
+    }
+    return out;
   }
 
   // ── Auto-save ──────────────────────────────────
