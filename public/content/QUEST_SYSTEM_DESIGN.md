@@ -1,8 +1,8 @@
 # Quest, Flag & Lock/Unlock System — Design Document
 
-**Version:** 1.5  
+**Version:** 1.6  
 **Date:** September 5, 2026  
-**Status:** Phase 2 (gating enforcement) complete — ready for Phase 3  
+**Status:** Phase 3 (live time events + notifications) complete — ready for Phase 4  
 
 ---
 
@@ -517,6 +517,20 @@ Implemented the town quest panel and acceptance flow:
 **Design decision — auto-complete:** quests complete the moment their last objective is done (no manual turn-in step). The story uses no "return to quest giver" pattern, so this keeps the flow tight: talk/fight → reward + unlock → next quest available. If turn-in quests are ever wanted, add a `turn_in: "npc_id"` objective type in Phase 5+.
 
 **Backlog (user-requested):** unlock notifications — when a quest grants a weapon/companion/region, show a toast/banner ("New weapon unlocked: Orbit!") so players *see* what they earned. Currently unlocks are only visible via the loadout/panel. Candidate hook: `quest:completed` listener in a small notification UI (Phase 4 polish or alongside web tools).
+
+---
+
+## 12.97 Phase 3 — Live Time Events + Toast Notifications (2026-09-05)
+
+| Item | Detail |
+|---|---|
+| **Live time-event tick** | `_startTimeEventTicker()` runs a 5s `setInterval` (cleared in `destroy()`); `_processPendingTimeEvents()` now fires due events mid-session instead of only on reload. The mq_01 "stranger leaves to scout" beat works in real time |
+| **Toast system** | `TownContent.showToast(message, kind, icon)` — stacked toasts in a fixed container, animated in/out, auto-dismiss at 3.5s. Kinds: `quest` (gold), `unlock` (green), `time` (blue) |
+| **Unlock notifications** | On `quest:completed`: "Quest complete: …" + one toast per concrete unlock (weapon/companion/region/location/stage) with display names resolved from DataManager. Flag-only completions show the quest description instead |
+| **Time event toasts** | `quest:time_event` listener shows the event description ("The stranger leaves to scout…") |
+| **Also delivered** | The Phase 1 backlog item (unlock notifications) — done early alongside this phase |
+
+**Temp-disable note:** `stranger_scouting` still only *sets* a flag — no NPC hides yet (deliberate, see Phase 0.75 note). Wiring `temp_disable_flag` into the NPC filter is a one-line addition when the story wants it.
 
 ---
 

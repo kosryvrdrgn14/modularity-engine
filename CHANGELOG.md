@@ -2,6 +2,18 @@
 
 ---
 
+## v1.7.0 — Live Time Events + Toast Notifications (Phase 3)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Live time-event tick** — 5s interval fires due time events mid-session (was reload-only); "stranger leaves to scout" now plays live
+- **Toast notification system** — stacked animated toasts: quest complete (gold), unlock (green, with real content names), time events (blue)
+- **Backlog item delivered** — unlock notifications (requested during playtesting) shipped with this phase
+- **Verified** — 8/8 headless browser checks: all toast types render, time event fires mid-session, auto-dismiss works, zero errors
+
+---
+
 ## v1.6.0 — Gating Enforcement (Phase 2)
 **Date:** September 5, 2026
 **Status:** ✅ Complete

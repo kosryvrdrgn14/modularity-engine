@@ -27,6 +27,9 @@ class QuestSystem {
     // Tracking for quest:available event spam guard
     this._lastAvailableIds = new Set();
 
+    // Live time-event tick (Phase 3) — started on init, cleaned up on destroy
+    this._timeEventTimer = null;
+
     // Objective handlers registry
     this._objectiveHandlers = {
       kill_count: this._handleKillCount.bind(this),
@@ -77,6 +80,10 @@ class QuestSystem {
 
     // Process pending time events
     this._processPendingTimeEvents();
+
+    // Start live ticking so time events fire mid-session (every 5s is plenty
+    // — time events are minute-scale story beats, not precision timers)
+    this._startTimeEventTicker();
 
     // Re-evaluate availability
     this._reevaluateAvailability();
@@ -138,6 +145,10 @@ class QuestSystem {
   }
 
   destroy() {
+    if (this._timeEventTimer) {
+      clearInterval(this._timeEventTimer);
+      this._timeEventTimer = null;
+    }
     if (this.eventBus) {
       if (this._handlers.death) this.eventBus.off('death', this._handlers.death);
       if (this._handlers.combatEnd) this.eventBus.off('combat:sessionEnd', this._handlers.combatEnd);
@@ -493,6 +504,15 @@ class QuestSystem {
       description: timeEvent.description,
     });
     this._markDirty();
+  }
+
+  // Live tick (Phase 3): fires due time events mid-session, not just on reload.
+  _startTimeEventTicker() {
+    if (this._timeEventTimer) clearInterval(this._timeEventTimer);
+    this._timeEventTimer = setInterval(() => {
+      if (!this._initialized) return;
+      this._processPendingTimeEvents();
+    }, 5000);
   }
 
   _processPendingTimeEvents() {

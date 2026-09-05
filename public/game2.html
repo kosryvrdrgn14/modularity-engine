@@ -158,6 +158,7 @@
 
     <!-- Zone 5: Bottom Dock -->
     <div id="town-dock">
+      <!-- (toasts render here via #town-toast-container, positioned above the dock) -->
       <button class="dock-tab active" id="dock-map"><span class="dock-icon">🗺️</span><span class="dock-label">Map</span></button>
       <button class="dock-tab" id="dock-social"><span class="dock-icon">👥</span><span class="dock-label">NPCs</span><span class="dock-badge" id="dock-social-badge" style="display:none;">0</span></button>
       <button class="dock-tab" id="dock-systems"><span class="dock-icon">📋</span><span class="dock-label">Systems</span><span class="dock-badge" id="dock-systems-badge" style="display:none;">0</span></button>
@@ -180,6 +181,9 @@
       <button id="dialogue-continue">Continue</button>
     </div>
   </div>
+
+  <!-- Toast notifications (unlock banners, time events) -->
+  <div id="town-toast-container"></div>
 
   <!-- Settings Screen -->
   <div id="settings-screen">

@@ -74,6 +74,93 @@ class TownContent {
     for (const evt of ['quest:started', 'quest:objective_progress', 'quest:completed', 'quest:available']) {
       this.eventBus.on(evt, refresh);
     }
+    // Time events (stranger leaves/returns) → toast
+    this.eventBus.on('quest:time_event', (data) => {
+      if (data && data.description) this.showToast(data.description, 'time', '⏳');
+    });
+    // Quest completion → reward/unlock toasts
+    this.eventBus.on('quest:completed', (data) => this._onQuestCompletedToast(data));
+  }
+
+  // ── Toast Notifications ─────────────────────────────────
+
+  showToast(message, kind = 'quest', icon = '📜') {
+    let container = document.getElementById('town-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'town-toast-container';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `town-toast toast-${kind}`;
+    toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${this._escapeHtml(message)}</span>`;
+    container.appendChild(toast);
+    // Force reflow so the transition plays
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.add('leaving');
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  _onQuestCompletedToast(data) {
+    if (!data || !data.questId || !this.questSystem) return;
+    const quest = this.questSystem.allQuests.find(q => q.id === data.questId);
+    if (!quest) return;
+
+    this.showToast(`Quest complete: ${quest.name}`, 'quest', '🏆');
+
+    const u = quest.unlocks_on_complete || {};
+    const names = {
+      weapons: 'weapon',
+      companions: 'companion',
+      regions: 'region',
+      locations: 'location',
+      stages: 'stage',
+    };
+    for (const [key, label] of Object.entries(names)) {
+      for (const id of (u[key] || [])) {
+        const pretty = this._prettyContentName(key, id);
+        this.showToast(`New ${label} unlocked: ${pretty}`, 'unlock', '✨');
+      }
+    }
+    if ((u.flags || []).length > 0 && !u.weapons?.length && !u.companions?.length && !u.regions?.length) {
+      // Story-progress flag with no concrete content — show the description instead
+      this.showToast(quest.description || 'The story advances...', 'quest', '📖');
+    }
+  }
+
+  _prettyContentName(contentType, id) {
+    // Look up display names from DataManager, falling back to the raw id
+    const dm = this._engine?.dataManager || window.game?.dataManager;
+    try {
+      if (contentType === 'weapons') {
+        const w = (dm?.weapons || []).find(x => x.id === id);
+        if (w) return w.name;
+      } else if (contentType === 'companions') {
+        const c = dm?.companions?.[id];
+        if (c) return c.name;
+      } else if (contentType === 'regions' || contentType === 'locations') {
+        const data = dm?.locations;
+        if (data?.regions) {
+          for (const r of data.regions) {
+            if (contentType === 'regions' && r.id === id) return r.name;
+            for (const [locId, loc] of Object.entries(r.locations || {})) {
+              if (locId === id) return loc.name || id;
+            }
+          }
+        }
+      } else if (contentType === 'stages') {
+        const s = (dm?.stages || []).find ? (dm.stages || []).find(x => x.id === id) : null;
+        if (s) return s.name;
+      }
+    } catch (e) { /* fall through to raw id */ }
+    return this._normalizeId(id);
+  }
+
+  _normalizeId(value) {
+    return String(value).replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
   // --- Display Updates ---
