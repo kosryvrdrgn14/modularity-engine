@@ -1766,10 +1766,10 @@ const EMBEDDED_DATA = {
       ],
       bossConfig: {
         enemyId: "boss_necromancer",
-        spawnTime: "4:00",
+        spawnTime: "8:00",
         announcement: [
           {
-            time: 510,
+            time: 465,
             text: "Dark energy fills the air...",
             type: "text",
             styling: {
@@ -1779,12 +1779,12 @@ const EMBEDDED_DATA = {
             }
           },
           {
-            time: 510,
+            time: 470,
             type: "dim",
             brightness: 0.75
           },
           {
-            time: 515,
+            time: 475,
             text: "Lilith the Necromancer appears!",
             type: "shake",
             styling: {
@@ -1794,7 +1794,7 @@ const EMBEDDED_DATA = {
             }
           },
           {
-            time: 520,
+            time: 480,
             type: "boss_spawn",
             position: "nearest_edge_to_player"
           }

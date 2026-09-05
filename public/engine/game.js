@@ -386,10 +386,23 @@ class Game {
       this.spawnSystem._tierSpawnRateMult = tierMults?.spawnRate || 1.0;
     }
     // Dynamic boss spawn time from stage data (duration - 60s for boss fight)
+    // POT-004: bossConfig.spawnTime is now the AUTHORITATIVE override when
+    // present (it was dead data before — the stage.json value was never read).
+    // BUT a fixed spawn time can exceed a short tier's duration (extended
+    // stage: 8:00 boss in a 3-min quick run), so the effective spawn is
+    // capped at duration - 60 — every tier gets a boss fight window.
     const stageDuration = tierConfig?.duration || 300;
-    const bossSpawnTime = stageDuration - 60; // Boss spawns 60s before end
-    this._bossSpawnTime = bossSpawnTime;
-    this.spawnSystem.reset(bossSpawnTime);
+    const spawnTimeStr = stageData?.bossConfig?.spawnTime;
+    let bossSpawnTime = stageDuration - 60; // default: boss spawns 60s before end
+    if (spawnTimeStr && typeof spawnTimeStr === 'string' && spawnTimeStr.includes(':')) {
+      const [bm, bs] = spawnTimeStr.split(':').map(Number);
+      const parsed = (bm * 60) + (bs || 0);
+      if (Number.isFinite(parsed) && parsed > 0) bossSpawnTime = parsed;
+    }
+    const effectiveSpawn = Math.min(bossSpawnTime, stageDuration - 60);
+    this._bossSpawnTime = effectiveSpawn;
+    this._activeRunDuration = stageDuration; // POT-004: run end from stage tier
+    this.spawnSystem.reset(effectiveSpawn);
     this.companionSystem.companions = [];
     this.gameTime = 0;
 
@@ -480,8 +493,12 @@ class Game {
     this.camera.update(dt);
     } catch (e) { console.error('[UPDATE ERROR]', e); }
 
-    // Check game over conditions
-    if (this.gameTime >= 300) {
+    // Check game over conditions — POT-004: run duration comes from the
+    // ACTIVE stage's tier config (was hardcoded 300, truncating the 10-min
+    // extended stage at 5:00 and overstaying quick runs). Boss fights still
+    // get their last 60s: boss spawn = duration - 60 (or stage spawnTime).
+    const runDuration = this._activeRunDuration || (this._bossSpawnTime || 240) + 60;
+    if (this.gameTime >= runDuration) {
       this.gameState.triggerGameOver('survived', this._getStats());
       this._handleGameOver();
     }
@@ -544,13 +561,13 @@ class Game {
   _updateAnnouncements() {
     const stageData = this.dataManager.stages;
     if (!stageData || !stageData.bossConfig || !stageData.bossConfig.announcement) return;
-    // Announcements are defined relative to boss spawn time in the data
-    const bossBase = 240; // Reference time the data was designed for (standard 5min)
-    const bossActual = this._bossSpawnTime || 240;
-    const offset = bossActual - bossBase;
-    
+    // POT-004: announcement times are ABSOLUTE (authored against the stage's
+    // boss spawn) and the stage's spawnTime is authoritative — no offset math.
+    // This replaces the old bossBase=240 shift hack, which mis-timed any stage
+    // whose data wasn't authored against the 4:00 reference (the extended
+    // stage's "Lilith appears!" fired ~270s AFTER she had already spawned).
     for (const ann of stageData.bossConfig.announcement) {
-      const adjustedTime = ann.time + offset;
+      const adjustedTime = ann.time;
       if (this._announcementTriggered[adjustedTime]) continue;
       if (this.gameTime >= adjustedTime) {
         this._announcementTriggered[adjustedTime] = true;

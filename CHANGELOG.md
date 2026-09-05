@@ -2,6 +2,23 @@
 
 ---
 
+## v1.9.2 — POT-004: Boss Timing Overhaul (found 3 bugs, not 1)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### What the trace actually found
+- **BUG-019 (dead data):** `bossConfig.spawnTime` was never read by the engine — boss spawn was always computed as `tierConfig.duration - 60`
+- **BUG-020 (offset hack):** announcement times were shifted by `bossActual - 240`, correct only for data authored against the 4:00 reference; the extended stage's "Lilith appears!" fired ~270s AFTER she had already spawned
+- **BUG-021 (🔴 hardcoded run end):** `gameTime >= 300` truncated EVERY run at 5:00 — the extended stage's 10-minute waves and 8:00 boss were unreachable; quick-tier runs also overstayed by 2 minutes
+
+### Fixes
+- `spawnTime` is now the authoritative override (capped at `duration - 60` so every tier gets a ≥60s boss window — fixed times can't fit all three tiers)
+- Announcement times are absolute (offset hack removed); extended stage retimed to lead the 8:00 spawn (465/470/475/480)
+- Run end reads `_activeRunDuration` from the stage's tier config; embeddedData mirror synced
+- **Verified** — 10/10 browser checks: spawnTime honored, 10-min run survives past 300s, announcements fire at absolute times, cap rule gives all 6 stage×tier combos a 60–120s+ boss window
+
+---
+
 ## v1.9.1 — Slot Picker Truth-in-Labeling (SLOT-UI fix)
 **Date:** September 5, 2026
 **Status:** ✅ Complete

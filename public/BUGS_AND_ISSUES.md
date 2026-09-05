@@ -126,6 +126,25 @@
 - **Root Cause:** Hardcoded legacy key outlived its storage format (found during slot-system damage sweep).
 - **Fix:** Reset now calls `wipeSlot(activeSlot)` — slot-aware, resets live store, persists immediately.
 
+### BUG-019: bossConfig.spawnTime Was Dead Data (September 5, 2026)
+- **Severity:** Medium (data-driven design violation)
+- **Symptom:** None visible — spawn silently used the computed default.
+- **Root Cause:** Engine computed boss spawn as `tierConfig.duration - 60`; the `spawnTime` field in stages.json was never read by any code path.
+- **Fix:** `spawnTime` is now the authoritative override in `startGame()` (parsed mm:ss), capped at `duration - 60` so short tiers still get a boss window.
+
+### BUG-020: Boss Announcement Offset Hack Mis-timed Extended Stage (September 5, 2026)
+- **Severity:** Medium (presentation)
+- **Symptom:** "Lilith appears!" fired ~270s AFTER she had already spawned (the original POT-004 symptom).
+- **Root Cause:** Announcements were shifted by `bossActual - 240` — only correct for data authored against the 4:00 reference. Extended stage's 510/515/520 were absolute times, so at highlight tier they got +300.
+- **Fix:** Announcement times are absolute (offset hack removed); extended stage retimed to 465/470/475/480, leading the 8:00 spawn.
+
+### BUG-021: Hardcoded 300s Run End Truncated Long Stages (September 5, 2026)
+- **Severity:** High (content unreachable — the extended stage could never be completed)
+- **Symptom:** Every run ended at exactly 5:00 regardless of stage/tier. Extended stage's 21 waves (to 9:30) and its 8:00 boss were unreachable; mq_07 (kill Lilith) untestable. Quick-tier runs also overstayed by 2 minutes.
+- **Root Cause:** `if (this.gameTime >= 300)` hardcoded in `Game.update()` while boss spawn time was dynamic.
+- **Fix:** Run end reads `_activeRunDuration` (stage tierConfig duration) set at `startGame()`.
+- **Lesson:** Same class as BUG-007 — wave/boss data extending past hardcoded time assumptions. Any new stage MUST declare realistic `tierConfig.*.duration` values.
+
 ---
 
 ## Potential Issues (Watch List)
@@ -161,12 +180,13 @@
 - **Remaining:** Should pass DataManager reference instead of relying on window global
 - **Priority:** Low — works, just not clean
 
-### POT-004: Extended Stage Boss Timing Mismatch (verified in data, September 5, 2026)
-- **Status:** `stage_graveyard_extended` has `bossConfig.spawnTime: "4:00"` but its announcement timeline fires "Dark energy..." at 510s and "Lilith the Necromancer appears!" at 515s (~8:35)
+### POT-004: Extended Stage Boss Timing Mismatch (September 5, 2026) — RESOLVED v1.9.2
+- **Status (was):** `stage_graveyard_extended` has `bossConfig.spawnTime: "4:00"` but its announcement timeline fires "Dark energy..." at 510s and "Lilith the Necromancer appears!" at 515s (~8:35)
 - **Behavior:** Spawn is driven by `spawnTime` (SpawnSystem line ~151: `_bossSpawnTime || 240`) — Lilith appears at 4:00 **unannounced**, then the announcement sequence plays at ~8:30 for a boss that's already been fighting the player
 - **Impact:** mq_07 (kill Lilith) depends on this stage; confusing presentation but not blocking
 - **Fix options:** align `spawnTime` to ~8:30, or retime the announcement block to lead the 4:00 spawn (e.g. text at 210s, shake at 235s, boss_spawn at 240s)
 - **Priority:** Medium — must resolve before sq_02/mq_07 testing on the extended stage
+- **RESOLUTION (v1.9.2, Sep 5):** the trace found THREE bugs, not one — see BUG-019/020/021 below. Extended stage retimed to spawn=8:00 with announcements leading (465/470/475/480); all 6 stage×tier combos verified with ≥60s boss windows.
 
 ### POT-005: Weapon Unlock Domain Has Code/Metadata Duplication (September 5, 2026)
 - **Status:** Three disconnected sources describe weapon availability: (1) quest gates (authoritative, works), (2) `unlockSchedule = [1, 3, 6]` hardcoded in `game.js _checkWeaponUnlocks()` — the in-combat slot pacing, (3) `unlockLevel` field in weapons.json — display-only, nothing reads it functionally
