@@ -1,13 +1,311 @@
 {
-  "main_quests": [],
-  "side_quests": [],
+  "main_quests": [
+    {
+      "id": "mq_01_newArrival",
+      "name": "New Arrival",
+      "chapter": 1,
+      "order": 1,
+      "description": "Arrive at the troubled town, speak with the local elder, and prepare for your first venture into the nearby graveyard.",
+      "objectives": [
+        {
+          "type": "talk_to",
+          "target": "old_man",
+          "description": "Speak with Elder Rowan to understand the threat."
+        }
+      ],
+      "prerequisites": [],
+      "unlocks_on_complete": {
+        "flags": ["met_stranger"],
+        "weapons": ["w2_orbit"],
+        "regions": ["graveyard"],
+        "companions": ["dog"]
+      },
+      "time_events": [
+        {
+          "trigger": "on_complete",
+          "delay_seconds": 120,
+          "flag": "stranger_scouting",
+          "description": "The stranger leaves to scout — temporarily unavailable."
+        }
+      ],
+      "rewards": { "gold": 50, "xp": 100 },
+      "notes": "Time events live at quest TOP level (not inside unlocks_on_complete). Tests the delayed-flag mechanic."
+    },
+    {
+      "id": "mq_02_clearing",
+      "name": "Clearing the Threat",
+      "chapter": 1,
+      "order": 2,
+      "description": "Venture into the Graveyard and eliminate the encroaching undead to secure the perimeter.",
+      "objectives": [
+        {
+          "type": "kill_count",
+          "target": "zombie",
+          "count": 20,
+          "description": "Defeat 20 zombies in the Graveyard (play the Cemetery stage)."
+        }
+      ],
+      "prerequisites": ["met_stranger"],
+      "unlocks_on_complete": {
+        "flags": ["graveyard_cleared"],
+        "weapons": ["w4_flame_wave"],
+        "locations": ["cemetery"],
+        "companions": ["knight"]
+      },
+      "rewards": { "gold": 100, "xp": 200 },
+      "notes": "REVISED from ghoul x10: ghoul is a miniboss that never spawns in current wave tables. Zombies spawn from 0:00 in stage_graveyard."
+    },
+    {
+      "id": "mq_03_secret",
+      "name": "旧墓的秘密",
+      "chapter": 1,
+      "order": 3,
+      "description": "The grave digger knows what lies beneath the cemetery. Earn his trust and learn the hidden dark secret.",
+      "objectives": [
+        {
+          "type": "talk_to",
+          "target": "grave_digger",
+          "description": "Speak with the Grave Digger at the Cemetery."
+        }
+      ],
+      "prerequisites": ["graveyard_cleared"],
+      "unlocks_on_complete": {
+        "flags": ["graveyard_warning"],
+        "stages": ["stage_graveyard_extended"],
+        "locations": ["crypt"]
+      },
+      "rewards": { "gold": 150, "xp": 250 },
+      "notes": "REVISED from reach_location 'Crypt': crypt is locked behind graveyard_warning, which THIS quest awards — the original was a circular deadlock. The grave digger is at cemetery (unlocked after mq_02). His warning is what opens the crypt."
+    },
+    {
+      "id": "mq_04_return",
+      "name": "返回营地",
+      "chapter": 1,
+      "order": 4,
+      "description": "Return to town and report the crypt's secret to Elder Rowan to unlock passage to the outer woods.",
+      "objectives": [
+        {
+          "type": "talk_to",
+          "target": "old_man",
+          "description": "Report back to Elder Rowan."
+        }
+      ],
+      "prerequisites": ["graveyard_warning"],
+      "unlocks_on_complete": {
+        "flags": ["chapter2_unlocked"],
+        "regions": ["forest"]
+      },
+      "rewards": { "gold": 200, "xp": 300 },
+      "notes": "Chapter 2 gate. Region unlock currently sets flags + regionUnlocks; town swipe gating is future work."
+    },
+    {
+      "id": "mq_05_forest_edge",
+      "name": "森林边缘",
+      "chapter": 2,
+      "order": 1,
+      "description": "Push past the safety of the town into the overgrown perimeter of the Forest and clear the undead pressing at the edge.",
+      "objectives": [
+        {
+          "type": "kill_count",
+          "target": "skeleton",
+          "count": 15,
+          "description": "Clear out 15 skeletons (they press at the forest edge from 2:00 in the Graveyard stage)."
+        }
+      ],
+      "prerequisites": ["chapter2_unlocked"],
+      "unlocks_on_complete": {
+        "flags": ["met_mage"],
+        "weapons": ["w5_arcane_bolt"],
+        "companions": ["archer"]
+      },
+      "rewards": { "gold": 250, "xp": 400 },
+      "notes": "PLACEHOLDER: originally forest_wolf x15 — no forest enemies exist yet. Re-point to forest_wolf when forest content lands."
+    },
+    {
+      "id": "mq_06_deep_call",
+      "name": "深处的呼唤",
+      "chapter": 2,
+      "order": 2,
+      "description": "Follow the mysterious echoes deep into the canopy and reach the Deep Woods.",
+      "objectives": [
+        {
+          "type": "reach_location",
+          "target": "deep_woods",
+          "description": "Reach the Deep Woods location in the Forest region."
+        }
+      ],
+      "prerequisites": ["met_mage"],
+      "unlocks_on_complete": {
+        "flags": ["forest_cleared"],
+        "locations": ["deep_woods"],
+        "companions": ["mage", "owl"]
+      },
+      "rewards": { "gold": 300, "xp": 500 },
+      "notes": "deep_woods is unlocked by default, so this is walkable immediately after chapter 2 opens."
+    },
+    {
+      "id": "mq_07_ancient_threat",
+      "name": "古老的威胁",
+      "chapter": 2,
+      "order": 3,
+      "description": "Confront the ancient evil that commands the dead — slay the Necromancer in the deepest trial.",
+      "objectives": [
+        {
+          "type": "kill_count",
+          "target": "boss_necromancer",
+          "count": 1,
+          "description": "Defeat Lilith the Necromancer (extended Graveyard stage boss)."
+        }
+      ],
+      "prerequisites": ["forest_cleared"],
+      "unlocks_on_complete": {
+        "flags": ["ancient_threat_defeated"],
+        "weapons": ["w6_dagger"],
+        "companions": ["panther"]
+      },
+      "rewards": { "gold": 400, "xp": 700 },
+      "notes": "PLACEHOLDER: originally treant_boss (doesn't exist). Boss kill_count works — death events carry enemyData.id for bosses."
+    },
+    {
+      "id": "mq_08_forest_heart",
+      "name": "森林之心",
+      "chapter": 2,
+      "order": 4,
+      "description": "Survive the full extended trial to stabilize the region's mana flows.",
+      "objectives": [
+        {
+          "type": "complete_stage",
+          "target": "stage_graveyard_extended",
+          "description": "Complete the extended Graveyard stage (10-minute trial)."
+        }
+      ],
+      "prerequisites": ["ancient_threat_defeated"],
+      "unlocks_on_complete": {
+        "flags": ["forest_heart_recovered"],
+        "weapons": ["w7_sword"],
+        "companions": ["spider"]
+      },
+      "rewards": { "gold": 500, "xp": 900 },
+      "notes": "PLACEHOLDER: originally deep_woods_core stage (doesn't exist). Objective uses the canonical `target` field — `stage_id` is also accepted as an alias."
+    },
+    {
+      "id": "mq_09_shadow_descent",
+      "name": "暗影降临",
+      "chapter": 3,
+      "order": 1,
+      "description": "The dead grow restless across every region. Destroy the shadow host pouring from the graves.",
+      "objectives": [
+        {
+          "type": "kill_count",
+          "target": "ghost",
+          "count": 20,
+          "description": "Defeat 20 ghosts (they spawn from 2:30 in Graveyard stages)."
+        }
+      ],
+      "prerequisites": ["forest_heart_recovered", "hunter_challenger_done"],
+      "unlocks_on_complete": {
+        "flags": ["shadow_fallen"],
+        "weapons": ["w8_claymore"],
+        "companions": ["turtle"]
+      },
+      "rewards": { "gold": 800, "xp": 1200 },
+      "notes": "PLACEHOLDER: originally shadow_fiend x20 (doesn't exist). Ghosts are the closest existing stand-in."
+    },
+    {
+      "id": "mq_10_final_defense",
+      "name": "最后的防线",
+      "chapter": 3,
+      "order": 2,
+      "description": "Rally all allied forces for the ultimate defensive stand — hold the line through the final trial.",
+      "objectives": [
+        {
+          "type": "complete_stage",
+          "target": "stage_graveyard_extended",
+          "description": "Complete the extended Graveyard stage one final time."
+        }
+      ],
+      "prerequisites": ["shadow_fallen"],
+      "unlocks_on_complete": {
+        "flags": ["final_defense_complete"],
+        "companions": ["rat", "frog", "bat"]
+      },
+      "rewards": { "gold": 1500, "xp": 2500 },
+      "notes": "PLACEHOLDER: originally final_siege stage (doesn't exist). Re-point when cross-region stages land."
+    }
+  ],
+  "side_quests": [
+    {
+      "id": "sq_01_herbalist",
+      "name": "Herbalist Request",
+      "chapter": 1,
+      "order": 5,
+      "description": "The herbalist's garden at the forest's edge is overrun by rats. Clear them so her remedies can be crafted.",
+      "objectives": [
+        {
+          "type": "kill_count",
+          "target": "rat",
+          "count": 10,
+          "description": "Defeat 10 rats (they spawn from 1:30 in Graveyard stages)."
+        }
+      ],
+      "prerequisites": ["met_stranger"],
+      "unlocks_on_complete": {
+        "flags": ["herbalist_ingredient"],
+        "companions": ["healer"]
+      },
+      "rewards": { "gold": 75, "xp": 150 },
+      "notes": "REVISED from collect_item 'rare_root' x3: no item/pickup system emits collect_item yet. Rat-clearing keeps the herbalist theme and is completable today."
+    },
+    {
+      "id": "sq_02_guard_training",
+      "name": "守卫的训练",
+      "chapter": 1,
+      "order": 6,
+      "description": "Assist the guards with combat sparring in the crypt to test advanced area suppression techniques.",
+      "objectives": [
+        {
+          "type": "complete_stage",
+          "target": "stage_graveyard_extended",
+          "description": "Complete the extended Graveyard stage training run (crypt opens after the Grave Digger's warning)."
+        }
+      ],
+      "prerequisites": ["graveyard_cleared"],
+      "unlocks_on_complete": {
+        "flags": ["guard_training_done"],
+        "weapons": ["weapon_area_pulse"]
+      },
+      "rewards": { "gold": 120, "xp": 220 },
+      "notes": "REVISED: stage id was 'graveyard_extended' (actual: stage_graveyard_extended); dropped the unused numeric tier field."
+    },
+    {
+      "id": "sq_03_hunter_challenge",
+      "name": "猎人的挑战",
+      "chapter": 2,
+      "order": 5,
+      "description": "Prove your tracking skills alongside the local survivalist by hunting down the forest's brutes.",
+      "objectives": [
+        {
+          "type": "kill_count",
+          "target": "brute",
+          "count": 10,
+          "description": "Hunt down 10 brutes (they spawn from 3:00 in the extended stage)."
+        }
+      ],
+      "prerequisites": ["met_mage"],
+      "unlocks_on_complete": {
+        "flags": ["hunter_challenger_done"],
+        "companions": ["hawk"]
+      },
+      "rewards": { "gold": 350, "xp": 600 },
+      "notes": "PLACEHOLDER: originally alpha_stalker x5 (doesn't exist). Re-point to alpha_stalker when forest enemies land."
+    }
+  ],
   "_schema": {
     "main_quests[]": {
       "id": "string — unique quest ID (mq_XX_name)",
       "name": "string — display name",
       "chapter": "number — story chapter",
       "order": "number — sort order within chapter",
-      "type": "main",
       "description": "string — quest description for UI",
       "objectives[]": {
         "type": "kill_count | talk_to | complete_stage | collect_item | reach_location",
@@ -21,9 +319,9 @@
         "flags[]": "string — flags set on completion",
         "weapons[]": "string — weapon IDs unlocked",
         "stages[]": "string — stage IDs unlocked",
-        "regions[]": "string — region names/ids unlocked (normalized to lowercase ids)",
+        "regions[]": "string — region ids (town | graveyard | forest)",
         "companions[]": "string — companion IDs unlocked",
-        "locations[]": "string — location names/ids (normalized; real gate is via unlockCondition flags)",
+        "locations[]": "string — location ids (cemetery | crypt | deep_woods)",
         "npcs[]": "string — NPC IDs unlocked",
         "dialogue[]": "string — dialogue branch IDs unlocked"
       },
@@ -37,8 +335,9 @@
         "gold": "number",
         "xp": "number"
       },
+      "notes": "string — design/test notes (ignored by the engine; safe to keep)",
       "repeatable": "boolean — default false"
     },
-    "side_quests[]": "same schema as main_quests but type = 'side'"
+    "side_quests[]": "same schema as main_quests but placed in the side_quests array (array placement determines type)"
   }
 }
