@@ -2,6 +2,19 @@
 
 ---
 
+## v1.5.0 — Quest UI + Acceptance Flow (Phase 1)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Quest panel in town** — replaces hardcoded "Clear the Graveyard" card: Available (Accept) → Active (live objective progress) → Completed (compact)
+- **Acceptance flow** — Accept button starts quests; dock badge on NPCs tab shows accept-ready count
+- **Live refresh** — panel re-renders on quest:started / objective_progress / completed / available events
+- **Auto-complete** — quest completes the moment its last objective finishes; rewards + unlocks + next-quest chain immediately (documented in design doc §12.9)
+- **Story Mode wiring** — `townScreen.setQuestSystem()`; dev mode shows "Available in Story Mode" placeholder
+
+---
+
 ## v1.4.1 — Single-Source Gates + Quest Schema (Phase 0.75)
 **Date:** September 5, 2026
 **Status:** ✅ Complete

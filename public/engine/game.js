@@ -659,6 +659,11 @@ class Game {
     }
     this.questSystem.init(this.gameManager, this.dataManager, this.eventBus);
 
+    // Give the town screen access to the quest system (quest panel)
+    if (this.townScreen && this.townScreen.setQuestSystem) {
+      this.townScreen.setQuestSystem(this.questSystem);
+    }
+
     // Set initial story flags if fresh start
     if (this.gameManager && !this.gameManager.get_flag('story_started')) {
       this.gameManager.set_flag('story_started', true);

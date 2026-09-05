@@ -45,10 +45,35 @@ class TownContent {
 
     // Engine reference (set later)
     this._engine = null;
+
+    // Quest system (set by TownScreen.setQuestSystem — Story Mode only)
+    this.questSystem = null;
+    this._questListenersRegistered = false;
   }
 
   setEngine(engine) {
     this._engine = engine;
+  }
+
+  setQuestSystem(questSystem) {
+    this.questSystem = questSystem;
+    this._registerQuestListeners();
+    this._renderQuestPanel();
+    this._updateQuestBadge();
+  }
+
+  // Live refresh: quest panel updates as quests start/progress/complete.
+  // Registered once — TownContent lives for the whole session.
+  _registerQuestListeners() {
+    if (!this.eventBus || this._questListenersRegistered) return;
+    this._questListenersRegistered = true;
+    const refresh = () => {
+      this._renderQuestPanel();
+      this._updateQuestBadge();
+    };
+    for (const evt of ['quest:started', 'quest:objective_progress', 'quest:completed', 'quest:available']) {
+      this.eventBus.on(evt, refresh);
+    }
   }
 
   // --- Display Updates ---
@@ -121,8 +146,7 @@ class TownContent {
 
     // Quests (priority)
     questArea.innerHTML = '';
-    const pinnedQuest = '<div class="panel-card"><span class="panel-card-icon">⚔️</span><div class="panel-card-info"><div class="panel-card-name">Clear the Graveyard</div><div class="panel-card-desc">Survive and defeat the boss</div></div><span class="panel-card-badge gold">Active</span></div>';
-    questArea.innerHTML = pinnedQuest;
+    this._renderQuestPanel();
 
     // NPCs at current location
     npcArea.innerHTML = '';
@@ -159,6 +183,80 @@ class TownContent {
         compArea.innerHTML = '<div class="panel-card locked"><span class="panel-card-icon">🐕</span><div class="panel-card-info"><div class="panel-card-name">No companions</div><div class="panel-card-desc">Pet the dog at camp to recruit</div></div></div>';
       }
     }
+  }
+
+  // ── Quest Panel ────────────────────────────────────────
+
+  _renderQuestPanel() {
+    const questArea = document.getElementById('panel-quests');
+    if (!questArea) return;
+    questArea.innerHTML = '';
+
+    if (!this.questSystem || !this.questSystem._initialized) {
+      questArea.innerHTML = '<div class="panel-card locked"><span class="panel-card-icon">📜</span><div class="panel-card-info"><div class="panel-card-name">Quests</div><div class="panel-card-desc">Available in Story Mode</div></div></div>';
+      return;
+    }
+
+    const available = this.questSystem.getAvailableQuests();
+    const active = this.questSystem.getActiveQuests();
+    const completed = this.questSystem.getCompletedQuests();
+
+    if (available.length === 0 && active.length === 0 && completed.length === 0) {
+      questArea.innerHTML = '<div class="panel-card locked"><span class="panel-card-icon">📜</span><div class="panel-card-info"><div class="panel-card-name">No quests yet</div><div class="panel-card-desc">Talk to Elder Rowan to begin</div></div></div>';
+      return;
+    }
+
+    // Available quests — offer acceptance
+    for (const quest of available) {
+      const card = document.createElement('div');
+      card.className = 'panel-card quest-available';
+      card.innerHTML = `<span class="panel-card-icon">📜</span><div class="panel-card-info"><div class="panel-card-name">${this._escapeHtml(quest.name)}</div><div class="panel-card-desc">${this._escapeHtml(quest.description || '')}</div></div><button class="quest-accept-btn">Accept</button>`;
+      card.querySelector('.quest-accept-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._acceptQuest(quest.id);
+      });
+      questArea.appendChild(card);
+    }
+
+    // Active quests — live objective progress
+    for (const quest of active) {
+      const card = document.createElement('div');
+      card.className = 'panel-card quest-active';
+      const prog = this.questSystem.getQuestProgress(quest.id) || [];
+      const objHtml = prog.map(p => {
+        const label = p.description || p.type;
+        return `<div class="quest-obj ${p.complete ? 'done' : ''}">${p.complete ? '✅' : '⬜'} ${this._escapeHtml(label)} <span class="quest-obj-count">${p.current}/${p.required}</span></div>`;
+      }).join('');
+      card.innerHTML = `<span class="panel-card-icon">⚔️</span><div class="panel-card-info"><div class="panel-card-name">${this._escapeHtml(quest.name)}</div><div class="panel-card-desc">${objHtml}</div></div><span class="panel-card-badge gold">In Progress</span>`;
+      questArea.appendChild(card);
+    }
+
+    // Recently completed — compact
+    for (const quest of completed.slice(-3)) {
+      const card = document.createElement('div');
+      card.className = 'panel-card quest-completed';
+      card.innerHTML = `<span class="panel-card-icon">🏆</span><div class="panel-card-info"><div class="panel-card-name">${this._escapeHtml(quest.name)}</div></div><span class="panel-card-badge green">Done</span>`;
+      questArea.appendChild(card);
+    }
+  }
+
+  _acceptQuest(questId) {
+    if (!this.questSystem || !this.questSystem.startQuest(questId)) return;
+    if (this.audioManager && this.audioManager.playMenuSound) {
+      this.audioManager.playMenuSound('select');
+    }
+    this._renderQuestPanel();
+    this._updateQuestBadge();
+  }
+
+  // Dock badge on the NPCs tab shows how many quests are ready to accept
+  _updateQuestBadge() {
+    if (!this.questSystem || !this._engine || !this._engine.dockMenu) return;
+    this._engine.dockMenu.updateBadge('social', this.questSystem.getAvailableQuests().length);
+  }
+
+  _escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
   renderRightPanel() {

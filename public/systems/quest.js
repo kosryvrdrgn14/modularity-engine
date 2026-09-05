@@ -382,6 +382,7 @@ class QuestSystem {
     const handler = this._objectiveHandlers[type];
     if (!handler) return;
 
+    const toComplete = [];
     for (const questId of store.active) {
       const quest = this.allQuests.find(q => q.id === questId);
       if (!quest) continue;
@@ -398,6 +399,17 @@ class QuestSystem {
           });
         }
       });
+
+      // Auto-complete when the last objective just finished
+      const progress = this.getQuestProgress(questId);
+      if (progress && progress.every(p => p.complete)) {
+        toComplete.push(questId);
+      }
+    }
+
+    // Complete after the loop — avoids mutating store.active mid-iteration
+    for (const questId of toComplete) {
+      this.completeQuest(questId);
     }
   }
 

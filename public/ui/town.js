@@ -65,6 +65,10 @@ class TownScreen {
     };
   }
 
+  setQuestSystem(questSystem) {
+    this.content.setQuestSystem(questSystem);
+  }
+
   show(runStats) {
     this.content._lastRunStats = runStats;
     this.engine.show();

@@ -1,8 +1,8 @@
 # Quest, Flag & Lock/Unlock System — Design Document
 
-**Version:** 1.3  
+**Version:** 1.4  
 **Date:** September 5, 2026  
-**Status:** Phase 0.75 (single-source gates + quest schema) complete — ready for Phase 1  
+**Status:** Phase 1 (player-facing quest UI) complete — ready for Phase 2  
 
 ---
 
@@ -497,6 +497,24 @@ Applied after the feasibility review (roadblocks R2 + R7):
 | — | **content_gates.json pruned** | Now the OVERRIDE layer only: `cute_girl → town_camp_upgraded` (non-quest game gate) + 2 dialogue-branch gates. All weapon/companion/stage/region/location gates removed (auto-derived). Embedded fallback synced |
 
 **Note on temp-disable:** the mechanism is supported in code (`temp_disable_flag`) and unit-tested, but no NPC uses it yet. Deliberate — mq_01's `stranger_scouting` time event would hide Elder Rowan and stall mq_04 if it fires before the player reports back. Revisit when time events tick live (Phase 3).
+
+---
+
+## 12.9 Phase 1 — Player-Facing Quest Layer (2026-09-05)
+
+Implemented the town quest panel and acceptance flow:
+
+| Item | Detail |
+|---|---|
+| **Quest panel** | `TownContent._renderQuestPanel()` replaces the hardcoded "Clear the Graveyard" card. Sections: Available (📜 + Accept button) → Active (⚔️ live objective progress `current/required` with ✅/⬜ ticks) → Recently completed (🏆 compact) |
+| **Acceptance flow** | Accept button → `questSystem.startQuest()` → panel refreshes → dock badge decrements |
+| **Live refresh** | TownContent listens to `quest:started`, `quest:objective_progress`, `quest:completed`, `quest:available` and re-renders the panel + dock badge without disturbing the NPC list |
+| **Auto-complete** | In `_onObjectiveEvent`, a quest auto-completes when its last objective finishes (completions collected then applied after the loop to avoid mid-iteration mutation). Rewards + unlocks + next-quest availability chain immediately |
+| **Story Mode wiring** | `_startStoryMode` calls `townScreen.setQuestSystem(questSystem)` after init; TownScreen forwards to TownContent. Dev/Test-Town mode shows a muted "Available in Story Mode" placeholder |
+| **Dock badge** | NPCs tab badge shows the count of quests ready to accept |
+| **Styling** | `quest-available` (green border), `quest-active` (gold left edge), `quest-completed` (dimmed), accept button, objective lines |
+
+**Design decision — auto-complete:** quests complete the moment their last objective is done (no manual turn-in step). The story uses no "return to quest giver" pattern, so this keeps the flow tight: talk/fight → reward + unlock → next quest available. If turn-in quests are ever wanted, add a `turn_in: "npc_id"` objective type in Phase 5+.
 
 ---
 
