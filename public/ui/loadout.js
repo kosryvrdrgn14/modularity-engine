@@ -98,10 +98,18 @@ class LoadoutScreen {
     const stage = stages.find(s => s.id === this.stageId);
     if (!stage) return;
 
+    // BUG-015 fix: gate-aware prefill. Stage 'recommendedWeapons' must never
+    // auto-fill a weapon the player hasn't unlocked — a locked id in a slot
+    // renders as 'Empty' but still ships on Confirm.
+    const available = this.getAvailableWeapons();
+    if (!available.length) return;
     const tierCfg = stage.tierConfig?.[this.stageTier];
     const recommended = tierCfg?.recommendedWeapons || [];
     for (let i = 0; i < 3 && i < recommended.length; i++) {
-      this.selectedWeapons[i] = recommended[i];
+      const wid = recommended[i];
+      if (wid && available.some(w => w.id === wid) && !this.selectedWeapons.includes(wid)) {
+        this.selectedWeapons[i] = wid;
+      }
     }
   }
 
@@ -157,7 +165,10 @@ class LoadoutScreen {
     html += '</div>';
 
     // Next button
-    const canProceed = this.selectedWeapons.filter(Boolean).length === 3;
+    // BUG-015 follow-up: require AT LEAST 1 weapon, not exactly 3 — a fresh
+    // story player may only have 1 unlocked weapon. (3+ was only reachable
+    // before because the prefill stuffed locked weapons into slots.)
+    const canProceed = this.selectedWeapons.filter(Boolean).length > 0;
     html += '<button class="loadout-confirm ' + (canProceed ? 'active' : '') + '" id="loadout-next">';
     html += 'Next: Companions ▶';
     html += '</button>';
@@ -207,7 +218,7 @@ class LoadoutScreen {
 
     // Next button
     const nextBtn = document.getElementById('loadout-next');
-    if (nextBtn && this.selectedWeapons.filter(Boolean).length === 3) {
+    if (nextBtn && this.selectedWeapons.filter(Boolean).length > 0) {
       nextBtn.addEventListener('click', () => {
         this.phase = 'companions';
         if (this.audioManager) this.audioManager.playMenuSound('select');
@@ -311,8 +322,15 @@ class LoadoutScreen {
     if (confirmBtn) {
       confirmBtn.addEventListener('click', () => {
         if (this.audioManager) this.audioManager.playMenuSound('select');
+        // BUG-015 fix: belt-and-suspenders — never ship a locked weapon even
+        // if one somehow reaches a slot. Mirrors getAvailableWeapons() gating.
+        let confirmedWeapons = this.selectedWeapons.filter(Boolean);
+        if (this.questSystem && this.questSystem._initialized) {
+          confirmedWeapons = confirmedWeapons.filter(id =>
+            this.questSystem.isContentUnlocked('weapons', id));
+        }
         const loadout = {
-          weapons: this.selectedWeapons.filter(Boolean),
+          weapons: confirmedWeapons,
           companions: this.selectedCompanions.filter(Boolean),
         };
         this.hide();

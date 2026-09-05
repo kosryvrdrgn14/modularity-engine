@@ -2,6 +2,18 @@
 
 ---
 
+## v1.7.1 — BUG-015: Loadout Prefill Bypassed Story Gates (Fix)
+**Date:** September 5, 2026
+**Status:** ✅ Complete
+
+### Session Summary
+- **Found via playtesting** — "Area" weapon upgrades appeared in a story run despite never being unlocked
+- **Root cause** — `_prefillFromStage()` copied stage `recommendedWeapons` into loadout slots **without the quest-gate filter**; locked ids rendered as "Empty" slots but still shipped on Confirm
+- **Fix (3 layers)** — gate-filtered prefill; confirm-time sanitization of shipped weapons; slot requirement relaxed from exactly-3 to at-least-1 (fresh story players have only 1 weapon — 3 was only reachable via the leak)
+- **Verified** — 7/7 Node + 9/9 headless browser checks (fresh story prefill = w1 only, hostile injection stripped at confirm, dev mode unchanged, zero JS errors)
+
+---
+
 ## v1.7.0 — Live Time Events + Toast Notifications (Phase 3)
 **Date:** September 5, 2026
 **Status:** ✅ Complete

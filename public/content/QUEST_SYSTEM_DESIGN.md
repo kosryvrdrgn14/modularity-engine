@@ -546,6 +546,24 @@ The gate rules existed since Phase 0.75 — this phase wires the UI to *obey* th
 | 4 | **Region gating** | `LocationManager.switchRegion()` refuses locked regions; town swipe/arrows/keyboard play a 'back' sound and stay put instead of transitioning. Regions unlock via quests (graveyard ← mq_01, forest ← mq_04) |
 | 5 | **Dev mode preserved** | No quest system attached (Test Town / Stage Select dev) → all content available, regions unrestricted |
 
+### BUG-015 (2026-09-05) — Prefill Bypassed the Phase 2 Gates
+
+Playtesting surfaced a leak **through** the Phase 2 filtering: `LoadoutScreen._prefillFromStage()`
+copied the stage's `recommendedWeapons` into slots *without* the gate filter. Locked ids sat in
+`selectedWeapons` (rendered as "Empty" slots) and shipped on Confirm — then activated in combat via
+the slot-unlock schedule (`_checkWeaponUnlocks`, hardcoded `[1, 3, 6]`), where their upgrade cards
+appeared in the level-up pool. This is why "Area" showed up unlocked in a fresh story run.
+
+Fixes now in `ui/loadout.js`:
+1. Prefill filters recommendations through `getAvailableWeapons()` (same gate source as the card list)
+2. Confirm sanitizes shipped weapons against `isContentUnlocked()` (defense in depth)
+3. Slot requirement relaxed: **at least 1 weapon** proceeds, not exactly 3 — a fresh story player has
+   only 1 weapon; requiring 3 was only satisfiable *because of the leak*
+
+Related hardcoding note: the `[1, 3, 6]` slot-unlock schedule in `game.js` remains code (flagged for
+the data-driven pass: move to `tierConfig.slotUnlockLevels`). Stage `recommendedWeapons` and weapon
+`unlockLevel` are display/metadata only — the *authoritative* unlock source is the quest gates.
+
 ---
 
 ## 13. Scaffolding Simulation — Resolved Plan

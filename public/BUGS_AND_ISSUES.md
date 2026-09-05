@@ -99,6 +99,14 @@
 - **Root Cause:** `_startStoryMode` calls `townScreen.show({})`; the empty object passed the `if (this._lastRunStats)` guard, then `time/level/kills` were undefined when rendered.
 - **Fix:** `TownScreen.show()` now treats an empty stats object as "no run finished" (`_lastRunStats = null`), and `updateDisplay()` only renders the chip when all three fields exist, otherwise resets to the default `⚔Lv1`.
 
+### BUG-015: Locked Weapons Reach Combat via Loadout Prefill (September 5, 2026)
+- **Severity:** Medium (gameplay/economy integrity — gates bypassed)
+- **Symptom:** Player received "Area" weapon upgrades in a story run despite never unlocking it — it appeared usable at Lv6 (slot schedule).
+- **Root Cause:** `LoadoutScreen._prefillFromStage()` copied the stage's `recommendedWeapons` (graveyard/standard = w1, w2_orbit, **weapon_area_pulse**) into slots **without the quest-gate filter**. A locked id in a slot rendered as "Empty" but stayed in `selectedWeapons`; the full prefill also made Confirm active immediately. The upgrade pool in `_showUpgradeOptions()` is correctly guarded (`wLevel > 0`) — the corruption entered through the loadout, not combat.
+- **Fix (3 layers):** (1) `_prefillFromStage()` now filters recommendations through `getAvailableWeapons()` (same gate filter as the card list); (2) confirm sanitizes the shipped loadout against the gates (belt-and-suspenders); (3) slot requirement relaxed from "exactly 3" to "at least 1" — a fresh story player has 1 weapon, and 3 was only reachable via the leak itself.
+- **Note:** Dev/Test-Town mode (no quest system) is unaffected — prefill still fills all 3 recommended weapons there.
+- **Verified:** 7/7 Node unit checks + 9/9 headless browser checks (fresh story → prefill = w1 only; Next enabled with 1 weapon; hostile injection stripped at confirm; zero JS errors).
+
 ---
 
 ## Potential Issues (Watch List)
