@@ -239,6 +239,11 @@ class Game {
       this.inputManager._isPaused = true;
       this.audioManager.duckForLevelUp(true);
       this._showUpgradeOptions();
+      // §21 chunk 3: milestone journal flush at the level-up pause (§21.3B).
+      // This captures the pre-pause level/state even if the crash happens
+      // while the player deliberates on the upgrade screen.
+      this._writeRunJournal();
+      if (this.gameManager?._dirty) this.gameManager.save();
     });
 
     this._isSelectingUpgrade = false;
@@ -292,6 +297,9 @@ class Game {
       if (this.sandboxSystem?.isActive && data.type !== 'player') {
         this.sandboxSystem.recordKill();
       }
+      // §21 chunk 3: run-journal kill counter (entityManager.getCount only
+      // counts ALIVE enemies, so journal kills are tracked via death events)
+      if (data.type !== 'player') this._runKillCount = (this._runKillCount || 0) + 1;
       // GAP 5 FIX: Skip boss deaths here — handled by bossDeath event
       if (data.type === 'boss_gravekeeper') return;
       if (data.entity === this.player) {
@@ -302,6 +310,9 @@ class Game {
     });
 
     this.eventBus.on('bossSpawn', (data) => {
+      // §21 chunk 3: milestone journal flush — boss spawn is a crash-recovery
+      // boundary; a resumed run must not re-spawn the boss.
+      this.gameManager?.updateRunJournal({ bossSpawned: true });
       // data.entity = the actual spawned entity (from entityManager.create)
       // data.boss = the enemy definition (from dataManager.enemies)
       this.renderer.bossEntity = data.entity || data.boss;
@@ -338,6 +349,13 @@ class Game {
       if (this.gameState.isGameOver() || this.gameState.isEndScreen()) {
         this.startGame();
       }
+    });
+
+    // ── AUTOSAVE §21 chunk 3: interrupted-run recovery ──
+    // Boot detection runs at the end of this method; this consumes the
+    // journaled run when the player answers the banner.
+    this.eventBus.on('save:runInterrupted', (data) => {
+      this._showResumeBanner(data.run);
     });
   }
 
@@ -377,6 +395,15 @@ class Game {
       this.dataManager.selectStage(selectedStageId);
     }
 
+    // ── AUTOSAVE §21 chunk 3: run journal lifecycle ──
+    // Every run (fresh or resumed) opens a journal; end_session() closes it
+    // on normal completion, so a journal surviving into the next boot means
+    // the previous run died mid-combat — that is the recovery signal.
+    const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
+    this._resumeRun = this.gameManager.getInterruptedRun();
+    this.gameManager.beginRunJournal(selectedStageId, stageTier);
+    this._runKillCount = 0;
+
     // B1: Player loadout — weapons are what the player chose, not the stage's
     const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
     const stageData = this.dataManager.stages;
@@ -389,6 +416,50 @@ class Game {
       // Fallback: use stage-recommended weapons if player hasn't chosen
       this._activeWeapons = tierConfig?.recommendedWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     }
+    // ── §21 chunk 3: resume an interrupted run (crash recovery) ──
+    // Restores journaled run-level stats. Per §21.6 recommendation, pending
+    // level-up choices are NOT re-granted — the player keeps the journaled
+    // LEVEL. Enemies/pickups are not persisted (§21.3C): combat is
+    // re-entered, not replayed. Every restore is guarded: a partial/corrupt
+    // journal must degrade to a fresh run, never block the game.
+    if (this._resumeRun) {
+      const jr = this._resumeRun;
+      this._resumeRun = null;
+      try {
+        const journaledWeapons = Object.keys(jr.weaponLevels || {})
+          .filter(wid => (jr.weaponLevels[wid] || 0) > 0);
+        if (journaledWeapons.length > 0) this._activeWeapons = journaledWeapons;
+        for (const wid of this._activeWeapons) {
+          if (!this.weaponSystem.weaponLevels[wid]) this.weaponSystem.unlockWeapon(wid);
+          const lvl = (jr.weaponLevels[wid] || 0);
+          if (lvl > 0) this.weaponSystem.weaponLevels[wid] = lvl;
+        }
+        this.gameTime = jr.gameTime || 0;
+        this._runKillCount = jr.kills || 0;
+        if (this.gameManager) {
+          this.gameManager.set('session.gold', jr.gold || 0);
+          this.gameManager.store.persistent.town.resources.gold = jr.gold || 0;
+        }
+        // Pre-mark announced times so a resumed run doesn't replay announcements
+        this._announcementTriggered = {};
+        for (const t of jr.announcementTimes || []) this._announcementTriggered[t] = true;
+        if (this.spawnSystem && jr.bossSpawned) this.spawnSystem.bossSpawned = true;
+        // Re-seed the (still open) journal with the restored values
+        this.gameManager.updateRunJournal({
+          stage_id: jr.stage_id, tier: jr.tier,
+          gameTime: jr.gameTime || 0, kills: jr.kills || 0,
+          gold: jr.gold || 0, level: jr.level || 1,
+          weaponLevels: { ...(jr.weaponLevels || {}) },
+          bossSpawned: !!jr.bossSpawned,
+          announcementTimes: (jr.announcementTimes || []).slice(),
+        });
+        console.log('[AUTOSAVE] Resumed interrupted run:', jr.stage_id,
+          'at', Math.floor((jr.gameTime || 0) / 60) + ':' + String((jr.gameTime || 0) % 60).padStart(2, '0'));
+      } catch (e) {
+        console.error('[AUTOSAVE] resume restore failed — continuing fresh:', e);
+      }
+    }
+
     // Only Slot 0 (first weapon) starts active. Slot 1 unlocks at Lv3, Slot 2 at Lv6.
     if (this._activeWeapons.length > 0) {
       this.weaponSystem.unlockWeapon(this._activeWeapons[0]);
@@ -473,6 +544,9 @@ class Game {
     this._combatSaveAccum = (this._combatSaveAccum || 0) + dt;
     if (this._combatSaveAccum >= 30) {
       this._combatSaveAccum = 0;
+      // §21 chunk 3: refresh the journal immediately BEFORE the flush, so
+      // the persisted snapshot is at most 30s stale (worst-case crash loss).
+      this._writeRunJournal();
       if (this.gameManager?._dirty) this.gameManager.save();
     }
 

@@ -1678,3 +1678,58 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
+
+/* ── §21 chunk 3: resume-interrupted-run banner ── */
+#resume-banner {
+  display: none;
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6000;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 18px;
+  background: rgba(20, 24, 34, 0.95);
+  border: 1px solid rgba(255, 213, 79, 0.4);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  color: #eee;
+}
+#resume-banner.active {
+  display: flex;
+}
+.resume-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffd54f;
+}
+.resume-desc {
+  font-size: 0.78rem;
+  color: #aaa;
+  margin-top: 2px;
+}
+.resume-actions {
+  display: flex;
+  gap: 8px;
+}
+.resume-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ddd;
+  border-radius: 6px;
+  padding: 7px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.resume-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.resume-btn.primary {
+  background: rgba(76, 175, 80, 0.25);
+  border-color: rgba(76, 175, 80, 0.5);
+  color: #a5d6a7;
+}
+.resume-btn.primary:hover {
+  background: rgba(76, 175, 80, 0.4);
+}

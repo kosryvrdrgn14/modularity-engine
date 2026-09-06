@@ -41,6 +41,27 @@ class GameManager {
 
   _slotKey(n) { return GameManager.SLOT_KEY(n); }
 
+  // ── §21 chunk 3: Run Journal (crash recovery) ──
+  // BUG: this static was CALLED at three sites (store default, migration,
+  // end_session) but never defined — any fresh boot or pre-v3 save migration
+  // threw ReferenceError. Defined now; shape matches MASTER_DESIGN §21.3B.
+  // Deliberately NOT stored mid-combat: enemy positions, projectiles,
+  // pickups, cooldowns (§21.3C) — combat is re-entered, not replayed.
+  static _emptyRunData() {
+    return {
+      stage_id: null,
+      tier: 'standard',
+      gameTime: 0,
+      kills: 0,
+      gold: 0,
+      level: 1,
+      weaponLevels: {},
+      bossSpawned: false,
+      announcementTimes: [],
+      savedAt: 0,
+    };
+  }
+
   _readActiveSlot() {
     const raw = this.backend.load(GameManager.ACTIVE_KEY);
     const n = typeof raw === 'number' ? raw : parseInt(raw, 10);
@@ -440,6 +461,42 @@ class GameManager {
     this.eventBus.emit('resources:changed', { currency: p.currency });
 
     this.save();
+  }
+
+  // ── §21 chunk 3: Run Journal API ─────────────────
+  // Written on run start + milestones, flushed with the 30s heartbeat.
+  // end_session() clears it on every normal completion, so a journal that
+  // survives into the next boot can ONLY mean the run died mid-combat.
+  beginRunJournal(stageId, tier) {
+    const s = this.store.session;
+    s.run_in_progress = true;
+    s.run_data = GameManager._emptyRunData();
+    s.run_data.stage_id = stageId;
+    s.run_data.tier = tier || 'standard';
+    this._dirty = true;
+  }
+
+  updateRunJournal(partial) {
+    if (!this.store.session.run_in_progress) return;
+    const rd = this.store.session.run_data;
+    if (!rd || !rd.stage_id) return;
+    Object.assign(rd, partial);
+    rd.savedAt = Date.now();
+    this._dirty = true;
+  }
+
+  clearRunJournal() {
+    const s = this.store.session;
+    s.run_in_progress = false;
+    s.run_data = GameManager._emptyRunData();
+    this._dirty = true;
+  }
+
+  /** Returns the journaled run if the previous run never finished, else null. */
+  getInterruptedRun() {
+    const s = this.store.session;
+    if (s.run_in_progress && s.run_data && s.run_data.stage_id) return s.run_data;
+    return null;
   }
 
   _addToInventory(item) {
