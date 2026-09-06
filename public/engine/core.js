@@ -183,7 +183,9 @@ class GameState {
       bossIntro: ['playing'],
       gameOver: ['endScreen'],
       endScreen: ['town', 'menu', 'playing'],
-      town: ['combat', 'title', 'town', 'playing'],
+      // BUG-024 audit: 'combat' removed — no code ever sets it and the table
+      // has no 'combat' row, so entering it would brick the machine.
+      town: ['title', 'town', 'playing'],
     };
   }
 
@@ -211,12 +213,35 @@ class GameState {
   isTown() { return this.state === 'town'; }
   isBossIntro() { return this.state === 'bossIntro'; }
 
+  /**
+   * BUG-024: the single sanctioned way to force a transition the table
+   * would reject. Use ONLY for flows that must work from ANY state
+   * (ending a run, returning to title) — never as a general-purpose setter.
+   * Everything else must go through setState() and honor its return value.
+   */
+  transition(newState, { allowRestart = false } = {}) {
+    if (allowRestart) {
+      this.previousState = this.state;
+      this.state = newState;
+      this.eventBus.emit('stateChange', { from: this.previousState, to: newState, data: null });
+      return true;
+    }
+    return this.setState(newState);
+  }
+
   triggerGameOver(result, stats) {
     // Prevent multiple triggers
     if (this.state === 'gameOver' || this.state === 'endScreen') return;
     this.endResult = result;
     this.endStats = stats;
-    this.setState('gameOver');
+    // BUG-024: a run can end while a sub-state is active — a win condition
+    // firing during the level-up screen, a pause, or a boss intro. The old
+    // code called setState('gameOver') and ignored the false return, so the
+    // transition was silently rejected (levelUp only allows 'playing') and
+    // state stayed stuck at 'levelUp' while the end screen showed: the
+    // split-brain behind the ghost-run symptoms. Ending a run must interrupt
+    // ANY state, so use the sanctioned force-path.
+    this.transition('gameOver', { allowRestart: true });
   }
 
   reset() {

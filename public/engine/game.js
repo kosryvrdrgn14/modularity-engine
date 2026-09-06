@@ -873,13 +873,26 @@ class Game {
   }
 
   _returnToTitle() {
-    // Show title screen again after game over
-    this.gameState.setState('title');
+    // BUG-024 audit: this path runs from gameOver/endScreen, where 'title'
+    // is not an allowed transition — setState() would silently reject it
+    // and leave the machine stuck. Use the same sanctioned force as
+    // triggerGameOver, since returning to title must work from any state.
+    this.gameState.transition('title', { allowRestart: true });
     this.titleMenu.show();
     this.titleBGM.fadeIn(1.5);
   }
 
   _handleGameOver() {
+    // BUG-024: the run may have ended from a sub-state (level-up screen,
+    // pause, boss intro) that triggerGameOver just force-interrupted. Clear
+    // any sub-flow debris so nothing keeps running against the assumption
+    // it is still that state — without this, upgrades kept applying after
+    // the victory screen appeared and queued level-ups leaked into the
+    // next stage.
+    this._isSelectingUpgrade = false;
+    this.uiManager.hideLevelUp();
+    if (this.levelingSystem.queue.length > 0) this.levelingSystem.queue = [];
+    if (this._queuedBossIntro) this._queuedBossIntro = null;
     // C2: Recall all companions from combat
     if (this.gameManager) {
       const companions = this.gameManager.get_companions();

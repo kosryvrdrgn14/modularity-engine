@@ -164,6 +164,13 @@
 - **Symptom:** Victory screen auto-returned to town after 1.5s — "barely any time to even read the victory screen".
 - **Fix:** Auto-return delay raised 1.5s → 4s. Click/Enter still restarts immediately (state-guarded per BUG-022). Later option: add an explicit button and drop the auto-return entirely.
 
+### BUG-024: triggerGameOver Silently Rejected from Sub-States — Split-Brain (September 6, 2026)
+- **Severity:** Critical (root cause of the BUG-022 symptom family)
+- **Symptom:** With the level-up overlay up, a win/loss firing in the same frame was silently discarded: `setState('gameOver')` returned `false` (levelUp only allows → playing) and the return value was ignored, so the machine stayed at `levelUp` while the victory screen still displayed. Upgrades kept applying, `setState('endScreen')` in `_handleGameOver()` was rejected too, and the next stage's `startGame()` (levelUp → playing is legal) "succeeded" while inheriting the old run's state — the stuck-victory / dump-back-into-the-fight symptoms.
+- **Root cause:** State machine had no path from any sub-state (`levelUp`, `paused`, `bossIntro`) to `gameOver`, and the one caller that must always succeed ignored `setState()`'s return value.
+- **Fix:** (1) `GameState.transition(newState, { allowRestart })` added in `core.js` as the single sanctioned force-path for flows that must work from ANY state; `triggerGameOver()` now uses it. (2) `_handleGameOver()` clears sub-flow debris first: `_isSelectingUpgrade`, the level-up overlay, pending level-up queue, queued boss intro. (3) Audit removed the dead `'combat'` target from the town row (no code ever set it; the table had no `combat` row, so entering it would have bricked the machine) and fixed latent `_returnToTitle()` which called `setState('title')` from gameOver/endScreen — never allowed, would have rejected silently.
+- **Lesson:** same class as the EventBus listener failure — an important operation failed silently and the caller proceeded as if it succeeded. RULE: never call `setState()` without honoring its return value; if a flow must work from ANY state, it must go through `GameState.transition()`, not raw writes.
+
 ---
 
 ## Potential Issues (Watch List)

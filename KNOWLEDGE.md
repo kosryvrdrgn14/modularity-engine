@@ -91,6 +91,13 @@ these before considering the refactor done:
 - Any code that looks up data by array index into a content list (e.g.
   `weapons[0]`) is a latent bug once that list can be reordered or extended.
   Prefer lookup by stable ID over positional index for anything content-driven.
+- Never call `setState()` and ignore its boolean return (BUG-024). A rejected
+  transition leaves the machine in the old state while the caller proceeds as
+  if it succeeded — the split-brain behind the stuck-victory/ghost-run family.
+  If a flow must work from ANY state (ending a run, returning to title), it
+  goes through `GameState.transition(newState, { allowRestart: true })`, the
+  single sanctioned force-path — never raw `this.state` writes, and never a
+  second ad-hoc bypass.
 
 ## 7. One source of truth per data type
 
