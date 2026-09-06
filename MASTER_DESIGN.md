@@ -1037,6 +1037,21 @@ Estimated size: ~120 lines total, zero combat-loop allocation, no UI changes in 
 
 ---
 
+## 22. Session Handoff (September 6, 2026)
+
+Pending when work resumes:
+
+1. **Manual tests (user, ~5 min):**
+   - Ghost-run fix family (BUG-022/023): victory screen readable ~4s then auto-returns; zombie counter frozen in town; rats count after 1:30 in extended stage.
+   - BUG-024: a win/loss firing while the level-up overlay is up now takes cleanly (no stuck screen, no upgrade spam).
+   - v1.9.3 (§21 chunk 3): refresh the preview mid-run → town shows the "Interrupted run detected" banner → Resume restores journaled stage/time/kills/gold/level/weapons; Discard = normal fresh start. A normally-finished run must NOT trigger the banner.
+2. **Owner decision:** delete root `isolate/` (review sandbox, now gitignored) once `game2_backup_monolithic.html` is confirmed recoverable from the GitHub backup repo.
+3. **Next features (agreed roadmap):**
+   - **Inventory system** — player items/equipment, data-driven.
+   - **Data-driven NPC structure** — when NPCs appear (conditions/gates), what dialogue options they offer, and related behaviors. Builds on the existing `content/npcs.json` + `schemas/npc.json`; follow KNOWLEDGE.md defensive patterns and the store-shape lesson from BUG-025 (fields land together with the code that uses them).
+
+---
+
 ## Appendix A: Related Documents
 
 | Document | Purpose |
