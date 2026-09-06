@@ -201,3 +201,9 @@ retrying variations of the same search. Switch immediately to either:
 
 Repeatedly retrying a search that's already shown signs of ignoring scope
 wastes context without fixing the underlying issue.
+
+Formal probe results and per-tool verdicts live in `TOOL_AUDIT_PLAN.md`
+(probed Sep 6, 2026): `code_search` is UNTRUSTED (ignores `cwd`, leaks
+`dist/` despite `.gitignore`), `glob` is CAUTION (intermittent recursion
+faults), `read_files`/`write_file`/`list_directory`/`write_todos`/terminal
+are TRUSTED.
