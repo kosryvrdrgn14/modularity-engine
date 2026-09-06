@@ -107,7 +107,9 @@ function distBetween(a, b) {
 }
 
 // Companion data — Dog (Slot 1, paired with W1)
-// COMPANION_DATA moved to data/companionData.js (loaded via <script> tag before this one)
+// COMPANION_DATA is populated at runtime by DataManager.loadAll()
+// (content/companions.json → window.COMPANION_DATA in engine/core.js).
+// The old data/companionData.js script tag no longer exists (INFRA-003).
 
 
 // ============================================================

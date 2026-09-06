@@ -342,11 +342,15 @@ class GameManager {
   // Get all companions with their statuses
   getCompanionRoster() {
     const companions = this.get_companions();
+    // INFRA-003: guarded global access — degrade to defaults if the
+    // window.COMPANION_DATA bridge (DataManager.loadAll → engine/core.js)
+    // ever regresses, instead of a hard ReferenceError.
+    const compData = typeof COMPANION_DATA !== 'undefined' ? COMPANION_DATA : {};
     return companions.map(id => ({
       id,
       status: this.getCompanionDeployStatus(id),
-      slot: COMPANION_DATA[id]?.slot || 0,
-      pairedWeapon: COMPANION_DATA[id]?.pairedWeapon || null,
+      slot: compData[id]?.slot || 0,
+      pairedWeapon: compData[id]?.pairedWeapon || null,
     }));
   }
 

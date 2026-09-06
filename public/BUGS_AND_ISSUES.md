@@ -248,6 +248,13 @@
 - **Diagnosis:** Game is fully client-side static files — nothing in the game code can produce a 502. Source is the Freebuff preview proxy/dev server (transient infra restart)
 - **Impact:** A 502 mid-combat loses that run's progress (saves commit at combat end). No action possible in game code; retry after the preview recovers
 
+### INFRA-003: Unguarded COMPANION_DATA Globals — Hardened (September 6, 2026)
+- **Found by:** external review (Claude) of the post-cleanup codebase; verified against live code.
+- **Symptom:** `data/companionData.js` is no longer in the script list; the live chain is `DataManager.loadAll()` → `content/companions.json` → `window.COMPANION_DATA` (engine/core.js). Nothing was broken — but 6 references (`companion.js` ×4, `progression.js` ×2) accessed the global bare/unguarded, while `titleMenu_refactored.js` and `loadout.js` already used the defensive `typeof` pattern. If the fallback chain ever regressed, half the files degrade gracefully and half hard-crash.
+- **Fix (v1.9.3):** `CompanionSystem._compData()` static guard wraps all 4 `companion.js` sites; inline guard in `getCompanionRoster()` (`progression.js`); stale `entities.js` comment (claimed a script tag that no longer exists) corrected. Headless-verified: missing global degrades to `{}`, no throw; `node --check` passes; zero bare refs remain.
+- **Also cleaned:** the three never-loaded data files (`npcData.js`, `locationTree.js`, `companionData.js`) are confirmed absent from `public/data/` (removed during the review pass; no code references remain — only schema doc strings, updated).
+- **Hygiene note:** a root `isolate/` sandbox (review tooling + pre-split monolith backups) was found untracked and NOT gitignored, actively polluting search. Added to `.gitignore`; deletion pending owner decision (monolith backup recovery unverifiable — git is platform-blocked in agent sessions).
+
 ### INFRA-002: Agent Search Tools Unreliable — Verified Faults (September 6, 2026)
 - **Symptom:** `code_search` ignored `cwd` scoping (root config files returned for `public/engine`-scoped queries), leaked content from gitignored `dist/` despite its documented `.gitignore` handling, and truncated output from context bloat. `glob` intermittently under-reported (1 file returned for a folder holding 87; 0 for a folder holding ~117).
 - **Diagnosis:** Harness-side tool defects, not project configuration — confirmed by a reproducible 8-probe suite (see `TOOL_AUDIT_PLAN.md`, run Sep 6, 2026). Cost: ~15 wasted tool calls tracing BUG-022 before the pattern was recognized.

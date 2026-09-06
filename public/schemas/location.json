@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Location Schema",
-  "description": "Schema for location definitions in data/locationTree.js",
+  "description": "Schema for location definitions in content/locations.json",
   "type": "object",
   "required": ["regions"],
   "properties": {
