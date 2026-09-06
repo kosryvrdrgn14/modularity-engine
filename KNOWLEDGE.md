@@ -172,3 +172,25 @@ Consequences for how we build and verify:
   or save-format logic (the Sep 5 slot trace showed slot machinery was fine).
 - Automated browser tests must boot their own in-process server + fresh
   context and never assume anything about the live preview's storage.
+
+## 13. Archived files are not part of the active codebase
+
+`archive/` and `public/archive/` contain superseded/legacy files kept only
+for historical reference. Never read, search within, or reference these
+folders during normal development tasks — if a search or grep turns up a
+result from either path, treat it as noise and ignore it. If a mechanical
+exclusion (`.gitignore`, branch separation) doesn't seem to be filtering
+these out in your current session, flag it rather than working around it
+by manually filtering results each time.
+
+## 14. Prefer targeted file access over broad search when search looks unreliable
+
+If a search tool call returns unexpectedly broad or irrelevant results (noise
+from unrelated directories, root-level clutter despite a scoped query), stop
+retrying variations of the same search. Switch immediately to either:
+
+- `read_files` on specific, already-known paths, or
+- `rg`/`grep` via terminal with explicit `--glob`/`--exclude-dir` scoping.
+
+Repeatedly retrying a search that's already shown signs of ignoring scope
+wastes context without fixing the underlying issue.
