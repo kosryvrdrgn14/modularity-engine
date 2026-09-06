@@ -207,3 +207,29 @@ Formal probe results and per-tool verdicts live in `TOOL_AUDIT_PLAN.md`
 `dist/` despite `.gitignore`), `glob` is CAUTION (intermittent recursion
 faults), `read_files`/`write_file`/`list_directory`/`write_todos`/terminal
 are TRUSTED.
+
+## 15. Buffy tool discipline (agent self-entry)
+
+Standing rules I follow on every task, so future sessions inherit them:
+
+- **Default path for scoped lookups:** terminal `rg` (`rg -n "pattern" public/engine`).
+  It auto-filters gitignored paths — verified: `rg --files` returns 0 dist hits —
+  so `dist/` noise cannot recur on this path.
+- **`code_search` only for fuzzy, project-wide discovery** where noise is
+  tolerable, and never with a `cwd` that must be honored (it ignores it).
+- **Backbone for known paths:** `read_files` (with offset/limit windows) and
+  `list_directory`. Prefer them over any search when the path is already known.
+- **One diagnosis, then switch** (see §14). A suspicious search result gets
+  exactly one assessment; then the trusted path takes over. No retry loops.
+- **`str_replace` reports per replacement:** a non-matching oldString is
+  skipped with a notice while other replacements in the same call still
+  apply. Always read the report; never assume all-or-nothing.
+- **No context-prune tool exists in my toolset.** Context discipline comes
+  from: (a) keeping tool outputs small — targeted reads instead of broad
+  searches, since a single bad search can dump megabytes of minified bundle
+  into context; (b) externalized state — `write_todos`, progress notes,
+  `KNOWLEDGE.md`, `TOOL_AUDIT_PLAN.md`, `BUGS_AND_ISSUES.md` — which is what
+  makes sessions resumable after user interruptions and context summarization.
+- **`TOOL_AUDIT_PLAN.md` is the source of truth** for per-tool verdicts and
+  probe recipes. If a tool misbehaves in a new way, add the evidence there
+  and adjust the verdict — don't silently work around it and forget.

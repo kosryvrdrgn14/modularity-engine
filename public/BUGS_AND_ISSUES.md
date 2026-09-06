@@ -241,6 +241,12 @@
 - **Diagnosis:** Game is fully client-side static files — nothing in the game code can produce a 502. Source is the Freebuff preview proxy/dev server (transient infra restart)
 - **Impact:** A 502 mid-combat loses that run's progress (saves commit at combat end). No action possible in game code; retry after the preview recovers
 
+### INFRA-002: Agent Search Tools Unreliable — Verified Faults (September 6, 2026)
+- **Symptom:** `code_search` ignored `cwd` scoping (root config files returned for `public/engine`-scoped queries), leaked content from gitignored `dist/` despite its documented `.gitignore` handling, and truncated output from context bloat. `glob` intermittently under-reported (1 file returned for a folder holding 87; 0 for a folder holding ~117).
+- **Diagnosis:** Harness-side tool defects, not project configuration — confirmed by a reproducible 8-probe suite (see `TOOL_AUDIT_PLAN.md`, run Sep 6, 2026). Cost: ~15 wasted tool calls tracing BUG-022 before the pattern was recognized.
+- **Key finding:** the terminal `rg` path auto-filters gitignored `dist/` correctly (`rg --files` → 0 dist hits, 347 total). Dist noise exists only via `code_search`.
+- **Resolution:** Verdict table + standing rules live in `TOOL_AUDIT_PLAN.md` and KNOWLEDGE.md §14/§15. Scoped lookups go to terminal `rg`; `code_search` is restricted to fuzzy project-wide discovery only. Closed — mitigations in effect.
+
 ---
 
-*Last updated: September 5, 2026*
+*Last updated: September 6, 2026*
