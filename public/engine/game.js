@@ -357,6 +357,7 @@ class Game {
     this.eventBus.on('save:runInterrupted', (data) => {
       this._showResumeBanner(data.run);
     });
+    this._detectInterruptedRun();
   }
 
   startGame() {
@@ -370,6 +371,7 @@ class Game {
     }
     this.uiManager.hideEndScreen();
     this.uiManager.hideLevelUp();
+    this._hideResumeBanner();
     this._isSelectingUpgrade = false;
     this.inputManager._isPaused = false;
     this.titleMenu.hide();
@@ -399,9 +401,9 @@ class Game {
     // Every run (fresh or resumed) opens a journal; end_session() closes it
     // on normal completion, so a journal surviving into the next boot means
     // the previous run died mid-combat — that is the recovery signal.
-    const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
-    this._resumeRun = this.gameManager.getInterruptedRun();
-    this.gameManager.beginRunJournal(selectedStageId, stageTier);
+    const resumedJournal = this._resumeApproved || null;
+    this._resumeApproved = null;
+    this.gameManager.beginRunJournal(selectedStageId, this.gameManager.get('session.current_stage_tier') || 'standard');
     this._runKillCount = 0;
 
     // B1: Player loadout — weapons are what the player chose, not the stage's
@@ -422,9 +424,8 @@ class Game {
     // LEVEL. Enemies/pickups are not persisted (§21.3C): combat is
     // re-entered, not replayed. Every restore is guarded: a partial/corrupt
     // journal must degrade to a fresh run, never block the game.
-    if (this._resumeRun) {
-      const jr = this._resumeRun;
-      this._resumeRun = null;
+    if (resumedJournal) {
+      const jr = resumedJournal;
       try {
         const journaledWeapons = Object.keys(jr.weaponLevels || {})
           .filter(wid => (jr.weaponLevels[wid] || 0) > 0);
@@ -1147,8 +1148,79 @@ class Game {
   }
 
   // ── AUTOSAVE (MASTER_DESIGN §21) ────────────────
-  // Chunks 1+2+4 of the §21 plan. See design doc for the intrusiveness
-  // analysis; combat impact is one sub-ms ~2KB localStorage write per 30s.
+  // Chunk 3: run journal. See design doc §21.3B for the intrusiveness
+  // analysis. The journal is an in-memory store mutation that rides the
+  // existing 30s heartbeat flush — zero extra disk writes mid-combat.
+
+  /** Snapshot the live run into the session journal (called on heartbeat +
+   *  milestones). No-op outside an open journal (e.g. after end_session). */
+  _writeRunJournal() {
+    const gm = this.gameManager;
+    if (!gm || !gm.store?.session?.run_in_progress) return;
+    gm.updateRunJournal({
+      gameTime: this.gameTime,
+      kills: this._runKillCount || 0,
+      gold: gm.get_resource('gold'),
+      level: this.levelingSystem.level,
+      weaponLevels: { ...this.weaponSystem.weaponLevels },
+      bossSpawned: !!this.spawnSystem?.bossSpawned,
+      // Keys of _announcementTriggered ARE the fired announcement times
+      // (set in _updateAnnouncements), so no separate capture list needed.
+      announcementTimes: Object.keys(this._announcementTriggered || {}),
+    });
+  }
+
+  /** Boot-time check: a journal that survived into this boot means the last
+   *  run never finished (end_session clears it on every normal completion). */
+  _detectInterruptedRun() {
+    const run = this.gameManager?.getInterruptedRun();
+    if (run) this.eventBus.emit('save:runInterrupted', { run });
+  }
+
+  _showResumeBanner(run) {
+    const banner = document.getElementById('resume-banner');
+    if (!banner) return;
+    const mins = Math.floor((run.gameTime || 0) / 60);
+    const secs = String(Math.floor((run.gameTime || 0) % 60)).padStart(2, '0');
+    const desc = banner.querySelector('.resume-desc');
+    if (desc) {
+      desc.textContent = `${run.stage_id || 'Unknown stage'} · ${mins}:${secs} · Lv ${run.level || 1} · ${run.kills || 0} kills`;
+    }
+    this._pendingInterruptedRun = run;
+    banner.classList.add('active');
+    // onclick (not addEventListener) so re-shows never stack listeners.
+    document.getElementById('resume-accept').onclick = () => this._resumeInterruptedRun();
+    document.getElementById('resume-discard').onclick = () => this._discardInterruptedRun();
+  }
+
+  _hideResumeBanner() {
+    const banner = document.getElementById('resume-banner');
+    if (banner) banner.classList.remove('active');
+    this._pendingInterruptedRun = null;
+  }
+
+  _resumeInterruptedRun() {
+    const run = this._pendingInterruptedRun;
+    this._hideResumeBanner();
+    if (!run) return;
+    // Pin session to the JOURNALED stage/tier so startGame's stage selection
+    // loads the crashed run's stage, whatever the town UI last pointed at.
+    if (this.gameManager) {
+      this.gameManager.set('session.selected_stage_id', run.stage_id);
+      this.gameManager.set('session.current_stage_tier', run.tier || 'standard');
+    }
+    this._resumeApproved = run;
+    // startGame() consumes _resumeApproved and restores from the journal.
+    this.startGame();
+  }
+
+  _discardInterruptedRun() {
+    this._hideResumeBanner();
+    if (!this.gameManager) return;
+    this.gameManager.clearRunJournal();
+    this.gameManager.save();
+  }
+
   _setupAutoSave() {
     const gm = this.gameManager;
     if (!gm) return;

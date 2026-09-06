@@ -164,6 +164,13 @@
 - **Symptom:** Victory screen auto-returned to town after 1.5s — "barely any time to even read the victory screen".
 - **Fix:** Auto-return delay raised 1.5s → 4s. Click/Enter still restarts immediately (state-guarded per BUG-022). Later option: add an explicit button and drop the auto-return entirely.
 
+### BUG-025: `_emptyRunData()` Called but Never Defined (September 6, 2026)
+- **Severity:** High (latent P1 — fresh boots and old-save migration would throw)
+- **Symptom:** None yet in play — found during §21 chunk-3 recon. `GameManager._emptyRunData()` was invoked at 3 sites (store default `_createDefault()`, `_migrate()` for pre-v3 saves, `end_session()`) but never defined anywhere.
+- **Impact:** Any boot with no existing save, or migration of a save predating the v3 journal fields, would ReferenceError during load.
+- **Fix:** Static defined in `progression.js` (v1.9.3), shape per MASTER_DESIGN §21.3B: `{stage_id, tier, gameTime, kills, gold, level, weaponLevels, bossSpawned, announcementTimes, savedAt}`.
+- **Lesson:** store-shape stubs added without their supporting functions will sit dormant until exactly the wrong moment (fresh boot); any new store field should land together with the code that uses it.
+
 ### BUG-024: triggerGameOver Silently Rejected from Sub-States — Split-Brain (September 6, 2026)
 - **Severity:** Critical (root cause of the BUG-022 symptom family)
 - **Symptom:** With the level-up overlay up, a win/loss firing in the same frame was silently discarded: `setState('gameOver')` returned `false` (levelUp only allows → playing) and the return value was ignored, so the machine stayed at `levelUp` while the victory screen still displayed. Upgrades kept applying, `setState('endScreen')` in `_handleGameOver()` was rejected too, and the next stage's `startGame()` (levelUp → playing is legal) "succeeded" while inheriting the old run's state — the stuck-victory / dump-back-into-the-fight symptoms.

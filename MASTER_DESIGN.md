@@ -938,8 +938,7 @@ Web version uses inline SVG for backgrounds (procedural, lightweight). Godot sho
 
 ## 21. Auto-Save System
 
-> Status: PARTIALLY IMPLEMENTED (v1.9.0) — chunks 1, 2 and 4 are live and verified.
-> Chunk 3 (run journal + resume banner) remains planned — it is the only piece still missing.
+> Status: COMPLETE (v1.9.0 chunks 1/2/4 + v1.9.3 chunk 3). Chunk 3: run journal written at run start, 30s heartbeat, level-up + boss-spawn milestones; boot detection emits `save:runInterrupted` → town banner Resume/Discard; resume restores stage/tier/time/kills/gold/level/weapons, suppresses boss re-spawn + announcement replay, holds pending level-ups (§21.6). Resume requires explicit banner approval; any other run start discards the journal. Crash window now ≤30s of run progress.
 
 ### 21.1 Current State & The Gap
 

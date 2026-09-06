@@ -2,6 +2,24 @@
 
 ---
 
+## v1.9.3 — §21 Chunk 3: Run Journal + Crash Recovery
+**Date:** September 6, 2026
+**Status:** ✅ Complete (headless-verified; browser test pending)
+
+### What landed
+- **Run journal** (`session.run_data`): written at run start, refreshed on the 30s combat heartbeat, and force-flushed at level-up pause + boss spawn. Holds `{stage_id, tier, gameTime, kills, gold, level, weaponLevels, bossSpawned, announcementTimes}`. Journal survives a crash; `end_session()` clears it on every normal completion — so a journal at boot can only mean an interrupted run.
+- **Boot detection + town banner:** on boot, an open journal shows a non-blocking "⚡ Interrupted run detected" banner (stage · time · level · kills) with Resume/Discard.
+- **Resume path:** banner approval pins the journaled stage/tier, re-enters combat at journaled time/kills/gold/level with weapons restored at journaled levels; boss re-spawn and announcement replays are suppressed. Pending level-up choices are NOT re-granted (§21.6 recommendation) — the player keeps the journaled level.
+- **Implicit discard:** any non-banner run start (fresh pick, restart, story mode) overwrites the journal — resume can never hijack an unrelated fresh run.
+- **BUG-025 fixed:** `GameManager._emptyRunData()` was called at 3 sites but never defined — fresh boots and pre-v3 save migration would have thrown ReferenceError. Found during chunk-3 recon; defined, shape = §21.3B.
+
+### Verification
+- Headless journal round-trip: begin → update → save → reload → exact restore (t/k/gold/level/weapons) ✓; discard path clears ✓; end_session clears ✓; fresh boot no longer throws ✓
+- `node --check` on all edited files ✓
+- Resume restore is try/catch-guarded: corrupt/partial journal degrades to a fresh run
+
+---
+
 ## v1.9.2 — POT-004: Boss Timing Overhaul (found 3 bugs, not 1)
 **Date:** September 5, 2026
 **Status:** ✅ Complete
