@@ -375,6 +375,12 @@ class Game {
     this._isSelectingUpgrade = false;
     this.inputManager._isPaused = false;
     this.titleMenu.hide();
+    // BUG-026 fix: startGame() is the single funnel for ALL combat starts
+    // (title Play, restart, loadout confirm, interrupted-run resume). The
+    // resume path can fire while the town screen is up — without this teardown
+    // the town DOM stayed over a live fight (combat audio + town UI, the
+    // "stuck in town" report). TownScreen.hide() is idempotent.
+    if (this.townScreen) this.townScreen.hide();
     this.gameState.reset();
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();
@@ -791,6 +797,14 @@ class Game {
     }
     this.gameManager.switchToSlot(n);
     this._resyncWorldFromStore();
+    // BUG-026 fix: the resume banner was scoped to whichever slot was active
+    // at BOOT. After a slot swap it stayed up showing the OLD slot's run and,
+    // if clicked, grafted that run into the NEW slot's store (ghost run +
+    // phantom resume notification). Hide the stale banner, then re-detect
+    // against the INCOMING slot's store — it re-appears only if that slot
+    // genuinely has an interrupted run.
+    this._hideResumeBanner();
+    this._detectInterruptedRun();
     console.log('[SLOT] Switched to slot', n);
     return true;
   }
@@ -1182,11 +1196,19 @@ class Game {
     if (!banner) return;
     const mins = Math.floor((run.gameTime || 0) / 60);
     const secs = String(Math.floor((run.gameTime || 0) % 60)).padStart(2, '0');
+    const slot = this.gameManager ? this.gameManager.getActiveSlot() : 1;
+    const title = banner.querySelector('.resume-title');
+    if (title) {
+      // BUG-026 fix: name the owning save slot — the run belongs to exactly
+      // one slot's store, and the player must be able to tell which.
+      title.textContent = `⚡ Interrupted run detected (Slot ${slot})`;
+    }
     const desc = banner.querySelector('.resume-desc');
     if (desc) {
       desc.textContent = `${run.stage_id || 'Unknown stage'} · ${mins}:${secs} · Lv ${run.level || 1} · ${run.kills || 0} kills`;
     }
     this._pendingInterruptedRun = run;
+    this._pendingInterruptedRunSlot = slot;
     banner.classList.add('active');
     // onclick (not addEventListener) so re-shows never stack listeners.
     document.getElementById('resume-accept').onclick = () => this._resumeInterruptedRun();
@@ -1197,20 +1219,37 @@ class Game {
     const banner = document.getElementById('resume-banner');
     if (banner) banner.classList.remove('active');
     this._pendingInterruptedRun = null;
+    this._pendingInterruptedRunSlot = null;
   }
 
   _resumeInterruptedRun() {
     const run = this._pendingInterruptedRun;
+    const runSlot = this._pendingInterruptedRunSlot;
     this._hideResumeBanner();
     if (!run) return;
+    // BUG-026 fix: the pending snapshot was captured at boot (or slot
+    // switch). If the ACTIVE store no longer holds that exact journal — slot
+    // was swapped, run was discarded, end_session ran — starting combat here
+    // would graft a foreign run into this slot's save (the ghost-run report).
+    // Re-verify against the live store before doing anything.
+    const live = this.gameManager?.getInterruptedRun();
+    const sameSlot = runSlot == null || runSlot === this.gameManager?.getActiveSlot();
+    if (!live || !sameSlot || live.stage_id !== run.stage_id || live.savedAt !== run.savedAt) {
+      console.warn('[AUTOSAVE] Resume aborted — journal no longer matches the active slot');
+      return;
+    }
     // Pin session to the JOURNALED stage/tier so startGame's stage selection
     // loads the crashed run's stage, whatever the town UI last pointed at.
     if (this.gameManager) {
       this.gameManager.set('session.selected_stage_id', run.stage_id);
       this.gameManager.set('session.current_stage_tier', run.tier || 'standard');
     }
+    // Resume can be answered from the TITLE banner — the boot-time title BGM
+    // would otherwise keep playing under combat audio.
+    if (this.titleBGM) this.titleBGM.stop();
     this._resumeApproved = run;
-    // startGame() consumes _resumeApproved and restores from the journal.
+    // startGame() consumes _resumeApproved, restores from the journal, and
+    // (BUG-022/BUG-026 teardown) dismisses title menu AND town screen.
     this.startGame();
   }
 

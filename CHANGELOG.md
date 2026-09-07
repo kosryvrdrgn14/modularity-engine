@@ -2,6 +2,27 @@
 
 ---
 
+## v1.9.4 — BUG-026: Cross-Slot Resume Contamination Fix
+**Date:** September 7, 2026
+**Status:** ✅ Complete (code fix; browser re-test of the 9-step repro pending)
+
+### User-reported reproduction
+Slot 1 run interrupted → slot 2 selected → phantom "resume run" notification inside slot 2 → Resume left the player stuck in town with combat audio running underneath → the ghost run wrote its journal into slot 2, so every later boot re-offered it.
+
+### Root causes (3 compounding)
+1. Resume banner was boot-scoped — slot switches never hid or re-checked it
+2. Resume consumed the boot-time snapshot without verifying the journal still belonged to the active slot's store
+3. `startGame()` never dismissed the town screen, so resume-from-town ran combat under the town DOM
+
+### Fixes (game.js)
+- `switchToSlot()` hides the stale banner and re-detects against the incoming slot's store
+- `_resumeInterruptedRun()` verifies owning slot + stage_id + savedAt against the live store before starting; mismatch aborts safely
+- `startGame()` teardown now includes `townScreen.hide()` — every combat-start funnel converges the UI
+- Banner title shows the owning save slot ("⚡ Interrupted run detected (Slot N)")
+- Title BGM stops when resuming from the title-screen banner
+
+---
+
 ## v1.9.3 — §21 Chunk 3: Run Journal + Crash Recovery
 **Date:** September 6, 2026
 **Status:** ✅ Complete (headless-verified; browser test pending)

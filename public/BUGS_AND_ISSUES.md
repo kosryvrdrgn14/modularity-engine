@@ -2,7 +2,7 @@
 
 > **Purpose:** Track known bugs, fixed bugs, and potential issues across all sessions
 > **Created:** September 2, 2026
-> **Last Updated:** September 5, 2026
+> **Last Updated:** September 7, 2026
 
 ---
 
@@ -178,6 +178,31 @@
 - **Fix:** (1) `GameState.transition(newState, { allowRestart })` added in `core.js` as the single sanctioned force-path for flows that must work from ANY state; `triggerGameOver()` now uses it. (2) `_handleGameOver()` clears sub-flow debris first: `_isSelectingUpgrade`, the level-up overlay, pending level-up queue, queued boss intro. (3) Audit removed the dead `'combat'` target from the town row (no code ever set it; the table had no `combat` row, so entering it would have bricked the machine) and fixed latent `_returnToTitle()` which called `setState('title')` from gameOver/endScreen — never allowed, would have rejected silently.
 - **Lesson:** same class as the EventBus listener failure — an important operation failed silently and the caller proceeded as if it succeeded. RULE: never call `setState()` without honoring its return value; if a flow must work from ANY state, it must go through `GameState.transition()`, not raw writes.
 
+### BUG-026: Cross-Slot Resume Contamination — Phantom Banner + Ghost Run Via the Resume Path (September 7, 2026)
+- **Severity:** Critical (save-slot integrity — same symptom family as BUG-022, new entry path)
+- **User reproduction (9 steps, save slots 1 & 2):**
+  1. Fresh boot, no saves → Story Mode → slot 1
+  2. Play to Cemetery, lose, refresh
+  3. Title screen shows NO notification; slot 1 holds the run's progress; slot 2 empty
+  4. Open slot 2 → a "resume run" notification appears INSIDE slot 2 (run actually belongs to slot 1)
+  5. Click Resume → town screen stays up, combat audio starts underneath — cannot participate
+  6. Starting a fresh quest fight stops the ghost audio (the two runs merged into one loop)
+  7. Preview refreshes by itself mid-fight (INFRA-001-class, environmental)
+  8. Title → slot 2 again → resume notification appears again (slot 2 now holds the GHOST run's journal)
+  9. Resume again → combat audio, still trapped in town
+- **Root cause (3 defects compounding):**
+  1. **Boot-scoped banner:** the resume banner is detected ONCE at boot against the boot-time active slot. Switching slots never hid it or re-checked it — the slot-1 banner stayed up over slot 2's town, reading as a slot-2 notification.
+  2. **No journal-ownership check at resume:** clicking Resume used the boot-time snapshot and ran `startGame()`, whose `beginRunJournal()` wrote the journal into whatever store was now active — grafting slot 1's run into slot 2's save (the ghost run that then legitimately produced the step-8 banner).
+  3. **Town screen never dismissed:** `startGame()` hid the title menu but never the town screen, so resuming from town left the town DOM over a live fight (combat audio + unplayable town UI).
+- **Fix (game.js, v1.9.4):**
+  1. `switchToSlot()` now hides the stale banner and re-runs detection against the INCOMING slot's store — the banner re-appears only if that slot genuinely has an interrupted run.
+  2. `_resumeInterruptedRun()` re-verifies the journal against the LIVE store before acting (owning slot + stage_id + savedAt must match); a mismatch aborts with a console warning instead of starting a foreign run.
+  3. `startGame()` teardown now also calls `townScreen.hide()` (idempotent) — the single funnel for every combat start (title Play, restart, loadout confirm, resume) can no longer leave the town over a fight.
+  4. Banner title now names the owning save slot: "⚡ Interrupted run detected (Slot N)".
+  5. Resuming from the title banner stops the title BGM first (it would have kept playing under combat audio).
+- **Note on step 2→3:** a clean defeat runs `end_session()`, which clears the journal — the banner at boot means the session actually ended mid-fight (refresh/502, INFRA-001), which is exactly the crash-recovery case the journal exists for. The bug was never that the journal survived; it was that the banner outlived its slot and the resume path could transplant it.
+- **Lesson:** any UI presenting per-slot state must be re-scoped on every slot switch, and any action consuming persisted state must re-verify it against the live store at action time — boot-time snapshots are hints, not facts. (Same class as BUG-022's "auto-timers must re-validate state when they fire".)
+
 ---
 
 ## Potential Issues (Watch List)
@@ -263,4 +288,4 @@
 
 ---
 
-*Last updated: September 6, 2026*
+*Last updated: September 7, 2026*
