@@ -1056,7 +1056,7 @@ Pending when work resumes:
 
 ## 23. Combat Pause Menu & Exit-to-Town (Planned)
 
-**Status: PLAN ONLY (2026-09-07). Do not implement until the current manual-test cycle is signed off.**
+**Status: PLANNED — design decisions locked 2026-09-07 (§23.8). Implementation deferred until the current manual-test cycle is signed off.**
 
 ### 23.1 Problem
 
@@ -1084,7 +1084,7 @@ Pre-existing oddity to clean during implementation: the pause-resume branch cont
 - Pause menu "Exit to Town" freezes the run and returns to town **without submitting the run**. The v1.9.3 run journal stays intact; the town banner immediately offers **Resume / Discard**.
 - ✅ Zero progress loss — reuses chunk 3 wholesale (restore path, boss-respawn suppression, pending level-up hold all already exist)
 - ✅ Blocks the gold-farm exploit (see Option B)
-- ⚠️ Banner copy "Interrupted run detected" reads like a crash for a voluntary exit → rename to "Unfinished run detected" (covers both cases)
+- ✅ Banner copy: **"Unfinished run detected"** — covers crash recovery + voluntary exit in one string (decided 2026-09-07)
 
 **Option B — Submit-and-bank exit (REJECT for v1)**
 - Exit calls `end_session(combatResult)` like a defeat and banks gold/XP.
@@ -1103,7 +1103,7 @@ Pre-existing oddity to clean during implementation: the pause-resume branch cont
   - Run snapshot line: `stage · time · level · kills`
   - `[1] Resume` (ESC also works)
   - `[2] Exit to Town` — run is journaled; town shows the Resume banner
-  - `[3] Quit to Title` — *optional, deferred by default*
+  - `[3] Quit to Title` — *decided 2026-09-07: included in v1.* Keeps the run journal; the Resume banner fires when the player next enters town (same direct-invoke path as Exit to Town, just deferred until town entry)
 - Number-key selection mirrors the level-up 1/2/3 pattern; mouse click supported.
 - Active **only** from `playing`/`paused`. ESC during `levelUp`/`bossIntro`/`endScreen` remains a no-op (level-up has its own modal; boss intro is skippable via Enter/Space).
 - Debounce ESC (reuse the `_upgradeKeyLock` pattern) to prevent rapid-toggle flicker.
@@ -1121,10 +1121,11 @@ Pre-existing oddity to clean during implementation: the pause-resume branch cont
   6. **Keep the run journal intact**; invoke the banner path directly (no need to wait for next boot)
 - Must NOT trip chunk 3's "any non-banner run start discards the journal" rule — exit goes banner-first, so resume is only offered via the banner (consistent with crash recovery).
 
-### 23.6 Defeat-flow companion fix (same theme, optional)
+### 23.6 Defeat-flow companion fix (decided 2026-09-07: full version)
 
-- **Full version:** end screen gets explicit buttons — `Retry` / `Return to Town` — replacing blind input-restart. Either canvas hit-testing (matches current end-screen rendering) or convert the end screen to an HTML overlay.
-- **Minimal version:** keep Enter = Retry, but add visible hint text (`ENTER: Retry · Town in 4s`) and a **1s input lockout** after the screen appears, so panic-clicks don't restart the fight.
+- **Chosen — full version:** end screen gets explicit buttons — `Retry` / `Return to Town` — replacing blind input-restart. Either canvas hit-testing (matches current end-screen rendering) or convert the end screen to an HTML overlay.
+- **Rejected:** minimal hint + 1s input lockout (too subtle to stop panic-clicks).
+- With buttons in place, the blanket click/Enter/Space-to-restart handler on the end screen is removed; a keyboard shortcut may remain but must mirror the Retry button deliberately, not fire on any input.
 - 4s auto-return to town unchanged.
 
 ### 23.7 Edge cases
@@ -1139,21 +1140,24 @@ Pre-existing oddity to clean during implementation: the pause-resume branch cont
 | Touch/mobile | No ESC key — HUD pause button needed eventually; out of scope v1 |
 | Audio while paused | Duck/quiet BGM (reuse `duckForLevelUp` pattern) — polish item |
 
-### 23.8 Open questions (owner decides before implementation)
+### 23.8 Decisions (locked 2026-09-07)
 
-1. **Banner copy** for voluntary exits: keep "Interrupted run detected" or switch to "Unfinished run detected"? (Recommend the latter — covers crash + voluntary in one string.)
-2. **Quit to Title** from the pause menu: include in v1 or defer?
-3. **End-screen fix depth:** full buttons (Retry/Town) or minimal hint + input lockout?
-4. Should a voluntary exit count toward `total_runs` / disaster-system checks? Plan says **no** (exit bypasses `_handleGameOver`) — confirm desired.
-5. Verify at implementation whether `_buildResult` computes rewards for non-completed runs (moot under Option A; matters if B is ever revisited).
+1. **Banner copy:** "Unfinished run detected" — replaces "Interrupted run detected" for both crash recovery and voluntary exits.
+2. **Quit to Title:** included in v1 (spec in §23.4).
+3. **End-screen fix:** full `Retry` / `Return to Town` buttons (spec in §23.6).
+4. **Run counters:** a voluntary exit does NOT count toward `total_runs` / disaster-system checks (the exit path bypasses `_handleGameOver`).
+
+Implementation-time verification items (not owner decisions):
+
+5. Verify whether `_buildResult` computes rewards for non-completed runs (moot under Option A; matters if B is ever revisited).
 6. **Quest counter round-trip:** confirm the exit→resume cycle preserves quest objective progress (counters ride the store; verify the resume path doesn't reset them).
 
 ### 23.9 Implementation order (when approved)
 
-1. **Pause menu overlay + Resume wiring** — fixes the invisible pause; small, isolated
-2. **`paused → town` edge + `_exitRunToTown()` teardown + immediate banner** — medium; reuses v1.9.3 nearly wholesale
-3. **End-screen explicit buttons or hint+lockout** — small
-4. **Polish:** BGM duck, banner copy, Quit-to-Title, HUD pause button (mobile) — optional
+1. **Pause menu overlay + Resume + Quit-to-Title wiring** — fixes the invisible pause; small, isolated
+2. **`paused → town` edge + `_exitRunToTown()` teardown + "Unfinished run" banner** — medium; reuses v1.9.3 nearly wholesale
+3. **End-screen `Retry` / `Return to Town` buttons** (remove blanket click-to-restart) — small
+4. **Polish:** BGM duck on pause, HUD pause button (mobile) — optional
 
 Estimated: phases 1–3 fit one session. Log the wrong-tag console.log cleanup alongside phase 1.
 
