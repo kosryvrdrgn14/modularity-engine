@@ -30,6 +30,8 @@
 19. [Open Design Questions](#19-open-design-questions)
 20. [Version History](#20-version-history)
 21. [Auto-Save System (Planned)](#21-auto-save-system-planned)
+22. [Session Handoff (September 6, 2026)](#22-session-handoff-september-6-2026)
+23. [Combat Pause Menu & Exit-to-Town (Planned)](#23-combat-pause-menu--exit-to-town-planned)
 
 ---
 
@@ -1049,6 +1051,111 @@ Pending when work resumes:
 3. **Next features (agreed roadmap):**
    - **Inventory system** — player items/equipment, data-driven.
    - **Data-driven NPC structure** — when NPCs appear (conditions/gates), what dialogue options they offer, and related behaviors. Builds on the existing `content/npcs.json` + `schemas/npc.json`; follow KNOWLEDGE.md defensive patterns and the store-shape lesson from BUG-025 (fields land together with the code that uses them).
+
+---
+
+## 23. Combat Pause Menu & Exit-to-Town (Planned)
+
+**Status: PLAN ONLY (2026-09-07). Do not implement until the current manual-test cycle is signed off.**
+
+### 23.1 Problem
+
+- **ESC silently freezes the game.** The `pause` event toggles `playing ↔ paused` and halts the loop, but there is **no pause UI at all** (verified: zero pause handling in `ui/game.js`). The player cannot tell the game is paused, and has no way out except pressing ESC again.
+- **No voluntary exit from a fight.** A player who needs to AFK, step away, or is frustrated with a fight has no way to back out to town mid-run.
+- **Defeat feels like being thrown back in.** On the end screen, *any* Enter/Space/click fires `restart` → `startGame()` = the same stage restarted from 0:00. The 4s auto-return to town exists, but a stray panic-click hijacks it into an instant restart first.
+
+### 23.2 Verified current plumbing (2026-09-07)
+
+| Piece | Behavior |
+|---|---|
+| `core.js` keydown | `Escape` → emits `pause {paused: true}` (no state guard at emit site) |
+| `game.js` `pause` listener | Guards `isPlaying()/isPaused()` → toggles state, freezes/unfreezes loop + input |
+| Pause UI | **None.** Silent freeze |
+| Transitions | `playing → [paused, levelUp, gameOver, bossIntro]`; `paused → [playing]` **only** — no path to town |
+| Defeat | `triggerGameOver('defeat')` → `_handleGameOver()` → `end_session(combatResult)` → endScreen → 4s auto-town |
+| `restart` event | Guarded to gameOver/endScreen; calls `startGame()` = **same stage, from 0:00** |
+| v1.9.3 run journal | Live: 30s heartbeat + milestone flushes; boot banner Resume/Discard; any non-banner run start silently discards the journal |
+
+Pre-existing oddity to clean during implementation: the pause-resume branch contains `console.log('[selectUpgrade] Game resumed')` — wrong log tag, harmless but confusing.
+
+### 23.3 Exit design options
+
+**Option A — Journal-based exit (RECOMMENDED)**
+- Pause menu "Exit to Town" freezes the run and returns to town **without submitting the run**. The v1.9.3 run journal stays intact; the town banner immediately offers **Resume / Discard**.
+- ✅ Zero progress loss — reuses chunk 3 wholesale (restore path, boss-respawn suppression, pending level-up hold all already exist)
+- ✅ Blocks the gold-farm exploit (see Option B)
+- ⚠️ Banner copy "Interrupted run detected" reads like a crash for a voluntary exit → rename to "Unfinished run detected" (covers both cases)
+
+**Option B — Submit-and-bank exit (REJECT for v1)**
+- Exit calls `end_session(combatResult)` like a defeat and banks gold/XP.
+- ❌ **Exploit risk:** if `_buildResult` computes rewards for non-completed runs, a player can enter a stage, farm the first ~30s of gold, exit-to-town, repeat = infinite gold farm of a stage's opening.
+- ❌ Loses all mid-run progress (level, weapons, kills).
+- Note: verify at implementation time whether `_buildResult` rewards non-completed runs — moot under Option A, but determines whether B is ever safe.
+
+**Option C — Hybrid (defer)**
+- Two buttons: "Exit (keep progress)" / "Abandon run". More explicit intent, but the banner's Discard button already covers abandonment. Revisit after play feedback.
+
+### 23.4 Pause menu spec (Option A)
+
+- **HTML overlay** matching the level-up overlay pattern in `game2.html` (dimmed canvas beneath).
+- Content:
+  - Title: `PAUSED`
+  - Run snapshot line: `stage · time · level · kills`
+  - `[1] Resume` (ESC also works)
+  - `[2] Exit to Town` — run is journaled; town shows the Resume banner
+  - `[3] Quit to Title` — *optional, deferred by default*
+- Number-key selection mirrors the level-up 1/2/3 pattern; mouse click supported.
+- Active **only** from `playing`/`paused`. ESC during `levelUp`/`bossIntro`/`endScreen` remains a no-op (level-up has its own modal; boss intro is skippable via Enter/Space).
+- Debounce ESC (reuse the `_upgradeKeyLock` pattern) to prevent rapid-toggle flicker.
+
+### 23.5 State machine + teardown changes
+
+- **Add one edge:** `paused: ['playing', 'town']` — a deliberate exit is an explicit, legal transition. No force-path abuse.
+- `playing → town` stays **illegal**: you must pass through pause first. Keeps the table honest and prevents exit-mid-hit bugs.
+- New `_exitRunToTown()` teardown:
+  1. Clear `_gameOverReturnTimer` if pending
+  2. Freeze loop + input flags (`gameLoop.paused`, `inputManager._isPaused`)
+  3. Reset audio duck (`duckForLevelUp(false)` pattern)
+  4. Clear entities, timers, floating text, boss-intro remnants
+  5. Hide combat UI overlays; show town screen
+  6. **Keep the run journal intact**; invoke the banner path directly (no need to wait for next boot)
+- Must NOT trip chunk 3's "any non-banner run start discards the journal" rule — exit goes banner-first, so resume is only offered via the banner (consistent with crash recovery).
+
+### 23.6 Defeat-flow companion fix (same theme, optional)
+
+- **Full version:** end screen gets explicit buttons — `Retry` / `Return to Town` — replacing blind input-restart. Either canvas hit-testing (matches current end-screen rendering) or convert the end screen to an HTML overlay.
+- **Minimal version:** keep Enter = Retry, but add visible hint text (`ENTER: Retry · Town in 4s`) and a **1s input lockout** after the screen appears, so panic-clicks don't restart the fight.
+- 4s auto-return to town unchanged.
+
+### 23.7 Edge cases
+
+| Case | Handling |
+|---|---|
+| ESC during `bossIntro` | No-op (Enter/Space already skips) |
+| Level-up while paused | Impossible — combat loop frozen, no XP accrual |
+| Exit with boss alive | Journal records `bossSpawned`; resume re-spawns boss without announcement replay (v1.9.3 handles) |
+| AFK for a long time | Paused run = frozen loop, no heartbeat writes; journal holds last snapshot (≤30s stale) — acceptable |
+| Exit, then pick a fresh stage | Existing rule silently discards journal — correct |
+| Touch/mobile | No ESC key — HUD pause button needed eventually; out of scope v1 |
+| Audio while paused | Duck/quiet BGM (reuse `duckForLevelUp` pattern) — polish item |
+
+### 23.8 Open questions (owner decides before implementation)
+
+1. **Banner copy** for voluntary exits: keep "Interrupted run detected" or switch to "Unfinished run detected"? (Recommend the latter — covers crash + voluntary in one string.)
+2. **Quit to Title** from the pause menu: include in v1 or defer?
+3. **End-screen fix depth:** full buttons (Retry/Town) or minimal hint + input lockout?
+4. Should a voluntary exit count toward `total_runs` / disaster-system checks? Plan says **no** (exit bypasses `_handleGameOver`) — confirm desired.
+5. Verify at implementation whether `_buildResult` computes rewards for non-completed runs (moot under Option A; matters if B is ever revisited).
+6. **Quest counter round-trip:** confirm the exit→resume cycle preserves quest objective progress (counters ride the store; verify the resume path doesn't reset them).
+
+### 23.9 Implementation order (when approved)
+
+1. **Pause menu overlay + Resume wiring** — fixes the invisible pause; small, isolated
+2. **`paused → town` edge + `_exitRunToTown()` teardown + immediate banner** — medium; reuses v1.9.3 nearly wholesale
+3. **End-screen explicit buttons or hint+lockout** — small
+4. **Polish:** BGM duck, banner copy, Quit-to-Title, HUD pause button (mobile) — optional
+
+Estimated: phases 1–3 fit one session. Log the wrong-tag console.log cleanup alongside phase 1.
 
 ---
 
