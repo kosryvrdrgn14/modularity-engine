@@ -264,6 +264,66 @@
 - **Recommended:** Give objectives stable ids (`obj_id` per objective) and key progress by those; migration v4 when done. Interim rule: **never reorder objectives of a shipped quest** — add a new objective at the end instead
 - **Priority:** Medium — matters the moment quest content is edited post-launch (web tools make this likely)
 
+### POT-009: Interrupted-Run Restore Is Clobbered by startGame() Teardown (September 8, 2026)
+- **Severity:** High — resume is effectively fake
+- **Found by:** full-code audit (Sep 8), follow-up to BUG-026
+- **Symptom:** Resume banner works and the journal re-seeds correctly, but the fight itself restarts from t=0.
+- **Root Cause:** In `game.js startGame()`, the resume restore block (~L435–466) sets `gameTime`, kills, gold, weapon levels and re-marks `spawnSystem.bossSpawned` — then teardown runs AFTER it with no early return: `spawnSystem.reset(effectiveSpawn)` (~L500, which clears `bossSpawned`) and `gameTime = 0` (~L502) wipe the restored values. The re-seeded journal makes saves LOOK right while the actual run restarts.
+- **Recommended:** Reorder so the resume restore runs after the full teardown (split `startGame()` into teardown/restore phases, or move the restore block below L502). Verify with a headless trace asserting `gameTime > 0` and `bossSpawned` survives into the first `update()`.
+- **Priority:** High — BUG-026's fix is incomplete without this; player-facing resume currently restores nothing that matters.
+
+### POT-010: total_runs Is Incremented Twice Per Run (September 8, 2026)
+- **Severity:** Medium (stat corruption, not gameplay)
+- **Found by:** full-code audit (Sep 8)
+- **Root Cause:** `game.js startGame()` (~L389) does `counters.total_runs++` for every combat start, AND `progression.js end_session()` (~L435) increments it again on every completed run. Every finished run counts twice; every abandoned run counts once.
+- **Impact:** Anything reading `total_runs` (game.js ~L996, titleMenu_refactored.js ~L488) shows inflated counts.
+- **Recommended:** Keep ONE increment site — `end_session()` is the better owner (it already owns the `counters_updated` pattern). Remove the `startGame()` increment.
+- **Priority:** Medium — cheap one-line fix, but save-slot data already carries doubled values.
+
+### POT-011: Dual Gold Ledgers That Drift (persistent.currency vs town.resources.gold) (September 8, 2026)
+- **Severity:** Medium
+- **Found by:** full-code audit (Sep 8)
+- **Status:** Two parallel gold stores written by different code paths with different APIs.
+- **Evidence:** `startGame()` zeroes `town.resources.gold` as an in-run counter (game.js ~L390); `end_session()` adds rewards to BOTH `p.currency` and `p.town.resources.gold` (progression.js ~L411–414); combat/quest loot uses `add_resource('gold')` → `town.resources.gold` only (progression.js ~L755, quest.js ~L361); disasters and estate upgrades spend via `spend_currency()` → `persistent.currency` only (progression.js ~L687, ~L917); the summary getter falls back `currency ?? resources.gold` (progression.js ~L640).
+- **Risk:** The two ledgers diverge depending on which API each caller used; the per-run zeroing plus double-credit shape can double-count run gold; every future gold call-site must "know" which ledger is real.
+- **Recommended:** Single ledger refactor — `persistent.currency` as the only truth, `town.resources.gold` either removed or turned into a derived view; audit every gold call-site during the inventory work (next milestone) so it lands on clean rails.
+- **Priority:** Medium — do it BEFORE the inventory/economy expansion.
+
+### POT-012: GameManager.set() Auto-Vivifies Paths and Is Persisted Wholesale (September 8, 2026)
+- **Severity:** Medium
+- **Found by:** full-code audit (Sep 8)
+- **Root Cause:** `set(path, value)` (progression.js ~L225–233) creates any missing intermediate object, so a typo'd or early `set('session.x', …)` silently grows a NEW session object that bypasses `_createDefault()` invariants (e.g. `run_in_progress`, `run_data` shape). The migration backfill (~L213–215) only repairs an undefined `run_in_progress`. There are 11 `set('session.*')` call-sites across game.js / titleMenu_refactored.js / town.js, and every write marks `_dirty`, so transient session state is persisted by heartbeats and by `switchToSlot()`'s save-on-exit.
+- **Risk:** A single bad path string creates a ghost store branch that survives into saves; half-configured session state can be snapshotted into the outgoing slot on a slot switch.
+- **Recommended:** Allowlist session keys inside `set()` (or route session writes through explicit GameManager methods); assert unknown top-level branches in dev builds.
+- **Priority:** Medium — silent-corruption class, same family as BUG-026.
+
+### POT-013: Legacy Canvas Upgrade-Card Hit-Test Parallels the HTML Overlay (September 8, 2026)
+- **Severity:** Low
+- **Found by:** full-code audit (Sep 8)
+- **Status:** `core.js _onPointerDown()` still runs `_getUpgradeCardAt(x, y)` (~L480–517) with hardcoded 160×200 card geometry, while card selection UI is the HTML level-up overlay in `ui/game.js`. Number-key selection (Digit1–3 → `selectUpgrade`) is the live keyboard path.
+- **Risk:** If the HTML overlay ever leaks pointer events (transparent gaps, pointer-events tuning), the canvas path could double-handle clicks with stale geometry; today it is most likely dead code that will rot.
+- **Recommended:** Confirm the overlay swallows all pointer events during levelUp, then delete the canvas hit-test path; keep the `selectUpgrade` event bus for keyboard.
+- **Priority:** Low — deletion candidate, zero behavior change intended.
+
+### POT-014: AudioContext Lifecycle Gaps (No Tab-Hide Suspend; Ad-Hoc BGM Ownership) (September 8, 2026)
+- **Severity:** Low
+- **Found by:** full-code audit (Sep 8)
+- **Status:** `audio.js` has user-gesture unlock and `resume()` (~L80, ~L224) but no `visibilitychange` → `ctx.suspend()` on hide. Music stop/start is called manually from scattered UI code (the BUG-026 fix had to add a title-BGM stop on resume-by-hand).
+- **Risk:** Hidden tab keeps the audio graph running (battery/CPU); every new screen transition risks another layered-BGM bug like BUG-026 step 9.
+- **Recommended:** Add `visibilitychange` suspend/resume; centralize a music bus with explicit ownership (exactly one BGM owner per screen) and crossfade helpers.
+- **Priority:** Low — polish, but cheap and prevents a repeat bug class.
+
+### POT-015: getEffectiveStats() Is a Stub (September 8, 2026)
+- **Severity:** Medium (when progression features land) / None today
+- **Found by:** full-code audit (Sep 8)
+- **Status:** `progression.js getEffectiveStats()` (~L518) returns `{ ...base }` with an in-code TODO — skill-tree and equipment bonuses are never applied. Any current caller silently gets base stats.
+- **Recommended:** Before implementing skill trees/equipment, make `getEffectiveStats()` the single composition point (base + tree + equipment + companions) and migrate all stat readers to it.
+- **Priority:** Medium — must be done as part of, not after, the next progression milestone.
+
+### Audit Positives (September 8, 2026)
+- `quest.js` re-verified clean: no unguarded content globals, degraded-mode fallback intact — the INFRA-003 lesson continues to hold in newer code.
+- All former bare `COMPANION_DATA` references are now guarded live (`companion.js _compData()` ×4, `progression.js` inline ×1) — INFRA-003 fix confirmed complete in current code.
+
 ---
 
 ## Environment Notes (Not Game Bugs)
