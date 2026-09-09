@@ -72,6 +72,22 @@ class AudioManager {
       // Wire game events
       this._wireEvents();
 
+      // POT-014a: suspend the AudioContext when the tab is hidden (saves
+      // battery/CPU in background tabs, prevents stale BGM from bleeding
+      // through — the BUG-026 step-9 audio class) and resume on return.
+      // ctx.resume() here is safe: it is a no-op when already running, and
+      // game code independently resumes on user gestures.
+      document.addEventListener('visibilitychange', () => {
+        if (!this.ctx) return;
+        if (document.hidden) {
+          if (this.ctx.state === 'running') {
+            try { this.ctx.suspend(); } catch (e) { /* noop */ }
+          }
+        } else if (this.ctx.state === 'suspended') {
+          try { this.ctx.resume(); } catch (e) { /* noop */ }
+        }
+      });
+
     } catch (e) {
       console.warn('Web Audio not supported');
     }

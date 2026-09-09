@@ -2,6 +2,30 @@
 
 ---
 
+## v1.9.5 — Audit Pot-Fixes: POT-009/010/012/013/014a (Headless-Verified)
+**Date:** September 9, 2026
+**Status:** ✅ Complete (23/23 headless trace checks pass; browser spot-check of resume + level-up still recommended)
+
+### What landed
+- **POT-009 (High) — resume restore no longer clobbered:** `startGame()` reordered so the interrupted-run restore runs AFTER teardown (`spawnSystem.reset()` / `gameTime = 0`) and loadout/tier setup. Resume now actually continues the journaled fight (gameTime, kills, gold, weapon levels, bossSpawned) instead of silently restarting from t=0. Restore is try/catch-guarded: a corrupt journal degrades to a fresh run, never blocks the game.
+- **POT-010 — `total_runs` counted once:** removed the `startGame()` increment; `end_session()` is the single owner. Existing slots may carry doubled historical values (left as-is, cosmetic stat only).
+- **POT-012 (symptom) — `session.gold` ghost branch removed:** the resume restore no longer creates the write-only `session.gold` path nothing ever read; gold restores into `persistent.town.resources.gold`.
+- **POT-013 — legacy canvas upgrade-card hit-test deleted:** `_getUpgradeCardAt()` and its `_onPointerDown()` hook removed (level-up is the HTML overlay; canvas could never legitimately receive card clicks). Keyboard 1–3 selection retained and verified end-to-end.
+- **POT-014a — AudioContext tab-hide suspend:** `visibilitychange` listener in `AudioManager.init()` suspends the context when the tab hides and resumes on return (no-op-safe, gesture-independent).
+
+### Verification
+- New trace `isolate/test_pot_fixes.cjs` (Playwright, `file://`, no server): 23 checks covering BUG-026 regressions (no phantom banner on wrong slot, correct slot label, town hidden, banner dismissed, no banner after completed run), POT-009 restore fidelity, POT-010 counting, POT-012 ghost branch, POT-013 removal + keyboard level-up flow, POT-014a suspend/resume, and a page-error net.
+- `node --check` passes on `game.js`, `core.js`, `audio.js`.
+
+### Not done (needs the user / next milestone)
+- POT-011 dual gold ledger refactor (before inventory/economy work)
+- POT-012 full allowlist for `set()`
+- POT-014 part 2: single music-bus owner
+- POT-015 `getEffectiveStats()` composition (with the progression milestone)
+- Historical doubled `total_runs` values in existing saves are not migrated back
+
+---
+
 ## v1.9.4 — BUG-026: Cross-Slot Resume Contamination Fix
 **Date:** September 7, 2026
 **Status:** ✅ Complete (code fix; browser re-test of the 9-step repro pending)

@@ -476,13 +476,12 @@ class InputManager {
     const x = (screenX - rect.left) * (this.canvas.width / rect.width);
     const y = (screenY - rect.top) * (this.canvas.height / rect.height);
     
-    // Check if clicking on upgrade cards during levelUp state (debounced)
-    const cardIndex = this._getUpgradeCardAt(x, y);
-    if (cardIndex >= 0) {
-      if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: cardIndex }); }
-      return;
-    }
-    
+    // POT-013: the legacy canvas upgrade-card hit-test was removed — level-up
+    // is a pure HTML overlay (#levelup-overlay, fixed inset-0, pointer-events:
+    // auto) with its own click/touch handlers, so the canvas never receives
+    // clicks during levelUp and the hardcoded 160x200 geometry could only
+    // misfire on stray combat clicks. Card selection = HTML cards or keys 1-3.
+
     // Check if skipping boss intro
     if (this._game && this._game.gameState.isBossIntro()) {
       this._game._skipIntroQueued = true;
@@ -502,24 +501,6 @@ class InputManager {
     this.hasTarget = true;
   }
 
-  _getUpgradeCardAt(x, y) {
-    // Card layout must match UIManager._renderLevelUp()
-    const w = this.canvas.width;
-    const h = this.canvas.height;
-    const cardWidth = 160;
-    const cardHeight = 200;
-    const spacing = 20;
-    const startX = (w - (cardWidth * 3 + spacing * 2)) / 2;
-    const cardY = h / 2 - 80;
-
-    for (let i = 0; i < 3; i++) {
-      const cardX = startX + i * (cardWidth + spacing);
-      if (x >= cardX && x <= cardX + cardWidth && y >= cardY && y <= cardY + cardHeight) {
-        return i;
-      }
-    }
-    return -1;
-  }
 
   _onPointerMove(screenX, screenY) {
     const rect = this.canvas.getBoundingClientRect();
