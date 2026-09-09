@@ -385,8 +385,11 @@ class Game {
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();
     if (this.gameManager) {
+      // Per-run in-combat gold counter (POT-011: dual-ledger cleanup pending).
+      // POT-010: total_runs is NOT incremented here — end_session() owns the
+      // single increment per COMPLETED run; counting at start too made every
+      // finished run count twice.
       this.gameManager.store.persistent.town.resources.gold = 0;
-      this.gameManager.store.counters.total_runs++;
     }
     this.introOverlay = null;
     this._announcementTriggered = {};
@@ -424,50 +427,8 @@ class Game {
       // Fallback: use stage-recommended weapons if player hasn't chosen
       this._activeWeapons = tierConfig?.recommendedWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
     }
-    // ── §21 chunk 3: resume an interrupted run (crash recovery) ──
-    // Restores journaled run-level stats. Per §21.6 recommendation, pending
-    // level-up choices are NOT re-granted — the player keeps the journaled
-    // LEVEL. Enemies/pickups are not persisted (§21.3C): combat is
-    // re-entered, not replayed. Every restore is guarded: a partial/corrupt
-    // journal must degrade to a fresh run, never block the game.
-    if (resumedJournal) {
-      const jr = resumedJournal;
-      try {
-        const journaledWeapons = Object.keys(jr.weaponLevels || {})
-          .filter(wid => (jr.weaponLevels[wid] || 0) > 0);
-        if (journaledWeapons.length > 0) this._activeWeapons = journaledWeapons;
-        for (const wid of this._activeWeapons) {
-          if (!this.weaponSystem.weaponLevels[wid]) this.weaponSystem.unlockWeapon(wid);
-          const lvl = (jr.weaponLevels[wid] || 0);
-          if (lvl > 0) this.weaponSystem.weaponLevels[wid] = lvl;
-        }
-        this.gameTime = jr.gameTime || 0;
-        this._runKillCount = jr.kills || 0;
-        if (this.gameManager) {
-          this.gameManager.set('session.gold', jr.gold || 0);
-          this.gameManager.store.persistent.town.resources.gold = jr.gold || 0;
-        }
-        // Pre-mark announced times so a resumed run doesn't replay announcements
-        this._announcementTriggered = {};
-        for (const t of jr.announcementTimes || []) this._announcementTriggered[t] = true;
-        if (this.spawnSystem && jr.bossSpawned) this.spawnSystem.bossSpawned = true;
-        // Re-seed the (still open) journal with the restored values
-        this.gameManager.updateRunJournal({
-          stage_id: jr.stage_id, tier: jr.tier,
-          gameTime: jr.gameTime || 0, kills: jr.kills || 0,
-          gold: jr.gold || 0, level: jr.level || 1,
-          weaponLevels: { ...(jr.weaponLevels || {}) },
-          bossSpawned: !!jr.bossSpawned,
-          announcementTimes: (jr.announcementTimes || []).slice(),
-        });
-        console.log('[AUTOSAVE] Resumed interrupted run:', jr.stage_id,
-          'at', Math.floor((jr.gameTime || 0) / 60) + ':' + String((jr.gameTime || 0) % 60).padStart(2, '0'));
-      } catch (e) {
-        console.error('[AUTOSAVE] resume restore failed — continuing fresh:', e);
-      }
-    }
-
     // Only Slot 0 (first weapon) starts active. Slot 1 unlocks at Lv3, Slot 2 at Lv6.
+    // (POT-009: the resume restore below may replace this loadout afterwards.)
     if (this._activeWeapons.length > 0) {
       this.weaponSystem.unlockWeapon(this._activeWeapons[0]);
     }
@@ -500,6 +461,54 @@ class Game {
     this.spawnSystem.reset(effectiveSpawn);
     this.companionSystem.companions = [];
     this.gameTime = 0;
+
+    // ── §21 chunk 3: resume an interrupted run (crash recovery) ──
+    // POT-009: this block MUST run after the teardown above. It previously
+    // sat before spawnSystem.reset()/gameTime = 0, which wiped every restored
+    // value (gameTime, kills, bossSpawned) — resume "worked" but the fight
+    // restarted from t=0. Restores journaled run-level stats. Per §21.6
+    // recommendation, pending level-up choices are NOT re-granted — the
+    // player keeps the journaled LEVEL. Enemies/pickups are not persisted
+    // (§21.3C): combat is re-entered, not replayed. Every restore is
+    // guarded: a partial/corrupt journal must degrade to a fresh run, never
+    // block the game.
+    if (resumedJournal) {
+      const jr = resumedJournal;
+      try {
+        const journaledWeapons = Object.keys(jr.weaponLevels || {})
+          .filter(wid => (jr.weaponLevels[wid] || 0) > 0);
+        if (journaledWeapons.length > 0) this._activeWeapons = journaledWeapons;
+        for (const wid of this._activeWeapons) {
+          if (!this.weaponSystem.weaponLevels[wid]) this.weaponSystem.unlockWeapon(wid);
+          const lvl = (jr.weaponLevels[wid] || 0);
+          if (lvl > 0) this.weaponSystem.weaponLevels[wid] = lvl;
+        }
+        this.gameTime = jr.gameTime || 0;
+        this._runKillCount = jr.kills || 0;
+        if (this.gameManager) {
+          // POT-012: the old set('session.gold', ...) call here created a
+          // ghost session.gold branch (nothing ever reads it) — removed.
+          this.gameManager.store.persistent.town.resources.gold = jr.gold || 0;
+        }
+        // Pre-mark announced times so a resumed run doesn't replay announcements
+        this._announcementTriggered = {};
+        for (const t of jr.announcementTimes || []) this._announcementTriggered[t] = true;
+        if (this.spawnSystem && jr.bossSpawned) this.spawnSystem.bossSpawned = true;
+        // Re-seed the (still open) journal with the restored values
+        this.gameManager.updateRunJournal({
+          stage_id: jr.stage_id, tier: jr.tier,
+          gameTime: jr.gameTime || 0, kills: jr.kills || 0,
+          gold: jr.gold || 0, level: jr.level || 1,
+          weaponLevels: { ...(jr.weaponLevels || {}) },
+          bossSpawned: !!jr.bossSpawned,
+          announcementTimes: (jr.announcementTimes || []).slice(),
+        });
+        console.log('[AUTOSAVE] Resumed interrupted run:', jr.stage_id,
+          'at', Math.floor((jr.gameTime || 0) / 60) + ':' + String((jr.gameTime || 0) % 60).padStart(2, '0'));
+      } catch (e) {
+        console.error('[AUTOSAVE] resume restore failed — continuing fresh:', e);
+      }
+    }
 
     // Create player
     const charData = this.dataManager.characters;
