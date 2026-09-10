@@ -2,6 +2,22 @@
 
 ---
 
+## v2.0.1 — POT-012 Resolution: set() Write Allowlist
+**Date:** September 10, 2026
+**Status:** ✅ Complete (75/75 headless trace checks pass)
+
+**The problem.** `GameManager.set(path, value)` auto-vivified ANY path and persisted it wholesale — a typo'd or early write silently grew a new save branch outside `_createDefault()` invariants (the BUG-026 ghost-run family; the v1.9.5 `session.gold` ghost was exactly this class). Every write marked `_dirty`, so heartbeats dutifully saved the corruption.
+
+**The finding.** The full call-site map: 12 static call-sites, exactly 5 unique paths — and **none of the 5 exist in `_createDefault()`**. Every one (`selected_stage_id`, `current_stage_tier`, `loadout_weapons`, `loadout_companions`, `town.phase`) came into being only via auto-vivification. The corruption vector was live, not hypothetical.
+
+**The fix.** `GameManager.WRITABLE_PATHS` — a static registered-path allowlist. `set()` rejects unregistered paths (console.error + `false`, **no dirty flag**, nothing persisted); vivification only occurs inside a registered path; reads remain unrestricted. All 12 call-sites untouched — zero behavior change for legit writes.
+
+**Verification.** Typo'd path and typo'd deep leaf rejected without dirtying; no vivification or persistence of either; registered path writes/reads/persists; session invariants (`run_in_progress`, `run_data` shape) hold after writes. All prior POT/BUG regressions still pass (75/75).
+
+**Convention.** New store fields join `WRITABLE_PATHS` deliberately or get a typed method — the NPC memory schema lands on typed methods from day one.
+
+---
+
 ## v2.0.0 — POT-007 Resolution: Stable Quest Objective Ids + Save Schema v4
 **Date:** September 10, 2026
 **Status:** ✅ Complete (69/69 headless trace checks pass)

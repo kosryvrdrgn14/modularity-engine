@@ -245,15 +245,37 @@ class GameManager {
     return path.split('.').reduce((obj, key) => obj && obj[key], this.store);
   }
 
+  // ── POT-012: explicit write allowlist ──────────
+  // set() used to auto-vivify ANY path: a typo'd or early write silently grew
+  // a new persisted branch outside _createDefault() invariants (the BUG-026
+  // ghost-run family; the v1.9.5 'session.gold' ghost was exactly this). Every
+  // writable path is now registered here — new store fields join this list
+  // deliberately (or get a typed method). Reads (get()) remain path-free.
+  // NOTE: these five paths are the complete live call-site map (12 sites);
+  // none exist in _createDefault(), they come into being only via these
+  // registered writes — that is expected, not drift.
+  static WRITABLE_PATHS = [
+    'session.selected_stage_id',
+    'session.current_stage_tier',
+    'session.loadout_weapons',
+    'session.loadout_companions',
+    'persistent.town.phase',
+  ];
+
   set(path, value) {
+    if (!GameManager.WRITABLE_PATHS.includes(path)) {
+      console.error(`[STORE] set() rejected unregistered path "${path}" — add it to GameManager.WRITABLE_PATHS or route the write through a typed method`);
+      return false; // no write, no dirty, nothing persisted
+    }
     const keys = path.split('.');
     let obj = this.store;
     for (let i = 0; i < keys.length - 1; i++) {
-      if (!obj[keys[i]]) obj[keys[i]] = {};
+      if (!obj[keys[i]]) obj[keys[i]] = {}; // vivify only inside a registered path
       obj = obj[keys[i]];
     }
     obj[keys[keys.length - 1]] = value;
     this._dirty = true;
+    return true;
   }
 
   // ── Resource Tracking ──────────────────────────

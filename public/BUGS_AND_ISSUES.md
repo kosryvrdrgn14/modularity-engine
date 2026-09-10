@@ -335,12 +335,15 @@
 - **Verification:** trace checks cover live crediting, earnings accounting, shared-ledger spends from both APIs, overspend rejection, deprecated mirror staying flat, no double-credit on resume, and the migration merge (500+300 → 800) across a reload. 45/45 pass.
 - **Note:** `end_session`'s `result.rewards.currency` path remains (currently unused by callers) — future callers get single-ledger behavior for free.
 
-### POT-012: GameManager.set() Auto-Vivifies Paths and Is Persisted Wholesale (September 8, 2026) — PARTIALLY RESOLVED v1.9.5
+### POT-012: GameManager.set() Auto-Vivifies Paths and Is Persisted Wholesale (September 8, 2026) — RESOLVED v2.0.1
 - **Severity:** Medium
 - **Found by:** full-code audit (Sep 8)
 - **Root Cause:** `set(path, value)` creates any missing intermediate object, so a typo'd or early `set('session.x', …)` silently grows a NEW session object that bypasses `_createDefault()` invariants (e.g. `run_in_progress`, `run_data` shape). There are 11 `set('session.*')` call-sites, and every write marks `_dirty`, so transient session state is persisted by heartbeats and by `switchToSlot()`'s save-on-exit.
 - **Resolution (v1.9.5, symptom):** The one live ghost-path symptom removed — the resumed-run restore no longer writes `set('session.gold', …)` (a write-only branch nothing ever read). Trace asserts `session.gold` never appears.
-- **Still open:** the allowlist itself — `set()` can still auto-vivify arbitrary paths. Route session writes through explicit GameManager methods or allowlist session keys in `set()`.
+- **Full call-site map (Sep 10, during the fix):** 12 static `set()` call-sites across 6 files, exactly 5 unique paths (`session.selected_stage_id`, `session.current_stage_tier`, `session.loadout_weapons`, `session.loadout_companions`, `persistent.town.phase`) — no dynamic path construction anywhere. Notably, **none of the 5 paths exist in `_createDefault()`**: every one came into being via auto-vivification, which is the corruption vector live, not hypothetical.
+- **Resolution (v2.0.1):** `GameManager.WRITABLE_PATHS` — a static registered-path allowlist. `set()` rejects unregistered paths (console.error + return false, no write, **no dirty flag** → nothing heartbeats into a save). Vivification now only happens *inside* a registered path; reads via `get()` remain unrestricted. All 12 call-sites untouched — zero behavior change for legit writes.
+- **Verification:** trace asserts a typo'd path and a typo'd deep leaf are rejected without dirtying the store, no `phas`/`sleected_stage_id` vivification or persistence, a registered path still writes/reads/persists, and session invariants (`run_in_progress`, `run_data` shape) hold after writes. 75/75 pass.
+- **Convention going forward:** new store fields either join `WRITABLE_PATHS` deliberately or get a typed GameManager method — the NPC memory schema should land on typed methods from day one.
 - **Priority:** Medium — silent-corruption class, same family as BUG-026.
 
 ### POT-013: Legacy Canvas Upgrade-Card Hit-Test Parallels the HTML Overlay (September 8, 2026) — RESOLVED v1.9.5
