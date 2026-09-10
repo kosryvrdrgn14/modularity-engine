@@ -332,6 +332,13 @@ class Game {
 
     this.eventBus.on('pickup', (data) => {
       this._sessionPickupsCollected = (this._sessionPickupsCollected || 0) + 1;
+      // POT-011: combat gold is credited LIVE to the single wallet (it was a
+      // no-op stub before — coins vanished and gold_earned stayed 0 forever).
+      if (data.pickup.pickupData?.id === 'gold_coin') {
+        const v = data.pickup.pickupData?.value || 1;
+        this._runGoldEarned = (this._runGoldEarned || 0) + v;
+        this.gameManager.add_currency(v, 'combat_loot');
+      }
       if (data.pickup.pickupData?.id === 'magnet') {
         this.eventBus.emit('magnetActivate', { player: data.player });
       }
@@ -384,13 +391,11 @@ class Game {
     this.gameState.reset();
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();
-    if (this.gameManager) {
-      // Per-run in-combat gold counter (POT-011: dual-ledger cleanup pending).
-      // POT-010: total_runs is NOT incremented here — end_session() owns the
-      // single increment per COMPLETED run; counting at start too made every
-      // finished run count twice.
-      this.gameManager.store.persistent.town.resources.gold = 0;
-    }
+    // POT-011: the wallet is NEVER zeroed at fight start (the old
+    // town.resources.gold = 0 wiped banked gold, including farming income).
+    // Per-run earnings live in this._runGoldEarned (reset below).
+    // POT-010: total_runs is NOT incremented here — end_session() owns the
+    // single increment per COMPLETED run.
     this.introOverlay = null;
     this._announcementTriggered = {};
     this.renderer._announcements = [];
@@ -399,6 +404,9 @@ class Game {
     this.pickupSystem.reset();
     this.levelingSystem.reset();
     this.weaponSystem.reset();
+    // POT-011: per-run gold EARNINGS counter only — the wallet is never
+    // zeroed anymore (the old town.resources.gold = 0 wiped banked gold,
+    // including farming income, at every fight start).
 
     // Select stage by ID from session, fallback to first available
     const selectedStageId = this.gameManager.get('session.selected_stage_id');
@@ -414,6 +422,7 @@ class Game {
     this._resumeApproved = null;
     this.gameManager.beginRunJournal(selectedStageId, this.gameManager.get('session.current_stage_tier') || 'standard');
     this._runKillCount = 0;
+    this._runGoldEarned = 0;
 
     // B1: Player loadout — weapons are what the player chose, not the stage's
     const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
@@ -492,11 +501,11 @@ class Game {
         this.levelingSystem.xp = 0;
         this.gameTime = jr.gameTime || 0;
         this._runKillCount = jr.kills || 0;
-        if (this.gameManager) {
-          // POT-012: the old set('session.gold', ...) call here created a
-          // ghost session.gold branch (nothing ever reads it) — removed.
-          this.gameManager.store.persistent.town.resources.gold = jr.gold || 0;
-        }
+        // POT-011: jr.gold is RUN EARNINGS, not a wallet snapshot — coins
+        // were credited live during the run, so restoring them here would
+        // double-pay the wallet. The counter is restored so end_session
+        // reports the run's true earnings; the wallet is left untouched.
+        this._runGoldEarned = jr.gold || 0;
         // Pre-mark announced times so a resumed run doesn't replay announcements
         this._announcementTriggered = {};
         for (const t of jr.announcementTimes || []) this._announcementTriggered[t] = true;
@@ -1029,7 +1038,7 @@ class Game {
         time_survived: this.gameTime,
         player_level: this.levelingSystem.level,
         kills: this.entityManager.getCount('enemy'),
-        gold_earned: this.gameManager.get_resource('gold'),
+        gold_earned: this._runGoldEarned || 0,
         xp_earned: this.levelingSystem.xp,
         boss_defeated: result === 'victory',
         weapons_used: Object.keys(this.weaponSystem.weaponLevels).filter(k => this.weaponSystem.weaponLevels[k] > 0),
@@ -1192,7 +1201,8 @@ class Game {
     gm.updateRunJournal({
       gameTime: this.gameTime,
       kills: this._runKillCount || 0,
-      gold: gm.get_resource('gold'),
+      // POT-011: run earnings for the journal (wallet untouched by runs).
+      gold: this._runGoldEarned || 0,
       level: this.levelingSystem.level,
       weaponLevels: { ...this.weaponSystem.weaponLevels },
       bossSpawned: !!this.spawnSystem?.bossSpawned,
@@ -1425,7 +1435,7 @@ class Game {
       time: `${Math.floor(this.gameTime / 60)}:${String(Math.floor(this.gameTime % 60)).padStart(2, '0')}`,
       level: this.levelingSystem.level,
       kills: this.entityManager.getCount('enemy'),
-      gold: this.gameManager ? this.gameManager.get_resource('gold') : 0,
+      gold: this.gameManager ? this.gameManager.get_currency() : 0,
     };
   }
 }

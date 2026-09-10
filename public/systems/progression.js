@@ -92,6 +92,21 @@ class GameManager {
       this.store = this._createDefault();
       this.save();
     }
+    // POT-011: one-time dual-ledger merge. Historically loot banked in
+    // town.resources.gold while shops spent persistent.currency, so old
+    // saves can hold gold the wallet never saw (or vice versa). Fold the
+    // mirror into the wallet and zero it — town.resources.gold is deprecated
+    // from here on; every reader/writer is redirected to the currency API.
+    try {
+      const res = this.store.persistent?.town?.resources;
+      const mirror = typeof res?.gold === 'number' ? res.gold : 0;
+      if (mirror !== 0) {
+        this.store.persistent.currency = (this.store.persistent.currency || 0) + mirror;
+        res.gold = 0;
+        this._dirty = true;
+        console.log('[ECONOMY] POT-011: merged legacy mirror gold into wallet:', mirror);
+      }
+    } catch (e) { console.warn('[ECONOMY] POT-011 merge skipped:', e); }
     this._dirty = true;
   }
 
@@ -257,13 +272,17 @@ class GameManager {
   get_currency() { return this.store.persistent.currency || 0; }
 
   // ── Resources ──────────────────────────────────
+  // POT-011: gold IS the wallet — redirect 'gold' resource ops to the
+  // currency API so farming/quest gold lands in the same ledger shops spend.
   add_resource(type, amount) {
+    if (type === 'gold') { this.add_currency(amount, 'resource'); return; }
     if (!this.store.persistent.town.resources.hasOwnProperty(type)) return;
     this.store.persistent.town.resources[type] += amount;
     this._dirty = true;
   }
 
   spend_resource(type, amount) {
+    if (type === 'gold') return this.spend_currency(amount, 'resource');
     const res = this.store.persistent.town.resources;
     if (!res.hasOwnProperty(type) || amount > res[type]) return false;
     res[type] -= amount;
@@ -271,7 +290,11 @@ class GameManager {
     return true;
   }
 
-  get_resource(type) { return this.store.persistent.town.resources[type] || 0; }
+  get_resource(type) {
+    // POT-011: gold reads come from the wallet, not the deprecated mirror.
+    if (type === 'gold') return this.get_currency();
+    return this.store.persistent.town.resources[type] || 0;
+  }
   has_resource(type, amount) { return this.get_resource(type) >= amount; }
 
   // ── Flags (flat key/value) ─────────────────────
@@ -387,19 +410,32 @@ class GameManager {
 
   // ── Combat Session ─────────────────────────────
   _buildResult(data) {
+    // BUG-028: accept BOTH naming conventions. The sole caller passes
+    // snake_case but this used to read camelCase, so 7 fields collapsed to
+    // defaults in EVERY combat result — stage_completed was always false,
+    // silently disabling star evaluation, gacha rolls, and best-run
+    // tracking. damage_taken / companions_used / pickups_collected were not
+    // mapped at all (hard star conditions like no_hit could never fire).
+    const pick = (snake, camel, fb) => {
+      const v = data[snake] !== undefined ? data[snake] : data[camel];
+      return v !== undefined ? v : fb;
+    };
     return {
       stageId: data.stageId || 'stage_graveyard',
-      stage_completed: data.stageCompleted || false,
-      time_survived: data.timeSurvived || 0,
-      player_level: data.playerLevel || 1,
+      stage_completed: pick('stage_completed', 'stageCompleted', false),
+      time_survived: pick('time_survived', 'timeSurvived', 0),
+      player_level: pick('player_level', 'playerLevel', 1),
       kills: data.kills || 0,
-      kills_by_type: data.killsByType || {},
-      gold_earned: data.goldEarned || 0,
-      xp_earned: data.xpEarned || 0,
-      items: data.itemsFound || [],
-      boss_defeated: data.bossDefeated || false,
-      weapons_used: data.weaponsUsed || [],
+      kills_by_type: data.kills_by_type || data.killsByType || {},
+      gold_earned: pick('gold_earned', 'goldEarned', 0),
+      xp_earned: pick('xp_earned', 'xpEarned', 0),
+      items: data.items || data.itemsFound || [],
+      boss_defeated: pick('boss_defeated', 'bossDefeated', false),
+      weapons_used: data.weapons_used || data.weaponsUsed || [],
       weapon_levels_end: data.weapon_levels_end || {},
+      damage_taken: data.damage_taken || 0,
+      companions_used: data.companions_used || 0,
+      pickups_collected: data.pickups_collected || 0,
       questEvents: data.questEvents || [],
     };
   }
@@ -434,14 +470,16 @@ class GameManager {
       }
     }
 
-    // Stats
+    // Stats — BUG-028: the result shape has kills/time_survived at the top
+    // level (see _buildResult); the old result.stats reads never matched, so
+    // total_kills never incremented and best_run never improved.
     this.store.counters.total_runs = (this.store.counters.total_runs || 0) + 1;
-    if (result.stats && result.stats.kills) {
-      this.store.counters.total_kills = (this.store.counters.total_kills || 0) + result.stats.kills;
+    if (result.kills) {
+      this.store.counters.total_kills = (this.store.counters.total_kills || 0) + result.kills;
     }
 
     // Best run
-    const time = result.stats ? result.stats.time_survived : 0;
+    const time = result.time_survived || 0;
     if (!p.combat.best_run || time > (p.combat.best_run.stats?.time_survived || 0)) {
       p.combat.best_run = result;
     }

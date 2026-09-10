@@ -215,6 +215,14 @@
 - **Verification:** trace extended (`isolate/test_pot_fixes.cjs`) — level restored from journal (3), no fabricated XP, HUD timer synced, timer pixels actually render on canvas, and a journal ROUND-TRIP: resume at Lv 3 → level up → milestone flush records Lv 4 for the next resume. 28/28 checks pass.
 - **Lesson:** every field in the journal shape must have a consumer in the restore block — a recorded-but-never-read field is a silent restore gap. When touching either side, diff `_emptyRunData()` keys against the restore block.
 
+### BUG-028: _buildResult Name Mismatch — Combat Results Lost 7 Fields Every Run (September 10, 2026)
+- **Severity:** High (silent progression-data loss; found during POT-011)
+- **Root cause:** `_buildResult()` read **camelCase** (`data.goldEarned`, `data.stageCompleted`, `data.timeSurvived`…) while its only caller passed **snake_case** (`gold_earned`, `stage_completed`, `time_survived`…). Undefined reads fell through to defaults, so every combat result was built with `stage_completed: false`, `time_survived: 0`, `player_level: 1`, `gold_earned: 0`, `boss_defeated: false`.
+- **Blast radius (all silently disabled):** star evaluation (2★/3★ thresholds never met except defaults), gacha rare-drop rolls (only ran on `stage_completed` — never true), best-run tracking (`time_survived` always 0, `best_run` never improved), `total_kills` (read `result.stats.kills`, which doesn't exist on the result shape — fixed to `result.kills`), no-hit/solo/companion hard star conditions (`damage_taken`/`companions_used` were never mapped at all).
+- **Fix (v1.9.7):** `_buildResult` now normalizes BOTH naming conventions and carries the unmapped fields; `end_session` reads `kills`/`time_survived` from the real result shape.
+- **Verification:** trace asserts the built result keeps snake_case fields, unmapped fields are carried, `end_session` counts kills and records best_run, and the completed-run path (stars + gacha) fires. 
+- **Lesson:** when a producer and consumer agree on a shape by hand, they drift — the result builder should have been exercised by at least one test that asserted field round-trip. The headless trace now does exactly that.
+
 ---
 
 ## Potential Issues (Watch List)
@@ -291,14 +299,16 @@
 - **Resolution (v1.9.5):** The `startGame()` increment removed — `end_session()` is now the single owner. Trace asserts startGame leaves the counter untouched and end_session bumps it exactly +1. Note: existing save slots may already carry doubled values; left as-is (stat-only cosmetic).
 - **Priority:** Medium — cheap one-line fix, but save-slot data already carries doubled values.
 
-### POT-011: Dual Gold Ledgers That Drift (persistent.currency vs town.resources.gold) (September 8, 2026)
+### POT-011: Dual Gold Ledgers That Drift (persistent.currency vs town.resources.gold) (September 8, 2026) — RESOLVED v1.9.7
 - **Severity:** Medium
 - **Found by:** full-code audit (Sep 8)
-- **Status:** Two parallel gold stores written by different code paths with different APIs.
-- **Evidence:** `startGame()` zeroes `town.resources.gold` as an in-run counter (game.js ~L390); `end_session()` adds rewards to BOTH `p.currency` and `p.town.resources.gold` (progression.js ~L411–414); combat/quest loot uses `add_resource('gold')` → `town.resources.gold` only (progression.js ~L755, quest.js ~L361); disasters and estate upgrades spend via `spend_currency()` → `persistent.currency` only (progression.js ~L687, ~L917); the summary getter falls back `currency ?? resources.gold` (progression.js ~L640).
-- **Risk:** The two ledgers diverge depending on which API each caller used; the per-run zeroing plus double-credit shape can double-count run gold; every future gold call-site must "know" which ledger is real.
-- **Recommended:** Single ledger refactor — `persistent.currency` as the only truth, `town.resources.gold` either removed or turned into a derived view; audit every gold call-site during the inventory work (next milestone) so it lands on clean rails.
-- **Priority:** Medium — do it BEFORE the inventory/economy expansion.
+- **Original evidence:** loot wrote `town.resources.gold` (via `add_resource('gold')`), shops/disasters/estates spent `persistent.currency` (via `spend_currency`), and `end_session` wrote both — the two ledgers diverged depending on which API each caller used.
+- **Deeper findings during the fix (Sep 10):**
+  1. **Combat gold was never credited at all** — the coin-pickup handler was a stub (`// Gold is tracked separately (not implemented yet)`). Coins dropped, were collected, vanished; `gold_earned` was always 0 and the 2★ gold threshold (≥600) could never be met via runs.
+  2. **The per-run zeroing destroyed banked gold** — `startGame()` zeroed `town.resources.gold`, which was ALSO where farming `collectSlot()` income landed, so every fight start silently wiped farm earnings.
+- **Resolution (v1.9.7):** `persistent.currency` is THE single wallet. `town.resources.gold` is deprecated; all resource-API gold ops (`add/spend/get/has_resource('gold')`) redirect to the currency API, so farming/quest gold and shop spends share one ledger. One-time migration in `init()` folds any legacy mirror balance into the wallet and zeroes the mirror. Combat coins now credit the wallet LIVE and accumulate in a per-run `_runGoldEarned` counter; the wallet is never zeroed at fight start. Journal `gold` redefined as RUN EARNINGS (not a wallet snapshot) so resume restores the counter without double-paying the wallet; `end_session`'s mirror write removed.
+- **Verification:** trace checks cover live crediting, earnings accounting, shared-ledger spends from both APIs, overspend rejection, deprecated mirror staying flat, no double-credit on resume, and the migration merge (500+300 → 800) across a reload. 45/45 pass.
+- **Note:** `end_session`'s `result.rewards.currency` path remains (currently unused by callers) — future callers get single-ledger behavior for free.
 
 ### POT-012: GameManager.set() Auto-Vivifies Paths and Is Persisted Wholesale (September 8, 2026) — PARTIALLY RESOLVED v1.9.5
 - **Severity:** Medium
