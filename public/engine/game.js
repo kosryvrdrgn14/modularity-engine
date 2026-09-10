@@ -293,16 +293,26 @@ class Game {
     });
 
     this.eventBus.on('death', (data) => {
+      // BUG-029: death events now carry type ('player'/'enemy') and
+      // enemyType (monster definition id). Robust player check: the type
+      // field used to be undefined entirely, so player deaths counted as
+      // kills and the defeat path only fired by entity identity.
+      const isPlayer = data.type === 'player' || data.entity === this.player;
       // F1: Track sandbox kills
-      if (this.sandboxSystem?.isActive && data.type !== 'player') {
+      if (this.sandboxSystem?.isActive && !isPlayer) {
         this.sandboxSystem.recordKill();
       }
-      // §21 chunk 3: run-journal kill counter (entityManager.getCount only
-      // counts ALIVE enemies, so journal kills are tracked via death events)
-      if (data.type !== 'player') this._runKillCount = (this._runKillCount || 0) + 1;
-      // GAP 5 FIX: Skip boss deaths here — handled by bossDeath event
-      if (data.type === 'boss_gravekeeper') return;
-      if (data.entity === this.player) {
+      // §21 chunk 3: run-journal kill counters. The per-type breakdown
+      // (_killsByType) feeds the end-screen teardown and lets type-specific
+      // features (quests, drops) be verified against real telemetry.
+      if (!isPlayer) {
+        this._runKillCount = (this._runKillCount || 0) + 1;
+        if (data.enemyType) {
+          this._killsByType = this._killsByType || {};
+          this._killsByType[data.enemyType] = (this._killsByType[data.enemyType] || 0) + 1;
+        }
+      }
+      if (isPlayer) {
         this.gameState.triggerGameOver('defeat', this._getStats());
         this._handleGameOver();
         this.audioManager.stopOrbitHum();
@@ -423,6 +433,7 @@ class Game {
     this.gameManager.beginRunJournal(selectedStageId, this.gameManager.get('session.current_stage_tier') || 'standard');
     this._runKillCount = 0;
     this._runGoldEarned = 0;
+    this._killsByType = {};
 
     // B1: Player loadout — weapons are what the player chose, not the stage's
     const stageTier = this.gameManager.get('session.current_stage_tier') || 'standard';
@@ -501,6 +512,8 @@ class Game {
         this.levelingSystem.xp = 0;
         this.gameTime = jr.gameTime || 0;
         this._runKillCount = jr.kills || 0;
+        // BUG-029: per-type kill breakdown survives resume too.
+        this._killsByType = { ...(jr.killsByType || {}) };
         // POT-011: jr.gold is RUN EARNINGS, not a wallet snapshot — coins
         // were credited live during the run, so restoring them here would
         // double-pay the wallet. The counter is restored so end_session
@@ -1037,7 +1050,8 @@ class Game {
         stage_completed: result === 'victory',
         time_survived: this.gameTime,
         player_level: this.levelingSystem.level,
-        kills: this.entityManager.getCount('enemy'),
+        kills: this._runKillCount || 0,
+        kills_by_type: { ...(this._killsByType || {}) },
         gold_earned: this._runGoldEarned || 0,
         xp_earned: this.levelingSystem.xp,
         boss_defeated: result === 'victory',
@@ -1203,6 +1217,7 @@ class Game {
     gm.updateRunJournal({
       gameTime: this.gameTime,
       kills: this._runKillCount || 0,
+      killsByType: { ...(this._killsByType || {}) },
       // POT-011: run earnings for the journal (wallet untouched by runs).
       gold: this._runGoldEarned || 0,
       level: this.levelingSystem.level,

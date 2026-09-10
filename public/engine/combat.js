@@ -774,9 +774,15 @@ class DamageSystem {
 
     if (target.hp <= 0) {
       target.active = false;
+      // BUG-029: consumers (kill counter, quest filters, audio routing)
+      // check `data.type` / per-monster ids, but the event never carried
+      // them. `type` = entity kind ('player'/'enemy'); `enemyType` = the
+      // monster definition id ('zombie', 'boss_gravekeeper', …).
       this.eventBus.emit('death', {
         entity: target,
         killer: source,
+        type: target.type,
+        enemyType: target.enemyData?.id || null,
         position: { x: target.x, y: target.y },
       });
       if (target.isBoss) {
@@ -812,9 +818,15 @@ class DamageSystem {
 
     if (target.hp <= 0) {
       target.active = false;
+      // BUG-029: consumers (kill counter, quest filters, audio routing)
+      // check `data.type` / per-monster ids, but the event never carried
+      // them. `type` = entity kind ('player'/'enemy'); `enemyType` = the
+      // monster definition id ('zombie', 'boss_gravekeeper', …).
       this.eventBus.emit('death', {
         entity: target,
         killer: source,
+        type: target.type,
+        enemyType: target.enemyData?.id || null,
         position: { x: target.x, y: target.y },
       });
       // Boss death triggers victory
