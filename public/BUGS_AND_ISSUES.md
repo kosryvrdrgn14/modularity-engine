@@ -223,6 +223,21 @@
 - **Verification:** trace asserts the built result keeps snake_case fields, unmapped fields are carried, `end_session` counts kills and records best_run, and the completed-run path (stars + gacha) fires. 
 - **Lesson:** when a producer and consumer agree on a shape by hand, they drift — the result builder should have been exercised by at least one test that asserted field round-trip. The headless trace now does exactly that.
 
+### BUG-029: Death Events Never Carried a Type — Player Deaths Counted as Kills (September 10, 2026)
+- **Severity:** Medium (data correctness; surfaced while building kill telemetry)
+- **Root cause:** `combat.js` emitted `death` with `{ entity, killer, position }` only — no `type`, no monster id. Every consumer that checked `data.type === 'player'` / `!== 'player'` / `=== 'boss_gravekeeper'` silently compared against `undefined`:
+  - player deaths **incremented the kill counter** and counted as quest `kill_count` progress;
+  - the player-death sound never routed (audio listener fell through);
+  - the defeat path in the main death handler fired only because `entity === this.player` identity matching happened to work.
+- **Fix (v1.9.8):** death events now carry `type: 'player' | 'enemy'` and `enemyType: <monster definition id from enemies.json>` (both emit sites). The main handler uses a robust `type === 'player' || entity === this.player` check; the stale `boss_gravekeeper` guard in game.js is replaced by the bossDeath-flow early return on `type: 'player'` semantics.
+- **Built on top (the original request): per-monster kill telemetry for testing**
+  - `_killsByType` accumulates per `enemyType` per run; flows into `_getStats()`, the combat result (`kills_by_type`), and the run journal (`killsByType` — survives resume).
+  - Combat HUD: kill counter chip (top-right, under level circle) + `Lv N · cur/next XP` numbers on the XP bar.
+  - End screen: a `zombie: 3 · bat: 2 · skeleton: 1`-style breakdown line under Kills — the verification tool for type-specific features (quests, drops).
+  - `kills_by_type` also added to `_buildResult`'s normalized shape (BUG-028).
+- **Verification:** trace asserts per-type accumulation, `_getStats`/HUD/journal round-trips, XP text render, end-screen breakdown render, and the healed player-death routing. 56/56 pass.
+- **Lesson:** an event field checked by three consumers but set by zero producers is a latently-wrong invariant — when adding a field to an event, grep the listeners *and* the emitters; both sides must exist.
+
 ---
 
 ## Potential Issues (Watch List)

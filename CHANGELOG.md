@@ -2,6 +2,24 @@
 
 ---
 
+## v1.9.8 — BUG-029: Kill Telemetry — Per-Monster Breakdown, HUD Kill Counter, XP Numbers
+**Date:** September 10, 2026
+**Status:** ✅ Complete (56/56 headless trace checks pass)
+
+### The bug under the feature
+Death events never carried `type` — every `data.type === 'player'` check compared against `undefined`. Player deaths counted as kills, counted toward quests, and the player-death sound never played (defeat only fired via entity identity). Death events now carry `type: 'player' | 'enemy'` + `enemyType: <enemies.json id>`; the handler uses a robust player check.
+
+### Kill telemetry (the request)
+- **Per-monster tracking:** `_killsByType` accumulates per run from death events, flows into `_getStats()`, the combat result (`kills_by_type`), and the run journal (`killsByType`) — the breakdown survives resume.
+- **Combat HUD:** kill counter chip (top-right, under the level circle) and exact numbers on the XP bar (`Lv N · cur/next XP`) — no more guessing from bar width.
+- **End screen:** kills-by-type breakdown line (e.g. `zombie: 3 · bat: 2 · skeleton: 1`) under the Kills line — built for testing type-specific quests/drops and verifying stage compositions.
+- **End screen correctness:** `kills` now reports the run's true kill total (it showed the count of *alive* enemies at run end).
+
+### Verification
+- 56/56: per-type accumulation, stats/HUD/journal round-trips, XP text + breakdown render checks, healed player-death routing, plus all prior POT-009/010/011/012/013/014a and BUG-026/027/028 regressions.
+
+---
+
 ## v1.9.7 — POT-011: Single Gold Ledger (+ BUG-028: Combat Result Field Fix)
 **Date:** September 10, 2026
 **Status:** ✅ Complete (45/45 headless trace checks pass; economy spot-check in browser recommended)

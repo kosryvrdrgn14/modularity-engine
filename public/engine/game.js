@@ -1167,6 +1167,9 @@ class Game {
       this.renderer.gameTime = this.gameTime;
       // POT-011: live gold wallet on the combat HUD
       this.renderer.gold = this.gameManager ? this.gameManager.get_currency() : 0;
+      // BUG-029: kill counter + XP numbers on the HUD
+      this.renderer.kills = this._runKillCount || 0;
+      this.renderer.xpText = `Lv ${this.levelingSystem.level} \u00b7 ${this.levelingSystem.xp}/${this.levelingSystem._getXpToNext(this.levelingSystem.level)} XP`;
       this.renderer._activeWeaponIds = this._activeWeapons || [];
       this.renderer._weaponLevels = this.weaponSystem.weaponLevels || {};
       this.renderer._activeCompanionIds = this.companionSystem.companions ? this.companionSystem.companions.map(c => c.id || c.companionId) : [];
@@ -1451,7 +1454,8 @@ class Game {
     return {
       time: `${Math.floor(this.gameTime / 60)}:${String(Math.floor(this.gameTime % 60)).padStart(2, '0')}`,
       level: this.levelingSystem.level,
-      kills: this.entityManager.getCount('enemy'),
+      kills: this._runKillCount || 0, // BUG-029: getCount only counts ALIVE enemies
+      kills_by_type: { ...(this._killsByType || {}) },
       gold: this.gameManager ? this.gameManager.get_currency() : 0,
     };
   }

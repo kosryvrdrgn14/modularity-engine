@@ -96,7 +96,18 @@ class UIManager {
       ctx.fillText(`Time: ${stats.time || '0:00'}`, w / 2, h / 2 + 10);
       ctx.fillText(`Level: ${stats.level || 1}`, w / 2, h / 2 + 40);
       ctx.fillText(`Kills: ${stats.kills || 0}`, w / 2, h / 2 + 70);
-      ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, h / 2 + 100);
+
+      // BUG-029: per-monster-type kill breakdown — testing/verification aid
+      // for type-specific features (quests, drops). Ids come from the death
+      // events' enemyType (the monster definition id in enemies.json).
+      const killsByType = stats.kills_by_type || {};
+      const typeKeys = Object.keys(killsByType).filter(k => killsByType[k] > 0);
+      if (typeKeys.length > 0) {
+        ctx.font = '12px monospace';
+        ctx.fillStyle = '#9E9E9E';
+        ctx.fillText(typeKeys.map(k => `${k}: ${killsByType[k]}`).join('  \u00b7  '), w / 2, h / 2 + 90);
+      }
+      ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, h / 2 + 108);
 
       // Display stars
       if (stats.stars) {

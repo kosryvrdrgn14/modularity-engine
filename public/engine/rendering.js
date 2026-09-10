@@ -434,6 +434,20 @@ class Renderer {
     ctx.fillStyle = '#FFD700';
     ctx.textAlign = 'left';
     ctx.fillText(`\u{1F4B0} ${goldVal}`, 16, 50);
+
+    // Kill counter (top-right, under the level circle) — BUG-029: run-kill
+    // telemetry from death events. The end screen previously showed the
+    // LIVE enemy count (getCount), which is nearly always wrong at run end.
+    const killVal = this.kills || 0;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(w - 106, 34, 96, 22);
+    ctx.strokeStyle = '#EF5350';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(w - 106.5, 33.5, 96, 22);
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = '#EF5350';
+    ctx.textAlign = 'right';
+    ctx.fillText(`\u2620 ${killVal}`, w - 16, 50);
     ctx.textAlign = 'center';
 
     // Boss Health Bar (if boss is alive)
@@ -457,6 +471,15 @@ class Renderer {
     ctx.fillRect(0, h - 20, w, 20);
     ctx.fillStyle = '#4FC3F7';
     ctx.fillRect(0, h - 20, w * (this.xpPercent || 0), 20);
+    // BUG-029: exact numbers on the XP bar — verify the leveling curve
+    // and resume XP semantics without guessing from bar width.
+    if (this.xpText) {
+      ctx.fillStyle = '#FFF';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(this.xpText, w - 8, h - 6);
+      ctx.textAlign = 'center';
+    }
 
     // Weapon Slots (bottom-left, above EXP bar)
     if (this._activeWeaponIds && this._activeWeaponIds.length > 0) {
