@@ -368,6 +368,9 @@ class Game {
       }
     });
 
+    // BUG-023 resolution 2: end screen dismissal (any key/click) → town.
+    this.eventBus.on('endScreenDismiss', () => this._dismissEndScreenToTown());
+
     // ── AUTOSAVE §21 chunk 3: interrupted-run recovery ──
     // Boot detection runs at the end of this method; this consumes the
     // journaled run when the player answers the banner.
@@ -1110,19 +1113,17 @@ class Game {
     // Move to endScreen state (gameOver → endScreen is valid; gameOver → town is not)
     this.gameState.setState('endScreen');
     
-    // Auto-return to town after a delay. BUG-023 feedback: 1.5s was barely
-    // enough time to see the stats — 4s lets the player actually read them.
-    if (this._gameOverReturnTimer) clearTimeout(this._gameOverReturnTimer);
-    this._gameOverReturnTimer = setTimeout(() => {
-      this._gameOverReturnTimer = null;
-      this._showGameOverReturnOption();
-    }, 4000);
+    // BUG-023 resolution 2: the end screen WAITS for input — no auto-return
+    // timer (even 4s rushed players), no accidental click-restart. Any
+    // key/click dismisses to town (endScreenDismiss); R fights again.
+    // Timestamp powers input lockouts against keys/clicks still in flight
+    // from gameplay (core.js checks it).
+    this._endScreenShownAt = performance.now();
   }
 
-  _showGameOverReturnOption() {
-    // BUG-022 fix: only auto-return if the end screen is still up. If the
-    // player already restarted, firing this transition slapped the town UI
-    // over a live combat run — the "ghost run".
+  /** BUG-023 resolution 2: leave the end screen to town (any key/click).
+   *  State-guarded — firing it over a live run was the BUG-022 ghost-run class. */
+  _dismissEndScreenToTown() {
     if (!this.gameState.isEndScreen()) return;
     const stats = this._getStats();
     this.gameState.setState('town');

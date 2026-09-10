@@ -453,11 +453,17 @@ class InputManager {
       if ((e.code === 'Enter' || e.code === 'Space') && this._game && this._game.gameState.isBossIntro()) {
         this._game._skipIntroQueued = true;
       }
-      // Restart on end screen (state-guarded — an unconditional emit here
-      // started ghost runs underneath the town/title UI: BUG-022)
-      if ((e.code === 'Enter' || e.code === 'Space') && this._game &&
-          (this._game.gameState.isGameOver() || this._game.gameState.isEndScreen())) {
-        this.eventBus.emit('restart');
+      // BUG-023 resolution 2 + BUG-022: the end screen WAITS for input.
+      // R = deliberate restart; ANY other key dismisses to town. Keys still
+      // held from gameplay are ignored via a short lockout after show
+      // (_endScreenShownAt, set by game.js _handleGameOver). During the
+      // transient gameOver state (pre-endScreen), input is ignored.
+      if (this._game && this._game.gameState.isEndScreen()) {
+        if (!this._game._endScreenShownAt ||
+            performance.now() - this._game._endScreenShownAt > 250) {
+          if (e.code === 'KeyR') this.eventBus.emit('restart');
+          else this.eventBus.emit('endScreenDismiss');
+        }
       }
     });
     window.addEventListener('keyup', (e) => {
@@ -487,9 +493,14 @@ class InputManager {
       this._game._skipIntroQueued = true;
       return;
     }
-    // Check if clicking to restart on end screen
-    if (this._game && (this._game.gameState.isGameOver() || this._game.gameState.isEndScreen())) {
-      this.eventBus.emit('restart');
+    // End screen: BUG-023 resolution 2 — any click dismisses to town.
+    // Clicks no longer restart (too easy to hit while click-to-moving);
+    // R is the deliberate restart. 250ms lockout vs in-flight clicks.
+    if (this._game && this._game.gameState.isEndScreen()) {
+      if (!this._game._endScreenShownAt ||
+          performance.now() - this._game._endScreenShownAt > 250) {
+        this.eventBus.emit('endScreenDismiss');
+      }
       return;
     }
     

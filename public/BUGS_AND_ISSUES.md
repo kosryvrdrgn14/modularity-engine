@@ -159,10 +159,16 @@
   3. `_showGameOverReturnOption()` no-ops unless state is still `endScreen`.
 - **Lesson:** Any auto-timer that mutates UI must re-validate game state when it fires; restart paths need teardown + guards at BOTH the emitter and the listener.
 
-### BUG-023: End Screen Auto-Dismiss Too Fast to Read (September 5, 2026)
+### BUG-023: End Screen Auto-Dismiss Too Fast to Read (September 5, 2026) — RESOLVED v1.9.9
 - **Severity:** Low (UX)
-- **Symptom:** Victory screen auto-returned to town after 1.5s — "barely any time to even read the victory screen".
-- **Fix:** Auto-return delay raised 1.5s → 4s. Click/Enter still restarts immediately (state-guarded per BUG-022). Later option: add an explicit button and drop the auto-return entirely.
+- **Symptom:** Victory screen auto-returned to town after 1.5s — "barely any time to even read the victory screen". The interim fix (4s auto-return) still rushed players, and the footer said "Click to restart" — with click-to-move controls, a stray click on the end screen silently started a NEW fight; same for any held Enter/Space.
+- **Resolution (v1.9.9, the "later option"):** the end screen now WAITS for input — no timer at all.
+  - Any key or click dismisses to town (`endScreenDismiss` → `_dismissEndScreenToTown`, state-guarded against the BUG-022 ghost-run class).
+  - `R` is the only restart path — deliberate, no accidental re-queues.
+  - 250ms input lockout after the screen appears (`_endScreenShownAt`) swallows keys/clicks still in flight from gameplay (kill-spam keys, held movement).
+  - Footer now reads "Press any key to continue · [R] fight again".
+- **Verification:** trace covers key-dismiss to town, lockout suppression, and R-restart. 59/59 pass.
+- **Lesson:** "auto-dismiss after N seconds" is never enough — the N is always someone's wrong pace. Input-driven continuation with an explicit alternative action beats timing.
 
 ### BUG-025: `_emptyRunData()` Called but Never Defined (September 6, 2026)
 - **Severity:** High (latent P1 — fresh boots and old-save migration would throw)

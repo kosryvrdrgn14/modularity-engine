@@ -2,6 +2,21 @@
 
 ---
 
+## v1.9.9 — BUG-023 Resolution: End Screen Waits for the Player
+**Date:** September 10, 2026
+**Status:** ✅ Complete (59/59 headless trace checks pass)
+
+### What changed
+- The end screen no longer auto-returns (the 4s timer was still rushing players) — it waits for input: **any key or click → town**, **R → fight again**.
+- Clicks/Enter/Space on the end screen no longer start a new fight (the old "Click to restart" made a stray click-to-move silently re-queue combat).
+- 250ms input lockout after the screen appears swallows keys/clicks still in flight from gameplay (kill-spam, held movement).
+- Footer: "Press any key to continue · [R] fight again".
+
+### Verification
+- 59/59: key-dismiss to town, lockout suppression, deliberate R-restart, plus all prior POT/BUG regressions.
+
+---
+
 ## v1.9.8 — BUG-029: Kill Telemetry — Per-Monster Breakdown, HUD Kill Counter, XP Numbers
 **Date:** September 10, 2026
 **Status:** ✅ Complete (56/56 headless trace checks pass)

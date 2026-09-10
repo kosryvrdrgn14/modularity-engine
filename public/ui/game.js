@@ -147,9 +147,14 @@ class UIManager {
       }
     }
 
-    ctx.fillStyle = '#666';
+    // v1.9.9 (BUG-023 resolution 2): the end screen waits for the player —
+    // no auto-return, no accidental restart. Any key/click → town; R → again.
+    ctx.fillStyle = '#AAA';
     ctx.font = '14px monospace';
-    ctx.fillText('Click to restart', w / 2, h / 2 + 190);
+    ctx.fillText('Press any key to continue', w / 2, h / 2 + 186);
+    ctx.fillStyle = '#666';
+    ctx.font = '12px monospace';
+    ctx.fillText('[R] fight again', w / 2, h / 2 + 208);
   }
 }
 
