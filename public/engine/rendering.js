@@ -420,6 +420,22 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.fillText(`${runM}:${runS}`, w / 2, 26);
 
+    // Gold wallet (top-left, under the HP bar) — POT-011 follow-up: coins
+    // credit the wallet LIVE during combat, and the original spec lists
+    // gold in the combat UI; a persistent chip (same value as the town
+    // chip) replaces the old fleeting '+1 G' float as the only feedback.
+    const goldVal = this.gold || 0;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(10, 34, 96, 22);
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(9.5, 33.5, 96, 22);
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'left';
+    ctx.fillText(`\u{1F4B0} ${goldVal}`, 16, 50);
+    ctx.textAlign = 'center';
+
     // Boss Health Bar (if boss is alive)
     if (this.bossEntity && this.bossEntity.active) {
       const bossHp = this.bossEntity.hp / this.bossEntity.maxHp;

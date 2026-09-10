@@ -1151,6 +1151,8 @@ class Game {
       this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
       // BUG-027: run clock on the HUD (also the resume-verification display)
       this.renderer.gameTime = this.gameTime;
+      // POT-011: live gold wallet on the combat HUD
+      this.renderer.gold = this.gameManager ? this.gameManager.get_currency() : 0;
       this.renderer._activeWeaponIds = this._activeWeapons || [];
       this.renderer._weaponLevels = this.weaponSystem.weaponLevels || {};
       this.renderer._activeCompanionIds = this.companionSystem.companions ? this.companionSystem.companions.map(c => c.id || c.companionId) : [];

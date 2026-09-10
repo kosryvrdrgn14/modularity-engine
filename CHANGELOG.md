@@ -12,13 +12,14 @@
 - **Single ledger:** `persistent.currency` is THE wallet. All `add/spend/get/has_resource('gold')` calls redirect to the currency API, so farming/quest gold and shop/disaster/estate spends share one ledger. `town.resources.gold` is deprecated (stays flat; still present in the save shape for schema stability).
 - **One-time migration:** on load, any legacy mirror balance is folded into the wallet and the mirror zeroed (logged to console).
 - **Resume semantics fixed:** the journal's `gold` field is now defined as RUN EARNINGS (not a wallet snapshot). Resume restores the earnings counter without re-crediting the wallet — no double-pay.
+- **Combat HUD gold chip:** the original spec lists gold in the combat UI, but the earning screen never showed it (town only). A persistent `💰 N` chip (top-left, under the HP bar, gold-on-dark matching the timer's style) now displays the live wallet during combat; the `+1 G` pickup float remains as moment-to-moment feedback on top of it.
 
 ### BUG-028 — combat results were hollow (found during POT-011)
 - `_buildResult()` read camelCase while its caller sent snake_case: every combat result had `stage_completed:false`, `time_survived:0`, `gold_earned:0`, `player_level:1`, `boss_defeated:false`. Stars, gacha rare-drop rolls, best-run tracking and `total_kills` were all silently dead; `damage_taken`/`companions_used`/`pickups_collected` were never even mapped.
 - Fixed with a both-conventions normalizer; `end_session` now reads the real result shape.
 
 ### Verification
-- Trace extended to 45 checks: live crediting, earnings accounting, shared-ledger spends from both APIs, overspend rejection, mirror stays flat, no double-credit on resume, migration merge across a reload (500+300→800), and BUG-028 field round-trips. All prior regression checks still pass.
+- Trace extended to 47 checks: live crediting, earnings accounting, shared-ledger spends from both APIs, overspend rejection, mirror stays flat, no double-credit on resume, migration merge across a reload (500+300→800), BUG-028 field round-trips, and HUD chip sync + render. All prior regression checks still pass.
 
 ### Not done / deferred
 - `result.rewards.currency` path in `end_session` remains unused by callers (kept for API completeness, now single-ledger).
