@@ -403,6 +403,23 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.fillText(this.level || 1, w - 30, 22);
 
+    // Run Timer (top-center) — BUG-027: gameTime is the resume-restore
+    // anchor; showing the run clock is the only way a player can verify a
+    // resumed run actually picked up where it left off. Mirrors the exact
+    // value journaled by _writeRunJournal().
+    const runT = Math.max(0, this.gameTime || 0);
+    const runM = Math.floor(runT / 60);
+    const runS = String(Math.floor(runT % 60)).padStart(2, '0');
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(w / 2 - 46, 10, 92, 22);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(w / 2 - 46.5, 10.5, 92, 22);
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${runM}:${runS}`, w / 2, 26);
+
     // Boss Health Bar (if boss is alive)
     if (this.bossEntity && this.bossEntity.active) {
       const bossHp = this.bossEntity.hp / this.bossEntity.maxHp;

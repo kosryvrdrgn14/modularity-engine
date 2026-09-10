@@ -203,6 +203,18 @@
 - **Note on step 2→3:** a clean defeat runs `end_session()`, which clears the journal — the banner at boot means the session actually ended mid-fight (refresh/502, INFRA-001), which is exactly the crash-recovery case the journal exists for. The bug was never that the journal survived; it was that the banner outlived its slot and the resume path could transplant it.
 - **Lesson:** any UI presenting per-slot state must be re-scoped on every slot switch, and any action consuming persisted state must re-verify it against the live store at action time — boot-time snapshots are hints, not facts. (Same class as BUG-022's "auto-timers must re-validate state when they fire".)
 
+### BUG-027: Resume Restored Weapons but Not Character Level; Run Timer Invisible (September 10, 2026)
+- **Severity:** Medium (resume fidelity — run continued but at wrong power curve)
+- **User report:** resuming from the title banner worked (returned to combat, weapons kept — e.g. Lv 7 projectile), but the character was Lv 1 again. Also: no run timer on the HUD, so the resumed start time was unverifiable.
+- **Root cause (2 items):**
+  1. **Journaled field with no consumer:** `_writeRunJournal()` records `level` (and `_emptyRunData()` defaults it), but the resume-restore block in `startGame()` never applied it to `levelingSystem` — the HUD reads `levelingSystem.level` per frame, so the run restarted at Lv 1 on the Lv-1 upgrade curve while weapon levels (which the block explicitly loops over) restored fine. Every journaled field except `level` had a consumer.
+  2. **`gameTime` was invisible:** it is the resume-restore anchor, yet no HUD element displayed it — a resumed run could not be verified by the player (and the journal only snapshots every 30s + at milestones, so the restored clock can legitimately lag the crash moment by up to 30s — §21.3B — which made verification matter).
+- **Fix (v1.9.6):**
+  1. Resume block restores `levelingSystem.level = jr.level` and zeroes `xp` (partial XP toward the next level is not journaled per §21.6 and is not fabricated).
+  2. Run timer added to the combat HUD (top-center, `m:ss`, mirrors the journaled clock exactly): `rendering.js _drawUI()` + per-frame `renderer.gameTime = gameTime` sync in `game.js`.
+- **Verification:** trace extended (`isolate/test_pot_fixes.cjs`) — level restored from journal (3), no fabricated XP, HUD timer synced, timer pixels actually render on canvas, and a journal ROUND-TRIP: resume at Lv 3 → level up → milestone flush records Lv 4 for the next resume. 28/28 checks pass.
+- **Lesson:** every field in the journal shape must have a consumer in the restore block — a recorded-but-never-read field is a silent restore gap. When touching either side, diff `_emptyRunData()` keys against the restore block.
+
 ---
 
 ## Potential Issues (Watch List)

@@ -483,6 +483,13 @@ class Game {
           const lvl = (jr.weaponLevels[wid] || 0);
           if (lvl > 0) this.weaponSystem.weaponLevels[wid] = lvl;
         }
+        // BUG-027 fix: the journal records the character level and the HUD
+        // reads levelingSystem.level — restore it, or a resumed run restarts
+        // at Lv 1 (wrong level-up curve + re-earning upgrade picks already
+        // granted). Partial XP toward the next level is not journaled
+        // (§21.6 keeps the journal lean) and is intentionally not restored.
+        this.levelingSystem.level = jr.level || 1;
+        this.levelingSystem.xp = 0;
         this.gameTime = jr.gameTime || 0;
         this._runKillCount = jr.kills || 0;
         if (this.gameManager) {
@@ -1133,6 +1140,8 @@ class Game {
     if (this.player) {
       this.renderer.level = this.levelingSystem.level;
       this.renderer.xpPercent = this.levelingSystem.xp / this.levelingSystem._getXpToNext(this.levelingSystem.level);
+      // BUG-027: run clock on the HUD (also the resume-verification display)
+      this.renderer.gameTime = this.gameTime;
       this.renderer._activeWeaponIds = this._activeWeapons || [];
       this.renderer._weaponLevels = this.weaponSystem.weaponLevels || {};
       this.renderer._activeCompanionIds = this.companionSystem.companions ? this.companionSystem.companions.map(c => c.id || c.companionId) : [];

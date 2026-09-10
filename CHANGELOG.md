@@ -2,6 +2,22 @@
 
 ---
 
+## v1.9.6 — BUG-027: Resume Level Restore + HUD Run Timer
+**Date:** September 10, 2026
+**Status:** ✅ Complete (28/28 headless trace checks pass; browser spot-check recommended)
+
+### What landed
+- **Level now restores on resume (BUG-027):** the journal always recorded `level`, but the resume-restore block never applied it — resumed runs restarted at Lv 1 (wrong level-up curve, and upgrade picks could be re-earned). The restore now sets `levelingSystem.level` from the journal and zeroes partial XP (partial XP is not journaled, per §21.6, and is not fabricated).
+- **Run timer on the combat HUD:** top-center `m:ss` box mirroring the exact journaled `gameTime` — the run clock is the resume-restore anchor, and now the player can verify a resumed run picked up where it left off. Note the journal snapshots at most every 30s (plus milestones), so a restored clock can legitimately lag the crash moment by up to 30s.
+
+### Verification
+- Trace extended: level restored (Lv 3 journal → Lv 3 live), no fabricated XP, HUD timer synced to `gameTime`, timer pixels render on canvas, and a journal ROUND-TRIP (resume Lv 3 → level up → milestone flush records Lv 4). 28/28 pass in `isolate/test_pot_fixes.cjs`.
+
+### Not done / deferred
+- Journaling partial XP toward the next level (lean-journal trade-off, §21.6) — a resumed run restarts its current level's XP at 0.
+
+---
+
 ## v1.9.5 — Audit Pot-Fixes: POT-009/010/012/013/014a (Headless-Verified)
 **Date:** September 9, 2026
 **Status:** ✅ Complete (23/23 headless trace checks pass; browser spot-check of resume + level-up still recommended)
