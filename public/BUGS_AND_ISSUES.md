@@ -293,17 +293,21 @@
 - **Recommended:** Move slot schedule to stage `tierConfig.slotUnlockLevels: [1, 3, 6]` (per-stage pacing becomes a JSON edit); either wire `unlockLevel` into display or drop it
 - **Priority:** Medium — do during the config-extraction pass; no gameplay change if numbers copied as-is
 
-### POT-006: embeddedData.js Mirrors All Content Files (September 5, 2026)
+### POT-006: embeddedData.js Mirrors All Content Files (September 5, 2026) — UPDATED Sep 10
 - **Status:** `data/embeddedData.js` (~2,000+ lines) hand-maintains fallback copies of every content JSON for offline/failure resilience
-- **Risk:** Every content edit must be mirrored or the fallback diverges from the real files (has already needed 3 sync edits: locations/npcs, companions, gates)
-- **Recommended:** Auto-generate the fallback from content files at build time, or accept as documented safety net with a sync-check in the web tools
+- **New finding (Sep 10, during POT-007):** `quests.json` is **not mirrored at all** — under any fetch-failure context (file://, offline) `allQuests` is empty: no quests available, no quest gates, and `quest:available` never fires. This is a fourth instance of the drift class (three partial-mirror syncs + one missing file) and means quest content has **no degraded mode at all**, unlike locations/npcs/companions/gates.
+- **Risk:** Every content edit must be mirrored or the fallback diverges from the real files; any unmirrored file silently has zero fallback
+- **Recommended:** Auto-generate the fallback from content files at build time, or accept as documented safety net with a sync-check in the web tools. **Decide before the data-driven NPC/memory wave** — every added content file multiplies this chore
 - **Priority:** Medium — grows with every content addition; blocks clean modding workflow
 
-### POT-007: Quest Objective Progress Keyed by Array Index (September 5, 2026)
-- **Status:** `quest.js _getQuestStore` keys objective progress as `objectives[questId][0]`, `[1]`, …
-- **Risk:** Editing/reordering objectives of a quest that any save has *in progress* silently corrupts that save's progress (e.g. old objective 1's count applies to new objective 1)
-- **Recommended:** Give objectives stable ids (`obj_id` per objective) and key progress by those; migration v4 when done. Interim rule: **never reorder objectives of a shipped quest** — add a new objective at the end instead
-- **Priority:** Medium — matters the moment quest content is edited post-launch (web tools make this likely)
+### POT-007: Quest Objective Progress Keyed by Array Index (September 5, 2026) — RESOLVED v2.0.0
+- **Severity:** Medium — silent save corruption on any post-launch quest edit
+- **Found by:** full-code audit (Sep 5)
+- **Original evidence:** `quest.js startQuest` wrote objective progress as `objectives[questId][0]`, `[1]`, … and all five objective handlers mutated by index — reordering/editing a quest's objectives that any save has in progress silently transplanted old counts onto new objectives.
+- **Resolution (v2.0.0):** Progress is keyed by **stable objective ids**: explicit `id` from content when present, else the derived `type:target` pair (verified unique across all 13 live quests). `startQuest` initializes by id (and fails loudly on duplicate derived ids), `_onObjectiveEvent` and all handlers take/access by stable `oid`, and `getQuestProgress` exposes `objectiveId` to UI consumers. Save schema bumped to **v4**; `_migrate` marks v4-awareness and `QuestSystem._reconcileObjectiveKeys()` (runs at quest init, when content is loaded) renames legacy index keys to stable ids **by position** — the exact mapping the old keys meant — preserving counts; orphaned counts from shrunken content are dropped rather than re-attached. Self-heal: an objective *added* to an in-progress quest initializes on its first event (previously permanently unwritable).
+- **Verification:** headless trace (69 checks) drives the real production flow — planted v3 index-keyed save in slot 2 → slot select → `switchToSlot` migration → story-mode quest init reconcile: index key renamed to `kill_count:zombie` with value preserved (12/20), synthetic death events write only stable keys (no numeric keys ever), objective completion auto-completes the quest, and a synthetic two-objective quest's progress survives an objectives-array reorder. All pass.
+- **Design note:** this establishes the stable-key + migration pattern the upcoming NPC memory schema should reuse — memory is another per-save keyed structure.
+- **POT-006 interaction:** `quests.json` is NOT mirrored into `embeddedData.js`, so under fetch-failure conditions quest content is empty and reconcile correctly leaves unknown-quest entries untouched (inert until content is present). Found and documented during this fix; strengthens the case for the POT-006 pipeline decision before the data-driven wave.
 
 ### POT-009: Interrupted-Run Restore Is Clobbered by startGame() Teardown (September 8, 2026) — RESOLVED v1.9.5
 - **Severity:** High — resume is effectively fake

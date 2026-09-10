@@ -71,6 +71,10 @@ class QuestSystem {
     // Build derived gates from quest unlocks — quests are the single source of truth
     this._buildDerivedGates();
 
+    // POT-007: reconcile legacy index-keyed objective progress ('0','1'…)
+    // to stable ids — by position, the exact mapping the old keys meant.
+    this._reconcileObjectiveKeys();
+
     // Register event listeners
     this._registerListeners();
 
@@ -258,18 +262,75 @@ class QuestSystem {
       .filter(Boolean);
   }
 
+  // ── POT-007: stable objective ids ───────────────────────
+  // Progress used to be keyed by ARRAY INDEX (objectives[questId][0]) —
+  // reordering/inserting objectives of a quest any save has in progress
+  // silently transplanted old counts onto new objectives. Progress is now
+  // keyed by a stable id: explicit `id` from content, else the derived
+  // `type:target` pair (unique across all current content; startQuest
+  // asserts collisions in dev).
+  _objectiveId(obj, index) {
+    if (obj.id) return obj.id;
+    return `${obj.type || 'unknown'}:${obj.target ?? 'any'}`;
+  }
+
+  /** One-time reconcile for v3 saves: rename index-keyed progress entries
+   *  ('0', '1'…) to stable ids, matching BY POSITION (the exact mapping the
+   *  old keys meant). Runs at quest-system init, when content is loaded.
+   *  Unknown quests (removed content) are left untouched and cleaned up by
+   *  normal quest lifecycle. */
+  _reconcileObjectiveKeys() {
+    const store = this._getQuestStore();
+    if (!store.objectives) return;
+    let migrated = 0;
+    for (const questId of store.active || []) {
+      const quest = this.allQuests.find(q => q.id === questId);
+      const entries = store.objectives[questId];
+      if (!quest || !entries) continue;
+      const legacyIndexes = Object.keys(entries).filter(k => /^\d+$/.test(k));
+      if (legacyIndexes.length === 0) continue;
+      const next = {};
+      // Copy already-stable entries first (mixed shapes survive a partial edit)
+      for (const k of Object.keys(entries)) {
+        if (!/^\d+$/.test(k)) next[k] = entries[k];
+      }
+      for (const idxKey of legacyIndexes) {
+        const i = Number(idxKey);
+        const obj = quest.objectives[i];
+        if (obj) {
+          next[this._objectiveId(obj, i)] = entries[idxKey];
+          migrated++;
+        }
+        // No matching objective (content shrank): drop the orphaned count —
+        // re-attaching it to a different objective would corrupt progress.
+      }
+      store.objectives[questId] = next;
+      this._markDirty();
+    }
+    if (migrated > 0) {
+      console.log(`[QUEST] POT-007: reconciled ${migrated} index-keyed objective entries to stable ids`);
+    }
+  }
+
   getQuestProgress(questId) {
     const store = this._getQuestStore();
     const objectives = store.objectives[questId] || {};
     const quest = this.allQuests.find(q => q.id === questId);
     if (!quest) return null;
 
-    return quest.objectives.map((obj, i) => ({
-      ...obj,
-      current: objectives[i]?.current || 0,
-      required: objectives[i]?.required || this._getRequired(obj),
-      complete: (objectives[i]?.current || 0) >= this._getRequired(obj),
-    }));
+    return quest.objectives.map((obj, i) => {
+      const oid = this._objectiveId(obj, i);
+      const current = objectives[oid]?.current || 0;
+      const required = objectives[oid]?.required || this._getRequired(obj);
+      return {
+        ...obj,
+        objectiveId: oid,
+        objectiveIndex: i,
+        current,
+        required,
+        complete: current >= required,
+      };
+    });
   }
 
   startQuest(questId) {
@@ -290,10 +351,19 @@ class QuestSystem {
 
     store.active.push(questId);
 
-    // Initialize objective tracking
+    // Initialize objective tracking — POT-007: keyed by stable objective
+    // ids (see _objectiveId). Duplicate derived ids (two objectives with
+    // the same type:target in one quest) would merge their progress —
+    // fail loudly in dev instead.
     store.objectives[questId] = {};
+    const seenIds = new Set();
     quest.objectives.forEach((obj, i) => {
-      store.objectives[questId][i] = { current: 0, required: this._getRequired(obj) };
+      const oid = this._objectiveId(obj, i);
+      if (seenIds.has(oid)) {
+        console.error(`[QUEST] Duplicate objective id "${oid}" in ${questId} — give objectives explicit ids in content`);
+      }
+      seenIds.add(oid);
+      store.objectives[questId][oid] = { current: 0, required: this._getRequired(obj) };
     });
 
     this._markDirty();
@@ -400,13 +470,21 @@ class QuestSystem {
 
       quest.objectives.forEach((obj, i) => {
         if (obj.type !== type) return;
-        if (handler(questId, i, obj, data)) {
+        const oid = this._objectiveId(obj, i);
+        // POT-007 self-heal: an objective ADDED to an in-progress quest (or
+        // restored by reconcile without an entry) initializes on first event
+        // — the old index scheme left it permanently unwritable.
+        if (!store.objectives[questId][oid]) {
+          store.objectives[questId][oid] = { current: 0, required: this._getRequired(obj) };
+        }
+        if (handler(questId, oid, obj, data)) {
           this._markDirty();
           this.eventBus.emit('quest:objective_progress', {
             questId,
+            objectiveId: oid,
             objectiveIndex: i,
-            current: store.objectives[questId][i].current,
-            required: store.objectives[questId][i].required,
+            current: store.objectives[questId][oid].current,
+            required: store.objectives[questId][oid].required,
           });
         }
       });
@@ -426,35 +504,36 @@ class QuestSystem {
 
   // ── Objective Handlers ─────────────────────────────────
 
-  _handleKillCount(questId, index, obj, data) {
-    // death events carry { entity, killer, position } — entity.enemyData.id is the content id
-    const enemyId = (data && data.enemyId)
+  _handleKillCount(questId, oid, obj, data) {
+    // BUG-029: death events carry enemyType (the enemies.json id) — prefer
+    // it, with the legacy entity-derived fallbacks kept for safety.
+    const enemyId = (data && (data.enemyType || data.enemyId))
       || (data && data.entity && (data.entity.enemyData && data.entity.enemyData.id) || (data && data.entity && data.entity.enemyId))
       || (data && data.entity && data.entity.type !== 'player' ? data.entity.type : null);
     if (!enemyId) return false;
     if (obj.target && enemyId !== obj.target) return false;
 
     const store = this._getQuestStore();
-    const progress = store.objectives[questId][index];
+    const progress = store.objectives[questId][oid];
     if (!progress || progress.current >= progress.required) return false;
 
     progress.current++;
     return true;
   }
 
-  _handleTalkTo(questId, index, obj, data) {
+  _handleTalkTo(questId, oid, obj, data) {
     // Called externally when player talks to NPC
     if (!data || data.npcId !== obj.target) return false;
 
     const store = this._getQuestStore();
-    const progress = store.objectives[questId][index];
+    const progress = store.objectives[questId][oid];
     if (!progress || progress.current >= progress.required) return false;
 
     progress.current = 1;
     return true;
   }
 
-  _handleCompleteStage(questId, index, obj, data) {
+  _handleCompleteStage(questId, oid, obj, data) {
     if (!data || !data.stageId) return false;
     // A lost run must not count — sessionEnd passes stage_completed only on victory
     if (data.stage_completed === false) return false;
@@ -463,18 +542,18 @@ class QuestSystem {
     if (targetId && data.stageId !== targetId) return false;
 
     const store = this._getQuestStore();
-    const progress = store.objectives[questId][index];
+    const progress = store.objectives[questId][oid];
     if (!progress || progress.current >= progress.required) return false;
 
     progress.current = 1;
     return true;
   }
 
-  _handleCollectItem(questId, index, obj, data) {
+  _handleCollectItem(questId, oid, obj, data) {
     if (!data || data.itemId !== obj.target) return false;
 
     const store = this._getQuestStore();
-    const progress = store.objectives[questId][index];
+    const progress = store.objectives[questId][oid];
     if (!progress || progress.current >= progress.required) return false;
 
     progress.current += (data.count || 1);
@@ -482,11 +561,11 @@ class QuestSystem {
     return true;
   }
 
-  _handleReachLocation(questId, index, obj, data) {
+  _handleReachLocation(questId, oid, obj, data) {
     if (!data || data.locationId !== obj.target) return false;
 
     const store = this._getQuestStore();
-    const progress = store.objectives[questId][index];
+    const progress = store.objectives[questId][oid];
     if (!progress || progress.current >= progress.required) return false;
 
     progress.current = 1;

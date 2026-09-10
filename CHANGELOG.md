@@ -2,6 +2,25 @@
 
 ---
 
+## v2.0.0 — POT-007 Resolution: Stable Quest Objective Ids + Save Schema v4
+**Date:** September 10, 2026
+**Status:** ✅ Complete (69/69 headless trace checks pass)
+
+**The problem.** Objective progress was keyed by array index (`objectives[questId][0]`). Reordering or editing a quest's objectives that any save had in progress silently transplanted old counts onto new objectives — corrupting saves with no error anywhere. The interim rule was "never reorder a shipped quest," which is untenable once quest content becomes editable data.
+
+**The fix.**
+- **Stable objective ids:** progress keyed by explicit content `id` when present, else derived `type:target` (verified unique across all 13 live quests; `startQuest` fails loudly on duplicates in dev).
+- **All consumers id-keyed:** `_onObjectiveEvent`, all five objective handlers, and `getQuestProgress` (now exposes `objectiveId` for UI consumers — the hook data-driven quests need).
+- **Save schema v4:** `_migrate` bumps v3→v4; `QuestSystem._reconcileObjectiveKeys()` (quest init, content present) renames legacy index keys to stable ids **by position**, preserving counts. Orphaned counts from shrunken content are dropped, not re-attached.
+- **Self-heal bonus:** an objective *added* to an in-progress quest initializes on its first event — previously it was permanently unwritable (progress could never increment).
+- **Quest content has no fallback (POT-006 finding):** `quests.json` was never mirrored into `embeddedData.js`; under fetch failure allQuests is empty. Documented as the fourth drift instance; strengthens the case for the pipeline decision before the data-driven wave.
+
+**Verification.** Trace drives the real production flow: planted v3 index-keyed save (slot 2, mq_02 at 12/20) → slot select → migration v4 → quest-init reconcile (index key → `kill_count:zombie`, value preserved) → synthetic death events write only stable keys → objective completes → quest auto-completes. Plus the core guarantee: a two-objective quest's progress survives an objectives-array reorder. All previous POT/BUG regression checks still pass (69/69).
+
+**Design note.** This is the stable-key + migration pattern to reuse for the NPC memory schema — memory is another per-save keyed structure that must survive content edits.
+
+---
+
 ## v1.9.9 — BUG-023 Resolution: End Screen Waits for the Player
 **Date:** September 10, 2026
 **Status:** ✅ Complete (59/59 headless trace checks pass)

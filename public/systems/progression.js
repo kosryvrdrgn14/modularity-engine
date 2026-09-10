@@ -112,7 +112,7 @@ class GameManager {
 
   _createDefault() {
     return {
-      save_version: 3,
+      save_version: 4,
       session: {
         current_stage_id: null,
         run_in_progress: false,
@@ -221,6 +221,14 @@ class GameManager {
       q.timeEvents = q.timeEvents || [];
       data.persistent.quests = q;
       data.save_version = 3;
+    }
+    if (v < 4) {
+      // POT-007: objective progress keys move from array indexes to stable
+      // ids. The key RENAME itself needs quest content (type:target pairs),
+      // so it happens in QuestSystem._reconcileObjectiveKeys() at init —
+      // this bump only marks that the store is v4-aware. Index-keyed
+      // entries left behind are inert until reconciled.
+      data.save_version = 4;
     }
     // §21 chunk 3 (additive, safe for all v3 saves): run journal fields.
     // No version bump — missing fields only mean "no journal", which is the
