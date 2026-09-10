@@ -234,11 +234,14 @@ class GameManager {
   }
 
   // ── Resource Tracking ──────────────────────────
-  // ── Currency (engine-agnostic name) ──────────────
+  // ── Currency (POT-011: SINGLE ledger) ──────────────
+  // persistent.currency is THE wallet. town.resources.gold is DEPRECATED —
+  // the old dual-ledger shape (loot wrote resources.gold, shops spent
+  // currency) let the two drift; every gold mutation now funnels through
+  // add_currency/spend_currency and legacy readers are redirected below.
   add_currency(amount, source) {
     if (amount <= 0) return;
     this.store.persistent.currency += amount;
-    this.store.persistent.town.resources.gold += amount;
     this._dirty = true;
     this.eventBus.emit('resources:changed', { currency: this.store.persistent.currency, source });
   }
@@ -246,7 +249,6 @@ class GameManager {
   spend_currency(amount, source) {
     if (amount > this.store.persistent.currency) return false;
     this.store.persistent.currency -= amount;
-    this.store.persistent.town.resources.gold -= amount;
     this._dirty = true;
     this.eventBus.emit('resources:changed', { currency: this.store.persistent.currency, source });
     return true;
@@ -406,10 +408,11 @@ class GameManager {
     const p = this.store.persistent;
     const s = this.store.session;
 
-    // Currency rewards
+    // Currency rewards — POT-011: single ledger (currency only; the old
+    // mirror write to town.resources.gold is gone). rewards.currency is
+    // currently never populated by callers but kept for API completeness.
     if (result.rewards && result.rewards.currency) {
       p.currency += result.rewards.currency;
-      p.town.resources.gold += result.rewards.currency;
     }
 
     // XP rewards
