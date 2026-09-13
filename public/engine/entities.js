@@ -106,10 +106,11 @@ function distBetween(a, b) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// Companion data — Dog (Slot 1, paired with W1)
-// COMPANION_DATA is populated at runtime by DataManager.loadAll()
-// (content/companions.json → window.COMPANION_DATA in engine/core.js).
-// The old data/companionData.js script tag no longer exists (INFRA-003).
+// Companion data lives in content/companions.json (or the generated
+// embeddedData.js fallback) and reaches CompanionSystem via the injected
+// DataManager reference (POT-003). The old data/companionData.js script
+// tag was removed in INFRA-003; the window.COMPANION_DATA bridge was
+// removed in POT-003.
 
 
 // ============================================================

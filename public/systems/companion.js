@@ -1,15 +1,16 @@
 class CompanionSystem {
-  /** INFRA-003: data/companionData.js is no longer in the script list; the
-   *  live source is DataManager.loadAll() → content/companions.json →
-   *  window.COMPANION_DATA (engine/core.js). This guard degrades to empty
-   *  if that chain ever regresses, instead of a hard ReferenceError —
-   *  same defensive pattern titleMenu_refactored.js/loadout.js use. */
-  static _compData() {
-    return typeof COMPANION_DATA !== 'undefined' ? COMPANION_DATA : {};
+  /** POT-003: companion content is read from the injected DataManager
+   *  reference (dataManager.companions, loaded from content/companions.json
+   *  or the generated embeddedData.js fallback). No window global involved.
+   *  The `|| {}` degrade-to-empty is kept: a missing/failed load degrades
+   *  gracefully instead of a hard ReferenceError. */
+  _compData() {
+    return this.dataManager?.companions || {};
   }
-  constructor(entityManager, eventBus) {
+  constructor(entityManager, eventBus, dataManager) {
     this.entityManager = entityManager;
     this.eventBus = eventBus;
+    this.dataManager = dataManager || null;
     this._activeCount = 0;
     this.companions = [];
     this._projectiles = []; // For archer/spider arrows
@@ -23,7 +24,7 @@ class CompanionSystem {
     this.weaponSystem = weaponSystem;
 
     for (const id of companionIds) {
-      const data = CompanionSystem._compData()[id];
+      const data = this._compData()[id];
       if (!data) continue;
       const level = 1;
       const stats = data.statsPerLevel[level - 1];
@@ -39,7 +40,7 @@ class CompanionSystem {
         attackType: data.attackType || 'cone',
         attackCooldown: 0,
         target: null,
-        // Type-specific data from COMPANION_DATA
+        // Type-specific data from companions.json (via DataManager)
         coneAngle: data.coneAngle,
         coneRange: data.coneRange,
         chainRange: data.chainRange || 80,
@@ -774,7 +775,7 @@ class CompanionSystem {
       if (!c.active || !c.pairedWeapon) continue;
       const buff = this._getWeaponBuff(c.pairedWeapon);
       c.weaponBuff = buff;
-      const data = CompanionSystem._compData()[c.companionId];
+      const data = this._compData()[c.companionId];
       if (data) {
         const lvl = Math.min(c._level || 1, data.statsPerLevel.length);
         const base = data.statsPerLevel[lvl - 1];
@@ -861,7 +862,7 @@ class CompanionSystem {
   setLevel(companionId, weaponLevel) {
     const c = this.companions.find(c => c.companionId === companionId);
     if (!c) return;
-    const data = CompanionSystem._compData()[companionId];
+    const data = this._compData()[companionId];
     if (!data) return;
     const lvl = Math.min(weaponLevel, data.statsPerLevel.length);
     c._level = lvl;

@@ -75,15 +75,9 @@ class LoadoutScreen {
   }
 
   getAvailableCompanions() {
-    let all;
-    // Read from DataManager (JSON) or fall back to global
-    if (this.dataManager?.companions) {
-      all = Object.values(this.dataManager.companions);
-    } else if (typeof COMPANION_DATA !== 'undefined') {
-      all = Object.values(COMPANION_DATA);
-    } else {
-      all = [];
-    }
+    // POT-003: read via the injected DataManager only — the
+    // window.COMPANION_DATA global was removed.
+    const all = Object.values(this.dataManager?.companions || {});
     if (!this.questSystem || !this.questSystem._initialized) return all;
     return all.filter(c => this.questSystem.isContentUnlocked('companions', c.id));
   }

@@ -25,8 +25,8 @@ class Game {
     this.uiManager = new UIManager(this.canvas, this.eventBus);
     this.audioManager = new AudioManager(this.eventBus);
     this.telegraphSystem = new TelegraphSystem(this.entityManager, this.eventBus);
-    this.companionSystem = new CompanionSystem(this.entityManager, this.eventBus);
-    this.gameManager = new GameManager(this.eventBus);
+    this.companionSystem = new CompanionSystem(this.entityManager, this.eventBus, this.dataManager);
+    this.gameManager = new GameManager(this.eventBus, null, this.dataManager);
     this.gameManager.init();
     this.starSystem = new StarSystem(this.gameManager);
     this.frenzySystem = new FrenzySystem(this.gameManager, this.starSystem);

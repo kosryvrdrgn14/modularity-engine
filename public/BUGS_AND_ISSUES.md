@@ -274,10 +274,14 @@
 - **Remaining:** Could be moved to weapons.json `visual` field for full data-driven control
 - **Priority:** Low
 
-### POT-003: Companion Data Still Uses Global
-- **Status:** `COMPANION_DATA` populated from JSON but accessed as global by companion.js and progression.js
-- **Remaining:** Should pass DataManager reference instead of relying on window global
-- **Priority:** Low — works, just not clean
+### POT-003: Companion Data Still Uses Global — RESOLVED v2.1.0
+- **Status (was):** `COMPANION_DATA` populated from JSON but accessed as a window global by companion.js/progression.js (guarded) and loadout/titleMenu (guarded fallbacks)
+- **Resolution (v2.1.0):** The `window.COMPANION_DATA` bridge in `DataManager.loadAll()` (engine/core.js) is deleted. Consumers receive the DataManager reference directly:
+  - `CompanionSystem(entityManager, eventBus, dataManager)` — static `_compData()` became an instance method reading `this.dataManager?.companions || {}` (graceful degrade preserved); all 4 call-sites converted; game.js passes `this.dataManager`.
+  - `GameManager(eventBus, backend, dataManager)` — new third ctor param (backend slot stays null for LocalStorageBackend); `getCompanionRoster()` reads `this.dataManager?.companions || {}`.
+  - `loadout.js` / `titleMenu_refactored.js` — already received `dataManager` in their constructors; the `typeof COMPANION_DATA` fallbacks are dropped.
+  - Companion saves store only the **id list** (`store.companions`), so no save migration was needed — roster data always resolves from content at read time.
+- **Verification:** headless trace — global gone, CompanionSystem sees all 13 content companions via the injected ref, add_companion → roster flows end-to-end without the global, and the granted id persists to the active-slot save.
 
 ### POT-004: Extended Stage Boss Timing Mismatch (September 5, 2026) — RESOLVED v1.9.2
 - **Status (was):** `stage_graveyard_extended` has `bossConfig.spawnTime: "4:00"` but its announcement timeline fires "Dark energy..." at 510s and "Lilith the Necromancer appears!" at 515s (~8:35)
@@ -293,12 +297,17 @@
 - **Recommended:** Move slot schedule to stage `tierConfig.slotUnlockLevels: [1, 3, 6]` (per-stage pacing becomes a JSON edit); either wire `unlockLevel` into display or drop it
 - **Priority:** Medium — do during the config-extraction pass; no gameplay change if numbers copied as-is
 
-### POT-006: embeddedData.js Mirrors All Content Files (September 5, 2026) — UPDATED Sep 10
-- **Status:** `data/embeddedData.js` (~2,000+ lines) hand-maintains fallback copies of every content JSON for offline/failure resilience
-- **New finding (Sep 10, during POT-007):** `quests.json` is **not mirrored at all** — under any fetch-failure context (file://, offline) `allQuests` is empty: no quests available, no quest gates, and `quest:available` never fires. This is a fourth instance of the drift class (three partial-mirror syncs + one missing file) and means quest content has **no degraded mode at all**, unlike locations/npcs/companions/gates.
-- **Risk:** Every content edit must be mirrored or the fallback diverges from the real files; any unmirrored file silently has zero fallback
-- **Recommended:** Auto-generate the fallback from content files at build time, or accept as documented safety net with a sync-check in the web tools. **Decide before the data-driven NPC/memory wave** — every added content file multiplies this chore
-- **Priority:** Medium — grows with every content addition; blocks clean modding workflow
+### POT-006: embeddedData.js Mirrors All Content Files (September 5, 2026) — RESOLVED v2.1.0 (Option A: build-time generator)
+- **Status (was):** hand-maintained ~2,000-line fallback mirror; drifted 4× (three partial syncs + `quests.json` never mirrored at all — under file:// the story layer silently vanished: no quests, no gates, no NPCs, no companions, zero errors); and `attackAreas.json`/`visuals.json`/`elements.json` had **no fallback key** → `undefined` fallback.
+- **Decision (Sep 12):** Option A — build-time generation, approved by the player.
+- **Resolution (v2.1.0):**
+  - `tools/generateEmbeddedData.mjs` reads every `public/content/*.json`, validates top-level shape per file (required keys / min entries), and emits `public/data/embeddedData.js` deterministically (no timestamps) with an AUTO-GENERATED header.
+  - **Registry guard (the structural fix):** every `content/*.json` must be registered in the generator — an unregistered orphan file is a HARD ERROR at generation time. The quests.json failure class (content shipping with no fallback) can no longer exist.
+  - `--check` mode byte-verifies the on-disk mirror; wired as `bun run content:sync` / `bun run content:check`.
+  - Mirror grew 2,011 → ~4,900 lines: locations/npcs/companions/quests now carry real content; attackAreas/visuals/elements/contentGates fallbacks now exist.
+- **Verification:** `content:check` passes and regeneration is idempotent; headless trace boots the real game under `file://` (the pure-fallback path) — all 14 keys non-empty, QuestSystem reads all 13 quests from fallback content, companion content flows via the injected DataManager (POT-003).
+- **Convention going forward:** any content edit requires `bun run content:sync` before shipping; `content:check` gates edits. New content files must join BOTH the generator registry and `DataManager.loadAll()`'s fetch list — the orphan guard enforces the first half at generation time.
+- **Priority:** resolved; the per-edit chore is now one command and drift is structurally impossible rather than policed.
 
 ### POT-007: Quest Objective Progress Keyed by Array Index (September 5, 2026) — RESOLVED v2.0.0
 - **Severity:** Medium — silent save corruption on any post-launch quest edit
@@ -307,7 +316,7 @@
 - **Resolution (v2.0.0):** Progress is keyed by **stable objective ids**: explicit `id` from content when present, else the derived `type:target` pair (verified unique across all 13 live quests). `startQuest` initializes by id (and fails loudly on duplicate derived ids), `_onObjectiveEvent` and all handlers take/access by stable `oid`, and `getQuestProgress` exposes `objectiveId` to UI consumers. Save schema bumped to **v4**; `_migrate` marks v4-awareness and `QuestSystem._reconcileObjectiveKeys()` (runs at quest init, when content is loaded) renames legacy index keys to stable ids **by position** — the exact mapping the old keys meant — preserving counts; orphaned counts from shrunken content are dropped rather than re-attached. Self-heal: an objective *added* to an in-progress quest initializes on its first event (previously permanently unwritable).
 - **Verification:** headless trace (69 checks) drives the real production flow — planted v3 index-keyed save in slot 2 → slot select → `switchToSlot` migration → story-mode quest init reconcile: index key renamed to `kill_count:zombie` with value preserved (12/20), synthetic death events write only stable keys (no numeric keys ever), objective completion auto-completes the quest, and a synthetic two-objective quest's progress survives an objectives-array reorder. All pass.
 - **Design note:** this establishes the stable-key + migration pattern the upcoming NPC memory schema should reuse — memory is another per-save keyed structure.
-- **POT-006 interaction:** `quests.json` is NOT mirrored into `embeddedData.js`, so under fetch-failure conditions quest content is empty and reconcile correctly leaves unknown-quest entries untouched (inert until content is present). Found and documented during this fix; strengthens the case for the POT-006 pipeline decision before the data-driven wave.
+- **POT-006 interaction:** `quests.json` is NOT mirrored into `embeddedData.js`, so under fetch-failure conditions quest content is empty and reconcile correctly leaves unknown-quest entries untouched (inert until content is present). Found and documented during this fix; strengthens the case for the POT-006 pipeline decision before the data-driven wave. *(Update v2.1.0: resolved — the mirror is now build-generated and carries quests; see POT-006.)*
 
 ### POT-009: Interrupted-Run Restore Is Clobbered by startGame() Teardown (September 8, 2026) — RESOLVED v1.9.5
 - **Severity:** High — resume is effectively fake

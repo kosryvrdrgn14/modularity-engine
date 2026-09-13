@@ -382,8 +382,9 @@ class TitleMenu {
     const overlay = document.getElementById('dev-stage-overlay');
     if (!overlay) return;
 
-    // Read companions from DataManager/COMPANION_DATA (data-driven, no hardcoded list)
-    const companionSource = this.dataManager?.companions || (typeof COMPANION_DATA !== 'undefined' ? COMPANION_DATA : {});
+    // Read companions from DataManager (data-driven; POT-003 removed the
+    // window.COMPANION_DATA global this used to fall back to).
+    const companionSource = this.dataManager?.companions || {};
     const allCompanions = Object.values(companionSource).map(c => ({
       id: c.id, name: c.name, icon: c.icon || '?', desc: c.desc || c.role || '', available: true
     }));

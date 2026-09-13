@@ -23,9 +23,10 @@ class LocalStorageBackend extends StorageBackend {
 // ============================================================
 
 class GameManager {
-  constructor(eventBus, backend) {
+  constructor(eventBus, backend, dataManager) {
     this.eventBus = eventBus;
     this.backend = backend || new LocalStorageBackend();
+    this.dataManager = dataManager || null;
     this.store = null;
     this._dirty = false;
     this._autoSaveTimer = 0;
@@ -397,10 +398,10 @@ class GameManager {
   // Get all companions with their statuses
   getCompanionRoster() {
     const companions = this.get_companions();
-    // INFRA-003: guarded global access — degrade to defaults if the
-    // window.COMPANION_DATA bridge (DataManager.loadAll → engine/core.js)
-    // ever regresses, instead of a hard ReferenceError.
-    const compData = typeof COMPANION_DATA !== 'undefined' ? COMPANION_DATA : {};
+    // POT-003: read via the injected DataManager (dataManager.companions);
+    // the window.COMPANION_DATA bridge was removed. `|| {}` keeps the
+    // graceful degrade if content loading ever fails.
+    const compData = this.dataManager?.companions || {};
     return companions.map(id => ({
       id,
       status: this.getCompanionDeployStatus(id),

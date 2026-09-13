@@ -120,10 +120,9 @@ class DataManager {
       }
     }
 
-    // Populate COMPANION_DATA global for systems/companion.js and systems/progression.js
-    if (this.companions && typeof window !== 'undefined') {
-      window.COMPANION_DATA = this.companions;
-    }
+    // POT-003: window.COMPANION_DATA bridge removed — consumers receive the
+    // DataManager reference directly (CompanionSystem, GameManager, and the
+    // UI screens that already took `dataManager` in their constructors).
 
     // Support stages as array - select by ID
     this._normalizeStages();

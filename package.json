@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "content:sync": "node tools/generateEmbeddedData.mjs",
+    "content:check": "node tools/generateEmbeddedData.mjs --check"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

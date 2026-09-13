@@ -2,6 +2,24 @@
 
 ---
 
+## v2.1.0 — POT-006/003 Resolution: Content Pipeline (Build-Time Generator) + Companion Data Decoupling
+**Date:** September 12, 2026
+**Status:** ✅ Complete (86/86 headless trace checks pass)
+
+**The problem.** `data/embeddedData.js` — the offline/fetch-failure fallback mirror every boot relies on under `file://` — was hand-maintained and had drifted 4×: three partial syncs, `quests.json` never mirrored at all (story layer silently vanished on any fetch failure), and `attackAreas/visuals/elements` had no fallback key (`undefined`). Every future content file (dialogue branches, NPC memory configs, spawn tables) would have multiplied the mirror chore. POT-003 layered on a `window.COMPANION_DATA` global with inconsistently-guarded consumers.
+
+**The fix (Option A — build-time generation, decided Sep 12).**
+- `tools/generateEmbeddedData.mjs` generates the mirror from `public/content/*.json` with per-file shape validation. **Registry guard:** any `content/*.json` not registered in the generator is a hard error — a content file without a fallback can no longer exist (the quests.json failure class is structurally impossible).
+- `bun run content:sync` regenerates; `bun run content:check` byte-verifies sync (CI-safe gate after any content edit).
+- Mirror 2,011 → ~4,900 lines: locations/npcs/companions/quests now real; attackAreas/visuals/elements/contentGates fallbacks exist.
+- **POT-003:** `window.COMPANION_DATA` bridge deleted. `CompanionSystem(entityManager, eventBus, dataManager)` and `GameManager(eventBus, backend, dataManager)` receive the DataManager directly; `getCompanionRoster()`, loadout, and titleMenu read `dataManager.companions` with `|| {}` degrade. Saves store only the id list — no migration needed.
+
+**Verification.** `content:check` passes and is idempotent. The headless trace boots the real game under `file://` (the pure-fallback path): all 14 fallback keys non-empty, QuestSystem reads all 13 quests from fallback content, companions flow end-to-end (grant → roster → persisted save) with no global. All prior POT/BUG regressions still green (86/86).
+
+**Convention going forward.** Content edits require `content:sync`; new content files join BOTH the generator registry and `DataManager.loadAll()`'s fetch list (the orphan guard enforces the first half). The data-driven wave (dialogue branches, NPC memory, UI-as-config) can now add content files freely — the fallback follows automatically.
+
+---
+
 ## v2.0.1 — POT-012 Resolution: set() Write Allowlist
 **Date:** September 10, 2026
 **Status:** ✅ Complete (75/75 headless trace checks pass)
