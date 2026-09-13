@@ -167,7 +167,8 @@ class WeaponSystem {
         vy: Math.sin(angle) * speed,
         damage: finalDamage,
         size: 4,
-        visual: { shape: 'square', color: '#FFD700' },
+        // POT-002: visual from weapons.json (inline literal is the fallback)
+        visual: { shape: 'square', ...this._weaponVisual('w1_projectile') },
       });
     }
     // GAP 1 FIX: Emit weaponFire so AudioManager can play w1_fire
@@ -202,7 +203,8 @@ class WeaponSystem {
         orbitAngle: (existingOrbs.length / orbCount) * Math.PI * 2,
         orbitRadius: stats.orbitRadius,
         orbitSpeed: stats.orbitSpeed,
-        visual: { shape: 'circle', color: '#4FC3F7' },
+        // POT-002: visual from weapons.json
+        visual: { shape: 'circle', ...this._weaponVisual('w2_orbit') },
       });
       existingOrbs.push(orb);
     }
@@ -325,7 +327,7 @@ class WeaponSystem {
     this.eventBus.emit('weaponFire', { weaponId: 'w4_flame_wave' });
     this.eventBus.emit('coneAttack', {
       x: player.x, y: player.y, angle, range, coneAngle,
-      damage, color: '#FF4500', level,
+      damage, color: this._weaponColor('w4_flame_wave', '#FF4500'), level,
     });
   }
 
@@ -376,7 +378,7 @@ class WeaponSystem {
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       damage, size: 6,
-      color: '#9C27B0',
+      color: this._weaponColor('w5_arcane_bolt', '#9C27B0'),
       piercing: false,
       chainCount, chainRange,
       slowAmount: weapon.powerSpikes?.level7?.statModifiers?.slowAmount || 0,
@@ -386,7 +388,7 @@ class WeaponSystem {
 
     // Visual effect
     this.eventBus.emit('arcaneShot', {
-      x: player.x, y: player.y, angle, damage, color: '#9C27B0',
+      x: player.x, y: player.y, angle, damage, color: this._weaponColor('w5_arcane_bolt', '#9C27B0'),
     });
   }
 
@@ -480,7 +482,8 @@ class WeaponSystem {
           x: player.x, y: player.y,
           vx: Math.cos(spreadAngle) * 300, vy: Math.sin(spreadAngle) * 300,
           damage: damage, size: 4, age: 0, maxAge: 1.0, pierceCount: 0,
-          color: '#9B59B6', shape: 'triangle', homing: true,
+          color: this._weaponColor('w6_dagger', '#9B59B6'),
+          shape: this._weaponVisual('w6_dagger').shape || 'triangle', homing: true,
           homingTurnRate: stats.homingTurnRate || 200, damageOwner: true,
         });
       }
@@ -504,7 +507,7 @@ class WeaponSystem {
       this.eventBus.emit('coneAttack', {
         x: player.x, y: player.y, angle: facingAngle,
         range, coneAngle: coneWidth * 2,
-        damage: 0, color: '#9B59B6', level,
+        damage: 0, color: this._weaponColor('w6_dagger', '#9B59B6'), level,
       });
       this.eventBus.emit('weaponFire', { weaponId: id });
     }
@@ -572,8 +575,7 @@ class WeaponSystem {
     const hitAngle = hit.angleOffset !== null ? hit.angleOffset : 0;
     this.eventBus.emit('coneAttack', {
       x: player.x, y: player.y, angle: hitAngle,
-      range: combo.range, coneAngle: combo.arcWidth,
-      damage: 0, color: '#3498DB', level: combo.nextHit + 1,
+      range: combo.range, coneAngle: combo.arcWidth,        damage: 0, color: this._weaponColor('w7_sword', '#3498DB'), level: combo.nextHit + 1,
     });
     if (combo.nextHit === 0) this.eventBus.emit('weaponFire', { weaponId: 'w7_sword' });
     combo.nextHit++;
@@ -642,7 +644,7 @@ class WeaponSystem {
     this.eventBus.emit('areaPulse', {
       x: player.x, y: player.y,
       radius: aoeWidth / 2,
-      color: '#8D6E63',
+      color: this._weaponColor('w8_claymore', '#8D6E63'),
     });
     this.eventBus.emit('weaponFire', { weaponId: id });
     // Explosion at Lv4+ — use queue instead of setTimeout
@@ -674,7 +676,7 @@ class WeaponSystem {
               this.eventBus.emit('damageEntity', { entity: e, damage: exp.damage, source: exp.playerRef });
             }
           }
-          this.eventBus.emit('areaPulse', { x: exp.cx, y: exp.cy, radius: exp.radius, color: '#FF6B35' });
+          this.eventBus.emit('areaPulse', { x: exp.cx, y: exp.cy, radius: exp.radius, color: this._weaponColor('w8_claymore', '#FF6B35') });
         }
         this._w8ExplosionQueue.splice(i, 1);
       }
@@ -719,6 +721,19 @@ class WeaponSystem {
 
   getWeaponLevel(weaponId) {
     return this.weaponLevels[weaponId] || 0;
+  }
+
+  // ── POT-002: data-driven weapon visuals ────────────────
+  /** Visual spec for a weapon id from content (weapons.json `visual`).
+   *  Returns {} when content is unavailable so every call-site's inline
+   *  fallback (shape/color literal) still applies. */
+  _weaponVisual(weaponId) {
+    return this.dataManager?.weapons?.find(w => w.id === weaponId)?.visual || {};
+  }
+
+  /** Color from content for a weapon id, falling back to the legacy literal. */
+  _weaponColor(weaponId, fallback) {
+    return this._weaponVisual(weaponId).color || fallback;
   }
 
   reset() {
@@ -852,9 +867,15 @@ class DamageSystem {
         this._handleDamage(enemy, { stats: player?.stats || {} }, data.damage);
       }
     }
-    // Visual pulse effect
+    // Visual pulse effect — BUG-030: honor the emitter's color (the w4 slam
+    // brown and w8 explosion flash were silently repainted orange here).
+    // POT-002: area-pulse weapons (w3) with no explicit color resolve from
+    // weapons.json, legacy literal as final fallback.
     if (this.renderer) {
-      this.renderer.addPulseEffect(data.x, data.y, data.radius, '#FF9100');
+      this.renderer.addPulseEffect(
+        data.x, data.y, data.radius,
+        data.color || this._weaponColor('weapon_area_pulse', '#FF9100')
+      );
     }
   }
 

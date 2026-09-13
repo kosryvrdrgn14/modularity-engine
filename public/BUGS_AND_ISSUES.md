@@ -244,11 +244,17 @@
 - **Verification:** trace asserts per-type accumulation, `_getStats`/HUD/journal round-trips, XP text render, end-screen breakdown render, and the healed player-death routing. 56/56 pass.
 - **Lesson:** an event field checked by three consumers but set by zero producers is a latently-wrong invariant — when adding a field to an event, grep the listeners *and* the emitters; both sides must exist.
 
+### BUG-030: _handleAreaPulse Ignored the Emitter's Color (September 12, 2026) — RESOLVED v2.2.0
+- **Severity:** Low (visual-only; found while implementing POT-002)
+- **Root cause:** `areaPulse` emitters passed a `color` field (w4 slam `#8D6E63`, w8 explosion `#FF6B35`), but `_handleAreaPulse` discarded it and hardcoded `#FF9100` into `renderer.addPulseEffect` — two distinct weapon effects rendered in the same orange as w3's pulse.
+- **Fix (v2.2.0):** the handler honors `data.color`, falling back to the w3 content color (`weapons.json weapon_area_pulse.visual`) and then the legacy literal.
+- **Lesson:** same event-field invariant as BUG-029 — an emitter field silently dropped by the consumer is a half-built data path; grep both directions.
+
 ---
 
 ## Potential Issues (Watch List)
 
-### POT-008: Auto-Save Timer Has Never Fired (September 5, 2026)
+### POT-008: Auto-Save Timer Has Never Fired (September 5, 2026) — RESOLVED (superseded by §21; dead tick removed v2.2.0)
 - **Severity:** High (silent — the only mid-run protection the game appears to have does not exist)
 - **Symptom:** None visible. Found by audit while drafting the auto-save design plan (MASTER_DESIGN §21).
 - **Root Cause:** `SpawnSystem.update()` calls `this.gameManager.update(dt)` (the 60s auto-save tick), but `SpawnSystem` is constructed as `new SpawnSystem(entityManager, dataManager, eventBus)` — `gameManager` is never assigned, so `this.gameManager` is always undefined and the timer never ticks. No `beforeunload`/`visibilitychange` handlers exist either.
@@ -256,6 +262,7 @@
 - **Fix:** Planned as MASTER_DESIGN.md §21 (Auto-Save System) — chunks 1–4: wire the dead tick, event-driven checkpoints, run journal with crash recovery, page-lifecycle saves.
 - **CONFIRMED LIVE (Sep 5 slot trace):** headless reproduction shows quest completion in town + page refresh (no exit-card save) = quest progress lost — "back to the starting quest" symptom. This is the unsaved-progress window, not a slot-isolation bug; slot machinery verified correct across plain and reload-variant traces. Exit-to-title now saves (v1.8.2); full fix = §21 event checkpoints.
 - **RESOLVED for town/quest progress (v1.9.0):** §21 chunks 1, 2, 4 implemented — quest/unlock/level events save instantly, 30s combat heartbeat, 15s town heartbeat, lifecycle saves on refresh/hide/close. Browser-verified: quest completed in town survives a RAW refresh. Remaining gap: mid-run combat-only progress (chunk 3 run journal, planned).
+- **FINAL RESOLUTION (v2.2.0):** the original dead tick itself is now **removed** rather than wired — `SpawnSystem.update()`'s `if (this.gameManager) this.gameManager.update(dt)` never fired (SpawnSystem never received the reference, as the entry said), and the §21 chunks superseded it with a better architecture (combat 30s accumulator at frame top + journal refresh, town interval timer, event checkpoints, lifecycle saves). Wiring it would have created a second competing tick racing the heartbeat flush. Combat journal heartbeat (chunk 3) landed v1.9.8. Trace verifies the dead call is gone from `SpawnSystem.update` and every real tick is intact.
 
 ### SLOT-UI: Wiped Storage Masqueraded as Saves in Slot Picker (September 5, 2026)
 - **Severity:** Low (display honesty; the underlying wipe was INFRA/origin-scoped, not game code)
@@ -269,11 +276,6 @@
 - **Remaining:** Full migration needs asset path references or portrait loading system
 - **Priority:** Medium — blocks web tools from generating NPC content
 
-### POT-002: Weapon Visuals Partially Hardcoded
-- **Status:** Weapon colors/shapes set inline in combat.js
-- **Remaining:** Could be moved to weapons.json `visual` field for full data-driven control
-- **Priority:** Low
-
 ### POT-003: Companion Data Still Uses Global — RESOLVED v2.1.0
 - **Status (was):** `COMPANION_DATA` populated from JSON but accessed as a window global by companion.js/progression.js (guarded) and loadout/titleMenu (guarded fallbacks)
 - **Resolution (v2.1.0):** The `window.COMPANION_DATA` bridge in `DataManager.loadAll()` (engine/core.js) is deleted. Consumers receive the DataManager reference directly:
@@ -283,6 +285,12 @@
   - Companion saves store only the **id list** (`store.companions`), so no save migration was needed — roster data always resolves from content at read time.
 - **Verification:** headless trace — global gone, CompanionSystem sees all 13 content companions via the injected ref, add_companion → roster flows end-to-end without the global, and the granted id persists to the active-slot save.
 
+### POT-002: Weapon Visuals Partially Hardcoded — RESOLVED v2.2.0
+- **Status (was):** weapon colors/shapes set inline in combat.js; weapons.json `visual` field unread by the engine
+- **Resolution (v2.2.0):** `WeaponSystem._weaponVisual(id)` / `_weaponColor(id, fallback)` read `weapons.json` `visual` (empty/legacy fallback when content omits the field). Converted all 11 hardcoded sites: w1 projectile visual, w2 orb visual, w4 cone+slam color, w5 bolt color ×2, w6 dagger color+shape ×2, w7 sword color, w8 slam+explosion colors. Editing a weapon's `visual.color` in JSON now changes in-game visuals with no code change; `content:sync` refreshes the fallback.
+- **Bonus:** exposed as **BUG-030** — `_handleAreaPulse` was ignoring the `color` its emitters passed.
+- **Verification:** trace asserts content read, legacy fallback for unknown ids, and a live content mutation flowing through (`#123456` test), 97/97 pass.
+
 ### POT-004: Extended Stage Boss Timing Mismatch (September 5, 2026) — RESOLVED v1.9.2
 - **Status (was):** `stage_graveyard_extended` has `bossConfig.spawnTime: "4:00"` but its announcement timeline fires "Dark energy..." at 510s and "Lilith the Necromancer appears!" at 515s (~8:35)
 - **Behavior:** Spawn is driven by `spawnTime` (SpawnSystem line ~151: `_bossSpawnTime || 240`) — Lilith appears at 4:00 **unannounced**, then the announcement sequence plays at ~8:30 for a boss that's already been fighting the player
@@ -291,10 +299,12 @@
 - **Priority:** Medium — must resolve before sq_02/mq_07 testing on the extended stage
 - **RESOLUTION (v1.9.2, Sep 5):** the trace found THREE bugs, not one — see BUG-019/020/021 below. Extended stage retimed to spawn=8:00 with announcements leading (465/470/475/480); all 6 stage×tier combos verified with ≥60s boss windows.
 
-### POT-005: Weapon Unlock Domain Has Code/Metadata Duplication (September 5, 2026)
+### POT-005: Weapon Unlock Domain Has Code/Metadata Duplication (September 5, 2026) — RESOLVED v2.2.0
 - **Status:** Three disconnected sources describe weapon availability: (1) quest gates (authoritative, works), (2) `unlockSchedule = [1, 3, 6]` hardcoded in `game.js _checkWeaponUnlocks()` — the in-combat slot pacing, (3) `unlockLevel` field in weapons.json — display-only, nothing reads it functionally
 - **Risk:** Numbers can drift between data and code (KNOWLEDGE.md §7 violation); `unlockLevel: 6` on Area *coincidentally* matches the hardcoded slot-2 unlock at Lv6
 - **Recommended:** Move slot schedule to stage `tierConfig.slotUnlockLevels: [1, 3, 6]` (per-stage pacing becomes a JSON edit); either wire `unlockLevel` into display or drop it
+- **RESOLUTION (v2.2.0):** `_checkWeaponUnlocks()` reads `stage.tierConfig.<tier>.slotUnlockLevels` (tier from `session.current_stage_tier`), historic `[1,3,6]` kept as the fallback for tiers that omit the field. Both live stages' `standard` tiers now carry `[1,3,6]` (quick/highlight deliberately untouched until their pacing is tuned — the fallback documents the default). The entry's `unlockLevel` display-only claim was stale: titleMenu already read and rendered it (Lv badge on weapon cards). Verified by trace: with content set to `[1,2,99]`, slot 2 unlocks at Lv2 and slot 3 stays locked — the old hardcoded array would have failed this.
+- **Priority:** resolved — weapon pacing is now a JSON edit per stage/tier.
 - **Priority:** Medium — do during the config-extraction pass; no gameplay change if numbers copied as-is
 
 ### POT-006: embeddedData.js Mirrors All Content Files (September 5, 2026) — RESOLVED v2.1.0 (Option A: build-time generator)
@@ -362,12 +372,13 @@
 - **Resolution (v1.9.5):** Canvas hit-test and `_getUpgradeCardAt()` deleted (`#levelup-overlay` confirmed `position:fixed; inset:0; pointer-events:auto`, so the canvas can never legitimately receive card clicks). Keyboard `selectUpgrade` path retained and trace-verified end-to-end (XP → overlay → key 1 → upgrade applied, queue drained).
 - **Priority:** Low — deletion candidate, zero behavior change intended.
 
-### POT-014: AudioContext Lifecycle Gaps (No Tab-Hide Suspend; Ad-Hoc BGM Ownership) (September 8, 2026) — PARTIALLY RESOLVED v1.9.5
+### POT-014: AudioContext Lifecycle Gaps (No Tab-Hide Suspend; Ad-Hoc BGM Ownership) (September 8, 2026) — RESOLVED v2.2.0 (part 1 v1.9.5, part 2 v2.2.0)
 - **Severity:** Low
 - **Found by:** full-code audit (Sep 8)
 - **Resolution (v1.9.5, part 1):** `visibilitychange` suspend/resume added in `AudioManager.init()` — hidden tab suspends the context (battery/CPU saved, no stale BGM bleed), returning resumes it; both calls no-op-safe and gesture-independent.
 - **Still open (part 2):** music stop/start is still hand-wired per screen (the BUG-026 resume fix was one of these). A single music-bus owner with one BGM owner per screen remains future work.
-- **Priority:** Low — polish, but cheap and prevents a repeat bug class.
+- **RESOLUTION part 2 (v2.2.0):** single music-bus owner implemented in `game.js`: `_playTitleMusic()` / `_stopTitleMusic(opts)` / `_setMusicVolume(v)` with `_musicOwner` dedupe (double-play is a no-op; stops only what title owns) and a `_musicGen` generation stamp — a pending fade-out can no longer fire its deferred `stop`+`startGame` into a state that moved on (the bare `setTimeout` in `_startFromTitle` had exactly that un-cancellable race). All 9 hand-wired `titleBGM` call-sites routed through the bus (boot, testTown, storyMode, startFromTitle, settings volume, town exit, endScreen→title, resume-answer, title return). Adding the next BGM track = extend the bus, not new per-screen wiring.
+- **Priority:** resolved — polish item closed; the repeat-bug class it prevented (stale BGM under new screens) is now structurally prevented.
 
 ### POT-015: getEffectiveStats() Is a Stub (September 8, 2026)
 - **Severity:** Medium (when progression features land) / None today

@@ -2,6 +2,26 @@
 
 ---
 
+## v2.2.0 — Housekeeping Batch: POT-008/005/002/014 Resolutions + BUG-030
+**Date:** September 12, 2026
+**Status:** ✅ Complete (97/97 headless trace checks pass)
+
+The pre-wave cleanup list is closed out. Four resolutions, one bonus bug:
+
+**POT-008 (dead auto-save tick) — removed, not wired.** `SpawnSystem.update()`'s `gameManager.update(dt)` never fired (the reference was never passed) and was superseded by §21's better architecture. Wiring it would have created a second tick racing the combat heartbeat. Trace asserts the dead call is gone and every real tick (combat 30s accumulator, town timer, event checkpoints, lifecycle saves) is intact.
+
+**POT-005 (weapon unlock schedule → content).** `_checkWeaponUnlocks()` now reads `stage.tierConfig.<tier>.slotUnlockLevels` (tier from session), historic `[1,3,6]` as fallback. Both stages' `standard` tiers carry the schedule in `stages.json`; quick/highlight keep the documented default until their pacing is tuned. Verified: with content `[1,2,99]`, slot 2 unlocks at Lv2 and slot 3 stays locked. Bonus: the entry's "unlockLevel is display-only" claim was stale — titleMenu already renders it.
+
+**POT-002 (weapon visuals → content).** `_weaponVisual(id)` / `_weaponColor(id, fallback)` read `weapons.json` `visual`; all 11 hardcoded sites converted (w1, w2, w4, w5×2, w6×2, w7, w8×2). A weapon's color/shape is now a JSON edit + `content:sync`, no code change.
+
+**BUG-030 (found during POT-002).** `_handleAreaPulse` discarded the `color` its emitters passed and hardcoded orange — the w4 slam brown and w8 explosion flash never rendered as designed. The handler now honors `data.color` with content/legacy fallbacks.
+
+**POT-014 part 2 (single music-bus owner).** `_playTitleMusic()` / `_stopTitleMusic(opts)` / `_setMusicVolume(v)` with ownership dedupe and a generation stamp that makes pending fade-outs self-cancelling — the bare `setTimeout` in `_startFromTitle` could fire `stop`+`startGame` after the user had already moved on. All 9 `titleBGM` call-sites route through the bus; the next BGM track extends the bus instead of new per-screen wiring.
+
+First exercise of the new content convention: `stages.json` edit → `bun run content:sync` → fallback mirror regenerated in one command.
+
+---
+
 ## v2.1.0 — POT-006/003 Resolution: Content Pipeline (Build-Time Generator) + Companion Data Decoupling
 **Date:** September 12, 2026
 **Status:** ✅ Complete (86/86 headless trace checks pass)

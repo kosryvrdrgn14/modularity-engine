@@ -130,7 +130,13 @@ class SpawnSystem {
 
   update(dt) {
     this.gameTime += dt;
-    if (this.gameManager) this.gameManager.update(dt);
+    // POT-008: the old `if (this.gameManager) this.gameManager.update(dt)`
+    // here was dead code — SpawnSystem never received a gameManager reference
+    // (constructed as (entityManager, dataManager, eventBus)), so the 60s
+    // tick could never fire. The real autosave lives in game.js: combat
+    // heartbeat (30s accumulator, §21 chunk 1), town timer, event checkpoints,
+    // and lifecycle saves. Removed rather than wired to avoid a second,
+    // competing tick racing the heartbeat flush.
     
     const stage = this.dataManager.stages;
     const wave = this._getCurrentWave(stage.waves);

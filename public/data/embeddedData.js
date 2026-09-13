@@ -1973,6 +1973,11 @@ const EMBEDDED_DATA = {
         },
         "standard": {
           "duration": 300,
+          "slotUnlockLevels": [
+            1,
+            3,
+            6
+          ],
           "recommendedWeapons": [
             "w1_projectile",
             "w2_orbit",
@@ -2426,6 +2431,11 @@ const EMBEDDED_DATA = {
         },
         "standard": {
           "duration": 300,
+          "slotUnlockLevels": [
+            1,
+            3,
+            6
+          ],
           "recommendedWeapons": [
             "w1_projectile",
             "w2_orbit",

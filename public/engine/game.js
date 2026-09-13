@@ -161,6 +161,8 @@ class Game {
     // Initialize title BGM and menu
     this.titleBGM = new TitleBGM(this.audioManager.ctx, this.audioManager.musicGain);
     this.titleBGM.init();
+    this._musicOwner = null;
+    this._musicGen = 0;
     this.titleMenu = new TitleMenu({
       audioManager: this.audioManager,
       gameManager: this.gameManager,
@@ -199,7 +201,7 @@ class Game {
 
     this.gameState.setState('title');
     this.titleMenu.show();
-    this.titleBGM.fadeIn(1.5);
+    this._playTitleMusic();
   }
 
   _setupEvents() {
@@ -808,7 +810,7 @@ class Game {
   _testTown() {
     // Debug: go directly to town with 100 gold
     this.titleMenu.hide();
-    this.titleBGM.stop();
+    this._stopTitleMusic();
     this.audioManager.resume();
     if (this.gameManager) {
       this.gameManager.add_currency(100, 'debug');
@@ -878,7 +880,7 @@ class Game {
   _startStoryMode() {
     // Story Mode: Initialize quest system and go to town
     this.titleMenu.hide();
-    this.titleBGM.stop();
+    this._stopTitleMusic();
     this.audioManager.resume();
 
     // Initialize quest system if not already done
@@ -917,14 +919,13 @@ class Game {
 
   _startFromTitle() {
     this.titleMenu.hide();
-    this.titleBGM.fadeOut(1.5);
+    // POT-014 part 2: fade via the music bus; the generation stamp inside
+    // the bus guarantees stop+startGame fire exactly once even if the user
+    // re-enters town and returns mid-fade (the old bare setTimeout could
+    // not be cancelled).
+    this._stopTitleMusic({ fadeOut: 1.5, onDone: () => this.startGame() });
     // Resume audio context (browser unlock)
     this.audioManager.resume();
-    // Start game after title BGM fades
-    setTimeout(() => {
-      this.titleBGM.stop();
-      this.startGame();
-    }, 1500);
   }
 
   _showSettings() {
@@ -953,9 +954,7 @@ class Game {
     musicSlider.oninput = () => {
       const v = parseInt(musicSlider.value);
       musicVal.textContent = v + '%';
-      if (this.titleBGM && this.titleBGM.gainNode) {
-        this.titleBGM.gainNode.gain.value = (v / 100) * 0.4;
-      }
+      this._setMusicVolume(v);
       this.audioManager.playMenuSound('slider');
     };
 
@@ -996,7 +995,7 @@ class Game {
    *  future exit path through this method persists the active slot. */
   _exitTownToTitle() {
     if (this.gameManager) this.gameManager.save();
-    this.titleBGM.fadeIn(1.5);
+    this._playTitleMusic();
     this.gameState.setState('title');
     this.townScreen.hide();
     this.titleMenu.show();
@@ -1009,7 +1008,7 @@ class Game {
     // triggerGameOver, since returning to title must work from any state.
     this.gameState.transition('title', { allowRestart: true });
     this.titleMenu.show();
-    this.titleBGM.fadeIn(1.5);
+    this._playTitleMusic();
   }
 
   _handleGameOver() {
@@ -1213,6 +1212,45 @@ class Game {
   // analysis. The journal is an in-memory store mutation that rides the
   // existing 30s heartbeat flush — zero extra disk writes mid-combat.
 
+  // ── POT-014 part 2: single music-bus owner ─────────────
+  // Every screen transition routes title-music start/stop through these two
+  // methods. They dedupe via _musicOwner (no double-start, no stopping a
+  // track another screen owns) and stamp a generation counter so a pending
+  // fade-out can never fire its onDone into a state that moved on (the
+  // ghost-startGame race the old hand-wired setTimeout had).
+  _playTitleMusic() {
+    this._musicGen++;
+    if (this._musicOwner === 'title') return;
+    this._musicOwner = 'title';
+    this.titleBGM.fadeIn(1.5);
+  }
+
+  _stopTitleMusic(opts = {}) {
+    this._musicGen++;
+    const gen = this._musicGen;
+    const wasOwner = this._musicOwner === 'title';
+    this._musicOwner = null;
+    if (opts.fadeOut && wasOwner) {
+      this.titleBGM.fadeOut(opts.fadeOut);
+      setTimeout(() => {
+        if (this._musicGen !== gen) return; // a newer play/stop superseded this fade
+        this.titleBGM.stop();
+        opts.onDone?.();
+      }, opts.fadeOut * 1000);
+    } else {
+      if (wasOwner) this.titleBGM.stop();
+      opts.onDone?.();
+    }
+  }
+
+  /** Music volume (0–100). No-op-safe before init(); dedupes redundant sets. */
+  _setMusicVolume(v) {
+    const vol = (v / 100) * 0.4;
+    if (this.titleBGM?.gainNode && this.titleBGM.gainNode.gain.value !== vol) {
+      this.titleBGM.gainNode.gain.value = vol;
+    }
+  }
+
   /** Snapshot the live run into the session journal (called on heartbeat +
    *  milestones). No-op outside an open journal (e.g. after end_session). */
   _writeRunJournal() {
@@ -1295,7 +1333,7 @@ class Game {
     }
     // Resume can be answered from the TITLE banner — the boot-time title BGM
     // would otherwise keep playing under combat audio.
-    if (this.titleBGM) this.titleBGM.stop();
+    this._stopTitleMusic();
     this._resumeApproved = run;
     // startGame() consumes _resumeApproved, restores from the journal, and
     // (BUG-022/BUG-026 teardown) dismisses title menu AND town screen.
@@ -1369,11 +1407,14 @@ class Game {
     const level = this.levelingSystem.level;
     const weapons = this.dataManager.weapons;
     if (!weapons || !Array.isArray(weapons)) return;
-    // Slot 0 = Lv1 (already active), Slot 1 = unlocks at Lv3, Slot 2 = unlocks at Lv6
-    const unlockSchedule = [1, 3, 6];
-    for (let i = 0; i < this._activeWeapons.length && i < 3; i++) {
+    // POT-005: slot pacing is stage content — tierConfig.<tier>.slotUnlockLevels
+    // in stages.json — not a hardcoded array. Fallback preserves the historic
+    // [1,3,6] pacing for any stage/tier that omits the field.
+    const tier = this.gameManager.get('session.current_stage_tier') || 'standard';
+    const schedule = this.dataManager.stages?.tierConfig?.[tier]?.slotUnlockLevels || [1, 3, 6];
+    for (let i = 0; i < this._activeWeapons.length && i < schedule.length; i++) {
       const wid = this._activeWeapons[i];
-      const unlockAt = unlockSchedule[i];
+      const unlockAt = schedule[i];
       if (level >= unlockAt && !this.weaponSystem.weaponLevels[wid]) {
         this.weaponSystem.unlockWeapon(wid);
         const wData = weapons.find(w => w.id === wid);
