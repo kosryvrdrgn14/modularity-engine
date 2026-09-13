@@ -2,6 +2,26 @@
 
 ---
 
+## v2.3.0 — §23 Combat Pause Menu & Voluntary Exit-to-Town
+**Date:** September 12, 2026
+**Status:** ✅ Complete (112/112 headless trace checks pass)
+
+The §23 design (locked 2026-09-07) is implemented: ESC during combat now shows a real pause menu instead of freezing silently, and players can finally back out of a fight.
+
+**Phase 1 — pause menu.** `#pause-overlay` (HTML, mirrors the levelup pattern): `PAUSED`, a live run snapshot (`stage · time · Lv · kills`), and three actions — `[1] Resume`, `[2] Exit to Town (run is saved)`, `[3] Quit to Title (run is saved)`. ESC is debounced (`_pauseKeyLock`, key-repeat-safe — a held key toggles exactly once); number keys select menu actions while paused and remain upgrade picks otherwise; all buttons are clickable. SFX duck while paused; the run journal flushes at the pause boundary.
+
+**Phase 2 — voluntary exit (Option A, journal-based).** `_exitRunToTown()` tears the run down without `end_session`: no rewards, no stars, no `total_runs`/disaster side-effects (§23.8.4). The run journal survives → the town banner (re-titled **"⚡ Unfinished run detected"** per §23.8.1) offers Resume/Discard — identical to crash recovery. Pending level-up picks are cleared so nothing leaks into the resumed run; companions recall; entities/effects/announcements reset. State machine gains legal edges `paused → town` and `paused → title` (deliberate exits, no force-transitions). Quit-to-Title keeps the journal and the banner appears on the next town entry.
+
+**Phase 3 — end-screen buttons (§23.6).** The canvas end screen gains a `⟲ Retry (R)` / `🏘 Return to Town (any key)` button bar for mouse/touch; the keyboard paths from v1.9.9 are unchanged. (Deviation note: the dangerous blanket-restart handler §23.6 originally targeted was already removed in v1.9.9.)
+
+**Design questions closed:** §23.8.5 moot (exit never builds a result); §23.8.6 verified — quest objective progress survives exit → banner → Resume.
+
+**Verification.** The trace drives the real flows: ESC burst (repeat-safe single toggle), overlay + snapshot, frozen `gameTime`, resume, Exit → banner → Resume round-trip with restored time, quest preservation, `total_runs` invariance, queue-leak guard, deferred Quit banner, Discard, and both end-screen buttons — 15 new checks, 112/112 total.
+
+**Player-facing summary:** ESC pauses with a menu; exit/quit keep your run for later (banner in town); Retry is now a visible button. Mobile HUD pause button remains future work (§23.7).
+
+---
+
 ## v2.2.0 — Housekeeping Batch: POT-008/005/002/014 Resolutions + BUG-030
 **Date:** September 12, 2026
 **Status:** ✅ Complete (97/97 headless trace checks pass)

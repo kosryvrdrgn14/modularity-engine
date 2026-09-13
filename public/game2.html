@@ -14,10 +14,27 @@
     <div id="levelup-cards"></div>
     <div id="levelup-hint">Press 1, 2, or 3 to select</div>
   </div>
+  <!-- §23: combat pause menu (HTML overlay, number keys + click) -->
+  <div id="pause-overlay">
+    <div id="pause-title">PAUSED</div>
+    <div id="pause-snapshot">—</div>
+  <div id="pause-actions">
+      <div class="pause-btn primary" id="pause-resume">[1] Resume</div>
+      <div class="pause-btn" id="pause-exit">[2] Exit to Town (run is saved)</div>
+      <div class="pause-btn" id="pause-quit">[3] Quit to Title (run is saved)</div>
+  </div>
+    <div id="pause-hint">ESC or [1] resumes · [2]/[3] keep the run for later</div>
+  </div>
+  <!-- §23.6: end-screen action buttons (the canvas end screen draws stats;
+       these are the discoverable Retry/Town affordances for mouse/touch) -->
+  <div id="end-actions">
+    <div class="pause-btn primary" id="end-retry">⟲ Retry (R)</div>
+    <div class="pause-btn" id="end-town">🏘 Return to Town (any key)</div>
+  </div>
   <!-- §21 chunk 3: resume-interrupted-run banner (town overlay, non-blocking) -->
   <div id="resume-banner">
     <div class="resume-text">
-      <div class="resume-title">⚡ Interrupted run detected</div>
+      <div class="resume-title">⚡ Unfinished run detected</div>
       <div class="resume-desc">A run was in progress when the session ended.</div>
     </div>
     <div class="resume-actions">

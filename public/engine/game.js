@@ -213,16 +213,41 @@ class Game {
       }
     });
 
+    // §23: ESC toggles playing ↔ paused and shows/hides the pause overlay.
+    // (The overlay was the missing piece — ESC used to freeze silently.)
     this.eventBus.on('pause', (data) => {
       if (this.gameState.isPlaying()) {
         this.gameState.setState('paused');
         this.gameLoop.paused = true;
         this.inputManager._isPaused = true;
+        // §23.7 polish: duck SFX so ambient loops don't drone under the menu.
+        this.audioManager.duckForLevelUp(true);
+        // §21 chunk 3: milestone flush at pause — deliberate pauses are the
+        // other natural crash-recovery boundary (same as the level-up stop).
+        this._writeRunJournal();
+        this.uiManager.showPauseMenu(this._pauseSnapshot());
       } else if (this.gameState.isPaused()) {
         this.gameState.setState('playing');
         this.gameLoop.paused = false;
         this.inputManager._isPaused = false;
-        this.audioManager.duckForLevelUp(false); console.log('[selectUpgrade] Game resumed');
+        this.uiManager.hidePauseMenu();
+        this.audioManager.duckForLevelUp(false);
+      }
+    });
+
+    // §23: pause-menu actions — [1] Resume, [2] Exit to Town, [3] Quit to
+    // Title. Exit/Quit both journal the run (no end_session → no rewards, no
+    // total_runs/disaster side-effects per §23.8.4) and tear the run down
+    // without touching the journal, so the town's "Unfinished run detected"
+    // banner offers Resume/Discard — the same path as crash recovery.
+    this.eventBus.on('pauseMenuAction', ({ action }) => {
+      if (!this.gameState.isPaused()) return;
+      if (action === 'resume') {
+        this.eventBus.emit('pause', { paused: true }); // reuses the toggle's resume branch
+      } else if (action === 'exit') {
+        this._exitRunToTown();
+      } else if (action === 'quit') {
+        this._exitRunToTown({ then: 'title' });
       }
     });
 
@@ -915,6 +940,10 @@ class Game {
 
     this.gameState.setState('town');
     this.townScreen.show({});
+    // §23.4: a run journaled via Quit-to-Title surfaces its banner on the
+    // next town entry (crash recovery is detected at boot; this covers the
+    // deferred voluntary-exit path).
+    this._detectInterruptedRun();
   }
 
   _startFromTitle() {
@@ -1130,6 +1159,77 @@ class Game {
     this.townScreen.show(stats);
   }
 
+  // ── §23: voluntary run exit (Option A — journal-based) ──────────
+  /** Snapshot line for the pause menu. */
+  _pauseSnapshot() {
+    const stage = this.dataManager?.stages?.name || this.gameManager?.get('session.selected_stage_id') || 'Stage';
+    const mins = Math.floor(this.gameTime / 60);
+    const secs = String(Math.floor(this.gameTime % 60)).padStart(2, '0');
+    return `${stage} · ${mins}:${secs} · Lv ${this.levelingSystem.level} · ${this._runKillCount || 0} kills`;
+  }
+
+  /** Voluntary exit from a live run. Journal-based (§23.3 Option A): the run
+   *  journal stays INTACT, so the town banner offers Resume/Discard. Bypasses
+   *  _handleGameOver entirely — no end_session, no rewards, no stars, no
+   *  total_runs/disaster side-effects (§23.8.4).
+   *  opts.then: 'town' (default) | 'title' — Quit-to-Title defers the banner
+   *  to the next town entry (§23.4). */
+  _exitRunToTown(opts = {}) {
+    if (!this.gameState.isPaused()) return;
+    // 1) Sub-flow debris (BUG-024 class: a queued level-up must not leak into
+    //    the resumed run's first frame — the journal already holds pre-queue
+    //    state, so dropping pending picks loses nothing that was earned).
+    this._isSelectingUpgrade = false;
+    this.uiManager.hideLevelUp();
+    this.uiManager.hidePauseMenu();
+    if (this.levelingSystem.queue.length > 0) this.levelingSystem.queue = [];
+    if (this._queuedBossIntro) this._queuedBossIntro = null;
+    if (this._gameOverReturnTimer) { clearTimeout(this._gameOverReturnTimer); this._gameOverReturnTimer = null; }
+    // 2) Freeze loop + input (same pattern as every other modal teardown).
+    this.gameLoop.paused = true;
+    this.inputManager._isPaused = true;
+    this.audioManager.duckForLevelUp(false);
+    // 3) Journal: snapshot NOW (post-clear, pre-teardown) so the banner's
+    //    Resume continues from the moment the player left, and flush to disk.
+    this._writeRunJournal();
+    if (this.gameManager?._dirty) this.gameManager.save();
+    // 4) Teardown mirrors _handleGameOver's, minus result submission.
+    // C2: recall companions (same as _handleGameOver) — deploy flags must
+    // clear, or the next fight's loadout sees them as in-combat.
+    if (this.gameManager) {
+      for (const id of this.gameManager.get_companions()) {
+        this.gameManager.recallCompanion(id);
+      }
+    }
+    this.weaponSystem.reset();
+    this._runKillCount = 0;
+    this._killsByType = {};
+    this._runGoldEarned = 0;
+    this._sessionDamageTaken = 0;
+    this._sessionPickupsCollected = 0;
+    this.gameTime = 0;
+    this.entityManager.clearAll();
+    this.floatingTextSystem.texts = [];
+    this.renderer.pulseEffects = [];
+    this.renderer.coneEffects = [];
+    this.renderer.bossEntity = null;
+    this.introOverlay = null;
+    this._announcementTriggered = {};
+    // 5) The journal deliberately survives — that is the whole design. Route:
+    const goTitle = opts.then === 'title';
+    this.gameState.setState(goTitle ? 'title' : 'town');
+    if (goTitle) {
+      // Quit to Title: defer the banner to the next town entry. The journal
+      // detection at town entry will pick it up (same path as crash recovery).
+      this.townScreen.hide();
+      this.titleMenu.show();
+      this._playTitleMusic();
+    } else {
+      this.townScreen.show({});
+      this._detectInterruptedRun(); // shows the banner immediately (journal is live)
+    }
+  }
+
   render(interp) {
     try {
     // Tick boss intro timer even when game loop is paused
@@ -1288,7 +1388,8 @@ class Game {
     if (title) {
       // BUG-026 fix: name the owning save slot — the run belongs to exactly
       // one slot's store, and the player must be able to tell which.
-      title.textContent = `⚡ Interrupted run detected (Slot ${slot})`;
+      // §23.8.1: banner copy covers crash recovery AND voluntary exits.
+      title.textContent = `⚡ Unfinished run detected (Slot ${slot})`;
     }
     const desc = banner.querySelector('.resume-desc');
     if (desc) {

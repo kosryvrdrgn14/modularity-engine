@@ -1056,7 +1056,7 @@ Pending when work resumes:
 
 ## 23. Combat Pause Menu & Exit-to-Town (Planned)
 
-**Status: PLANNED — design decisions locked 2026-09-07 (§23.8). Implementation deferred until the current manual-test cycle is signed off.**
+**Status: IMPLEMENTED v2.3.0 (2026-09-12) — design decisions locked 2026-09-07 (§23.8), all phases built and headless-verified (112/112 trace checks). See §23.10.**
 
 ### 23.1 Problem
 
@@ -1154,12 +1154,24 @@ Implementation-time verification items (not owner decisions):
 
 ### 23.9 Implementation order (when approved)
 
-1. **Pause menu overlay + Resume + Quit-to-Title wiring** — fixes the invisible pause; small, isolated
-2. **`paused → town` edge + `_exitRunToTown()` teardown + "Unfinished run" banner** — medium; reuses v1.9.3 nearly wholesale
-3. **End-screen `Retry` / `Return to Town` buttons** (remove blanket click-to-restart) — small
-4. **Polish:** BGM duck on pause, HUD pause button (mobile) — optional
+1. **Pause menu overlay + Resume + Quit-to-Title wiring** — fixes the invisible pause; small, isolated ✅ v2.3.0
+2. **`paused → town` edge + `_exitRunToTown()` teardown + "Unfinished run" banner** — medium; reuses v1.9.3 nearly wholesale ✅ v2.3.0
+3. **End-screen `Retry` / `Return to Town` buttons** (remove blanket click-to-restart) — small ✅ v2.3.0 (see §23.10 deviation note: v1.9.9 had already removed the blanket restart)
+4. **Polish:** BGM duck on pause ✅ v2.3.0 (`duckForLevelUp(true)` reuses the level-up duck); HUD pause button (mobile) — still out of scope
 
-Estimated: phases 1–3 fit one session. Log the wrong-tag console.log cleanup alongside phase 1.
+Estimated: phases 1–3 fit one session. Log the wrong-tag console.log cleanup alongside phase 1. ✅ (tag cleaned during the pause-listener rewrite)
+
+### 23.10 Implementation record (v2.3.0, September 12, 2026)
+
+**Landed:** `#pause-overlay` HTML overlay (game2.html + styles.css, mirrors the levelup pattern; `.pause-btn` styles shared with the end-screen bar). `ui/game.js` gained `showPauseMenu(snapshot)` / `hidePauseMenu()` with click wiring (`pauseMenuAction` events, onclick-overwrite so re-shows never stack listeners). `core.js`: ESC debounce via `_pauseKeyLock` (same release-on-keyup pattern as `_upgradeKeyLock`), number keys 1/2/3 route to `pauseMenuAction` while paused (upgrade picks otherwise untouched), state edges now `paused: ['playing', 'town', 'title']` — both exit destinations are explicit legal edges, no force-paths. `game.js`: the pause listener shows/hides the menu, ducks SFX, and flushes the run journal at the pause boundary; `pauseMenuAction` handler; `_pauseSnapshot()` (stage · time · Lv · kills); `_exitRunToTown({then:'town'|'title'})` — full §23.5 teardown (sub-flow debris incl. pending level-up queue, freeze, journal snapshot AFTER the queue clear so Resume continues from the moment of exit, companion recall via `recallCompanion` like `_handleGameOver`, `entityManager.clearAll()`, effect/announcement resets) with the journal deliberately intact; Exit shows the banner immediately, Quit defers it to the next `_startStoryMode()` entry (which now re-runs `_detectInterruptedRun()`). Banner copy per §23.8.1: "⚡ Unfinished run detected (Slot N)". End screen: `#end-actions` bar with Retry/Return-to-Town buttons (keyboard paths unchanged).
+
+**Design questions closed during implementation:**
+- §23.8.5 (moot): exit never calls `_buildResult`/`end_session` — Option A structure makes the question unreachable.
+- §23.8.6 (verified): quest objective counters ride the persistent store and survive exit→banner→resume (trace-verified round-trip).
+- §23.6 deviation note: v1.9.9 (BUG-023) had already replaced the blanket click/Enter-restart with wait-for-input + deliberate R, so the dangerous handler §23.6 targeted no longer existed; v2.3.0 adds the discoverable buttons on top.
+- Deviation from §23.5: `title` added alongside `town` in the paused edge list — Quit-to-Title is the same class of deliberate exit and deserved a legal edge rather than a force-transition.
+
+**Verification (112/112):** real-key ESC burst models key-repeat (exactly one toggle, no flicker); overlay visible with live snapshot; `gameTime` frozen while paused; resume via button; Exit → town with banner + intact journal + zeroed run counters; quest progress preserved; banner Resume restores `gameTime`; `total_runs` untouched (§23.8.4); level-up queue does not leak through exit; Quit keeps journal with deferred banner on next town entry; Discard clears journal; end-screen buttons drive retry/town from a live run.
 
 ---
 

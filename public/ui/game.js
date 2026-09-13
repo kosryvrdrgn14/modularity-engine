@@ -8,6 +8,15 @@ class UIManager {
     // HTML overlay for level-up (reliable click/touch)
     this._levelupOverlay = document.getElementById('levelup-overlay');
     this._levelupCards = document.getElementById('levelup-cards');
+    // §23: combat pause menu overlay
+    this._pauseOverlay = document.getElementById('pause-overlay');
+    // onclick (not addEventListener) so re-shows never stack listeners.
+    const pauseResume = document.getElementById('pause-resume');
+    const pauseExit = document.getElementById('pause-exit');
+    const pauseQuit = document.getElementById('pause-quit');
+    if (pauseResume) pauseResume.onclick = () => this.eventBus.emit('pauseMenuAction', { action: 'resume' });
+    if (pauseExit) pauseExit.onclick = () => this.eventBus.emit('pauseMenuAction', { action: 'exit' });
+    if (pauseQuit) pauseQuit.onclick = () => this.eventBus.emit('pauseMenuAction', { action: 'quit' });
   }
 
   showLevelUp(options) {
@@ -18,6 +27,18 @@ class UIManager {
   hideLevelUp() {
     this.levelUpOptions = null;
     this._hideLevelUpOverlay();
+  }
+
+  // ── §23: combat pause menu overlay ──
+  showPauseMenu(snapshot) {
+    if (!this._pauseOverlay) return;
+    const el = this._pauseOverlay.querySelector('#pause-snapshot');
+    if (el) el.textContent = snapshot;
+    this._pauseOverlay.classList.add('active');
+  }
+
+  hidePauseMenu() {
+    if (this._pauseOverlay) this._pauseOverlay.classList.remove('active');
   }
 
   _showLevelUpOverlay(options) {
@@ -55,10 +76,23 @@ class UIManager {
     if (stats && !stats.stars && result && result.stars) {
       this.endScreen.stats.stars = result.stars;
     }
+    // §23.6: explicit end-screen buttons (mouse/touch discoverability;
+    // keyboard paths R → retry / any-key → town are unchanged). onclick is
+    // overwritten each show — re-shows never stack listeners.
+    const bar = document.getElementById('end-actions');
+    if (bar) {
+      bar.classList.add('active');
+      const retry = document.getElementById('end-retry');
+      const town = document.getElementById('end-town');
+      if (retry) retry.onclick = () => this.eventBus.emit('restart');
+      if (town) town.onclick = () => this.eventBus.emit('endScreenDismiss');
+    }
   }
 
   hideEndScreen() {
     this.endScreen = null;
+    const bar = document.getElementById('end-actions');
+    if (bar) bar.classList.remove('active');
   }
 
   render() {

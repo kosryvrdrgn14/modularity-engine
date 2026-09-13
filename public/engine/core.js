@@ -177,7 +177,7 @@ class GameState {
       // 'town' allowed: Story Mode / Test Town enter the town hub from title
       title: ['playing', 'town'],
       playing: ['paused', 'levelUp', 'gameOver', 'bossIntro'],
-      paused: ['playing'],
+      paused: ['playing', 'town', 'title'], // §23: deliberate exit/quit are legal, explicit edges
       levelUp: ['playing'],
       bossIntro: ['playing'],
       gameOver: ['endScreen'],
@@ -438,15 +438,28 @@ class InputManager {
         return;
       }
       if (e.code === 'Escape') {
-        this.eventBus.emit('pause', { paused: true });
+        // §23: ESC debounce — identical guard to the upgrade-key lock, so a
+        // rapid double-tap can't toggle pause twice (flicker).
+        if (!this._pauseKeyLock) {
+          this._pauseKeyLock = true;
+          this.eventBus.emit('pause', { paused: true });
+        }
       }
       // Upgrade selection during levelUp state (debounced)
       if (e.code === 'Digit1' || e.code === 'Numpad1') {
-        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 0 }); }
+        // §23: while paused, the number keys select pause-menu actions
+        // (Resume/Exit/Quit) instead of upgrade picks.
+        if (this._game && this._game.gameState.isPaused()) {
+          if (!this._pauseKeyLock) { this._pauseKeyLock = true; this.eventBus.emit('pauseMenuAction', { action: 'resume' }); }
+        } else if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 0 }); }
       } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
-        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 1 }); }
+        if (this._game && this._game.gameState.isPaused()) {
+          if (!this._pauseKeyLock) { this._pauseKeyLock = true; this.eventBus.emit('pauseMenuAction', { action: 'exit' }); }
+        } else if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 1 }); }
       } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
-        if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 2 }); }
+        if (this._game && this._game.gameState.isPaused()) {
+          if (!this._pauseKeyLock) { this._pauseKeyLock = true; this.eventBus.emit('pauseMenuAction', { action: 'quit' }); }
+        } else if (!this._upgradeKeyLock) { this._upgradeKeyLock = true; this.eventBus.emit('selectUpgrade', { index: 2 }); }
       }
       // Skip boss intro
       if ((e.code === 'Enter' || e.code === 'Space') && this._game && this._game.gameState.isBossIntro()) {
@@ -467,12 +480,13 @@ class InputManager {
     });
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
-      // Reset upgrade lock when ANY number key is released
+      // Reset upgrade/pause locks when ANY governing key is released
       if (e.code === 'Digit1' || e.code === 'Numpad1' ||
           e.code === 'Digit2' || e.code === 'Numpad2' ||
           e.code === 'Digit3' || e.code === 'Numpad3') {
         this._upgradeKeyLock = false;
       }
+      if (e.code === 'Escape') this._pauseKeyLock = false;
     });
   }
 
