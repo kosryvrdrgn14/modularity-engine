@@ -19,7 +19,7 @@ class Game {
     this.collisionSystem = new CollisionSystem(this.entityManager, this.eventBus);
     this.weaponSystem = new WeaponSystem(this.entityManager, this.dataManager, this.eventBus);
     this.renderer = new Renderer(this.canvas, this.camera);
-    this.damageSystem = new DamageSystem(this.entityManager, this.eventBus, this.renderer);
+    this.damageSystem = new DamageSystem(this.entityManager, this.eventBus, this.renderer, this.dataManager);
     this.pickupSystem = new PickupSystem(this.entityManager, this.dataManager, this.eventBus);
     this.levelingSystem = new LevelingSystem(this.entityManager, this.dataManager, this.eventBus);
     this.uiManager = new UIManager(this.canvas, this.eventBus);

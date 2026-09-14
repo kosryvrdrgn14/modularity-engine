@@ -786,7 +786,14 @@ class CompanionSystem {
   }
 
   _getStats(c) {
-    const data = CompanionSystem._compData()[c.companionId];
+    // BUG-031: this was `CompanionSystem._compData()[c.companionId]` — a call to
+    // a STATIC method that doesn't exist (_compData is an instance method), so
+    // EVERY _getStats call threw TypeError. The dog only reaches _getStats via
+    // the growl case (_getCooldown), i.e. the first time it closes on an enemy —
+    // and the throw killed companionSystem.update mid-frame every tick from then
+    // on (weapons/collision/pickups run after it in the update order and were
+    // silently skipped by the §21 try/catch: frozen dog, dead effects, no pickups).
+    const data = this._compData()[c.companionId];
     if (!data) return null;
     const lvl = Math.min(c._level || 1, data.statsPerLevel.length);
     return data.statsPerLevel[lvl - 1];

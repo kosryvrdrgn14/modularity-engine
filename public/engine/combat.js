@@ -753,10 +753,16 @@ class WeaponSystem {
 // --- DamageSystem ---
 // Applies damage, crits, knockback, invincibility
 class DamageSystem {
-  constructor(entityManager, eventBus, renderer) {
+  constructor(entityManager, eventBus, renderer, dataManager) {
     this.entityManager = entityManager;
     this.eventBus = eventBus;
     this.renderer = renderer;
+    // BUG-032: _handleAreaPulse calls the POT-002 visual helpers, which are
+    // defined on WeaponSystem — DamageSystem had no dataManager and no methods,
+    // so every areaPulse (w3 pulse / w4 wave / w8 explosion flash) threw
+    // TypeError and the pulse visual never rendered. Shared, not copied: both
+    // systems read the same content lookup.
+    this.dataManager = dataManager;
   }
 
   init() {
@@ -889,6 +895,20 @@ class DamageSystem {
     }
   }
 }
+
+// BUG-032: the POT-002 visual helpers previously lived only on WeaponSystem,
+// while DamageSystem._handleAreaPulse also needs them — one shared mixin onto
+// DamageSystem (after the class declaration: class bindings are TDZ'd) keeps a
+// single content-lookup implementation instead of a per-class copy.
+// Note: DamageSystem must be constructed with a dataManager (game.js passes it).
+Object.assign(DamageSystem.prototype, {
+  _weaponVisual(weaponId) {
+    return this.dataManager?.weapons?.find(w => w.id === weaponId)?.visual || {};
+  },
+  _weaponColor(weaponId, fallback) {
+    return this._weaponVisual(weaponId).color || fallback;
+  },
+});
 
 // ============================================================
 // PHASE 10: PICKUP SYSTEM

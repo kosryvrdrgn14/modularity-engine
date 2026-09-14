@@ -2,6 +2,16 @@
 
 ---
 
+## v2.3.1 — BUG-031/BUG-032: Combat-Frame Freeze & Missing Visual Helpers
+**Date:** September 14, 2026
+**Status:** ✅ Complete (112/112 headless trace checks pass)
+
+**BUG-031 (critical, player-reported).** The moment the player took contact damage, the companion dog froze, pickups stopped collecting, and weapon effects died — while player movement kept working. `_getStats()` called `CompanionSystem._compData()` statically (the method is instance-only), so every call threw; the dog only reaches `_getStats` via the growl path (`_getCooldown`), which first fires when it closes on an enemy — i.e., exactly when enemies reach the player. `companionSystem.update()` then threw inside the frame's try/catch every tick, and every system after it in the update order (weapons, collisions/pickups, pickups, leveling) was silently skipped. Fixed to `this._compData()`. Verified headless: 3s of forced enemy contact with the dog equipped — frame stays alive, dog attacks and returns to follow, kills register, zero page errors.
+
+**BUG-032 (silent, found during the BUG-031 investigation).** `_handleAreaPulse` on DamageSystem called the POT-002 helpers `_weaponVisual`/`_weaponColor`, which exist only on WeaponSystem — every area-pulse event threw (swallowed by the EventBus error net), so w3/w4/w8 pulse visuals never rendered and BUG-030's color fix was untestable. The helpers are now one shared implementation mixed onto `DamageSystem.prototype` (single source of truth, no fork), and DamageSystem is constructed with the dataManager.
+
+---
+
 ## v2.3.0 — §23 Combat Pause Menu & Voluntary Exit-to-Town
 **Date:** September 12, 2026
 **Status:** ✅ Complete (112/112 headless trace checks pass)

@@ -250,6 +250,19 @@
 - **Fix (v2.2.0):** the handler honors `data.color`, falling back to the w3 content color (`weapons.json weapon_area_pulse.visual`) and then the legacy literal.
 - **Lesson:** same event-field invariant as BUG-029 — an emitter field silently dropped by the consumer is a half-built data path; grep both directions.
 
+### BUG-031: Static Call on an Instance Method Froze the Game Frame Mid-Combat (September 14, 2026) — RESOLVED v2.3.1
+- **Severity:** Critical (combat becomes unplayable; silent — errors only in console)
+- **Symptom (player-reported):** the moment the player takes contact damage, the companion dog freezes in place, pickups stop being collected, weapon effects stop — but the player can still move. Returning to title and resuming "fixes" it until the next contact.
+- **Root cause:** `CompanionSystem._getStats()` called `CompanionSystem._compData()[...]` — a STATIC call on a method that only exists on instances (`_compData` is an instance method, line 7), so every `_getStats()` threw `TypeError: CompanionSystem._compData is not a function`. The dog only reaches `_getStats` through the growl case (`_getCooldown` to set `attackCooldown`), which first fires when it closes on an enemy — i.e., right when enemies reach the player. From then on `companionSystem.update()` threw every tick inside the frame's try/catch (game.js §21), and because it runs at position 3 in the update order (game.js:637), every system after it — weaponSystem, collisionSystem (pickups), pickupSystem, levelingSystem — was silently skipped. Player movement runs BEFORE it (636), hence the partial-freeze signature. Title→resume cleared the stuck growl state; the next growl re-threw.
+- **Fix (v2.3.1):** `this._compData()[c.companionId]`.
+- **Lesson:** a wrong-receiver static call compiles fine and fails only on the specific runtime path that reaches it — the trace never drove the dog into a growl against a live enemy. Reach-test patterns matter: drive the state machine, not just the API.
+
+### BUG-032: DamageSystem Called POT-002 Visual Helpers It Didn't Have (September 14, 2026) — RESOLVED v2.3.1
+- **Severity:** Medium (area-pulse visuals never rendered; TypeError swallowed by the EventBus error net)
+- **Symptom:** none visible to the player (silent); found during the BUG-031 investigation. Every `areaPulse` event (w3 pulse, w4 wave, w8 explosion flash) threw `TypeError: this._weaponColor is not a function` in `_handleAreaPulse` — the helper exists only on WeaponSystem, and DamageSystem was constructed without a dataManager.
+- **Fix (v2.3.1):** the two helpers are now one shared implementation mixed onto `DamageSystem.prototype` via `Object.assign` (after the class declaration — class bindings are TDZ'd) instead of a copied fork, and game.js constructs DamageSystem with the dataManager. Repaired side-effect: the w4 slam / w8 explosion colors (BUG-030's fix) actually render now — BUG-030's fix was untestable until this landed.
+- **Lesson:** POT-002 converted 11 call-sites on WeaponSystem but missed the 12th consumer on a different class in the same file — the "call-sites of a helper" sweep must be class-aware. Also: the first `Object.assign` placement sat before the class declaration and TDZ-crashed boot — placement discipline for prototype extension in the script-tag (non-module) codebase.
+
 ---
 
 ## Potential Issues (Watch List)
