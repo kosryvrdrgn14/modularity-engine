@@ -95,6 +95,7 @@ class DataManager {
       { key: 'quests', path: 'content/quests.json' },
       { key: 'contentGates', path: 'content/content_gates.json' },
       { key: 'uiSkins', path: 'content/ui_skins.json' },
+      { key: 'calendar', path: 'content/calendar.json' },
     ];
 
     const results = await Promise.all(

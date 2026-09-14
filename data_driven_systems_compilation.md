@@ -106,7 +106,14 @@ needs. See the build-order note in §5 before starting either.
 
 ## 3. Modular Inventory System
 
-**Status: designed in discussion, not yet written as a standalone spec file.** Consider splitting
+**Status: implemented (v2.8.0, 2026-09-14) — see `calendar_time_system_spec.md`.** Event-driven
+in-game calendar: `content/calendar.json` (16th content file), `public/systems/calendarTime.js`
+(`TimeService`), typed `GameManager.advanceDay` (runs/quests advance via content `daySources`;
+story skips logged to a bounded `skipLog`), store v7 (`persistent.time`, additive). Season
+resolution: event modifiers (first-match-wins on `seasonOverride`) → region biome schedule →
+default; festivals STACK. ConditionEngine now implements `season`/`festival`/`time` types
+(`dialogueChoice`/`location` stay reserved); memory-log events carry a `day` stamp (seq stays the
+ordering spine); export cards and memoryCheckpoint labels gain historical date context. Consider splitting
 into `inventory_system_spec.md` before implementation, matching project convention.
 
 **Core data model:**

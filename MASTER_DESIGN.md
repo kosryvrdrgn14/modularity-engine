@@ -1233,6 +1233,14 @@ split, spoiler cutoff via `upToSeq` (fail-closed), derived memoryCheckpoint inde
 slots directly, in-game dialogue entry gated on interaction history. Gate: step4 suite 8/8 strict
 incl. no-duplicate-infrastructure purity checks — all four plan steps now green.
 
+**Post-plan follow-on — Calendar & time (calendar_time_system_spec.md, v2.8.0).** Event-driven
+in-game calendar per locked spec decisions: `TimeService` + `content/calendar.json` (content-
+agnostic engine), `advanceDay()` typed path (combat runs/quests via content daySources; story
+skips to `skipLog`), store v7 additive, season = modifiers(first-match-wins) → biome → default
+with festivals stacking, `season`/`festival`/`time` condition types implemented in the shared
+engine, memory-log `day` stamps, export/checkpoint date context. Gate:
+`tests/suites/calendar_time.cjs` 27/27 strict; full battery green.
+
 **Structures this plan must not damage (verified 2026-09-14):** POT-012's `WRITABLE_PATHS`
 store allowlist (any new store paths MUST be added to it — rejected writes are silent failures
 by design); the `_migrate` version chain (new log containers join via one version bump with

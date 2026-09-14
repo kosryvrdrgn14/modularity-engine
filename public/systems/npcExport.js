@@ -87,19 +87,20 @@ class NPCExportSystem {
 
   _factFromEvent(ev) {
     const p = ev.payload || {};
+    const day = Number.isFinite(ev.day) ? ev.day : null;
     switch (ev.type) {
       case 'questCompleted':
-        return { kind: 'quest', text: `Completed the quest "${p.questId || 'unknown'}" together.`, seq: ev.seq, chapterMarker: ev.chapterMarker };
+        return { kind: 'quest', text: `Completed the quest "${p.questId || 'unknown'}" together.`, seq: ev.seq, chapterMarker: ev.chapterMarker, day };
       case 'giftGiven':
-        return { kind: 'gift', text: p.itemId ? `Received a gift: ${p.itemId}.` : `Shared a meaningful moment (worth ${p.affection ?? 1}).`, seq: ev.seq, chapterMarker: ev.chapterMarker };
+        return { kind: 'gift', text: p.itemId ? `Received a gift: ${p.itemId}.` : `Shared a meaningful moment (worth ${p.affection ?? 1}).`, seq: ev.seq, chapterMarker: ev.chapterMarker, day };
       case 'dialogueChoiceMade':
-        return { kind: 'dialogue', text: `In conversation, the traveler chose: "${p.choiceId || '…'}".`, seq: ev.seq, chapterMarker: ev.chapterMarker };
+        return { kind: 'dialogue', text: `In conversation, the traveler chose: "${p.choiceId || '…'}".`, seq: ev.seq, chapterMarker: ev.chapterMarker, day };
       case 'flagSet':
-        return { kind: 'revelation', text: `Shared something personal: ${p.flagId || 'a confidence'}.`, seq: ev.seq, chapterMarker: ev.chapterMarker, spoilerTag: ev.spoilerTag };
+        return { kind: 'revelation', text: `Shared something personal: ${p.flagId || 'a confidence'}.`, seq: ev.seq, chapterMarker: ev.chapterMarker, spoilerTag: ev.spoilerTag, day };
       case 'npcTalkedTo':
-        return { kind: 'talk', text: 'Spent time talking.', seq: ev.seq, chapterMarker: ev.chapterMarker };
+        return { kind: 'talk', text: 'Spent time talking.', seq: ev.seq, chapterMarker: ev.chapterMarker, day };
       default:
-        return { kind: ev.type, text: `${ev.type} (seq ${ev.seq}).`, seq: ev.seq, chapterMarker: ev.chapterMarker };
+        return { kind: ev.type, text: `${ev.type} (seq ${ev.seq}).`, seq: ev.seq, chapterMarker: ev.chapterMarker, day };
     }
   }
 
@@ -140,6 +141,18 @@ class NPCExportSystem {
         label = `${ev.chapterMarker || 'Story'}: a revelation (${ev.spoilerTag})`;
       }
       if (!label) continue;
+      // Day context (spec §5): historical day → calendar description, never
+      // present-tense flags. Pre-calendar events add nothing.
+      if (Number.isFinite(ev.day)) {
+        const cal = this.dataManager?.calendar || null;
+        if (cal && typeof TimeService !== 'undefined') {
+          const d = TimeService.describeDay(cal, ev.day);
+          if (d.monthId && d.seasonDefault) label += ` (Day ${d.day}, ${d.seasonDefault})`;
+          else label += ` (Day ${d.day})`;
+        } else {
+          label += ` (Day ${ev.day})`;
+        }
+      }
       const key = `${label}@${ev.seq}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -274,6 +287,19 @@ class NPCExportSystem {
     lines.push('## FACTS (as of this snapshot)');
     for (const fact of card.facts) {
       lines.push(`- [${fact.kind}] ${fact.text}`);
+    }
+    // Calendar context line (calendar_time_system_spec.md §5): derived from
+    // the LATEST included fact's day — past days use the calendar's own
+    // month/season mapping, never present-tense event flags. Pre-calendar
+    // facts (no day) contribute NO line — context is never invented.
+    const lastDay = [...card.facts].reverse().find((f) => Number.isFinite(f.day))?.day;
+    const calContent = this.dataManager?.calendar || null;
+    if (lastDay != null && calContent && typeof TimeService !== 'undefined') {
+      const d = TimeService.describeDay(calContent, lastDay);
+      if (d.monthId && d.seasonDefault) {
+        lines.push('');
+        lines.push(`— Day ${d.day}, ${d.monthId}${d.weekday ? ` (${d.weekday})` : ''}, ${d.seasonDefault} season —`);
+      }
     }
     lines.push('');
     lines.push('## RULES (constraints)');

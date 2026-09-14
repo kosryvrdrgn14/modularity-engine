@@ -46,13 +46,22 @@ class NpcMemoryLog {
   }
 
   /** Append one event. Returns the stored event, or null (rejected — logged
-   *  loudly, never silently improvised). Marks the store dirty via callback. */
+   *  loudly, never silently improvised). Marks the store dirty via callback.
+   *  Calendar stamp (calendar_time_system_spec.md §5): events carry the day
+   *  they happened on, read from the SAME store being written (slot-safe).
+   *  Absent day = pre-calendar history; seq remains the ordering spine. */
   append(spec, opts = {}) {
-    const npcs = this._branch();
-    if (!npcs) {
+    const store = typeof this._storeOrGetter === 'function' ? this._storeOrGetter() : this._storeOrGetter;
+    if (!store || !store.persistent || !store.persistent.npcs) {
       console.error('[MEMORYLOG] rejected: store has no persistent.npcs branch');
       return null;
     }
+    const npcs = store.persistent.npcs;
+    if (!Array.isArray(npcs.eventLog)) npcs.eventLog = [];
+    if (typeof npcs.eventSeq !== 'number') npcs.eventSeq = 0;
+    const day = (store.persistent.time && Number.isFinite(store.persistent.time.currentDay))
+      ? store.persistent.time.currentDay
+      : null;
     const problems = NpcMemoryLog.validateSpec(spec);
     if (problems.length) {
       console.error('[MEMORYLOG] rejected event:', problems.join('; '), JSON.stringify(spec));
@@ -67,6 +76,7 @@ class NpcMemoryLog {
       type: spec.type,
       payload: spec.payload || null,
       spoilerTag: spec.spoilerTag || null,
+      day,
     };
     npcs.eventLog.push(ev);
     if (typeof opts.onDirty === 'function') opts.onDirty();

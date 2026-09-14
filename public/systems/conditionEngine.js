@@ -30,7 +30,9 @@
 // ============================================================
 
 class ConditionEngine {
-  static RESERVED_TYPES = ['time', 'dialogueChoice', 'location', 'season'];
+  // Calendar & time types (season/festival/time) are IMPLEMENTED as of
+  // calendar_time_system_spec.md; dialogueChoice and location stay reserved.
+  static RESERVED_TYPES = ['dialogueChoice', 'location'];
 
   static TIER_ORDER = ['stranger', 'interest', 'respect', 'trust', 'claim'];
 
@@ -82,6 +84,9 @@ class ConditionEngine {
     if (keys.includes('flag')) return this._evalFlag(condition, keys, context);
     if (keys.includes('questState')) return this._evalQuestState(condition, keys, context);
     if (keys.includes('affectionTier')) return this._evalAffectionTier(condition, keys, context);
+    if (keys.includes('season')) return this._evalSeason(condition, keys, context);
+    if (keys.includes('festival')) return this._evalFestival(condition, keys, context);
+    if (keys.includes('time')) return this._evalTime(condition, keys, context);
 
     // Reserved-but-unimplemented types get a SPECIFIC rejection.
     const reserved = keys.find((k) => ConditionEngine.RESERVED_TYPES.includes(k));
@@ -137,6 +142,41 @@ class ConditionEngine {
         problems.push(`${path}: "affectionTier.atLeast" must be one of ${ConditionEngine.TIER_ORDER.join('|')}`);
       }
       if (keys.length > 2) problems.push(`${path}: "affectionTier" accepts only "atLeast" as an extra key`);
+      return problems;
+    }
+    if (keys.includes('season')) {
+      const s = condition.season;
+      if (!s || typeof s !== 'object' || Array.isArray(s)) {
+        problems.push(`${path}: "season" must be an object`);
+      } else {
+        const sk = Object.keys(s);
+        if (typeof s.is !== 'string' || !s.is) problems.push(`${path}: "season.is" must be a non-empty season id`);
+        if (s.region !== undefined && (typeof s.region !== 'string' || !s.region)) problems.push(`${path}: "season.region" must be a non-empty region id`);
+        if (sk.some((k) => k !== 'is' && k !== 'region')) problems.push(`${path}: "season" accepts only "is" and "region"`);
+      }
+      if (keys.length > 1) problems.push(`${path}: "season" must be the only key`);
+      return problems;
+    }
+    if (keys.includes('festival')) {
+      const f = condition.festival;
+      if (!f || typeof f !== 'object' || Array.isArray(f)) {
+        problems.push(`${path}: "festival" must be an object`);
+      } else {
+        if (typeof f.active !== 'string' || !f.active) problems.push(`${path}: "festival.active" must be a non-empty festival id`);
+        if (Object.keys(f).some((k) => k !== 'active')) problems.push(`${path}: "festival" accepts only "active"`);
+      }
+      if (keys.length > 1) problems.push(`${path}: "festival" must be the only key`);
+      return problems;
+    }
+    if (keys.includes('time')) {
+      const t = condition.time;
+      if (!t || typeof t !== 'object' || Array.isArray(t)) {
+        problems.push(`${path}: "time" must be an object`);
+      } else {
+        if (!Number.isFinite(t.dayAtLeast)) problems.push(`${path}: "time.dayAtLeast" must be a number`);
+        if (Object.keys(t).some((k) => k !== 'dayAtLeast')) problems.push(`${path}: "time" accepts only "dayAtLeast"`);
+      }
+      if (keys.length > 1) problems.push(`${path}: "time" must be the only key`);
       return problems;
     }
     const reserved = keys.find((k) => ConditionEngine.RESERVED_TYPES.includes(k));
@@ -242,6 +282,63 @@ class ConditionEngine {
     const ladders = ConditionEngine.TIER_ORDER.map((name, i) => ({ name, i, min: [0, 10, 30, 60, 100][i] }));
     for (const l of ladders) if (aff >= l.min) current = l.i;
     return current >= required;
+  }
+
+  _evalSeason(cond, keys, ctx) {
+    const s = cond.season;
+    if (!s || typeof s !== 'object' || Array.isArray(s) || typeof s.is !== 'string' || !s.is) {
+      this._logger('rejected: "season" must be an object with a non-empty "is"', cond);
+      return false;
+    }
+    if (s.region !== undefined && (typeof s.region !== 'string' || !s.region)) {
+      this._logger('rejected: "season.region" must be a non-empty region id', cond);
+      return false;
+    }
+    if (keys.length > 1) {
+      this._logger('rejected: "season" must be the only key', cond);
+      return false;
+    }
+    // Time context (calendar_time_system_spec.md §4): getter style, wired by
+    // GameManager.buildConditionContext. Fail-closed when absent.
+    if (typeof ctx.getSeason !== 'function') {
+      this._logger('rejected: no time service wired — season conditions unavailable', cond);
+      return false;
+    }
+    return ctx.getSeason(s.region || undefined) === s.is;
+  }
+
+  _evalFestival(cond, keys, ctx) {
+    const f = cond.festival;
+    if (!f || typeof f !== 'object' || Array.isArray(f) || typeof f.active !== 'string' || !f.active) {
+      this._logger('rejected: "festival" must be an object with a non-empty "active"', cond);
+      return false;
+    }
+    if (keys.length > 1) {
+      this._logger('rejected: "festival" must be the only key', cond);
+      return false;
+    }
+    if (typeof ctx.getFestivals !== 'function') {
+      this._logger('rejected: no time service wired — festival conditions unavailable', cond);
+      return false;
+    }
+    return ctx.getFestivals().includes(f.active);
+  }
+
+  _evalTime(cond, keys, ctx) {
+    const t = cond.time;
+    if (!t || typeof t !== 'object' || Array.isArray(t) || !Number.isFinite(t.dayAtLeast)) {
+      this._logger('rejected: "time" must be an object with a numeric "dayAtLeast"', cond);
+      return false;
+    }
+    if (keys.length > 1) {
+      this._logger('rejected: "time" must be the only key', cond);
+      return false;
+    }
+    if (typeof ctx.getCurrentDay !== 'function') {
+      this._logger('rejected: no time service wired — time conditions unavailable', cond);
+      return false;
+    }
+    return ctx.getCurrentDay() >= t.dayAtLeast;
   }
 
   _validCombinator(list, name, keys) {

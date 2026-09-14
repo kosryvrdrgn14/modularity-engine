@@ -2,6 +2,47 @@
 
 ---
 
+## v2.8.0 — Calendar & Time System (event-driven days, modular content)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (calendar_time suite 27/27 strict; full battery green — trace 112/112, steps 1–4, calendar)
+
+### Added
+- **`calendar_time_system_spec.md`** — spec-first, with locked decisions: event-driven days
+  (never wall-clock), content-agnostic engine, season = modifiers → biome → default,
+  **stacked-by-field modifier rule** (seasonOverride first-match-wins; festivals stack —
+  blight and the harvest festival can coexist and content can author against it).
+- **`public/content/calendar.json`** — 16th content file (loadAll + generator registry,
+  mirror synced): default 4×28-day calendar, weekday names, season schedules, region biome
+  overrides (graveyard = eternal_dusk), event modifiers, day-source deltas. A bespoke fantasy
+  calendar is a content edit, not code.
+- **`public/systems/calendarTime.js` (`TimeService`)** — day arithmetic from content only,
+  `getSeason(region?)` resolution chain, stacked `getFestivals()`, date labels, static
+  `describeDay()` for historical days, typed `advanceDay(days, source)` (rejects negative/
+  non-integer days and missing sources fail-closed; content-tabulated sources use content
+  deltas; explicit skips land in a bounded `skipLog`).
+- **`GameManager.advanceDay` call sites** — combat run end and quest completion advance via
+  content `daySources`; emits `time:dayAdvanced` (producers may listen; no saves, §21 rule).
+- **ConditionEngine** — `season {is, region?}`, `festival {active}`, `time {dayAtLeast}`
+  implemented and validated; fail-closed with a specific message when no time service is
+  wired (`dialogueChoice`/`location` remain reserved).
+- **Memory log day stamps** — events carry `day` (read from the same store being written,
+  slot-safe); `seq` remains the ordering spine; absent day = pre-calendar history.
+- **Export integration** — cards gain a historical date context line; memoryCheckpoint
+  labels gain `(Day N, season)`; both derive from the calendar, never present-tense flags.
+- **Store v7** — additive `persistent.time {currentDay, skipLog}` migration (old saves boot clean).
+- **`tests/suites/calendar_time.cjs`** — 27 checks driving real state transitions: content
+  deltas vs skips, exact month-boundary flip, biome override, the locked modifier rule
+  (both directions), evaluator types incl. combinators and fail-closed, log stamping,
+  export context, save/reload round-trip, migration.
+
+### Notes
+- Farming stays decoupled (locked decision #6): a farming cycle is not a story day.
+- Per-turn advancement is reserved: add a `turn_complete` key to `daySources` once turns are
+  defined — no engine change.
+
+---
+
+## v2.7.0 — Step 4: Roleplay Export (final plan step — ALL STEPS GREEN)
 ## v2.7.0 — Step 4: Roleplay Export (final plan step — ALL STEPS GREEN)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (step4 suite 8/8 strict incl. purity checks; full battery green — trace 112/112, steps 1–4 all PASS; content:check OK)

@@ -446,6 +446,11 @@ class QuestSystem {
 
     this._markDirty();
     this.eventBus.emit('quest:completed', { questId, rewards: quest.rewards });
+    // Calendar (calendar_time_system_spec.md): a completed quest = a day,
+    // delta from content (daySources.quest_completed). Quiet advance.
+    if (this.gameManager?._timeServiceRef) {
+      this.gameManager._timeServiceRef.advanceDay(0, 'quest_completed');
+    }
 
     if (window.__QUEST_DEBUG__) {
       console.log(`[QUEST] Completed: ${questId}`);

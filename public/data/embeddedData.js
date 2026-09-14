@@ -4984,4 +4984,88 @@ const EMBEDDED_DATA = {
       "accentColorToken": "rgba(255, 205, 100, 0.6)"
     }
   },
+
+  // calendar — from content/calendar.json
+  calendar: {
+    "_note": "Default calendar (v1). The engine is calendar-agnostic: replacing months/seasons with a bespoke calendar is a content edit, not code. Spec: calendar_time_system_spec.md (locked decisions 1-7).",
+    "calendar": {
+      "name": "Common Reckoning",
+      "epochLabel": "Day 1 of the Refuge",
+      "months": [
+        {
+          "id": "seedfall",
+          "days": 28
+        },
+        {
+          "id": "highsun",
+          "days": 28
+        },
+        {
+          "id": "emberfall",
+          "days": 28
+        },
+        {
+          "id": "deepfrost",
+          "days": 28
+        }
+      ],
+      "daysPerWeek": 6,
+      "weekdayNames": [
+        "firstday",
+        "workday",
+        "midday",
+        "marketday",
+        "eve",
+        "restday"
+      ]
+    },
+    "seasons": {
+      "default": {
+        "byMonth": {
+          "seedfall": "spring",
+          "highsun": "summer",
+          "emberfall": "harvest",
+          "deepfrost": "winter"
+        }
+      },
+      "schedules": {
+        "eternal_dusk": {
+          "fixed": "dusk"
+        }
+      }
+    },
+    "regionBiomes": {
+      "town": "default",
+      "region_town": "default",
+      "graveyard": "eternal_dusk",
+      "region_graveyard": "eternal_dusk",
+      "forest": "default",
+      "region_forest": "default",
+      "_note": "region ids: legacy bare ids mapped for safety; canonical ids are region_*"
+    },
+    "eventModifiers": [
+      {
+        "id": "blight",
+        "when": {
+          "flag": "blight_active"
+        },
+        "seasonOverride": "blight",
+        "summary": "The land sickens; crops blacken on the stalk."
+      },
+      {
+        "id": "harvest_festival",
+        "when": {
+          "flag": "harvest_festival_active"
+        },
+        "festivals": [
+          "harvest_festival"
+        ],
+        "summary": "Lanterns in the camp; the Bazaar stays open late."
+      }
+    ],
+    "daySources": {
+      "combat_run_complete": 1,
+      "quest_completed": 1
+    }
+  },
 };

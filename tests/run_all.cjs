@@ -20,6 +20,7 @@ const SUITES = [
   'tests/suites/step2_npc_system.cjs',
   'tests/suites/step3_widget_inventory.cjs',
   'tests/suites/step4_export.cjs',
+  'tests/suites/calendar_time.cjs',
 ];
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);

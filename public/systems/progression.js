@@ -124,7 +124,7 @@ class GameManager {
 
   _createDefault() {
     return {
-      save_version: 6,
+      save_version: 7,
       session: {
         current_stage_id: null,
         run_in_progress: false,
@@ -262,6 +262,17 @@ class GameManager {
       }
       data.save_version = 6;
     }
+    // Calendar & time (v7, additive; spec calendar_time_system_spec.md §3).
+    // Missing fields mean "Day 1, empty skip log" — correct for every
+    // pre-v7 save. Event-driven days only; no wall clock anywhere.
+    if (v < 7) {
+      if (data.persistent) {
+        data.persistent.time = data.persistent.time || { currentDay: 1, skipLog: [] };
+        if (!Number.isFinite(data.persistent.time.currentDay)) data.persistent.time.currentDay = 1;
+        if (!Array.isArray(data.persistent.time.skipLog)) data.persistent.time.skipLog = [];
+      }
+      data.save_version = 7;
+    }
     // §21 chunk 3 (additive, safe for all v3 saves): run journal fields.
     // No version bump — missing fields only mean "no journal", which is the
     // correct default for every pre-journal save.
@@ -379,6 +390,11 @@ class GameManager {
         return null;
       },
       getAffection: (npcId) => this.get_counter('affection_' + npcId),
+      // Calendar & time (calendar_time_system_spec.md §4) — wired when the
+      // TimeService exists; absent context = fail-closed in the engine.
+      getSeason: (region) => this._timeServiceRef?.getSeason(region),
+      getFestivals: () => this._timeServiceRef?.getFestivals() || [],
+      getCurrentDay: () => this._timeServiceRef?.getCurrentDay() || 0,
     };
   }
 
@@ -771,6 +787,10 @@ class GameManager {
   }
 
   // ── Save/Load ──────────────────────────────────
+  /** Back-reference set by Game after constructing the TimeService so
+   *  condition contexts stay live without a circular constructor dep. */
+  set timeServiceRef(ts) { this._timeServiceRef = ts; }
+
   save() {
     this.backend.save(this._slotKey(this.activeSlot || 1), this.store);
     this._dirty = false;

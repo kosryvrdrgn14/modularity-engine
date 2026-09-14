@@ -102,6 +102,14 @@ class Game {
     // shared evaluator, and WidgetRenderer. Constructed before any session
     // starts so the title-screen favorites browser works with no live game
     // (spec §1 hard architectural boundary).
+    // Calendar & time (calendar_time_system_spec.md): event-driven days.
+    // Content-agnostic engine; default calendar ships in calendar.json.
+    this.timeService = new TimeService({
+      gameManager: this.gameManager,
+      content: this.dataManager?.calendar || null,
+      eventBus: this.eventBus,
+    });
+    this.gameManager.timeServiceRef = this.timeService;
     this.npcExportSystem = new NPCExportSystem({
       gameManager: this.gameManager,
       dataManager: this.dataManager,
@@ -1088,6 +1096,9 @@ class Game {
     }
     // E4: Grow children after each run
     if (this.childrenSystem) this.childrenSystem.growChildren();
+    // Calendar (calendar_time_system_spec.md): a run = a day, delta from
+    // content (daySources.combat_run_complete). Quiet, not a skipLog entry.
+    if (this.timeService) this.timeService.advanceDay(0, 'combat_run_complete');
     // D5: Check for disaster event
     if (this.disasterSystem) {
       const runs = this.gameManager.get('counters.total_runs') || 0;
