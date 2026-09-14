@@ -1802,3 +1802,59 @@
 .resume-btn.primary:hover {
   background: rgba(76, 175, 80, 0.4);
 }
+
+
+/* ============================================================
+   §24 STEP 3 — WIDGET SYSTEM (data-driven Card template)
+   widget_ui_system_spec.md §2/§4. Purely presentational: structure comes
+   from WidgetRenderer, skins/color are CSS custom props only (§4.4 — a
+   skin is never the sole information channel). :empty slots collapse —
+   text reflows (§2.7), never assumes fixed width.
+   ============================================================ */
+.widget-card {
+  --widget-accent: rgba(255, 215, 0, 0.5);
+  --widget-skin-bg: transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 215, 0, 0.18);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.12)), var(--widget-skin-bg);
+  min-height: 56px;
+  box-sizing: border-box;
+}
+.widget-card.interactive { cursor: pointer; transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease; }
+.widget-card.interactive:hover {
+  border-color: var(--widget-accent);
+  background: linear-gradient(180deg, rgba(255,215,0,0.06), rgba(0,0,0,0.12)), var(--widget-skin-bg);
+}
+.widget-card.interactive:active { transform: scale(0.985); }
+/* Layout presets (§2.3) — the ONLY arrangement axes. */
+.widget-card.layout-icon-top { flex-direction: column; align-items: flex-start; }
+.widget-card.layout-icon-only .widget-slot:not(.slot-icon) { display: none; }
+.widget-card.layout-text-only-row { grid-auto-flow: column; }
+/* Size tokens (§2.4) — bounded, never arbitrary pixels. */
+.widget-card.size-small { min-height: 40px; padding: 8px 10px; gap: 8px; }
+.widget-card.size-large { min-height: 72px; padding: 16px 18px; }
+/* Slots (§2.1) — optional; :empty collapses (text reflow, §2.7). */
+.widget-slot { min-width: 0; }
+.widget-slot:empty { display: none; }
+.slot-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+.slot-primaryText { font-weight: 600; color: #f5f0e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-secondaryText { flex: 1; font-size: 0.8rem; color: rgba(245,240,225,0.55); overflow: hidden; text-overflow: ellipsis; }
+.slot-badge {
+  margin-left: auto;
+  font-size: 0.8rem; font-weight: 700;
+  color: var(--widget-accent);
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.slot-progress { position: relative; flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.widget-progress-fill { height: 100%; border-radius: 999px; background: var(--widget-accent); transition: width 0.2s ease; }
+.slot-status.status-locked { color: #b0a488; font-size: 0.85rem; }
+.slot-status.status-active { color: #a5d6a7; font-size: 0.85rem; }
+/* Skin layer hook (§4): color-token skins set --widget-skin-bg / --widget-accent;
+   structure and bindings are untouched — a skin can never carry information. */

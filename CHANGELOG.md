@@ -2,6 +2,42 @@
 
 ---
 
+## v2.6.0 — Step 3: Widget/Inventory Pilot (+ two latent shop bugs fixed)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (step3 suite 20/20 strict; steps 1–2 green; regression trace 112/112 — ALL SUITES GREEN; content:check OK)
+
+### Added
+- **`public/ui/widgetRenderer.js`** (`window.WidgetRenderer`) — the §5 Card pilot:
+  slot-based bindings (`icon`, `primaryText`, `secondaryText`, `badge`, `onClick`),
+  `{{path}}` payload templating with literal-pass-through, layout presets
+  (`icon-left`/`icon-right`/`stacked`), bounded size/color tokens, repeat-over-array,
+  **instance pooling** (rebind-in-place on regrow, hide-on-shrink — no DOM churn),
+  context accents, loud fail-closed schema validation with path-keyed errors, `_v`
+  version tagging, and the visual skinning layer (`ui_skins.json` → CSS custom props;
+  missing skin degrades to unskinned, structure intact).
+- **Pilot screen:** shop Inventory tab rendered *entirely* through the widget system
+  (`inventoryItemSelected` declared-event clicks; pooled host `#shop-items`).
+- **`public/content/ui_skins.json`** — first real skin: `bazaar_cloth` (color tokens
+  only, per §4.1's asset-less rule).
+- **Tests:** step3 suite rewritten to the real contract (20 checks): slots, repeat,
+  pooling regrow/shrink, loud validation, skin apply/degrade, live pilot screen,
+  tagged+legacy inventory coexistence, POT-015 composition. Harness error-net now
+  whitelists deliberate renderer warnings.
+
+### Fixed (both found by the pilot's ground-truth pass)
+- **Shop purchases crashed after spending gold:** `_addToInventory` wrote the
+  nonexistent root `store.inventory` while `_createDefault`/endSession used
+  `persistent.inventory` — all writers/readers now use the canonical
+  `store.persistent.inventory` (no duplicate array; the compilation's one-rule).
+- **`getEffectiveStats()` returned `{}`:** it read dead `store.player.baseStats`;
+  now composes `persistent.player.base_stats` + equipped-item `bonus` maps (POT-015).
+
+### Docs
+- Compilation §5 status → pilot implemented (with not-yet-built list); §6 step 3 marked DONE.
+- MASTER_DESIGN §24 step 3 marked DONE with the two bug fixes recorded.
+
+---
+
 ## v2.5.0 — Step 2: NPC Condition System + Canonical Memory Log
 **Date:** September 14, 2026
 **Status:** ✅ Complete (step2 suite 30/30 strict; step1 30/30; regression trace 112/112 — ALL SUITES GREEN)

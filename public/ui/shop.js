@@ -109,6 +109,9 @@ class ShopSystem {
 
   renderItems() {
     if (!this._items || this.currentMode !== 'shop') return;
+    // §24 Step 3: the Inventory tab is the widget-system pilot screen
+    // (widget_ui_system_spec.md §8) — rendered ENTIRELY through WidgetRenderer.
+    if (this.currentTab === 'inventory') return this._renderInventory();
     this._items.innerHTML = '';
 
     const items = SHOP_DATA[this.currentTab] || [];
@@ -130,6 +133,67 @@ class ShopSystem {
         card.addEventListener('click', () => this.buy(item));
       }
       this._items.appendChild(card);
+    }
+  }
+
+  // ── Widget-system pilot: the inventory grid (§24 Step 3) ──
+  // Every card is a WidgetRenderer instance driven by a declarative def +
+  // bound data. The def below is the reference "Card as configured data"
+  // example — same template as the future §2 inspector screen and §4 export
+  // browser will use. Clicks emit the DECLARED event (inventoryItemSelected);
+  // the grid rebinds through the pooled path (§5.1). Item display names come
+  // from SHOP_DATA when the id matches a stocked item, else the raw id.
+  _renderInventory() {
+    this._items.innerHTML = '';
+    if (!this.widgetRenderer) {
+      this.widgetRenderer = new WidgetRenderer({ skins: window.game?.dataManager?.uiSkins || null });
+    }
+    const R = this.widgetRenderer;
+    const items = this.gameManager.getInventoryItems();
+    const defs = SHOP_DATA.combat || [];
+    const nameFor = (id) => (defs.find((d) => d.id === id) || {}).name || String(id).replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const descFor = (id) => (defs.find((d) => d.id === id) || {}).desc || (String(id).startsWith('probe') ? 'Purchased from the Grand Bazaar.' : '');
+    const cardDef = {
+      template: 'card',
+      _v: 1,
+      layout: 'icon-left',
+      size: 'medium',
+      skinId: 'bazaar_cloth',
+      slots: {
+        icon: { bind: 'item.icon' },
+        primaryText: { bind: 'item.name' },
+        secondaryText: { bind: 'item.desc' },
+        badge: { bind: 'item.count' },
+      },
+      onClick: { emit: 'inventoryItemSelected', payload: { itemId: '{{item.id}}' } },
+    };
+    const data = items.map((it) => ({
+      item: {
+        id: it.id,
+        icon: it.icon || '🎒',
+        name: nameFor(it.id) + (it.category ? ` · ${it.category}` : ''),
+        desc: it.desc || descFor(it.id),
+        count: `×${it.count || 1}`,
+        tags: it.tags || null,
+      },
+    }));
+    if (data.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'shop-item';
+      empty.innerHTML = '<span class="item-icon">🎒</span><div class="item-info"><div class="item-name">Inventory empty</div><div class="item-desc">Buy something from the tabs above — purchases land here.</div></div>';
+      this._items.appendChild(empty);
+      return;
+    }
+    // Pooled path (§5.1): rebinds existing card nodes when re-rendered.
+    R.repeatInto(this._items, cardDef, data);
+    // Interactive instances bubble their DECLARED event; select sound + log
+    // line demonstrate the payload contract for the §7 occlusion audit later.
+    if (!this._inventoryListener) {
+      this._inventoryListener = true;
+      this._items.addEventListener('inventoryItemSelected', (e) => {
+        this.audioManager?.playMenuSound('select');
+        console.log('[INVENTORY] item selected:', e.detail);
+      });
     }
   }
 

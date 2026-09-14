@@ -1219,6 +1219,11 @@ steps, never feature-local forks).
 **Step 3 — Widget/inventory pilot (parallel track, explicit go/no-go).** Card template + one
 skin on the inventory grid; extends the existing `store.inventory` (no parallel v2 store).
 POT-015's `getEffectiveStats()` composition point lands here.
+✅ **DONE (v2.6.0):** `public/ui/widgetRenderer.js` piloted on the shop Inventory tab; skin via
+`ui_skins.json` (color tokens only, degrade-safe). Two latent bugs fixed en route: `_addToInventory`
+now writes the canonical `store.persistent.inventory` (root-path crash), and `getEffectiveStats()`
+now reads `persistent.player.base_stats` + equipped bonuses (was a dead path returning `{}`).
+Gate: step3 suite 20/20 strict; step4 purity checks still enforce no duplicate infrastructure.
 
 **Step 4 — Roleplay export (§4).** Pure consumption of the canonical log + evaluator spoiler
 queries + widget rendering. No new evaluator, log, or rendering code.

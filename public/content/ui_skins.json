@@ -1,3 +1,9 @@
 {
-  "_note": "UI skin registry (widget_ui_system_spec.md §4). Maps skinId → { border, background, cornerOrnament, accentColorToken }. Empty until the widget system lands. Rules: purely visual, never structural; a skin must never be the sole channel for information (§4.4); all referenced asset paths must exist. Registered in DataManager.loadAll() (core.js) and the embeddedData generator registry so the fallback mirror stays in sync — an unregistered content file is the town-blank-screen bug class."
+  "_note": "UI skin registry (widget_ui_system_spec.md §4). Maps skinId → { border, background, cornerOrnament, accentColorToken }. Rules: purely visual, never structural; a skin must never be the sole channel for information (§4.4); all referenced asset paths must exist. Registered in DataManager.loadAll() (core.js) and the embeddedData generator registry so the fallback mirror stays in sync — an unregistered content file is the town-blank-screen bug class.",
+  "bazaar_cloth": {
+    "_note": "§24 Step 3 pilot skin for the Inventory tab's widget cards (bazaar tier). Color-token only — no image assets exist yet; when 9-slice border/texture art lands, add border/background/cornerOrnament here with verified asset paths. background must be a color token (no '/' → renderer treats image paths as unimplemented and refuses them safely).",
+    "version": 1,
+    "background": "rgba(30, 26, 20, 0.85)",
+    "accentColorToken": "rgba(255, 205, 100, 0.6)"
+  }
 }

@@ -652,21 +652,58 @@ class GameManager {
   }
 
   _addToInventory(item) {
-    // Simplified: just track count in consumables
-    const existing = this.store.inventory.consumables.find(i => i.id === item.id);
+    // §24 Step 3: canonical inventory home is persistent.inventory (matches
+    // _createDefault and endSession's reward path). The old root-store read
+    // (this.store.inventory) pointed at a branch that NEVER existed — shop
+    // purchases crashed with a TypeError AFTER spend_currency had already
+    // charged the wallet. Items are { id, count } plus OPTIONAL category/tags
+    // (compilation §3 groundwork: absent = legacy consumable, no migration);
+    // unknown extra fields are preserved on stack-merge, never stripped.
+    const inv = this.store.persistent.inventory;
+    const existing = inv.consumables.find(i => i.id === item.id);
     if (existing) {
       existing.count += item.count || 1;
+      // Preserve category/tags if the caller upgrades a legacy item's shape.
+      for (const k of ['category', 'tags']) {
+        if (item[k] !== undefined && existing[k] === undefined) existing[k] = item[k];
+      }
     } else {
-      this.store.inventory.consumables.push({ id: item.id, count: item.count || 1 });
+      const entry = { id: item.id, count: item.count || 1 };
+      if (item.category !== undefined) entry.category = item.category;
+      if (item.tags !== undefined) entry.tags = item.tags;
+      inv.consumables.push(entry);
     }
     this._dirty = true;
   }
 
+  /** Canonical inventory read (§24 Step 3). All consumers read the
+   *  consumables list through here — no second array, ever. */
+  getInventoryItems() {
+    return this.store.persistent.inventory?.consumables || [];
+  }
+
   // ── Query Helpers ──────────────────────────────
   getEffectiveStats() {
-    const base = this.store.player.baseStats;
-    // TODO: add skill tree bonuses and equipment bonuses
-    return { ...base };
+    // POT-015 composition point (§24 Step 3): THE sanctioned place where stat
+    // bonuses compose. The old read (this.store.player.baseStats) pointed at
+    // a branch that never exists (the real home is persistent.player.base_stats),
+    // so this silently returned {} — every consumer got garbage.
+    // Order of composition: base → equipment bonuses → skill-tree bonuses
+    // (the latter two join here when those systems land — NOT feature-local).
+    const base = this.store.persistent.player?.base_stats || { max_health: 100, move_speed: 200, damage_multiplier: 1.0, speed_multiplier: 1.0 };
+    const stats = { ...base };
+    const eq = this.store.persistent.inventory?.equipment || {};
+    // Equipment bonus vocabulary (v1): items may declare a `bonus` map using
+    // the same keys as base_stats. Absent bonus = plain consumable/legacy.
+    const bonusKeys = ['max_health', 'move_speed', 'damage_multiplier', 'speed_multiplier'];
+    for (const slotKey of Object.keys(eq)) {
+      const item = (this.getInventoryItems().find((i) => i.id === eq[slotKey])) || null;
+      if (!item || !item.bonus) continue;
+      for (const k of bonusKeys) {
+        if (typeof item.bonus[k] === 'number') stats[k] = (stats[k] || 0) + item.bonus[k];
+      }
+    }
+    return stats;
   }
 
   getUnlockedWeapons() {

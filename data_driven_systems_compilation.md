@@ -180,7 +180,14 @@ rules, constraint model, and testing matrix.
 
 ## 5. Data-Driven Widget UI System
 
-**Status: full spec written — see `widget_ui_system_spec.md`.**
+**Status: PILOT IMPLEMENTED v1 (2026-09-14) — see `widget_ui_system_spec.md`.** Card template with
+slot bindings, layout presets (`icon-left`/`icon-right`/`stacked`), size tokens, bounded color
+tokens, repeat-over-array, instance pooling (rebind-in-place, hide-on-shrink), context accents,
+loud schema validation (fail-closed on malformed defs), version tagging (`_v`), and the visual
+skinning layer via `public/content/ui_skins.json` (color-token only; missing skin degrades to
+unskinned with structure intact). NOT yet built: 9-slice border skins, live-preview tool, widget
+inspector, occlusion detection. Reference implementation: `public/ui/widgetRenderer.js`
+(`window.WidgetRenderer`), piloted on the shop's Inventory tab.
 
 **Summary for integration purposes:** a slot-based Card template (icon, primary/secondary text,
 badge, progress bar, status indicator — all optional, data-bound), fixed layout presets rather
@@ -243,7 +250,11 @@ memory-log decision below.
    gift-eligibility and key-item conditions read through it). POT-015 (`getEffectiveStats`
    composition point) lands with this milestone. **Gate: `tests/suites/step3_widget_inventory.cjs`
    must pass `--strict` (card slots/repeat/loud-validation; inventory tagged items coexisting
-   with legacy shape).**
+   with legacy shape).** ✅ **DONE 2026-09-14 (v2.6.0):** 20/20 strict. Also fixed en route:
+   `_addToInventory` wrote to a nonexistent root `store.inventory` (shop purchases crashed after
+   spending gold) — canonical home is `store.persistent.inventory`, all writers/readers now agree;
+   `getEffectiveStats()` read a dead `store.player.baseStats` path — now composes
+   `persistent.player.base_stats` + equipped-item `bonus` maps.
 4. **Roleplay export favorites/memoryCheckpoint UI (§4)** — pure consumption: reads the
    canonical log, the evaluator's spoiler queries, and the widget layer. No new evaluator,
    no new log, no new rendering code. **Gate: `tests/suites/step4_export.cjs` must pass
