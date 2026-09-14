@@ -53,9 +53,28 @@ condition type for §2) rather than writing a second evaluator anywhere.
 
 ## 2. NPC Data-Driven Locations, Dialogue, and Mood
 
-**Status: designed in discussion, not yet written as a standalone spec file.** Summarized here in
-full so it isn't lost; consider splitting into its own `npc_condition_system_spec.md` before
-implementation begins, matching this project's convention of one spec file per major feature.
+**Status: BUILT — Step 2 complete (v2.5.0, 2026-09-14).** Spec:
+`npc_condition_system_spec.md` (written before implementation, per convention).
+`public/systems/npcSystem.js` implements `NpcMemoryLog` (the canonical event log —
+see §4's ownership note) and `NPCSystem`: `locationRules` (first-match-wins, base
+location as fallback), `dialogueSets` (first passing set wins with a GUARANTEED
+unconditional fallback — legacy root-topics NPCs synthesize one automatically), per-topic
+conditions, and the mood layer (selection input, stamped into event payloads). All
+conditions evaluate through the §1 engine — zero forks. Producers are centrally registered
+bus listeners (`npc:dialogueChoice`, `npc:dialogueFlag`, `npc:dialogueAffection` emitted at
+the single selection point in TownContent; `npc:talked` and `quest:completed` re-used as
+they exist); log writes ride the §21 autosave machinery (typed GameManager methods:
+`logNpcEvent` / `getNpcEventsForNpc` — POT-012 `WRITABLE_PATHS` untouched; store v5 adds
+`persistent.npcs.eventLog`/`eventSeq` additively). Dev Condition Inspector:
+`window.__NPC_DEBUG__` (evaluate/explain/log/schema). `old_man` is the migrated reference
+NPC; every other NPC stays 100% legacy-functional. Build-time validation of NPC `when`
+conditions added to the generator (same policy as quest gates). Contract enforced by
+`tests/suites/step2_npc_system.cjs` (30 checks, strict — including the save→reload
+round-trip via the harness's new `keepStorage` boot). Deferred from the original sketch:
+`npc:locationChanged`/`dialogueSetChanged`/`moodChanged`/`schedule:tick` hooks and `time`
+conditions (registered extension types, implemented in later steps).
+
+**Original design sketch (for reference):**
 
 **Core data additions per NPC:**
 - `locationRules`: ordered list of `{ location, conditions }` — first match wins. Lets an NPC's
@@ -209,15 +228,16 @@ memory-log decision below.
    not rearchitecture later). Ship with trace coverage that drives real state transitions
    (BUG-031 lesson: reach-test the machine, not just the API). **Gate: its suite
    (`tests/suites/step1_gate_engine.cjs`) must pass `--strict` before the step counts as done.**
-2. **NPC locations/dialogue/mood (§2), spec first.** Write `npc_condition_system_spec.md`
-   (project convention) BEFORE implementation. Scope: the dialogue-selection mechanism itself
-   (none exists today — `dialogue_branches` gates are dead schema), `locationRules`, the
-   unconditional-fallback dialogueSets rule, the mood layer, the `npc:*` / `schedule:tick` event
-   hooks, and the Dev: NPC Condition Inspector. **The canonical NPC memory log is built here**
-   (see the locked decision below) as its first producer lands. Test against the existing
-   roster + hand-authored test NPCs. Deferred: full calendar system, full roster content.
-   **Gate: `tests/suites/step2_npc_system.cjs` must pass `--strict` (log round-trip, seq
-   monotonicity, spoiler projection, fallback location/dialogue).**
+2. ✅ **NPC locations/dialogue/mood (§2) — done (v2.5.0, 2026-09-14).** Spec
+   `npc_condition_system_spec.md` written first; implementation in
+   `public/systems/npcSystem.js` (`NpcMemoryLog` + `NPCSystem`); GameManager typed methods
+   (`logNpcEvent`/`getNpcEventsForNpc`), store v5 (additive `persistent.npcs.eventLog`/`eventSeq`),
+   TownContent wired at the single selection point, locationManager consults `resolveLocation`,
+   generator validates NPC conditions, `window.__NPC_DEBUG__` inspector, `old_man` reference
+   migration. The canonical memory log's first producers landed here. Suite:
+   `tests/suites/step2_npc_system.cjs` 30/30 strict (incl. save→reload round-trip).
+   Deferred to later steps: `time`/`dialogueChoice` condition implementations,
+   `schedule:tick`, `npc:locationChanged`/`moodChanged` broadcast hooks.
 3. **Widget/inventory pilot (§5 Card + one skin on the §3 grid) — parallel track, explicit
    go/no-go.** Recommended: run in parallel with §2 once the §1 evaluator lands (the pilot's
    gift-eligibility and key-item conditions read through it). POT-015 (`getEffectiveStats`

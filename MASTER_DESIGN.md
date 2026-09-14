@@ -1202,13 +1202,19 @@ true-by-default), reserved extension types (time, dialogueChoice, location, seas
 embeddedData generator validates object prerequisites at build time. No new store paths
 (POT-012 untouched). Suite: step1_gate_engine.cjs 30/30 strict; regression trace 112/112.
 
-**Step 2 — NPC condition system (§2), spec first.** `npc_condition_system_spec.md` written
-before implementation. Includes the dialogue-selection mechanism itself (today `dialogue_branches`
-gates are dead schema), `locationRules` (first-match-wins), unconditional-fallback dialogueSets,
-mood layer, `npc:*`/`schedule:tick` hooks, Dev Condition Inspector — and the canonical NPC
-memory log (locked decision, compilation §6): one append-only store-backed log in §4's schema,
-producers via centrally-registered bus listeners (§21 event-checkpoint pattern),
-`dialogueChoiceMade` events + query projection for §2's needs.
+**Step 2 — NPC condition system (§2), spec first. ✅ DONE (v2.5.0, 2026-09-14).**
+`npc_condition_system_spec.md` written before implementation. Landed: the dialogue-selection
+mechanism itself, `locationRules` (first-match-wins with base-location fallback),
+unconditional-fallback dialogueSets (legacy root-topics NPCs synthesize a fallback — never
+silent), per-topic conditions, mood layer, Dev Condition Inspector (`window.__NPC_DEBUG__`),
+and the canonical NPC memory log (locked decision, compilation §6): one append-only
+store-backed log in §4's schema (`persistent.npcs.eventLog`/`eventSeq`, store v5, additive),
+producers via centrally-registered bus listeners riding the §21 autosave machinery (typed
+methods `logNpcEvent`/`getNpcEventsForNpc`; POT-012 `WRITABLE_PATHS` untouched). Suite:
+`step2_npc_system.cjs` 30/30 strict incl. save→reload round-trip; trace 112/112.
+Deferred: `time`/`dialogueChoice` condition implementations, `schedule:tick`,
+`npc:locationChanged`/`moodChanged` broadcast hooks (registered extension types — later
+steps, never feature-local forks).
 
 **Step 3 — Widget/inventory pilot (parallel track, explicit go/no-go).** Card template + one
 skin on the inventory grid; extends the existing `store.inventory` (no parallel v2 store).

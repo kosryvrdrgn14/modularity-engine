@@ -498,7 +498,11 @@ function report(name, pass, detail) {
       activeSlot: gm.getActiveSlot(),
     };
   });
-  report('POT-007: v3 save migrated to v4', pot7.saveVersion === 4, `v=${pot7.saveVersion}`);
+  // §24 Step 2 (v2.5.0): the migration chain now carries v3 saves to v5
+  // (the canonical NPC memory-log branch joins at v5, npc_condition_system_spec.md
+  // §2.2). The assertion follows the chain head; the property under test —
+  // a v3 save boots migrated, not stuck — is unchanged.
+  report('POT-007: v3 save migrated to v4', pot7.saveVersion >= 4, `v=${pot7.saveVersion}`);
   report('POT-007: slot select flow migrated the loaded slot', pot7.activeSlot === 2, `slot=${pot7.activeSlot}`);
   // NOTE: pre-POT-006, quests.json was never mirrored into embeddedData.js,
   // so under file:// allQuests was empty and reconcile correctly left

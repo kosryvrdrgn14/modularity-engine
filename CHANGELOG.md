@@ -2,6 +2,54 @@
 
 ---
 
+## v2.5.0 — Step 2: NPC Condition System + Canonical Memory Log
+**Date:** September 14, 2026
+**Status:** ✅ Complete (step2 suite 30/30 strict; step1 30/30; regression trace 112/112 — ALL SUITES GREEN)
+
+MASTER_DESIGN §24 Step 2; spec: `npc_condition_system_spec.md` (written first, per convention).
+
+**`public/systems/npcSystem.js` (new) — two classes:**
+- **`NpcMemoryLog`** — the ONE canonical NPC event log (append-only, per-save, §4's export
+  schema from day one: `{ eventId, seq, chapterMarker, npcIds[], type, payload, spoilerTag }`).
+  DETACHED store access (getter-resolved per call) so slot switches can never write into a
+  dead store (BUG-026 discipline). Fail-closed validation: malformed events are rejected
+  loudly and dropped, never improvised. Projections: per-npc, type filter, `upToSeq`,
+  `spoilerFilter: 'safe'`; multi-NPC events are stored once and visible to every listed npc.
+- **`NPCSystem`** — data-driven selection over the §1 ConditionEngine (zero forks):
+  `locationRules` (first-match-wins, base location as fallback), `dialogueSets` (first passing
+  set wins; **guaranteed unconditional fallback** — legacy root-topics NPCs synthesize one,
+  so an NPC can never go silent), per-topic conditions, mood layer (selection input, stamped
+  into event payloads). Dev Condition Inspector: `window.__NPC_DEBUG__`
+  (evaluate/explain/log/schema).
+
+**Wiring (every critical structure protected):**
+- GameManager typed methods `logNpcEvent` / `getNpcEventsForNpc` / `getNpcEvents` /
+  `clearNpcEvents` — **POT-012 `WRITABLE_PATHS` untouched** (five paths, complete map).
+- Store **v5**: `persistent.npcs.eventLog` / `eventSeq` join additively via `_migrate`
+  (missing fields = empty log — old saves boot clean; one version bump, no rewrites).
+- Producers centrally registered in `NPCSystem.init()` (double-listener rule): dialogue
+  choice / flag / affection events emitted at THE single selection point in TownContent;
+  `npc:talked` + `quest:completed` re-used as-is. **No new autosave behavior** — log writes
+  mark dirty and ride the existing §21 heartbeat/checkpoint machinery; `giftGiven` is
+  deduped per (npc, choiceId) so the log never grows on repeats (curation principle).
+- `LocationManager.getNPCsAtLocation` consults `npcSystem.resolveLocation` when live
+  (guarded — legacy boot order unchanged); TownContent `openDialogue`/`showChoices` use
+  `selectDialogueSet`/`selectTopics` with verbatim legacy fallback.
+- Content: `old_man` migrated as the reference NPC (gated post-graveyard dialogueSet,
+  locationRule, mood rules; legacy root topics remain as the deepest fallback). All other
+  NPCs 100% unchanged. Generator now validates every NPC `when` condition at build time
+  (same policy as quest gates) — mirror regenerated, `content:check` green.
+
+**Harness:** `bootGame({ keepStorage: true })` added — persistence suites round-trip via
+same-page `page.reload()` (a second `bootGame()` browser has EMPTY storage, making such
+assertions vacuously green — the step-2 round-trip originally had exactly that flaw).
+
+**Trace note:** POT-007's `v3→v4` migration assertion now accepts `>= 4` — the chain
+legitimately carries v3 saves to v5 now; the property under test (a v3 save boots migrated,
+not stuck) is unchanged.
+
+---
+
 ## v2.4.0 — Step 1: Shared Condition/Gate Engine
 **Date:** September 14, 2026
 **Status:** ✅ Complete (step1 suite 30/30 strict; regression trace 112/112; pipeline negative test passes)

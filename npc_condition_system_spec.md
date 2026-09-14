@@ -1,6 +1,6 @@
 # NPC Condition System — Design Spec (§2)
 
-**Status:** Spec for v1 (implementation follows this document in the same step, per plan of record).
+**Status:** ✅ Implemented v1 alongside this document (v2.5.0, 2026-09-14) — spec-first per project convention. Suite: `tests/suites/step2_npc_system.cjs` 30/30 strict.
 **Plan of record:** `data_driven_systems_compilation.md` §6 step 2; `MASTER_DESIGN.md` §24.
 **Builds on:** Step 1 — `ConditionEngine` (`public/systems/conditionEngine.js`) is the ONE evaluator; nothing here forks it.
 **Companion suites:** `tests/suites/step2_npc_system.cjs` is this step's definition of done (strict-gated).
