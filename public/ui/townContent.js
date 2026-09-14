@@ -176,6 +176,32 @@ class TownContent {
     const goldEl = document.getElementById('town-gold');
     const bgEl = document.getElementById('town-bg');
     const runStatsEl = document.getElementById('town-run-stats');
+    // Calendar date chip (calendar_time_system_spec.md §3): short label in
+    // the chip, full context as the hover title.
+    // 📖 Log chip → session console (game_log_system_spec.md §3)
+    const logChip = document.getElementById('town-log-toggle');
+    if (logChip && !logChip._logWired) {
+      logChip._logWired = true;
+      logChip.addEventListener('click', () => {
+        this.audioManager?.playMenuSound('select');
+        const gl = (typeof window !== 'undefined' && window.game?.gameLog) || null;
+        if (gl) gl.togglePanel();
+      });
+    }
+
+    const dateEl = document.getElementById('town-date');
+    if (dateEl) {
+      const ts = this._engine?.timeService || (typeof window !== 'undefined' && window.game?.timeService) || null;
+      if (ts) {
+        const day = ts.getCurrentDay();
+        dateEl.textContent = `📅 Day ${day}`;
+        const ctx = ts.getDateContext(day);
+        dateEl.title = [ctx.label, ctx.season ? `${ctx.season} season` : null, ctx.festivals.length ? `festivals: ${ctx.festivals.join(', ')}` : null]
+          .filter(Boolean).join(' · ');
+      } else {
+        dateEl.textContent = '📅 —';
+      }
+    }
 
     if (campNameEl) campNameEl.textContent = campName;
     if (goldEl) goldEl.textContent = `💰 ${gold}`;

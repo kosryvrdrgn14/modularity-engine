@@ -110,6 +110,17 @@ class Game {
       eventBus: this.eventBus,
     });
     this.gameManager.timeServiceRef = this.timeService;
+
+    // Game log (game_log_system_spec.md): player+dev session console. PLAY
+    // SURFACE ONLY — never a data source; the canonical NPC memory log owns
+    // story memory. Central listeners; ring buffer; town console + inspector.
+    this.gameLog = new GameLogSystem({
+      gameManager: this.gameManager,
+      eventBus: this.eventBus,
+    });
+    this.gameLog.init();
+    this.gameLog.installPanel();
+    this.gameLog.installInspector();
     this.npcExportSystem = new NPCExportSystem({
       gameManager: this.gameManager,
       dataManager: this.dataManager,
@@ -1552,6 +1563,10 @@ class Game {
     // [1,3,6] pacing for any stage/tier that omits the field.
     const tier = this.gameManager.get('session.current_stage_tier') || 'standard';
     const schedule = this.dataManager.stages?.tierConfig?.[tier]?.slotUnlockLevels || [1, 3, 6];
+        // No active run → no active weapons → nothing to unlock. Guard added
+    // after the game-log suite's levelUp probe exposed this crash: the
+    // listener fires outside combat where _activeWeapons is undefined.
+    if (!Array.isArray(this._activeWeapons)) return;
     for (let i = 0; i < this._activeWeapons.length && i < schedule.length; i++) {
       const wid = this._activeWeapons[i];
       const unlockAt = schedule[i];

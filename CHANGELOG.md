@@ -2,6 +2,35 @@
 
 ---
 
+## v2.9.0 — Town Date Chip + Game Log / Session Console (+ levelUp crash fix)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (game_log suite 12/12; full battery green — 7 suites; content:check OK)
+
+### Added
+- **📅 Date chip on the town HUD** — short "Day N" chip in the header; hover title carries the
+  full calendar context (date label, season, active festivals). Refreshes with the existing
+  `updateDisplay()` flow; no new CSS (reuses `.res-chip`).
+- **`game_log_system_spec.md`** — the one-rule boundary: the game log is a PLAY SURFACE,
+  never a data source; the canonical NPC memory log remains the only story memory.
+- **`public/systems/gameLog.js` (`GameLogSystem`)** — session-scoped ring buffer (200 entries):
+  central bus listeners capture day advances/timeskips, quest completions, level-ups,
+  weapon level-ups, purchases, farming loot, and wallet changes (debounced); `window.onerror`
+  tail surfaced as ⚠ entries. Entries stamp in-game day + session clock, colored by kind.
+  **Town console:** 📖 Log chip toggles a slide-down panel (newest-first, Clear/✕).
+  **Dev inspector:** `__GAMELOG_DEBUG__` (`last`/`filter`/`dump`/`clear`).
+- **`tests/suites/game_log.cjs`** — 12 checks: capture via real bus events, stamp integrity,
+  ring-buffer cap under flood, clear, chip/panel UI, and **purity checks** proving the game
+  log never touches the memory-log store branch.
+
+### Fixed
+- **Real crash found by the suite's error net:** `Game._checkWeaponUnlocks()` read
+  `this._activeWeapons.length` unguarded — any `levelUp` event outside an active run (town,
+  title) threw `TypeError: Cannot read properties of undefined (reading 'length')` inside the
+  weapon-unlock listener. Guarded (`!Array.isArray(this._activeWeapons) → return`).
+
+---
+
+## v2.8.0 — Calendar & Time System (event-driven days, modular content)
 ## v2.8.0 — Calendar & Time System (event-driven days, modular content)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (calendar_time suite 27/27 strict; full battery green — trace 112/112, steps 1–4, calendar)
