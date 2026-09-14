@@ -634,7 +634,20 @@ class QuestSystem {
 
   _checkPrerequisites(quest) {
     if (!quest.prerequisites || quest.prerequisites.length === 0) return true;
-    return quest.prerequisites.every(flag => this.getFlag(flag));
+    // §24 Step 1: mixed-mode prerequisites. Bare flag strings keep their exact
+    // legacy behavior (pure sugar — identical to before this change). Condition
+    // OBJECTS route through the shared ConditionEngine via GameManager — the
+    // single evaluation path (fail-closed: a malformed object rejects loudly,
+    // never unlocks). No fork: engine logic lives only in conditionEngine.js.
+    return quest.prerequisites.every((req) => {
+      if (typeof req === 'string') return this.getFlag(req);
+      const engine = this.gameManager?.conditionEngine;
+      if (!engine) {
+        console.error('[QUEST] condition-object prerequisite but no ConditionEngine:', quest.id);
+        return false;
+      }
+      return engine.evaluate(req, this.gameManager.buildConditionContext());
+    });
   }
 
   // ── Availability Re-evaluation ─────────────────────────

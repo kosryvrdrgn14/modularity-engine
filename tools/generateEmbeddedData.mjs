@@ -51,6 +51,16 @@ const REGISTRY = [
 const errors = [];
 const loaded = [];
 
+// §24 Step 1: the shared ConditionEngine doubles as the content-pipeline
+// validator — condition-object prerequisites in quests.json are checked at
+// GENERATION time, so a malformed gate fails here, not silently in-game.
+// The engine file is classic-script-clean for the browser, so under Node
+// (type:module) we import it for the side-effect global and read that.
+await import(new URL('../public/systems/conditionEngine.js', import.meta.url));
+const ConditionEngine = globalThis.ConditionEngine;
+if (typeof ConditionEngine !== 'function') throw new Error('ConditionEngine failed to load');
+const gateEngine = new ConditionEngine();
+
 for (const entry of REGISTRY) {
   const filePath = path.join(CONTENT_DIR, entry.file);
   if (!existsSync(filePath)) {
@@ -103,6 +113,25 @@ for (const orphan of orphans) {
     `no fallback for it. Add a { key, file, type, ... } entry to tools/generateEmbeddedData.mjs ` +
     `(and a matching fetch entry in public/engine/core.js).`
   );
+}
+
+// Condition-object prerequisite validation (§24 Step 1). Bare flag strings
+// are always valid sugar; objects go through the shared engine's validator.
+const questsEntry = loaded.find((l) => l.key === 'quests');
+if (questsEntry) {
+  const allQuests = [
+    ...(questsEntry.data.main_quests || []),
+    ...(questsEntry.data.side_quests || []),
+  ];
+  for (const q of allQuests) {
+    for (const req of q.prerequisites || []) {
+      if (typeof req === 'object' && req !== null) {
+        for (const problem of gateEngine.validate(req, `${q.id}.prerequisites`)) {
+          errors.push(`GATE: quests.json — ${problem}`);
+        }
+      }
+    }
+  }
 }
 
 if (errors.length) {

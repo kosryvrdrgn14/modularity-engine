@@ -30,6 +30,10 @@ class GameManager {
     this.store = null;
     this._dirty = false;
     this._autoSaveTimer = 0;
+    // §24 Step 1: the ONE condition evaluator (data_driven_systems_compilation.md
+    // §1). All consumers — quest availability, NPC conditions, gift eligibility,
+    // export spoiler gating — evaluate through this instance; nothing forks it.
+    this.conditionEngine = new ConditionEngine();
   }
 
   // ── Save slots (SLOT system) ──────────────────
@@ -331,6 +335,31 @@ class GameManager {
   // ── Flags (flat key/value) ─────────────────────
   set_flag(key, value) { this.store.flags[key] = value; this._dirty = true; }
   get_flag(key) { return !!this.store.flags[key]; }
+
+  // ── Condition evaluation (§24 Step 1) ─────────
+
+  /** Live evaluation context for ConditionEngine: getter-style readers
+   *  straight off the store (no snapshot copying, no stale data). */
+  buildConditionContext() {
+    return {
+      getFlag: (id) => this.get_flag(id),
+      getQuestState: (questId) => {
+        const q = this.store?.persistent?.quests;
+        if (!q) return null;
+        if (q.completed?.includes(questId)) return 'completed';
+        if (q.active?.includes(questId)) return 'active';
+        if (q.failed?.includes(questId)) return 'failed';
+        return null;
+      },
+      getAffection: (npcId) => this.get_counter('affection_' + npcId),
+    };
+  }
+
+  /** Evaluate one condition object against live game state.
+   *  `context` overrides the built snapshot (tests, exports). */
+  evaluateCondition(condition, context) {
+    return this.conditionEngine.evaluate(condition, context || this.buildConditionContext());
+  }
   toggle_flag(key) { this.store.flags[key] = !this.store.flags[key]; this._dirty = true; }
 
   // ── Counters (flat numeric) ────────────────────

@@ -17,13 +17,17 @@ not just good practice.
 
 ## 1. The Shared Core: Condition/Gate Engine
 
-**Status: NOT YET BUILT (corrected 2026-09-14 audit).** What exists today is an id-keyed
-content-unlock lookup (`systems/quest.js isContentUnlocked`: derived quest gates + boolean
-unlock_flag / temp_disable_flag checks) and bare-flag AND prerequisites — no condition-object
-parser, no all/any/not combinators, no typed conditions. The vocabulary below is the DESIGN
-target; building it is §6's step 1. The existing lookups fold behind the new evaluator
-(they keep their id-keyed semantics for four live consumer files) rather than being mutated
-in place.
+**Status: BUILT — Step 1 complete (v2.4.0, 2026-09-14).** `public/systems/conditionEngine.js`
+implements the vocabulary below: typed leaf conditions (`flag`/`questState`/`affectionTier`),
+`all`/`any`/`not` recursion, fail-closed policy (malformed input logs + returns false, never
+true-by-default), reserved extension types (`time`, `dialogueChoice`, `location`, `season`) that
+reject with a specific message, and a `validate()` surface. GameManager exposes
+`evaluateCondition(cond, ctx?)` + `buildConditionContext()` (getter-style live context); quest
+`prerequisites` now accept condition objects mixed with legacy flag strings (strings keep exact
+legacy behavior). The same file validates content at GENERATION time — the embeddedData
+generator runs `validate()` over every quest's object prerequisites. Contract enforced by
+`tests/suites/step1_gate_engine.cjs` (30 checks, strict). Reserved types are implemented in
+later steps: `time` and `dialogueChoice` are the first two on deck (§2).
 
 **Condition vocabulary (as designed):**
 ```json
@@ -187,6 +191,10 @@ memory-log decision below.
    into the existing `store.inventory`; event ordering = per-save monotonic `seq` +
    `chapterMarker` (no calendar built); `spouses` unlock category added; `ui_skins.json`
    pipeline-registered (mirror at 15 content files).
+0a. ✅ **Step 1 — condition evaluator (done, v2.4.0):** `public/systems/conditionEngine.js` —
+   ONE evaluator, fail-closed, all/any/not, typed conditions, `validate()` in the content
+   pipeline, existing lookups folded (mixed-mode prerequisites, zero migration). Suite:
+   `tests/suites/step1_gate_engine.cjs` 30/30 strict. Remaining steps below may now start.
 0b. ✅ **Test-harness safety (done 2026-09-14):** the trace relocated to
    `tests/regression_trace.cjs` (112/112 green post-move). Full autonomous testing now lives at
    `node tests/run_all.cjs` — the trace plus one step-gated suite per step below

@@ -2,6 +2,41 @@
 
 ---
 
+## v2.4.0 — Step 1: Shared Condition/Gate Engine
+**Date:** September 14, 2026
+**Status:** ✅ Complete (step1 suite 30/30 strict; regression trace 112/112; pipeline negative test passes)
+
+MASTER_DESIGN §24 Step 1 — the shared evaluator all four data-driven systems consume:
+
+**`public/systems/conditionEngine.js` (new).** ONE evaluator, no forks:
+- Typed leaf conditions: `flag` (presence or boolean `equals`), `questState`
+  (active/completed/failed), `affectionTier` (`atLeast`, thresholds from the live AFFECTION_TIERS table).
+- `all`/`any`/`not` combinators, recursive, nest freely; bare flag-name strings accepted as sugar.
+- **Fail-closed:** malformed shapes, unknown keys, and wrong-typed operands log a specific
+  `[CONDITION] rejected:` error and return false — never true-by-default, never a silent guess.
+- Reserved extension types (`time`, `dialogueChoice`, `location`, `season`) registered and
+  rejected with a clear message — later steps implement them, content authors get signal not silence.
+- `validate()` returns human-readable problem paths; doubles as the content-pipeline validator.
+- Dual-environment bridge (globalThis + guarded module.exports) — one file serves the browser
+  script-tag world AND Node ESM; nothing forked, nothing duplicated.
+
+**Wiring.** GameManager owns the engine instance and exposes `evaluateCondition(cond, ctx?)` /
+`buildConditionContext()` (getter-style live context off the store — no snapshot copying).
+`quest.js _checkPrerequisites` is mixed-mode: bare strings keep their EXACT legacy behavior,
+objects route through the engine (fail-closed). Zero changes for existing content; zero new
+store paths (POT-012 allowlist untouched); zero save migration.
+
+**Content pipeline.** `tools/generateEmbeddedData.mjs` now runs `validate()` over every
+condition-object prerequisite in quests.json at GENERATION time — verified by negative test:
+a planted malformed gate fails the build naming the exact quest (`GATE: quests.json —
+mq_02_clearing.prerequisites: "flag" accepts only "equals" as an extra key`).
+
+**Tests.** `tests/suites/step1_gate_engine.cjs` enforces the full contract (typed leaves,
+combinator nesting, no-silent-fail rejections, mixed-mode routing through quest.js, validate()
+paths, backward compatibility) — 30/30 strict. Full run: 112/112 trace + step1 PASS, all suites green.
+
+---
+
 ## v2.3.4 — Autonomous Testing Architecture (per-step regression gates)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (default run: 1 PASS + 4 loud SKIPs, exit 0; strict run: gate verified)

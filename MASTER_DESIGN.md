@@ -1193,12 +1193,14 @@ full autonomous pass — the regression trace plus one step-gated suite per step
 contract; `--strict` makes skips fail. Each step's suite is part of that step's definition of
 done — landing code without its suite passing strict is not done.
 
-**Step 1 — Generic condition evaluator (§1, new construction).** Condition-object parser,
-`all`/`any`/`not` recursion, typed conditions, no-silent-fail policy, load-time validation.
-Existing id-keyed lookups (`isContentUnlocked`, `_checkPrerequisites`) fold BEHIND it with
-unchanged consumer-facing semantics (bare flag strings in `prerequisites` stay as all-of sugar).
-`time` and `dialogueChoice` registered as reserved extension types. Trace coverage must drive
-real state transitions, not just API calls (BUG-031 lesson).
+**Step 1 — Generic condition evaluator (§1, new construction).** ✅ DONE v2.4.0 (2026-09-14):
+`public/systems/conditionEngine.js` — typed conditions (flag/questState/affectionTier),
+all/any/not recursion, fail-closed (malformed input logs and returns false, never
+true-by-default), reserved extension types (time, dialogueChoice, location, season), and
+`validate()`. Wired: GameManager `evaluateCondition()` + `buildConditionContext()`; quest
+`prerequisites` accept mixed string/object entries (strings unchanged — pure sugar); the
+embeddedData generator validates object prerequisites at build time. No new store paths
+(POT-012 untouched). Suite: step1_gate_engine.cjs 30/30 strict; regression trace 112/112.
 
 **Step 2 — NPC condition system (§2), spec first.** `npc_condition_system_spec.md` written
 before implementation. Includes the dialogue-selection mechanism itself (today `dialogue_branches`
