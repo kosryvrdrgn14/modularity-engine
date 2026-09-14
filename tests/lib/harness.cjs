@@ -14,7 +14,12 @@ const path = require('path');
 const PUBLIC_DIR = path.resolve(__dirname, '..', '..', 'public');
 
 /** Boot the real game headless under file:// (pure fallback path) with a
- *  clean storage context. Resolves { page, browser } — caller closes. */
+ *  clean storage context. Resolves { page, browser } — caller closes.
+ *
+ *  opts.keepStorage — skip the post-load localStorage.clear(). Persistence
+ *  suites (step 2 round-trip) need this PLUS a same-page page.reload(): a
+ *  second bootGame() launches a FRESH browser whose storage starts empty, so
+ *  a save→new-boot assertion against it is always vacuously empty. */
 async function bootGame(opts = {}) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
@@ -26,7 +31,9 @@ async function bootGame(opts = {}) {
   });
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('file://' + path.join(PUBLIC_DIR, 'game2.html'));
-  await page.evaluate(() => { try { localStorage.clear(); } catch (_) {} });
+  if (!opts.keepStorage) {
+    await page.evaluate(() => { try { localStorage.clear(); } catch (_) {} });
+  }
   await page.waitForFunction(() => window.game && window.game.gameManager, null, { timeout: 15000 });
   return { browser, context, page, errors };
 }

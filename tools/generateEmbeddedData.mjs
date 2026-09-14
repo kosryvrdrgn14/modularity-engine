@@ -134,6 +134,35 @@ if (questsEntry) {
   }
 }
 
+// §24 Step 2: NPC content conditions (npc_condition_system_spec.md §3.2).
+// Every `when` in locationRules / dialogueSets / topics / mood.rules goes
+// through the SAME shared validator — a malformed NPC gate fails at build
+// time, never silently at talk time.
+const npcsEntry = loaded.find((l) => l.key === 'npcs');
+if (npcsEntry && typeof npcsEntry.data === 'object') {
+  const checkNpcCondition = (cond, label) => {
+    if (cond == null) return; // null = unconditional fallback — valid
+    for (const problem of gateEngine.validate(cond, label)) {
+      errors.push(`GATE: npcs.json — ${problem}`);
+    }
+  };
+  for (const [npcId, npc] of Object.entries(npcsEntry.data)) {
+    if (!npc || typeof npc !== 'object' || npc._note) continue;
+    for (const [ri, rule] of (npc.locationRules || []).entries()) {
+      checkNpcCondition(rule?.when, `${npcId}.locationRules[${ri}]`);
+    }
+    for (const set of (npc.dialogueSets || [])) {
+      checkNpcCondition(set?.when, `${npcId}.dialogueSets[${set?.id || '?'}]`);
+      for (const [ti, topic] of (set?.topics || []).entries()) {
+        checkNpcCondition(topic?.when, `${npcId}.dialogueSets[${set?.id || '?'}].topics[${ti}]`);
+      }
+    }
+    for (const [ri, rule] of (npc.mood?.rules || []).entries()) {
+      checkNpcCondition(rule?.when, `${npcId}.mood.rules[${ri}]`);
+    }
+  }
+}
+
 if (errors.length) {
   console.error(`generateEmbeddedData: ${errors.length} error(s):`);
   for (const e of errors) console.error(`  - ${e}`);

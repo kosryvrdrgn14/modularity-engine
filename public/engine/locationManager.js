@@ -111,12 +111,17 @@ class LocationManager {
   }
 
   getNPCsAtLocation(locationId) {
-    // Filter NPCs by their assigned location (default: city_root)
+    // Filter NPCs by their assigned location (default: city_root).
+    // §24 Step 2: when npcSystem is live, locationRules participate —
+    // resolveLocation() applies first-match-wins rules with the NPC's base
+    // location as fallback, so rules are effective everywhere NPCs are
+    // listed. Guarded: legacy boot order (npcSystem absent) is unchanged.
     const npcsData = this._getNPCsData();
+    const resolver = (typeof window !== 'undefined' && window.game && window.game.npcSystem) || null;
     const npcs = [];
     for (const key in npcsData) {
       const npc = npcsData[key];
-      const loc = npc.location || 'city_root';
+      const loc = resolver ? resolver.resolveLocation(key) : (npc.location || 'city_root');
       if (loc === locationId && npc.unlocked) npcs.push(npc);
     }
     return npcs;

@@ -34,6 +34,13 @@ class GameManager {
     // §1). All consumers — quest availability, NPC conditions, gift eligibility,
     // export spoiler gating — evaluate through this instance; nothing forks it.
     this.conditionEngine = new ConditionEngine();
+    // §24 Step 2: the ONE canonical NPC memory log (spec:
+    // npc_condition_system_spec.md §2). DETACHED — it resolves this.store per
+    // call, because slot switches REPLACE the store object and a captured
+    // reference would write into a dead store (BUG-026 class). Constructed
+    // lazily-typed: npcSystem.js loads after this file, but GameManager is
+    // only ever CONSTRUCTED after all scripts are live.
+    this.memoryLog = new NpcMemoryLog(() => this.store);
   }
 
   // ── Save slots (SLOT system) ──────────────────
@@ -139,7 +146,7 @@ class GameManager {
         combat: { unlocked_weapons: ["w1_projectile"], weapon_levels: {}, best_run: null, run_history: [], stars: {} },
         skills: { unlocked: [], skill_points: 0 },
         town: { level: 1, population: 0, popCap: 5, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 }, workers: { farmers: 0, miners: 0, builders: 0, idle: 0 } },
-        npcs: { met: [], relationships: {}, companions: [], companionStatus: {} },
+        npcs: { met: [], relationships: {}, companions: [], companionStatus: {}, eventLog: [], eventSeq: 0 },
         factions: { wanderers_guild: { reputation: 0, rank: "unknown" }, shadow_covenant: { reputation: 0, rank: "unknown" }, forge_brotherhood: { reputation: 0, rank: "unknown" } },
         quests: { active: [], completed: [], failed: [], objectives: {}, timeEvents: [] },
         unlocks: { stages: ["stage_graveyard"], items: [], features: ["town_basic", "combat_basic"] },
@@ -234,6 +241,17 @@ class GameManager {
       // this bump only marks that the store is v4-aware. Index-keyed
       // entries left behind are inert until reconciled.
       data.save_version = 4;
+    }
+    if (v < 5) {
+      // §24 Step 2: canonical NPC memory log (additive journal, spec:
+      // npc_condition_system_spec.md §2.2). Missing fields mean "empty log"
+      // — the correct default for every pre-v5 save. No rewrites, no
+      // compaction; append-only from here on.
+      if (data.persistent && data.persistent.npcs) {
+        data.persistent.npcs.eventLog = data.persistent.npcs.eventLog || [];
+        data.persistent.npcs.eventSeq = data.persistent.npcs.eventSeq || 0;
+      }
+      data.save_version = 5;
     }
     // §21 chunk 3 (additive, safe for all v3 saves): run journal fields.
     // No version bump — missing fields only mean "no journal", which is the
@@ -359,6 +377,35 @@ class GameManager {
    *  `context` overrides the built snapshot (tests, exports). */
   evaluateCondition(condition, context) {
     return this.conditionEngine.evaluate(condition, context || this.buildConditionContext());
+  }
+
+  // ── Canonical NPC memory log (§24 Step 2) ─────
+  // Typed write/query surface (POT-012: NOT via set() — WRITABLE_PATHS stays
+  // untouched at its five live paths). Writers are the central bus listeners
+  // in NPCSystem.init(); the log rides the existing autosave machinery and
+  // never saves on its own (spec §2.4).
+
+  /** Append one event to the canonical log. Returns the stored event or
+   *  null (validation failure — logged loudly, fail-closed). */
+  logNpcEvent(spec) {
+    return this.memoryLog.append(spec, { onDirty: () => { this._dirty = true; } });
+  }
+
+  /** Projection: events for one npc (multi-NPC events appear for every
+   *  listed id). opts: { type, upToSeq, spoilerFilter: 'safe' }. */
+  getNpcEventsForNpc(npcId, opts) {
+    return this.memoryLog.getEventsForNpc(npcId, opts || {});
+  }
+
+  /** Projection: all events. Same opts as getNpcEventsForNpc. */
+  getNpcEvents(opts) {
+    return this.memoryLog.getEvents(opts || {});
+  }
+
+  /** Dev/test only — wipes the log branch. */
+  clearNpcEvents() {
+    this.memoryLog.clear();
+    this._dirty = true;
   }
   toggle_flag(key) { this.store.flags[key] = !this.store.flags[key]; this._dirty = true; }
 

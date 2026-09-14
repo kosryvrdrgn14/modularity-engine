@@ -86,6 +86,18 @@ class Game {
     this.estateSystem = new EstateSystem(this.gameManager);
     this.childrenSystem = new ChildrenSystem(this.gameManager);
 
+    // §24 Step 2: NPC condition system + canonical memory log (spec:
+    // npc_condition_system_spec.md). Detached log — resolves the store
+    // per call so slot switches are safe; producers centrally registered.
+    // No construct-time store access; init() wires listeners exactly once.
+    this.npcSystem = new NPCSystem({
+      gameManager: this.gameManager,
+      eventBus: this.eventBus,
+      dataManager: this.dataManager,
+    });
+    this.npcSystem.init();
+    this.npcSystem.installInspector();
+
     // F1: Sandbox System
     this.sandboxSystem = new SandboxSystem(this.gameManager, this.eventBus);
 

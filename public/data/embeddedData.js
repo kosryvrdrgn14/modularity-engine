@@ -192,6 +192,64 @@ const EMBEDDED_DATA = {
       "name": "Elder Rowan",
       "portraitKey": "old_man",
       "location": "city_root",
+      "_step2_note": "Reference implementation of the NPC condition system (npc_condition_system_spec.md §5). locationRules: first-match-wins, he moves to the graveyard entrance while the clearing quest is active. dialogueSets: first passing set wins; legacy root topics below are the guaranteed unconditional fallback via the selection mechanism's legacy synthesis — no duplicated fallback content. Root topics also carry the graveyard_warning flag the gated set's topics reference.",
+      "locationRules": [
+        {
+          "when": {
+            "questState": "mq_02_clearing",
+            "state": "active"
+          },
+          "location": "graveyard_entrance"
+        }
+      ],
+      "dialogueSets": [
+        {
+          "id": "old_man_post_graveyard",
+          "when": {
+            "flag": "graveyard_cleared"
+          },
+          "greeting": "You've seen it yourself now, haven't you? The dead do not rest. Whatever keeps them stirring — we will need you again soon.",
+          "topics": [
+            {
+              "id": "post_graveyard_resolve",
+              "text": "We will be ready for them.",
+              "response": "That fire in your eyes — that is what got us through the first winter. Keep it burning, traveler.",
+              "affection": 1
+            },
+            {
+              "id": "post_graveyard_camp",
+              "text": "How are the camp's defenses?",
+              "response": "Better, now that the road sees travelers again. Garret forged new spearheads; Mira's tavern has light in its windows. Small things. But they add up.",
+              "affection": 0
+            },
+            {
+              "id": "end",
+              "text": "[End Conversation]",
+              "response": null,
+              "close": true
+            }
+          ]
+        }
+      ],
+      "mood": {
+        "base": "hopeful",
+        "rules": [
+          {
+            "when": {
+              "questState": "mq_02_clearing",
+              "state": "active"
+            },
+            "mood": "grave"
+          },
+          {
+            "when": {
+              "questState": "mq_02_clearing",
+              "state": "failed"
+            },
+            "mood": "worried"
+          }
+        ]
+      },
       "unlocked": true,
       "greeting": "Welcome back, traveler. The road has been dangerous, but we are alive.",
       "topics": [

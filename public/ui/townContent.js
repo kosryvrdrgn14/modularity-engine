@@ -474,11 +474,32 @@ class TownContent {
   // --- NPC System ---
 
   openDialogue(npc) {
-    if (!npc || !npc.topics) return;
+    if (!npc || (!npc.topics && !npc.dialogueSets)) return;
     this._lastDialogueNpcId = npc.id;
 
-    // Report to quest system (talk_to objectives)
-    if (this.eventBus) this.eventBus.emit('npc:talked', { npcId: npc.id });
+    // §24 Step 2: data-driven dialogue selection (spec:
+    // npc_condition_system_spec.md §3.4). When npcSystem is live, the winning
+    // dialogueSet supplies greeting + topics (first passing set wins,
+    // guaranteed unconditional fallback); legacy NPCs without dialogueSets
+    // resolve to their root topics exactly as before. The selected topics are
+    // cached so showChoices (incl. its re-entry after a response) renders the
+    // same conversation.
+    const sys = this._engine?.npcSystem || (typeof window !== 'undefined' && window.game && window.game.npcSystem) || null;
+    let greeting = npc.greeting || '...';
+    this._activeTopics = npc.topics || [];
+    this._activeConversationId = 'legacy_topics';
+    if (sys) {
+      const set = sys.selectDialogueSet(npc.id);
+      if (set) {
+        greeting = set.greeting || greeting;
+        this._activeTopics = sys.selectTopics(npc.id);
+        this._activeConversationId = set.id || 'legacy_topics';
+      }
+    }
+
+    // Report to quest system (talk_to objectives) + memory log producer
+    // (npcTalkedTo — logged once per opened conversation, spec §2.3)
+    if (this.eventBus) this.eventBus.emit('npc:talked', { npcId: npc.id, conversationId: this._activeConversationId });
 
     // Use inline SVG for reliable rendering
     const svgHtml = SVG_PORTRAITS[npc.portraitKey || npc.id] || '';
@@ -493,7 +514,7 @@ class TownContent {
 
     // Show greeting with typewriter, then show choices
     if (this._engine) {
-      this._engine.typewriteText(npc.greeting || '...', () => {
+      this._engine.typewriteText(greeting, () => {
         this.showChoices(npc);
       });
     }
@@ -504,12 +525,24 @@ class TownContent {
     this.dom.dialogueChoices.innerHTML = '';
     this.dom.dialogueChoices.style.display = 'flex';
 
-    for (const topic of npc.topics) {
+    // §24 Step 2: topics come from the conversation selected in openDialogue
+    // (per-topic conditions already filtered there); legacy fallback intact.
+    const topics = this._activeTopics || npc.topics || [];
+    for (const topic of topics) {
       const btn = document.createElement('button');
       btn.className = 'dialogue-choice';
       btn.textContent = topic.text;
       btn.addEventListener('click', () => {
         this.audioManager.playMenuSound('select');
+        // §24 Step 2: THE single choice-logging point (spec §3.5). One emit,
+        // one central listener — no per-topic log writes anywhere.
+        if (this.eventBus) {
+          this.eventBus.emit('npc:dialogueChoice', {
+            npcId: npc.id,
+            conversationId: this._activeConversationId || null,
+            choiceId: topic.id || topic.text || null,
+          });
+        }
         if (topic.close) {
           this.dom.dialogueOverlay.classList.remove('active');
           // Trigger dog dialogue after Lina's conversation
@@ -518,16 +551,41 @@ class TownContent {
           }
           return;
         }
-        // Set flag if defined
+        // Set flag if defined (flagSet logged — curation: dialogue-authored
+        // flags only, spec §2.3)
         if (topic.flag) {
           this.gameManager.set_flag(topic.flag, true);
+          if (this.eventBus) {
+            this.eventBus.emit('npc:dialogueFlag', {
+              npcId: npc.id,
+              flagId: topic.flag,
+              conversationId: this._activeConversationId || null,
+            });
+          }
         }
-        // Add affection
+        // Add affection (giftGiven logged once per choice — dedupe lives in
+        // the central listener, spec §2.3 curation)
         if (topic.affection > 0 && this.affectionSystem) {
           this.affectionSystem.addAffection(npc.id, topic.affection);
+          if (this.eventBus) {
+            this.eventBus.emit('npc:dialogueAffection', {
+              npcId: npc.id,
+              affection: topic.affection,
+              choiceId: topic.id || null,
+              conversationId: this._activeConversationId || null,
+            });
+          }
         } else if (topic.affection > 0) {
           const key = `affection_${npc.id}`;
           this.gameManager.add_counter(key, topic.affection);
+          if (this.eventBus) {
+            this.eventBus.emit('npc:dialogueAffection', {
+              npcId: npc.id,
+              affection: topic.affection,
+              choiceId: topic.id || null,
+              conversationId: this._activeConversationId || null,
+            });
+          }
         }
         // Show response
         this.dom.dialogueChoices.style.display = 'none';
