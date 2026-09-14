@@ -20,6 +20,18 @@ class ShopSystem {
     this._tabs = document.getElementById('shop-tabs');
     this._items = document.getElementById('shop-items');
     this._closeBtn = document.getElementById('shop-close');
+    this._goldEl = document.getElementById('shop-gold');
+
+    // POT-011: one wallet, one listener. add_currency/spend_currency emit
+    // resources:changed on EVERY mutation (purchases, farming loot, quest
+    // rewards), so this keeps the header live across all shop modes — and
+    // costs zero writes per purchase (no per-buy DOM polling).
+    if (this._goldEl && this.eventBus) {
+      this._updateGold();
+      this.eventBus.on('resources:changed', (data) => {
+        if (data && typeof data.currency === 'number') this._updateGold(data.currency);
+      });
+    }
 
     if (this._closeBtn) {
       this._closeBtn.addEventListener('click', () => this.close());
@@ -73,6 +85,12 @@ class ShopSystem {
   }
 
   // --- Generic Methods ---
+
+  _updateGold(value) {
+    if (!this._goldEl) return;
+    const gold = typeof value === 'number' ? value : (this.gameManager?.get_currency?.() || 0);
+    this._goldEl.textContent = `💰 ${gold.toLocaleString()}`;
+  }
 
   _showOverlay(title) {
     if (this._overlay) this._overlay.classList.add('active');

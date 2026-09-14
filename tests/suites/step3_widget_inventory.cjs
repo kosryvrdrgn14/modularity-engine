@@ -161,6 +161,27 @@ const { bootGame, STEP_DETECTORS, createRunner } = require('../lib/harness.cjs')
     r.check('pilot grid uses the pooled path', pilot.pooledHost);
   }
 
+  // ── Gold chip: header wallet is live via the ONE ledger (POT-011) ──
+  const goldChip = await page.evaluate(() => {
+    const gm = window.game.gameManager;
+    const el = document.getElementById('shop-gold');
+    const before = gm.get_currency();
+    const textMatches = (v) => el && el.textContent.includes(String(v));
+    const initialOk = textMatches(before);
+    gm.add_currency(777, 'test_gold_chip');
+    const afterAdd = gm.get_currency();
+    const addOk = textMatches(afterAdd);
+    const spent = gm.spend_currency(177, 'test_gold_chip_spend');
+    const afterSpend = gm.get_currency();
+    const spendOk = spent && textMatches(afterSpend);
+    // Restore so later inventory probes start from the original wallet.
+    gm.spend_currency(afterSpend - before, 'test_gold_chip_restore');
+    const restored = gm.get_currency() === before;
+    return { initialOk, addOk, spendOk, restored, before, afterAdd, afterSpend };
+  });
+  r.check('shop header shows live gold from the one ledger', goldChip.initialOk && goldChip.addOk && goldChip.spendOk, JSON.stringify(goldChip));
+  r.check('gold chip test leaves the wallet untouched', goldChip.restored);
+
   // ── Inventory: category/tags extend the EXISTING canonical shape ──
   const inv = await page.evaluate(() => {
     const gm = window.game.gameManager;

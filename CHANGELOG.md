@@ -2,6 +2,20 @@
 
 ---
 
+## v2.6.1 — Shop header gold chip (UX fix from manual testing)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (step3 suite 22/22; full battery green)
+
+### Added
+- **Live gold chip in the shop header** (`#shop-gold`) — visible across ALL shop modes
+  (Grand Bazaar, Auto-Clear Farming, Sandbox) since they share one overlay. Driven by a
+  single `resources:changed` listener: every `add_currency`/`spend_currency` mutation
+  (purchases, farming loot, quest rewards) updates it reactively — zero writes per
+  purchase, no polling. Tabular numerals so digits don't jitter mid-spend.
+- Step-3 suite covers it (live earn/spend updates + wallet-untouched assertion): 20 → 22 checks.
+
+---
+
 ## v2.6.0 — Step 3: Widget/Inventory Pilot (+ two latent shop bugs fixed)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (step3 suite 20/20 strict; steps 1–2 green; regression trace 112/112 — ALL SUITES GREEN; content:check OK)

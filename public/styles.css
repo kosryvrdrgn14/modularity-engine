@@ -1284,6 +1284,13 @@
     }
     #shop-header .shop-title { color: #FFD700; font-size: 1.1rem; font-family: Georgia, serif; }
     #shop-header .shop-close { color: #888; cursor: pointer; font-size: 1.5rem; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+    #shop-header .shop-gold {
+      color: #fff8e7; font-size: 0.95rem; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      padding: 4px 12px; border-radius: 999px;
+      background: rgba(255, 215, 0, 0.10);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+    }
     #shop-tabs {
       display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.08);
     }
