@@ -1921,3 +1921,6 @@
 .gamelog-entry.kind-warn { color: #FFB74D; }
 .gamelog-entry.kind-error { color: #FF6B6B; }
 .gamelog-empty { color: #666; font-size: 0.78rem; text-align: center; padding: 18px 0; }
+.gamelog-entry.gamelog-prev { opacity: 0.55; }
+.gamelog-divider { color: #555; font-size: 0.68rem; text-align: center; padding: 4px 0 2px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08); margin-bottom: 4px; }

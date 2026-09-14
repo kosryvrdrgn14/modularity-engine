@@ -2,6 +2,25 @@
 
 ---
 
+## v2.9.2 — Game log: capped persisted tail (resume-friendly console)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (game_log suite 17/17; full battery green + strict)
+
+### Added
+- **Capped persisted tail** — the last 30 session-log entries now ride in the save
+  (`persistent.gameLog.tail`, **store v8**, additive migration — old saves boot clean). After a
+  preview refresh/resume, the console shows them as a dimmed "— previous session —" section above
+  the fresh entries, so a mid-test reload no longer blinds the player.
+- `hydrateFromStore()` on boot; mirror-on-write with dirty marking; `clear()` wipes tail + view;
+  flood-tested (newest 30 survive a 50-entry burst).
+- **Boundary unchanged and suite-enforced:** the tail is DISPLAY ONLY — never a data source;
+  the canonical NPC memory log remains the only story memory. Spec §2 amended to record the
+  owner decision.
+- Suite: +5 checks (mirror, round-trip hydration, cap under flood, fresh-session emptiness).
+
+---
+
+## v2.9.1 — Cleanup pass: §22.3 executed, docs refreshed
 ## v2.9.1 — Cleanup pass: §22.3 executed, docs refreshed
 **Date:** September 14, 2026
 **Status:** ✅ Complete (full battery green post-cleanup — 7 suites, trace 112/112)

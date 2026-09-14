@@ -124,7 +124,7 @@ class GameManager {
 
   _createDefault() {
     return {
-      save_version: 7,
+      save_version: 8,
       session: {
         current_stage_id: null,
         run_in_progress: false,
@@ -153,6 +153,7 @@ class GameManager {
         estates: [],
         family: { wives: [], children: [] },
         inventory: { equipment: { weapon: null, armor: null }, consumables: [], max_slots: 24 },
+        gameLog: { tail: [] },
       },
       farming: {
         slots: [
@@ -272,6 +273,18 @@ class GameManager {
         if (!Array.isArray(data.persistent.time.skipLog)) data.persistent.time.skipLog = [];
       }
       data.save_version = 7;
+    }
+    // Game-log capped tail (v8, additive; spec game_log_system_spec.md §2):
+    // the LAST ~30 session-console entries ride along in the save so a
+    // preview refresh / resume doesn't blind the player mid-test. DISPLAY
+    // ONLY — the one-rule boundary holds: nothing may read this as a data
+    // source; the canonical NPC memory log remains the only story memory.
+    if (v < 8) {
+      if (data.persistent) {
+        data.persistent.gameLog = data.persistent.gameLog || { tail: [] };
+        if (!Array.isArray(data.persistent.gameLog.tail)) data.persistent.gameLog.tail = [];
+      }
+      data.save_version = 8;
     }
     // §21 chunk 3 (additive, safe for all v3 saves): run journal fields.
     // No version bump — missing fields only mean "no journal", which is the

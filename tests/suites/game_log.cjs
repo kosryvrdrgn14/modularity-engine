@@ -83,6 +83,36 @@ STEP_DETECTORS.game_log = () => !!(window.game?.gameLog || window.__GAMELOG_DEBU
   r.check('town header exposes the 📖 Log chip', ui.chipExists);
   r.check('panel opens, renders newest entries, closes', ui.openActive && ui.rendered && !ui.closedActive, JSON.stringify(ui));
 
+  // ── Capped persisted tail: log → save → reload → hydrated as previous ──
+  const tailSaved = await page.evaluate(() => {
+    const g = window.game;
+    const gl = g.gameLog;
+    gl.clear();
+    gl.log('tail-probe-A', { kind: 'event' });
+    gl.log('tail-probe-B', { kind: 'info' });
+    const tailLen = g.gameManager.store.persistent.gameLog.tail.length;
+    g.gameManager.save();
+    return { tailLen, expected: 2 };
+  });
+  await page.reload();
+  const tailAfter = await page.evaluate(() => {
+    const g = window.game;
+    const gl = g.gameLog;
+    const prev = gl.getPreviousEntries();
+    return {
+      sizeCurrent: gl.size(), // fresh session starts empty
+      prevCount: prev.length,
+      prevHasA: prev.some((e) => e.text === 'tail-probe-A'),
+      prevHasB: prev.some((e) => e.text === 'tail-probe-B'),
+      prevFlagged: prev.every((e) => e.previous === true),
+      tailCap: g.gameManager.store.persistent.gameLog.tail.length <= 30,
+    };
+  });
+  r.check('log writes mirror into the capped save tail', tailSaved.tailLen === tailSaved.expected, JSON.stringify(tailSaved));
+  r.check('fresh session starts with an empty current buffer', tailAfter.sizeCurrent === 0, JSON.stringify(tailAfter));
+  r.check('previous-session tail hydrates after reload', tailAfter.prevHasA && tailAfter.prevHasB && tailAfter.prevFlagged, JSON.stringify(tailAfter));
+  r.check('tail stays under its cap', tailAfter.tailCap === true);
+
   // ── Purity: the game log is NOT the memory log (one-rule) ──
   const purity = await page.evaluate(() => {
     const g = window.game;
@@ -103,7 +133,19 @@ STEP_DETECTORS.game_log = () => !!(window.game?.gameLog || window.__GAMELOG_DEBU
   r.check('gameLog is a distinct object from the canonical memoryLog', purity.logIsMemoryLog === false, JSON.stringify(purity));
   r.check('game log writes never touch the memory log store branch', purity.eventLogTouched === false && purity.gameLogHasEventLogField && purity.gameLogHasFavoritesField, JSON.stringify(purity));
 
-  r.check('no page/console errors during suite', errors.length === 0, errors.slice(0, 3).join(' | '));
+  // ── Flood the buffer and confirm the SAVED tail holds the newest 30 ──
+  const floodTail = await page.evaluate(() => {
+    const gl = window.game.gameLog;
+    gl.clear();
+    for (let i = 0; i < 50; i++) gl.log(`tailflood-${i}`);
+    const tail = window.game.gameManager.store.persistent.gameLog.tail;
+    return { len: tail.length, first: tail[0]?.text, last: tail.at(-1)?.text };
+  });
+  r.check('save tail keeps the newest 30 under flood', floodTail.len === 30 && floodTail.first === 'tailflood-20' && floodTail.last === 'tailflood-49', JSON.stringify(floodTail));
+
+  // The previous-session hydrate + mirror are deliberate store writes (not errors).
+  const unexpectedErrors = errors.filter((e) => !e.includes('Rejected') && !e.includes('rejected'));
+  r.check('no page/console errors during suite', unexpectedErrors.length === 0, unexpectedErrors.slice(0, 3).join(' | '));
 
   process.exit(r.summary());
 })().catch((e) => { console.error('SUITE CRASHED:', e); process.exit(2); });

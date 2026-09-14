@@ -13,15 +13,42 @@
 
 class GameLogSystem {
   static MAX_ENTRIES = 200;
+  // Capped persisted tail (spec §2, store v8): the last N entries ride in the
+  // save so a preview refresh/resume doesn't blind the player mid-test.
+  // DISPLAY ONLY — nothing may read the tail as a data source (one-rule).
+  static TAIL_SIZE = 30;
 
   constructor(deps = {}) {
     this.gameManager = deps.gameManager || null;
     this.eventBus = deps.eventBus || null;
     this._entries = [];
+    // Hydrated from the save's tail (previous-session entries). Rendered
+    // dimmed with a divider; NEVER re-appended into _entries or re-persisted
+    // as current-session content.
+    this._previous = [];
     this._sessionStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     this._listenersRegistered = false;
     this._uiOpen = false;
     this._pendingResource = null; // per-frame debounce for resources:changed
+  }
+
+  /** Called once after the store is loaded (Game constructor): pull the
+   *  previous session's capped tail out of the save. */
+  hydrateFromStore() {
+    const store = this.gameManager?.store;
+    const tail = store?.persistent?.gameLog?.tail;
+    this._previous = Array.isArray(tail)
+      ? tail.slice(-GameLogSystem.TAIL_SIZE).map((e) => ({ ...e, previous: true }))
+      : [];
+  }
+
+  _mirrorTail() {
+    const store = this.gameManager?.store;
+    if (!store?.persistent) return; // headless/edge: silently skip mirroring
+    if (!store.persistent.gameLog) store.persistent.gameLog = { tail: [] };
+    if (!Array.isArray(store.persistent.gameLog.tail)) store.persistent.gameLog.tail = [];
+    store.persistent.gameLog.tail = this._entries.slice(-GameLogSystem.TAIL_SIZE);
+    if (typeof this.gameManager._dirty === 'boolean') this.gameManager._dirty = true;
   }
 
   init() {
@@ -98,6 +125,7 @@ class GameLogSystem {
     if (this._entries.length > GameLogSystem.MAX_ENTRIES) {
       this._entries.splice(0, this._entries.length - GameLogSystem.MAX_ENTRIES);
     }
+    this._mirrorTail();
     if (this.eventBus) this.eventBus.emit('gameLog:updated', { size: this._entries.length });
     this._renderIfOpen();
   }
@@ -107,10 +135,16 @@ class GameLogSystem {
     return Number.isFinite(n) ? list.slice(-n) : list;
   }
 
+  getPreviousEntries() {
+    return this._previous.slice();
+  }
+
   size() { return this._entries.length; }
 
   clear() {
     this._entries = [];
+    this._previous = []; // Clear button wipes history including the tail view
+    this._mirrorTail();
     if (this.eventBus) this.eventBus.emit('gameLog:updated', { size: 0 });
     this._renderIfOpen();
   }
@@ -142,11 +176,16 @@ class GameLogSystem {
     const list = panel.querySelector('#gamelog-list');
     if (!list) return;
     const entries = this.getEntries().slice().reverse(); // newest first
-    list.innerHTML = entries.length === 0
-      ? '<div class="gamelog-empty">Nothing logged yet this session.</div>'
-      : entries.map((e) =>
-          `<div class="gamelog-entry kind-${e.kind}"><span class="gamelog-ts">[Day ${e.day ?? '—'} · ${e.at}]</span> ${GameLogSystem._esc(e.text)}</div>`
-        ).join('');
+    const prev = this.getPreviousEntries().slice().reverse();
+    if (entries.length === 0 && prev.length === 0) {
+      list.innerHTML = '<div class="gamelog-empty">Nothing logged yet this session.</div>';
+    } else {
+      const render = (e) =>
+        `<div class="gamelog-entry kind-${e.kind}${e.previous ? ' gamelog-prev' : ''}"><span class="gamelog-ts">[Day ${e.day ?? '—'} · ${e.at}]</span> ${GameLogSystem._esc(e.text)}</div>`;
+      list.innerHTML =
+        (prev.length ? `<div class="gamelog-divider">— previous session —</div>${prev.map(render).join('')}` : '') +
+        entries.map(render).join('');
+    }
     const count = panel.querySelector('#gamelog-count');
     if (count) count.textContent = String(this.size());
   }

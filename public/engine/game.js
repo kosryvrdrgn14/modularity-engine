@@ -118,6 +118,7 @@ class Game {
       gameManager: this.gameManager,
       eventBus: this.eventBus,
     });
+    this.gameLog.hydrateFromStore(); // pull previous-session tail from the save (store v8)
     this.gameLog.init();
     this.gameLog.installPanel();
     this.gameLog.installInspector();

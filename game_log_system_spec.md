@@ -47,10 +47,12 @@ debug context. Neither is a save-format change.
 
 ## 2. Storage & behavior
 
-- **Ring buffer, 200 entries** (`MAX_ENTRIES`), drop-oldest. Session-scoped: **not persisted**.
-  Rationale: it's a play/debug surface; persistence would be a second save log (the exact
-  duplication the one-rule forbids). If a future feature needs persistent history, that's a new
-  decision — not this buffer.
+- **Ring buffer, 200 entries** (`MAX_ENTRIES`), drop-oldest. **Amended 2026-09-14 (v2.9.2, owner
+  decision):** a **capped tail of the last 30 entries** now rides in the save
+  (`persistent.gameLog.tail`, store v8, additive) and hydrates as a dimmed "previous session"
+  section after reload — a preview refresh mid-test no longer blinds the player. The one-rule
+  boundary is unchanged and suite-enforced: the tail is DISPLAY ONLY, nothing reads it as a data
+  source, and it is never re-persisted as current-session content. `clear()` wipes tail and view.
 - `log(text, { kind })` — kinds: `info` (default), `event`, `reward`, `warn`, `error` → colored.
 - `getEntries(n?)`, `clear()` (dev), `size()`.
 - New entries emit `gameLog:updated` on the bus (UI re-renders when open).
