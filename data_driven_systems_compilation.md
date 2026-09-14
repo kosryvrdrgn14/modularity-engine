@@ -17,10 +17,13 @@ not just good practice.
 
 ## 1. The Shared Core: Condition/Gate Engine
 
-**Status: partially built.** Already powers quest availability in the live codebase
-(`systems/quest.js` reads `dataManager.contentGates` and evaluates gate rules against player
-state). This is the single most important piece of shared infrastructure in this document —
-three other systems below need the exact same rule-evaluation capability.
+**Status: NOT YET BUILT (corrected 2026-09-14 audit).** What exists today is an id-keyed
+content-unlock lookup (`systems/quest.js isContentUnlocked`: derived quest gates + boolean
+unlock_flag / temp_disable_flag checks) and bare-flag AND prerequisites — no condition-object
+parser, no all/any/not combinators, no typed conditions. The vocabulary below is the DESIGN
+target; building it is §6's step 1. The existing lookups fold behind the new evaluator
+(they keep their id-keyed semantics for four live consumer files) rather than being mutated
+in place.
 
 **Condition vocabulary (as designed):**
 ```json
@@ -174,21 +177,58 @@ and the occlusion-detection mechanism.
 
 ---
 
-## 6. Integration Map & Recommended Build Order
+## 6. Integration Map & Recommended Build Order (revised 2026-09-14 — plan of record)
 
-Given the dependencies above, here is the sequencing that avoids building anything twice:
+Supersedes the original sequencing after the §1 audit (the quest gate engine proved to be an
+id-keyed lookup, NOT a general condition evaluator — §1 is new construction) and the locked
+memory-log decision below.
 
-1. **Generalize/verify the existing quest gate engine (§1)** as the shared evaluator for all four
-   consumers. Small, foundational, unblocks everything else. Do this first regardless of which
-   feature is tackled next.
-2. **Pilot the Card template + one skin (§5) on the inventory grid (§3).** This satisfies §5's own
-   rollout guidance (pilot on one real screen before expanding the widget vocabulary) and starts
-   real inventory work at the same time — two birds, one screen.
-3. **Decide, explicitly, which of {§2's dialogue/choice memory, §4's event log} gets built first**,
-   and design it generically enough that the other system consumes it rather than duplicating it.
-   This decision should be made before either is implemented, not discovered after both exist.
-4. **NPC locations/dialogue/mood (§2)** — depends on step 1, can proceed in parallel with step 2.5. **Roleplay export favorites/memoryCheckpoint UI (§4)** — depends on steps 1, 2/5 (rendering), and 3
-   (the shared memory-log decision).
+0. ✅ **Groundwork decisions (done, v2.3.2):** memoryCheckpoint naming locked; inventory merges
+   into the existing `store.inventory`; event ordering = per-save monotonic `seq` +
+   `chapterMarker` (no calendar built); `spouses` unlock category added; `ui_skins.json`
+   pipeline-registered (mirror at 15 content files).
+0b. **Test-harness safety (do first, before any cleanup):** relocate
+   `isolate/test_pot_fixes.cjs` — the 112-check regression trace, the project's only automated
+   test infrastructure — out of `isolate/` (it resolves the game via `__dirname/../public`, so
+   the move is a path tweak + doc-reference updates). It currently sits inside the directory
+   MASTER_DESIGN §22.3 targets for deletion, and isolate/ is gitignored. Verify
+   `game2_backup_monolithic.html` (exists ONLY in isolate/) is recoverable from the GitHub
+   backup repo before deleting isolate/; move it out if not.
+1. **Build the generic condition evaluator (§1) — new construction.** Parser + all/any/not
+   recursion + typed conditions + no-silent-fail policy + load-time schema validation. Fold the
+   existing lookups behind it: `isContentUnlocked` and `_checkPrerequisites` (bare flag strings
+   in prerequisites remain sugar for all-of flag conditions — no content migration). Register
+   `time` and `dialogueChoice` as reserved-but-unimplemented condition types (extension points,
+   not rearchitecture later). Ship with trace coverage that drives real state transitions
+   (BUG-031 lesson: reach-test the machine, not just the API).
+2. **NPC locations/dialogue/mood (§2), spec first.** Write `npc_condition_system_spec.md`
+   (project convention) BEFORE implementation. Scope: the dialogue-selection mechanism itself
+   (none exists today — `dialogue_branches` gates are dead schema), `locationRules`, the
+   unconditional-fallback dialogueSets rule, the mood layer, the `npc:*` / `schedule:tick` event
+   hooks, and the Dev: NPC Condition Inspector. **The canonical NPC memory log is built here**
+   (see the locked decision below) as its first producer lands. Test against the existing
+   roster + hand-authored test NPCs. Deferred: full calendar system, full roster content.
+3. **Widget/inventory pilot (§5 Card + one skin on the §3 grid) — parallel track, explicit
+   go/no-go.** Recommended: run in parallel with §2 once the §1 evaluator lands (the pilot's
+   gift-eligibility and key-item conditions read through it). POT-015 (`getEffectiveStats`
+   composition point) lands with this milestone.
+4. **Roleplay export favorites/memoryCheckpoint UI (§4)** — pure consumption: reads the
+   canonical log, the evaluator's spoiler queries, and the widget layer. No new evaluator,
+   no new log, no new rendering code.
+5. **POT-001 (NPC portraits) lands with §2's portrait-variation work.**
+
+**Memory-log ownership decision (LOCKED 2026-09-14 — resolves the original step 3):**
+ONE canonical log, built with §2, shaped to §4's schema from day one, owned by neither feature.
+Schema: `{ eventId, seq, chapterMarker, npcIds[], type, payload, spoilerTag }` — append-only,
+per-save, session-independent (usable from the title screen; no Game/GameLoop dependency),
+persisted via the existing store + `_migrate` discipline. §2's `{ conversationId: choiceId }`
+memory is an event type (`dialogueChoiceMade`) plus a query projection
+(`getEventsForNpc(npcId, { type, upToSeq, spoilerFilter })`), NOT a second store. Rationale:
+§4's schema is the strict superset (npcIds[], spoilerTag, chapterMarker); starting from §2's
+subset would force a parallel translation log later. Writes flow through ONE append API via
+centrally-registered bus listeners (the §21 autosave event-checkpoint pattern);
+memoryCheckpoints and favorites are read-side curation layers over the log, never write-side
+filters.
 
 **Explicit warning to carry into planning, worth repeating even though it opens this document
 too:** no system above should end up with its own independent condition evaluator, its own

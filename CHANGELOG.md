@@ -2,6 +2,20 @@
 
 ---
 
+## v2.3.3 — Data-Driven Systems Plan of Record
+**Date:** September 14, 2026
+**Status:** 📋 Plan (no runtime code changed)
+
+Locked the sequencing after the §1 audit and the review of the external outline:
+
+- **Compilation §1 status corrected** — the "quest gate engine" is an id-keyed lookup, not a condition evaluator; §1 is new construction (parser, all/any/not, typed conditions, no-silent-fail, load-time validation) with the existing lookups folded behind it, not mutated.
+- **Compilation §6 rewritten as the plan of record** (and repaired a line-merge from the earlier rename pass): harness relocation 0b → evaluator 1 → NPC system 2 (spec first; canonical memory log built here) → widget/inventory pilot 3 (explicit go/no-go, POT-015 lands here) → export 4 (pure consumption) → POT-001 with §2.
+- **Memory-log ownership decision LOCKED** — one canonical log in §4's schema, built with §2, query-projection consumption for dialogue memory; supersedes the compilation's old step 3 and is cross-referenced from the export spec.
+- **MASTER_DESIGN §24 added** — the same plan with the explicit do-not-damage list: POT-012 WRITABLE_PATHS (new store paths must be registered — rejected writes are silent by design), `_migrate` version chain, §21 autosave central registration, §23 pause/exit edges, embeddedData dual registration.
+- Next action queued: relocate `isolate/test_pot_fixes.cjs` out of isolate/ before any §22.3 cleanup; resolve backup recoverability for `game2_backup_monolithic.html`.
+
+---
+
 ## v2.3.2 — Data-Driven Systems Groundwork (pre-build decisions)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (mirror in sync, 112/112 headless trace checks pass)

@@ -15,6 +15,13 @@ availability), the affection tier system, and the wife-network relationship data
 a third independent consumer of that shared engine is the point; do not fork a second condition
 evaluator for this feature.
 
+**Canonical log decision (locked 2026-09-14, see data_driven_systems_compilation.md §6):** the
+event log in §2 below IS the game's single canonical NPC memory log. It is built with the NPC
+condition system (§2 of the compilation) and shaped to THIS spec's schema — `{ eventId, seq,
+chapterMarker, npcIds[], type, payload, spoilerTag }` — from day one, so the export system
+becomes a pure consumer with no migration or translation layer. Per-NPC dialogue/choice memory
+is a query projection over this log, never a second store.
+
 ---
 
 ## 1. Purpose & Scope

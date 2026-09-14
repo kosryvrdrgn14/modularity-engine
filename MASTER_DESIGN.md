@@ -1175,6 +1175,53 @@ Estimated: phases 1–3 fit one session. Log the wrong-tag console.log cleanup a
 
 ---
 
+## 24. Data-Driven Systems — Plan of Record (September 14, 2026)
+
+The four planned data-driven systems (spec set in `data_driven_systems_compilation.md`, which
+after the §1 audit is the authoritative sequencing document for this work) move forward in this
+order:
+
+**Step 0b — Test-harness safety (before any cleanup).** Relocate `isolate/test_pot_fixes.cjs`
+(112-check headless regression trace) out of `isolate/` — it is the project's only automated
+test infrastructure and currently sits inside the directory §22.3 targets for deletion.
+Resolve §22.3's precondition (backup recoverability) before deleting the rest of isolate/.
+
+**Step 1 — Generic condition evaluator (§1, new construction).** Condition-object parser,
+`all`/`any`/`not` recursion, typed conditions, no-silent-fail policy, load-time validation.
+Existing id-keyed lookups (`isContentUnlocked`, `_checkPrerequisites`) fold BEHIND it with
+unchanged consumer-facing semantics (bare flag strings in `prerequisites` stay as all-of sugar).
+`time` and `dialogueChoice` registered as reserved extension types. Trace coverage must drive
+real state transitions, not just API calls (BUG-031 lesson).
+
+**Step 2 — NPC condition system (§2), spec first.** `npc_condition_system_spec.md` written
+before implementation. Includes the dialogue-selection mechanism itself (today `dialogue_branches`
+gates are dead schema), `locationRules` (first-match-wins), unconditional-fallback dialogueSets,
+mood layer, `npc:*`/`schedule:tick` hooks, Dev Condition Inspector — and the canonical NPC
+memory log (locked decision, compilation §6): one append-only store-backed log in §4's schema,
+producers via centrally-registered bus listeners (§21 event-checkpoint pattern),
+`dialogueChoiceMade` events + query projection for §2's needs.
+
+**Step 3 — Widget/inventory pilot (parallel track, explicit go/no-go).** Card template + one
+skin on the inventory grid; extends the existing `store.inventory` (no parallel v2 store).
+POT-015's `getEffectiveStats()` composition point lands here.
+
+**Step 4 — Roleplay export (§4).** Pure consumption of the canonical log + evaluator spoiler
+queries + widget rendering. No new evaluator, log, or rendering code.
+
+**Structures this plan must not damage (verified 2026-09-14):** POT-012's `WRITABLE_PATHS`
+store allowlist (any new store paths MUST be added to it — rejected writes are silent failures
+by design); the `_migrate` version chain (new log containers join via one version bump with
+shape defaults); the §21 autosave event-checkpoint list (log-producer listeners are appended
+to it, never bypass it — keeps the project's single central-registration rule); §23's pause/
+exit state edges; the embeddedData pipeline (new content files join BOTH the loadAll fetch
+list and the generator registry or the orphan guard hard-errors).
+
+**Deliberately deferred:** full in-game calendar (the `time` condition type stays unimplemented),
+full NPC roster content, weather/season systems. POT-001 (portraits) lands with §2's
+portrait-variation work.
+
+---
+
 ## Appendix A: Related Documents
 
 | Document | Purpose |
