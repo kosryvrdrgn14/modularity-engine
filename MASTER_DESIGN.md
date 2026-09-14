@@ -1227,6 +1227,11 @@ Gate: step3 suite 20/20 strict; step4 purity checks still enforce no duplicate i
 
 **Step 4 — Roleplay export (§4).** Pure consumption of the canonical log + evaluator spoiler
 queries + widget rendering. No new evaluator, log, or rendering code.
+✅ **DONE (v2.7.0):** `public/systems/npcExport.js` + `public/ui/npcExportUi.js`. Facts/flavor
+split, spoiler cutoff via `upToSeq` (fail-closed), derived memoryCheckpoint index, favorites on
+`persistent.npcs` (additive, store v6), title-screen browser through WidgetRenderer reading saved
+slots directly, in-game dialogue entry gated on interaction history. Gate: step4 suite 8/8 strict
+incl. no-duplicate-infrastructure purity checks — all four plan steps now green.
 
 **Structures this plan must not damage (verified 2026-09-14):** POT-012's `WRITABLE_PATHS`
 store allowlist (any new store paths MUST be added to it — rejected writes are silent failures

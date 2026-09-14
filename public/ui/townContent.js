@@ -528,6 +528,11 @@ class TownContent {
     // §24 Step 2: topics come from the conversation selected in openDialogue
     // (per-topic conditions already filtered there); legacy fallback intact.
     const topics = this._activeTopics || npc.topics || [];
+    // §24 Step 4: in-game export entry (spec §10). Appended when the NPC has
+    // interaction history; strangers get no export option. Handled by
+    // npcExportUI, never by the topic machinery below.
+    const exportUi = (typeof window !== 'undefined' && window.game?.npcExportUI) || null;
+    const exportTopic = exportUi ? exportUi.exportTopicFor(npc.id) : null;
     for (const topic of topics) {
       const btn = document.createElement('button');
       btn.className = 'dialogue-choice';
@@ -608,6 +613,17 @@ class TownContent {
             };
           });
         }
+      });
+      this.dom.dialogueChoices.appendChild(btn);
+    }
+    if (exportTopic) {
+      const btn = document.createElement('button');
+      btn.className = 'dialogue-choice';
+      btn.textContent = exportTopic.text;
+      btn.addEventListener('click', () => {
+        this.audioManager.playMenuSound('select');
+        this.dom.dialogueOverlay.classList.remove('active');
+        exportUi.openPreview(npc.id);
       });
       this.dom.dialogueChoices.appendChild(btn);
     }

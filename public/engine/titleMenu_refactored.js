@@ -4,7 +4,7 @@
 // ============================================================
 
 class TitleMenu {
-  constructor({ audioManager, gameManager, dataManager, onStart, onSettings, onTestTown, onStoryMode, onSlotPlay, onSlotWipe, getSlotSummaries }) {
+  constructor({ audioManager, gameManager, dataManager, onStart, onSettings, onTestTown, onStoryMode, onSlotPlay, onSlotWipe, getSlotSummaries, onFavorites }) {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
     this.dataManager = dataManager;
@@ -17,6 +17,8 @@ class TitleMenu {
     this.onSlotPlay = onSlotPlay || null;
     this.onSlotWipe = onSlotWipe || null;
     this.getSlotSummaries = getSlotSummaries || null;
+    // §24 Step 4: title-screen favorites browser (always-visible entry, spec §4.1)
+    this.onFavorites = onFavorites || null;
 
     this.selectedIndex = 0;
     this.items = [
@@ -25,6 +27,7 @@ class TitleMenu {
       { action: 'stages', locked: true },
       { action: 'settings', locked: false },
       { action: 'story-mode', locked: false },
+      { action: 'favorites', locked: false },
       { action: 'test-town', locked: false },
       { action: 'dev-stage', locked: false },
     ];
@@ -141,6 +144,9 @@ class TitleMenu {
       case 'story-mode':
         if (this.onSlotPlay && this.getSlotSummaries) this._showSlotPicker();
         else if (this.onStoryMode) this.onStoryMode();
+        break;
+      case 'favorites':
+        if (this.onFavorites) this.onFavorites();
         break;
       case 'test-town':
         this.onTestTown();

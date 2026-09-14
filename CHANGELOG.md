@@ -2,6 +2,52 @@
 
 ---
 
+## v2.7.0 — Step 4: Roleplay Export (final plan step — ALL STEPS GREEN)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (step4 suite 8/8 strict incl. purity checks; full battery green — trace 112/112, steps 1–4 all PASS; content:check OK)
+
+### Added
+- **`public/systems/npcExport.js` (`NPCExportSystem`)** — pure consumer of the one log, the
+  one evaluator, and the one renderer:
+  - **Facts/flavor split (§6):** facts derived per-request from the canonical log via
+    `getEventsForNpc` with `upToSeq` cutoffs; flavor is static authored content (name,
+    greeting, canonical voice lines from `npcs.json`).
+  - **Spoiler gating (§7):** a tagged fact is included only when its reveal exists at or
+    before the cutoff — **fail-closed**, ambiguity excludes, never leaks. Exercised by the
+    suite: spoiler absent at `upToSeq:1`, present at full history (gate, not deletion).
+  - **memoryCheckpoints (§3):** curated read-side index synthesized from quest-completion
+    and spoiler-tag events — derived, never persisted, never a filter on log writes.
+  - **Favorites (§4):** (checkpoint-set, NPC-set) pairs; each member may pin a different
+    checkpoint. The only persisted export state — additive `favorites` field on the
+    EXISTING `persistent.npcs` branch (typed methods only, no WRITABLE_PATHS additions).
+  - **Constraint model (§8):** universal base template (spoiler containment, relationship
+    accuracy, no-jealousy house rule, meta/AI boundaries) + per-character `exportConstraints`
+    delta from NPC content. Primary renderer: plain copy-paste text with clipboard fallback.
+  - **Title-screen safety (§1 boundary):** `getFavoriteSummaries()`/`regenerateFromSlot()`
+    read saved slot documents directly — never live session state; slot reconstruction uses
+    a detached read-only log view per slot.
+- **`public/ui/npcExportUi.js` (`NPCExportUI`)** — §4.1 title-screen favorites browser
+  (always-visible "🕯️ Favorite Memories" menu entry; recency-first list rendered through
+  WidgetRenderer's **pooled path**; friendly §4.2 empty state; per-member card regeneration
+  with copy buttons) and the §10 in-game entry: a "preserve our memories" dialogue topic
+  that appears ONLY when the NPC has interaction history (no export for strangers).
+- **Store v6** — additive `favorites` default + migration step (old saves boot clean;
+  memory log untouched, append-only discipline holds).
+
+### Fixed
+- **`public/styles.css` was accidentally truncated mid-session by a bad shell one-liner.**
+  Recovered byte-for-byte from the git object database (newest committed blob, 1,868 lines,
+  read-only — no git commands) via `tools/recover_styles_css.cjs` (kept as a utility), then
+  re-appended the in-flight export-overlay block. Lesson recorded: file tools only, never
+  inline shell writes. All suites green post-recovery.
+
+### Docs
+- Compilation §4 status → BUILT; §6 step 4 marked DONE — **all four plan steps green**.
+- MASTER_DESIGN §24 step 4 marked DONE.
+
+---
+
+## v2.6.1 — Shop header gold chip (UX fix from manual testing)
 ## v2.6.1 — Shop header gold chip (UX fix from manual testing)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (step3 suite 22/22; full battery green)

@@ -98,6 +98,21 @@ class Game {
     this.npcSystem.init();
     this.npcSystem.installInspector();
 
+    // §24 Step 4: roleplay export — PURE consumer of the memory log, the
+    // shared evaluator, and WidgetRenderer. Constructed before any session
+    // starts so the title-screen favorites browser works with no live game
+    // (spec §1 hard architectural boundary).
+    this.npcExportSystem = new NPCExportSystem({
+      gameManager: this.gameManager,
+      dataManager: this.dataManager,
+    });
+    this.npcExportUI = new NPCExportUI({
+      gameManager: this.gameManager,
+      exportSystem: this.npcExportSystem,
+      widgetRenderer: new WidgetRenderer({ skins: this.dataManager?.uiSkins || null }),
+      audioManager: this.audioManager,
+    });
+
     // F1: Sandbox System
     this.sandboxSystem = new SandboxSystem(this.gameManager, this.eventBus);
 
@@ -186,6 +201,7 @@ class Game {
       onSlotPlay: (n) => this._onStorySlotSelected(n),
       onSlotWipe: (n) => this.gameManager.wipeSlot(n),
       getSlotSummaries: () => this.gameManager.getSlotSummaries(),
+      onFavorites: () => this.npcExportUI?.openBrowser(),
     });
 
     // Show title screen (audio unlocks on first user gesture)

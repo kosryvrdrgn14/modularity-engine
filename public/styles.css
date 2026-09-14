@@ -1865,3 +1865,29 @@
 .slot-status.status-active { color: #a5d6a7; font-size: 0.85rem; }
 /* Skin layer hook (§4): color-token skins set --widget-skin-bg / --widget-accent;
    structure and bindings are untouched — a skin can never carry information. */
+
+/* ===== Step 4: export favorites browser (spec 4.1) - slot-picker styling conventions ===== */
+#export-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9000;
+  background: rgba(5, 5, 14, 0.82); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+#export-overlay.active { display: flex; }
+#export-panel {
+  width: min(680px, 94vw); max-height: 82vh; overflow-y: auto;
+  background: rgba(10, 10, 26, 0.96); border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 10px; padding: 20px;
+}
+.export-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.export-empty { text-align: center; padding: 28px 16px; margin: 14px 0;
+  border: 1px dashed rgba(255, 215, 0, 0.25); border-radius: 8px; }
+.export-empty-icon { font-size: 2rem; margin-bottom: 8px; }
+.export-empty-title { color: #FFD700; font-family: Georgia, serif; margin-bottom: 6px; }
+.export-empty-desc { color: #999; font-size: 0.85rem; line-height: 1.5; }
+.export-cards { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
+.export-card-block { border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px; }
+.export-card-head { color: #FFD700; font-size: 0.9rem; margin-bottom: 8px; }
+.export-card-text { white-space: pre-wrap; word-break: break-word; color: #ccc;
+  font-size: 0.78rem; line-height: 1.5; background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px; padding: 10px; max-height: 40vh; overflow-y: auto; margin: 0 0 8px 0;
+  font-family: Consolas, monospace; }

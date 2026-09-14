@@ -149,9 +149,17 @@ Migration steps in `_migrate` must add any new container fields the tag/category
 one version bump, per the save-versioning discipline. `consumables` is NOT duplicated as a new
 array; the model grows around it.
 
----
+---## 4. NPC Memory & Roleplay Export System
 
-## 4. NPC Memory & Roleplay Export System
+**Status: BUILT — Step 4 complete (v2.7.0, 2026-09-14).** `public/systems/npcExport.js`
++ `public/ui/npcExportUi.js`. Pure consumption held: facts derive from the canonical log via
+`getEventsForNpc` (+ `upToSeq` cutoffs), spoiler gating fails closed (a tagged fact is included
+only when its reveal exists at/before the cutoff), memoryCheckpoints are a derived read-side index
+(never persisted, never a write filter), favorites persist as an additive `favorites` field on the
+EXISTING `persistent.npcs` branch (typed methods, store v6), and the title-screen browser renders
+through WidgetRenderer's pooled path while reading saved slots directly — no Game/GameLoop
+dependency (spec §1 boundary). In-game entry: the "preserve our memories" dialogue topic appears
+only when the NPC has interaction history (spec §10: no export for a stranger).
 
 **Status: full spec written — see `npc_memory_roleplay_export_spec.md`.**
 
@@ -254,11 +262,7 @@ memory-log decision below.
    `_addToInventory` wrote to a nonexistent root `store.inventory` (shop purchases crashed after
    spending gold) — canonical home is `store.persistent.inventory`, all writers/readers now agree;
    `getEffectiveStats()` read a dead `store.player.baseStats` path — now composes
-   `persistent.player.base_stats` + equipped-item `bonus` maps.
-4. **Roleplay export favorites/memoryCheckpoint UI (§4)** — pure consumption: reads the
-   canonical log, the evaluator's spoiler queries, and the widget layer. No new evaluator,
-   no new log, no new rendering code. **Gate: `tests/suites/step4_export.cjs` must pass
-   `--strict`, including its no-duplicate-infrastructure purity checks.**
+   `persistent.player.base_stats` + equipped-item `bonus` maps.4. **Roleplay export favorites/memoryCheckpoint UI (§4)** — pure consumption: reads the   canonical log, the evaluator's spoiler queries, and the widget layer. No new evaluator,   no new log, no new rendering code. **Gate: `tests/suites/step4_export.cjs` must pass   `--strict`, including its no-duplicate-infrastructure purity checks.** ✅ **DONE   2026-09-14 (v2.7.0):** 8/8 strict incl. both purity checks — ALL FOUR PLAN STEPS GREEN.
 5. **POT-001 (NPC portraits) lands with §2's portrait-variation work.**
 
 **Memory-log ownership decision (LOCKED 2026-09-14 — resolves the original step 3):**

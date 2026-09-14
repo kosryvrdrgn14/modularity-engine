@@ -124,7 +124,7 @@ class GameManager {
 
   _createDefault() {
     return {
-      save_version: 4,
+      save_version: 6,
       session: {
         current_stage_id: null,
         run_in_progress: false,
@@ -146,7 +146,7 @@ class GameManager {
         combat: { unlocked_weapons: ["w1_projectile"], weapon_levels: {}, best_run: null, run_history: [], stars: {} },
         skills: { unlocked: [], skill_points: 0 },
         town: { level: 1, population: 0, popCap: 5, buildings: {}, resources: { gold: 0, wood: 0, stone: 0, herbs: 0, ore: 0 }, workers: { farmers: 0, miners: 0, builders: 0, idle: 0 } },
-        npcs: { met: [], relationships: {}, companions: [], companionStatus: {}, eventLog: [], eventSeq: 0 },
+        npcs: { met: [], relationships: {}, companions: [], companionStatus: {}, eventLog: [], eventSeq: 0, favorites: [] },
         factions: { wanderers_guild: { reputation: 0, rank: "unknown" }, shadow_covenant: { reputation: 0, rank: "unknown" }, forge_brotherhood: { reputation: 0, rank: "unknown" } },
         quests: { active: [], completed: [], failed: [], objectives: {}, timeEvents: [] },
         unlocks: { stages: ["stage_graveyard"], items: [], features: ["town_basic", "combat_basic"] },
@@ -252,6 +252,15 @@ class GameManager {
         data.persistent.npcs.eventSeq = data.persistent.npcs.eventSeq || 0;
       }
       data.save_version = 5;
+    }
+    // §24 Step 4: export favorites (additive, spec §4). Missing field means
+    // "no favorites" — the correct default for every pre-v6 save. No
+    // rewrites; the memory log itself is untouched (append-only holds).
+    if (v < 6) {
+      if (data.persistent && data.persistent.npcs) {
+        data.persistent.npcs.favorites = data.persistent.npcs.favorites || [];
+      }
+      data.save_version = 6;
     }
     // §21 chunk 3 (additive, safe for all v3 saves): run journal fields.
     // No version bump — missing fields only mean "no journal", which is the
