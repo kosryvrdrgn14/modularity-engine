@@ -1,7 +1,6 @@
 .env.local
 node_modules
 dist
-isolate
 src/convex/_generated
 
 tests/artifacts/

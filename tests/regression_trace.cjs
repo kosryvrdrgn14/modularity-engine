@@ -1,6 +1,6 @@
 /**
  * Headless verification for POT-009/010/012/013/014a + BUG-026 regression.
- * Run: node isolate/test_pot_fixes.cjs   (Playwright, file:// — no server needed)
+ * Run: node tests/regression_trace.cjs   (Playwright, file:// — no server needed)
  *
  * Scenario: slot 2 holds a planted interrupted-run journal (the "ghost run"
  * from the BUG-026 era); slot 1 is the boot-active slot.
@@ -608,7 +608,7 @@ function report(name, pass, detail) {
   const pot12 = await page.evaluate(() => {
     const gm = window.game.gameManager;
     const out = {};
-    gm._dirty = false; // isolate dirty-flag observation
+    gm._dirty = false; // dirty-flag observation point
     out.rejected = gm.set('session.sleected_stage_id', 'stage_typo'); // typo
     out.deepRejected = gm.set('persistent.town.phas', 2); // typo'd leaf
     out.dirtyAfterRejects = gm._dirty;

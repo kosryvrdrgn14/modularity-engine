@@ -2,6 +2,37 @@
 
 ---
 
+## v2.9.1 — Cleanup pass: §22.3 executed, docs refreshed
+**Date:** September 14, 2026
+**Status:** ✅ Complete (full battery green post-cleanup — 7 suites, trace 112/112)
+
+### Removed
+- **`isolate/` deleted (§22.3 executed)** — the long-blocked cleanup. Blocked until now on the
+  backup-recoverability question; answered with `tools/audit_monolithic_backup.cjs`, a read-only
+  git-object auditor that line-compares a file against EVERY historical snapshot: both
+  monolithic HTML backups contained **0 lines absent from git history** → safe to delete. All six
+  isolate scripts verified as loose blobs in the object DB before deletion. Stale script-path
+  comment in `tests/regression_trace.cjs` corrected; `isolate` removed from `.gitignore`.
+
+### Documented
+- **KNOWLEDGE.md §15–18** — this session's lessons: never write source files with inline shell
+  one-liners (the styles.css wipe + recovery pattern, the str_replace sync quirk and its scripted
+  fallback); the suite error net is a bug detector (it caught the real `_checkWeaponUnlocks`
+  crash); two logs / two purposes (game log vs canonical memory log, never merge); the
+  audit-first-delete-second backup pattern.
+- **TESTING_PLAN.md** — §4.9 inventories the six post-plan suites (146 checks); manual list gains
+  M10 (calendar/date chip), M11 (game-log console), M12 (the §9 roleplay-export simulation
+  checklist, spec §9.2 tests 1–7); session script re-ordered (~30 min).
+- **Housekeeping note:** the COMPANION_DATA guard retrofit and entities.js comment fix from the
+  old review were verified ALREADY DONE (remaining mentions are explanatory; zero bare accesses).
+
+### Added
+- **`tools/audit_monolithic_backup.cjs`** — kept as the reference tool for any future "is this
+  backup safe to delete?" question (read-only; no git CLI needed).
+
+---
+
+## v2.9.0 — Town Date Chip + Game Log / Session Console (+ levelUp crash fix)
 ## v2.9.0 — Town Date Chip + Game Log / Session Console (+ levelUp crash fix)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (game_log suite 12/12; full battery green — 7 suites; content:check OK)

@@ -123,6 +123,15 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 POT-014 music-bus: owner/gen semantics (extend: assert stop actually stops scheduled nodes via D4 mock)
 - 🟥 POT-014 real flow: title→combat transition fires exactly one stop (D4 call count)
 
+### 4.9 Post-plan system suites (added 2026-09-14)
+- 🟩 `step1_gate_engine.cjs` — ConditionEngine: typed conditions, combinators, fail-closed, quest routing (30)
+- 🟩 `step2_npc_system.cjs` — NPC system + canonical memory log incl. save/reload round-trip (30)
+- 🟩 `step3_widget_inventory.cjs` — widget pilot + inventory canonical home + POT-015 + gold chip (22)
+- 🟩 `step4_export.cjs` — roleplay export: spoiler cutoff, favorites, purity (8)
+- 🟩 `calendar_time.cjs` — event-driven days, biomes, locked modifier rule, log day-stamps (27)
+- 🟩 `game_log.cjs` — session console capture, ring buffer, UI, two-logs purity (12)
+- Run everything: `npm test` (skip-safe) / `npm run test:strict` (skips fail).
+
 ### 4.8 Save integrity fuzz
 - 🟥 50 seeded random mutations of a valid save (dropped keys, wrong types, injected ghosts) → boot never throws, degraded-mode path or migration handles each
 - 🟥 Double-boot race: two boots against same slot (refresh storm) → no duplicate totals (POT-010 family)
@@ -190,8 +199,11 @@ Automation cannot verify these; each needs one focused human pass on the laptop:
 | M7 | **NPC dialogue presentation** — typewriter pacing, portrait rendering (POT-001 still open: base64 portraits), dialogue-option layout | Subjective + pending migration | Talk to every NPC once in town |
 | M8 | **Save-slot UX honesty** — slot summaries match reality after the M4 session (dates, level, quest counts render correctly) | Visual correctness of derived data | Glance at title slot cards after M4 |
 | M9 | **ESC pause menu (once built)** — ergonomics of pause during chaos, does ESC feel safe mid-boss | New UX, needs a human opinion | Pause mid-swarm, resume, exit-to-town |
+| M10 | **Calendar & date chip** — 📅 chip reads sensibly, hover context (season/festivals) is right, chip updates after a run (+1 day) and story skips; season flip at month boundary feels correct in dialogue conditions later | Visual + feel of time passing | One run; then console `game.timeService.advanceDay(30,'story_skip')` and re-enter town; check chip + hover |
+| M11 | **Game log console** — 📖 Log chip opens/closes; purchase/run/level entries appear with correct day stamps; errors show as ⚠; panel readable at 800px width | Presentation + usefulness, not presence | Open the panel, buy a potion, finish a run, read the tail |
+| M12 | **Roleplay export (§9 simulation, spec)** — copy a card into your external AI tool; run the scripted scenarios: spoiler leakage, relationship accuracy, jealousy resistance, meta-questions, personality drift | External model behavior | Follow npc_memory_roleplay_export_spec.md §9.2 tests 1–7; score pass/partial/fail |
 
-**Manual session script (suggested order):** M4 → M8 → M1 → M2 → M3 → M9(if built) → M7 → M5 → M6. ~25 minutes total.
+**Manual session script (suggested order):** M4 → M8 → M1 → M2 → M3 → M9(if built) → M7 → M11 → M10 → M12(async, at your desk) → M5 → M6. ~30 minutes total.
 
 ---
 

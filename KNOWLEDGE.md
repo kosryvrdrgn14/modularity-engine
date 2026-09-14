@@ -223,7 +223,51 @@ Formal probe results and per-tool verdicts live in `TOOL_AUDIT_PLAN.md`
 faults), `read_files`/`write_file`/`list_directory`/`write_todos`/terminal
 are TRUSTED.
 
-## 15. Buffy tool discipline (agent self-entry)
+## 15. Never write source files with inline shell one-liners (added 2026-09-14)
+
+A malformed `node -e` one-liner wiped `public/styles.css` to zero bytes mid-session
+(v2.7.0). It was recovered from the git object database — but the lesson is the
+process, not the rescue:
+
+- **Create/modify source files only with file tools** (`write_file`, `str_replace`).
+  Shell is for inspection, builds, tests — never for file content.
+- **If a shell write is ever unavoidable** (e.g. the file-tool sync layer refuses a
+  path after an external write — this happened to `styles.css` and `game.js`), write
+  the code as a reviewed, idempotent script in `tools/` that verifies its own result
+  and exits non-zero on mismatch — never as an inline `-e` string.
+- **`str_replace` can start refusing a file mid-session** after external tooling has
+  written it, even when the target text verifies as present via `grep`/`node -e`.
+  Don't fight it in a loop — fall back to the scripted pattern above.
+- **`rm` of a tracked file is recoverable** — the blob lives in `.git/objects` (loose
+  or packed). `tools/recover_styles_css.cjs` and `tools/audit_monolithic_backup.cjs`
+  are working reference implementations for reading the object DB without git
+  commands (git CLI is blocked in this environment).
+
+## 16. The suite error net is a bug detector, not a nuisance (added 2026-09-14)
+
+The game-log suite's first run failed its "no console errors" check because a
+synthetic `levelUp` emit crashed `Game._checkWeaponUnlocks()` — a REAL latent bug
+(any level-up outside combat threw inside the listener). Whitelisting expected
+deliberate rejections is correct; silencing unexpected errors is how bugs hide.
+When the error net goes red, diagnose before dismissing.
+
+## 17. Two logs, two purposes — never merge (added 2026-09-14)
+
+The **game log** (`GameLogSystem`) is a session-scoped play/debug surface: noisy,
+fire-and-forget, not persisted, never read by any system. The **canonical NPC memory
+log** (`NpcMemoryLog`) is per-save story memory: typed, validated, append-only,
+persisted, consumed by export/checkpoints/conditions. The game-log suite enforces
+purity in both directions. Any future "log"-shaped feature must state which one it is
+before it is built.
+
+## 18. §22.3 executed; backup recoverability is a solved pattern (2026-09-14)
+
+`isolate/` was deleted after `tools/audit_monolithic_backup.cjs` verified — by
+line-level comparison against every git snapshot — that both monolithic HTML backups
+contained **0 lines absent from git history**. The directory was gitignored, so this
+audit was the only thing standing between a casual `rm` and permanent loss. The tool
+stays in `tools/` as the reference for any future "is this backup safe to delete?"
+question: audit first, delete second.
 
 Standing rules I follow on every task, so future sessions inherit them:
 
