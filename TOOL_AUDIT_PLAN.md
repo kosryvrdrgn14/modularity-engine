@@ -5,6 +5,10 @@ burned ~15 tool calls hunting one bug. Purpose: establish, with reproducible
 probes, which tools can be trusted — so future sessions skip straight to the
 reliable path instead of re-learning it the hard way.
 
+> **Related:** `TOOLING_MAP.md` (v2.10.0) catalogs the GAME-side tools — build/verify/test
+> surfaces and their npm scripts. This document stays scoped to the AGENT-side toolset
+> (file tools, search, terminal quirks of this environment).
+
 ## Verdict scale
 
 - **TRUSTED** — no faults observed across many uses; default choice.

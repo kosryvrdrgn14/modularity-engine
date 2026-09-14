@@ -2,6 +2,30 @@
 
 ---
 
+## v2.10.0 — Tooling: TOOLING_MAP.md (verified) + tools/verify.cjs
+**Date:** September 14, 2026
+**Status:** ✅ Complete (verify green incl. trace; full battery untouched and green)
+
+### Added
+- **`TOOLING_MAP.md`** — the human+AI tool catalog, every status verified against the repo
+  (2026-09-14). Corrections from the draft are recorded in its §5 live log rather than silently
+  applied: NPC/quest/game-log inspectors marked Built, the Playwright suite marked as the
+  primary safety net (265 checks + trace), two LOST tools flagged as not-on-disk, monolith-split
+  fossils marked historical, npm block synced with package.json, five missing reference docs
+  added, git-object-DB tools documented.
+- **`tools/verify.cjs`** (`npm run verify` / `npm run verify:trace`) — one-command static
+  verification: all 37 game files syntax-checked IN REAL BROWSER LOAD ORDER (extraction from
+  game2.html, with a loud guard if extraction ever yields nothing), 16 content JSONs parsed,
+  embeddedData mirror byte-verified; `--trace` adds the 112-check headless regression suite.
+  The first command to run after any edit to `public/`.
+
+### Documented
+- Cross-links: TOOLING_MAP joins the reference index; agent convention recorded (verify after
+  every edit, test when behavioral).
+
+---
+
+## v2.9.2 — Game log: capped persisted tail (resume-friendly console)
 ## v2.9.2 — Game log: capped persisted tail (resume-friendly console)
 **Date:** September 14, 2026
 **Status:** ✅ Complete (game_log suite 17/17; full battery green + strict)

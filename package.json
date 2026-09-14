@@ -13,7 +13,9 @@
     "content:check": "node tools/generateEmbeddedData.mjs --check",
     "test": "node tests/run_all.cjs",
     "test:strict": "node tests/run_all.cjs --strict",
-    "test:trace": "node tests/regression_trace.cjs"
+    "test:trace": "node tests/regression_trace.cjs",
+    "verify": "node tools/verify.cjs",
+    "verify:trace": "node tools/verify.cjs --trace"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

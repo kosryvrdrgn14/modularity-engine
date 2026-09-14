@@ -7,6 +7,10 @@
 
 ## 0. Goals & Non-Goals
 
+> **Tool inventory:** for what each test tool is, its npm script, and its limits, see
+> `TOOLING_MAP.md` §2 (kept in sync with `package.json`). This document owns the test
+> *architecture and manual checklist*; that one owns the *tool catalog*.
+
 **Goals**
 1. One command (`node isolate/test_e2e.cjs`) boots the real game in a real browser and verifies every feature end-to-end: title → save slots → town → quests → combat → level-ups → weapons → boss → results → back to town.
 2. **Unsupervised:** deterministic (seeded RNG, injected clock), self-reporting (PASS/FAIL + artifacts), and safe to run on a schedule or after every change batch.
