@@ -114,15 +114,23 @@ reserved by the estate/warfront routing system, linking directly to its routing 
 - **Rendering depends on the Widget UI System (§5)** — the inventory grid is explicitly the
   recommended pilot screen for that system's Card template (see that spec's §8, Rollout).
 
+**Storage decision (2026-09-14 groundwork):** the inventory model extends the EXISTING
+`store.inventory` in `systems/progression.js` — it is merged into live saves via
+`_migrate` (v1.4) and actively written by `ui/shop.js` via `_addToInventory`. There is NO
+parallel v2 inventory system: items gain optional `category` and `tags` fields (absent = legacy
+consumable, so old saves need no data migration — only the `_migrate` default-shape step).
+Migration steps in `_migrate` must add any new container fields the tag/category model needs,
+one version bump, per the save-versioning discipline. `consumables` is NOT duplicated as a new
+array; the model grows around it.
+
 ---
 
 ## 4. NPC Memory & Roleplay Export System
 
 **Status: full spec written — see `npc_memory_roleplay_export_spec.md`.**
 
-**Summary for integration purposes:** an event-sourced per-NPC history log (not overwritten
-flags), named checkpoints auto-generated at major milestones, favorites as
-`(checkpoint-set, NPC-set)` pairs accessible from the title screen (decoupled from live gameplay
+**Summary for integration purposes:** an event-sourced per-NPC history log (not overwrittenflags), named memoryCheckpoints auto-generated at major milestones, favorites as
+`(memoryCheckpoint-set, NPC-set)` pairs accessible from the title screen (decoupled from live gameplay
 session state), a cross-character relationship registry, a facts/flavor data split, a full
 constraint model (spoiler containment, a hard no-jealousy rule, meta/immersion boundaries,
 inheritance of existing content-exclusion decisions), and a complete no-code testing plan for
@@ -133,10 +141,13 @@ validating character behavior across different receiving AI models.
   consume it, not fork a separate evaluator.
 - **The event log here and §2's dialogue/choice memory log are conceptually the same data.**
   Whichever of these two systems is built first should be designed generically enough for the
-  other to simply consume it — see the build-order note below.
-- **Rendering (favorites menu, checkpoint browser) depends on the Widget UI System (§5).**
+  other to simply consume it — see the build-order note below.- **Rendering (favorites menu, memoryCheckpoint browser) depends on the Widget UI System (§5).**
 
-**Full detail:** see the attached spec file for the complete event schema, checkpoint tagging
+**Groundwork decisions locked 2026-09-14 (carried from the five-decision pre-build pass):**
+- **Naming:** curated history points are **memoryCheckpoints** — the bare word "checkpoint" is
+  owned by the auto-save system's event checkpoints (MASTER_DESIGN §21).
+- **Event ordering:** per-save monotonic integer `seq` + the existing `chapterMarker` field —
+  no in-game calendar is built for this system (spec §11 resolved).**Full detail:** see the attached spec file for the complete event schema, memoryCheckpoint tagging
 rules, constraint model, and testing matrix.
 
 ---
@@ -156,7 +167,7 @@ tool, a widget inspector dev tool, and the occlusion-detection system (using
 `document.elementFromPoint()` to catch buried/unclickable UI elements automatically).
 
 **This is the rendering layer for:** §2's NPC Condition Inspector dev screen, §3's inventory grid
-(explicitly the recommended pilot screen), and §4's favorites/checkpoint browser.
+(explicitly the recommended pilot screen), and §4's favorites/memoryCheckpoint browser.
 
 **Full detail:** see the attached spec file for the complete slot vocabulary, skin data model,
 and the occlusion-detection mechanism.
@@ -176,8 +187,7 @@ Given the dependencies above, here is the sequencing that avoids building anythi
 3. **Decide, explicitly, which of {§2's dialogue/choice memory, §4's event log} gets built first**,
    and design it generically enough that the other system consumes it rather than duplicating it.
    This decision should be made before either is implemented, not discovered after both exist.
-4. **NPC locations/dialogue/mood (§2)** — depends on step 1, can proceed in parallel with step 2.
-5. **Roleplay export favorites/checkpoint UI (§4)** — depends on steps 1, 2/5 (rendering), and 3
+4. **NPC locations/dialogue/mood (§2)** — depends on step 1, can proceed in parallel with step 2.5. **Roleplay export favorites/memoryCheckpoint UI (§4)** — depends on steps 1, 2/5 (rendering), and 3
    (the shared memory-log decision).
 
 **Explicit warning to carry into planning, worth repeating even though it opens this document

@@ -1,0 +1,3 @@
+{
+  "_note": "UI skin registry (widget_ui_system_spec.md §4). Maps skinId → { border, background, cornerOrnament, accentColorToken }. Empty until the widget system lands. Rules: purely visual, never structural; a skin must never be the sole channel for information (§4.4); all referenced asset paths must exist. Registered in DataManager.loadAll() (core.js) and the embeddedData generator registry so the fallback mirror stays in sync — an unregistered content file is the town-blank-screen bug class."
+}

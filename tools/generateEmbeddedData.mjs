@@ -45,6 +45,7 @@ const REGISTRY = [
   { key: 'companions', file: 'companions.json', type: 'object', minKeys: 1 },
   { key: 'quests', file: 'quests.json', type: 'object', required: ['main_quests'] },
   { key: 'contentGates', file: 'content_gates.json', type: 'object' },
+  { key: 'uiSkins', file: 'ui_skins.json', type: 'object' },
 ];
 
 const errors = [];

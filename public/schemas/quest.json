@@ -93,9 +93,14 @@
               "description": "NPC IDs unlocked (must exist in npcs.json)",
               "items": { "type": "string" }
             },
-            "dialogue": {
+            "dialogue_branches": {
               "type": "array",
-              "description": "Dialogue branch IDs unlocked",
+              "description": "Dialogue branch IDs unlocked (canonical key — must match quest.js _buildDerivedGates cats; 'dialogue' was the old key and never reached the gate engine)",
+              "items": { "type": "string" }
+            },
+            "spouses": {
+              "type": "array",
+              "description": "NPC IDs to marry on completion (NPC must exist in npcs.json); gated like any other unlockable category — no consumer yet (marriage flow is unimplemented), so quest-granted spouses set the roster the future marriage system reads",
               "items": { "type": "string" }
             }
           }

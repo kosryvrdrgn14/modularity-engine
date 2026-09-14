@@ -5,7 +5,7 @@ template proves wrong in practice, rebuild rather than force-fit around it. The 
 is a clear starting shape, not a guarantee of permanence.
 
 **Relationship to other systems:** Consumed by the inventory system spec (categories/sorting) and
-the NPC memory/roleplay export spec (checkpoint/favorites menus) as their rendering layer, rather
+the NPC memory/roleplay export spec (memoryCheckpoint/favorites menus) as their rendering layer, rather
 than each building its own UI code. Also the foundation for §7's occlusion-detection tool, which
 depends on interactive elements being declared through this system rather than hand-coded.
 
@@ -88,7 +88,7 @@ localization becomes real.
 
 Genuine structural outliers that cannot reasonably be expressed as a configured Card: the VN
 dialogue/date-scene interface, the in-combat HUD (health bar, minimap, weapon cooldowns), the
-settings panel (sliders, toggles), the NPC checkpoint/history browser.
+settings panel (sliders, toggles), the NPC memoryCheckpoint/history browser.
 
 ### 3.2 The graduation rule (mandatory check before adding a new one)
 
@@ -126,8 +126,14 @@ slot content — never structural, never touches data bindings or click behavior
 
 ### 4.2 Skins are data
 
-`content/ui_skins.json` maps skin-id → asset paths and color tokens, following the same pattern
-as every other content type in this project. Adding a new skin never touches renderer code.
+`public/content/ui_skins.json` maps skin-id → asset paths and color tokens, following the same
+pattern as every other content type in this project. (Path corrected 2026-09-14: the live content
+root is `public/content/`, not `content/`.) The file is already registered in the content pipeline
+— `DataManager.loadAll()` (public/engine/core.js, key `uiSkins`) and the embeddedData generator
+registry (`tools/generateEmbeddedData.mjs`) — with an empty `_note`-only starter on disk, so the
+fallback mirror stays in sync from day one. Adding new content files MUST follow this exact
+pattern: fetch-list entry + generator registry entry + `bun run content:sync`, or the generator's
+orphan guard will hard-error generation.
 
 ### 4.3 Use cases
 

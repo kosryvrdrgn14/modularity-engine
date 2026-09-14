@@ -67,7 +67,7 @@ This system adds a story-driven quest layer that gates content via flags. The pl
         "companions": ["dog"],
         "locations": ["cemetery"],
         "npcs": ["stranger"],
-        "dialogue": ["old_man_post_graveyard"]
+        "dialogue_branches": ["old_man_post_graveyard"]
       },
       "time_events": [
         {
@@ -106,7 +106,7 @@ This system adds a story-driven quest layer that gates content via flags. The pl
         "companions": [],
         "locations": [],
         "npcs": [],
-        "dialogue": ["herbalist_grateful"]
+        "dialogue_branches": ["herbalist_grateful"]
       },
       "repeatable": false,
       "rewards": {
@@ -157,7 +157,7 @@ Maps content IDs to the flags/quests required to access them:
   },
   "dialogue_branches": {
     "old_man_post_graveyard": { "unlock_flag": "graveyard_cleared" },
-    "herbalist_grateful": { "unlock_flag": "herbalist_ingredient_found" }
+    "herbalist_grateful": { "unlock_flag": "herbalist_ingredient" }
   }
 }
 ```

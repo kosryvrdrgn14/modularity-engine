@@ -4878,7 +4878,8 @@ const EMBEDDED_DATA = {
           "companions[]": "string — companion IDs unlocked",
           "locations[]": "string — location ids (cemetery | crypt | deep_woods)",
           "npcs[]": "string — NPC IDs unlocked",
-          "dialogue[]": "string — dialogue branch IDs unlocked"
+          "dialogue_branches[]": "string — dialogue branch IDs unlocked (canonical key; matches quest.js _buildDerivedGates — the old 'dialogue' key never reached the gate engine)",
+          "spouses[]": "string — NPC IDs to marry on completion (no consumer yet; marriage flow unimplemented — category reserved so quests can grant spouses like any other content)"
         },
         "time_events[]": {
           "trigger": "on_complete",
@@ -4913,5 +4914,10 @@ const EMBEDDED_DATA = {
         "unlock_flag": "herbalist_ingredient"
       }
     }
+  },
+
+  // uiSkins — from content/ui_skins.json
+  uiSkins: {
+    "_note": "UI skin registry (widget_ui_system_spec.md §4). Maps skinId → { border, background, cornerOrnament, accentColorToken }. Empty until the widget system lands. Rules: purely visual, never structural; a skin must never be the sole channel for information (§4.4); all referenced asset paths must exist. Registered in DataManager.loadAll() (core.js) and the embeddedData generator registry so the fallback mirror stays in sync — an unregistered content file is the town-blank-screen bug class."
   },
 };

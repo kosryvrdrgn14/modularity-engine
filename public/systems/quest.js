@@ -102,7 +102,7 @@ class QuestSystem {
   // content_gates.json remains an OVERRIDE layer for non-quest gates
   // (e.g. cute_girl → town_camp_upgraded) and temp-disable rules.
   _buildDerivedGates() {
-    const cats = ['weapons', 'stages', 'regions', 'locations', 'companions', 'npcs', 'dialogue_branches'];
+    const cats = ['weapons', 'stages', 'regions', 'locations', 'companions', 'npcs', 'dialogue_branches', 'spouses'];
     const derived = {};
     for (const cat of cats) derived[cat] = {};
 

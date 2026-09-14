@@ -1049,7 +1049,7 @@ Pending when work resumes:
    - v1.9.3 (§21 chunk 3): refresh the preview mid-run → town shows the "Interrupted run detected" banner → Resume restores journaled stage/time/kills/gold/level/weapons; Discard = normal fresh start. A normally-finished run must NOT trigger the banner.
 2. **Owner decision:** delete root `isolate/` (review sandbox, now gitignored) once `game2_backup_monolithic.html` is confirmed recoverable from the GitHub backup repo.
 3. **Next features (agreed roadmap):**
-   - **Inventory system** — player items/equipment, data-driven.
+   - **Inventory system** — player items/equipment, data-driven. Groundwork decision (2026-09-14): extends the existing `store.inventory` in progression.js — no parallel v2 store; optional `category`/`tags` fields on items, migration via `_migrate` (see data_driven_systems_compilation.md §3).
    - **Data-driven NPC structure** — when NPCs appear (conditions/gates), what dialogue options they offer, and related behaviors. Builds on the existing `content/npcs.json` + `schemas/npc.json`; follow KNOWLEDGE.md defensive patterns and the store-shape lesson from BUG-025 (fields land together with the code that uses them).
 
 ---

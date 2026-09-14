@@ -2,6 +2,20 @@
 
 ---
 
+## v2.3.2 — Data-Driven Systems Groundwork (pre-build decisions)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (mirror in sync, 112/112 headless trace checks pass)
+
+Five low-risk groundwork decisions before the gate-engine build, executed per plan:
+
+1. **Naming locked: `memoryCheckpoint`.** The NPC-memory spec's curated history points are renamed everywhere (spec + compilation doc). The bare word "checkpoint" stays owned by the auto-save system (§21 event checkpoints). No code change.
+2. **Inventory merge stance recorded.** The future inventory model extends the existing `store.inventory` (progression.js, live in saves via `_migrate`, written by shop.js) — no parallel v2 store; items gain optional `category`/`tags` (absent = legacy consumable, no data migration). Recorded in the compilation doc §3 and MASTER_DESIGN.
+3. **Timestamp scheme adopted.** NPC-memory events order by a per-save monotonic integer `seq` plus the existing `chapterMarker` field — no in-game calendar system. Spec §2.1 updated, §11's open question closed.
+4. **`spouses` unlock category added.** `quest.js _buildDerivedGates` cats, quests.json `_schema`, schemas/quest.json. No consumer yet (marriage flow unimplemented) — reserved so quests can grant spouses like any other content. Same pass fixed the doc-level `dialogue` → `dialogue_branches` key mismatch (QUEST_SYSTEM_DESIGN examples + schema descriptions; the canonical key already matched the gate engine's cats — quest-granted dialogue gates were only ever broken in the docs) and a stale `herbalist_ingredient_found` flag name.
+5. **`ui_skins.json` wired into the pipeline.** Starter file created (note-only, no invented assets), registered in `DataManager.loadAll()` (key `uiSkins`) and the generator registry per the exact 14-file pattern; mirror regenerated (15 content files); widget spec path corrected to `public/content/ui_skins.json` with the registration convention documented.
+
+---
+
 ## v2.3.1 — BUG-031/BUG-032: Combat-Frame Freeze & Missing Visual Helpers
 **Date:** September 14, 2026
 **Status:** ✅ Complete (112/112 headless trace checks pass)
