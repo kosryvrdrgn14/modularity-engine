@@ -1181,10 +1181,17 @@ The four planned data-driven systems (spec set in `data_driven_systems_compilati
 after the §1 audit is the authoritative sequencing document for this work) move forward in this
 order:
 
-**Step 0b — Test-harness safety (before any cleanup).** Relocate `isolate/test_pot_fixes.cjs`
-(112-check headless regression trace) out of `isolate/` — it is the project's only automated
-test infrastructure and currently sits inside the directory §22.3 targets for deletion.
-Resolve §22.3's precondition (backup recoverability) before deleting the rest of isolate/.
+**Step 0b — Test-harness safety (before any cleanup).** ✅ DONE 2026-09-14: the trace relocated
+to `tests/regression_trace.cjs` (112/112 green post-move). The remaining isolate/ deletion is
+now just archive hygiene — still confirm `game2_backup_monolithic.html` recoverability (or move
+it out) before removing isolate/.
+
+**Testing architecture (added 2026-09-14, KNOWLEDGE.md §2b):** `node tests/run_all.cjs` runs the
+full autonomous pass — the regression trace plus one step-gated suite per step below
+(`tests/suites/step1_gate_engine.cjs`, `step2_npc_system.cjs`, `step3_widget_inventory.cjs`,
+`step4_export.cjs`). Suites SKIP loudly (exit 0) until their step exists, then enforce its
+contract; `--strict` makes skips fail. Each step's suite is part of that step's definition of
+done — landing code without its suite passing strict is not done.
 
 **Step 1 — Generic condition evaluator (§1, new construction).** Condition-object parser,
 `all`/`any`/`not` recursion, typed conditions, no-silent-fail policy, load-time validation.

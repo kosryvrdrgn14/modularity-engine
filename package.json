@@ -10,7 +10,10 @@
     "format": "prettier --write .",
     "preview": "vite preview",
     "content:sync": "node tools/generateEmbeddedData.mjs",
-    "content:check": "node tools/generateEmbeddedData.mjs --check"
+    "content:check": "node tools/generateEmbeddedData.mjs --check",
+    "test": "node tests/run_all.cjs",
+    "test:strict": "node tests/run_all.cjs --strict",
+    "test:trace": "node tests/regression_trace.cjs"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

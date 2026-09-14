@@ -33,6 +33,21 @@ state the plan before continuing.
   upgrade freeze took 3 sessions to diagnose specifically because the file
   was too large to hold in context while tracing it.
 
+## 2b. Step-gate testing rule (added 2026-09-14)
+
+Every plan step ships WITH its regression suite, and no step is "done" while its suite
+still reports SKIP:
+
+- `node tests/run_all.cjs` = full autonomous pass: the 112-check regression trace plus one
+  step-gated suite per plan step (compilation §6). Skips are loud and exit 0 while a step is
+  unimplemented; `--strict` flips skips to failures once the step lands.
+- Detection lives in `tests/lib/harness.cjs` (STEP_DETECTORS). When a step's real API lands
+  under a different name than probed, update the detector — one line, deliberate.
+- New infrastructure (evaluator, memory log, widget renderer) is NOT complete until its suite
+  enforces the contract, including no-silent-fail behaviors and persistence round-trips.
+- Reach-test the machine, not just the API (BUG-031): suites drive real state transitions
+  (events fired, state machines walked), not only method existence.
+
 ## 3. Specs are written just-in-time, not in bulk
 
 - Write the spec for the feature you're about to build this session or next.

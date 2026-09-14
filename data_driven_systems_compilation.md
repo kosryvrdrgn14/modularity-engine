@@ -187,20 +187,20 @@ memory-log decision below.
    into the existing `store.inventory`; event ordering = per-save monotonic `seq` +
    `chapterMarker` (no calendar built); `spouses` unlock category added; `ui_skins.json`
    pipeline-registered (mirror at 15 content files).
-0b. **Test-harness safety (do first, before any cleanup):** relocate
-   `isolate/test_pot_fixes.cjs` — the 112-check regression trace, the project's only automated
-   test infrastructure — out of `isolate/` (it resolves the game via `__dirname/../public`, so
-   the move is a path tweak + doc-reference updates). It currently sits inside the directory
-   MASTER_DESIGN §22.3 targets for deletion, and isolate/ is gitignored. Verify
-   `game2_backup_monolithic.html` (exists ONLY in isolate/) is recoverable from the GitHub
-   backup repo before deleting isolate/; move it out if not.
+0b. ✅ **Test-harness safety (done 2026-09-14):** the trace relocated to
+   `tests/regression_trace.cjs` (112/112 green post-move). Full autonomous testing now lives at
+   `node tests/run_all.cjs` — the trace plus one step-gated suite per step below
+   (`tests/suites/stepN_*.cjs`, skip-until-implemented; `--strict` after landing). Each step's
+   suite is part of its definition of done. Remaining isolate/ deletion is pure archive
+   hygiene: still confirm `game2_backup_monolithic.html` recoverability before removing it.
 1. **Build the generic condition evaluator (§1) — new construction.** Parser + all/any/not
    recursion + typed conditions + no-silent-fail policy + load-time schema validation. Fold the
    existing lookups behind it: `isContentUnlocked` and `_checkPrerequisites` (bare flag strings
    in prerequisites remain sugar for all-of flag conditions — no content migration). Register
    `time` and `dialogueChoice` as reserved-but-unimplemented condition types (extension points,
    not rearchitecture later). Ship with trace coverage that drives real state transitions
-   (BUG-031 lesson: reach-test the machine, not just the API).
+   (BUG-031 lesson: reach-test the machine, not just the API). **Gate: its suite
+   (`tests/suites/step1_gate_engine.cjs`) must pass `--strict` before the step counts as done.**
 2. **NPC locations/dialogue/mood (§2), spec first.** Write `npc_condition_system_spec.md`
    (project convention) BEFORE implementation. Scope: the dialogue-selection mechanism itself
    (none exists today — `dialogue_branches` gates are dead schema), `locationRules`, the
@@ -208,13 +208,18 @@ memory-log decision below.
    hooks, and the Dev: NPC Condition Inspector. **The canonical NPC memory log is built here**
    (see the locked decision below) as its first producer lands. Test against the existing
    roster + hand-authored test NPCs. Deferred: full calendar system, full roster content.
+   **Gate: `tests/suites/step2_npc_system.cjs` must pass `--strict` (log round-trip, seq
+   monotonicity, spoiler projection, fallback location/dialogue).**
 3. **Widget/inventory pilot (§5 Card + one skin on the §3 grid) — parallel track, explicit
    go/no-go.** Recommended: run in parallel with §2 once the §1 evaluator lands (the pilot's
    gift-eligibility and key-item conditions read through it). POT-015 (`getEffectiveStats`
-   composition point) lands with this milestone.
+   composition point) lands with this milestone. **Gate: `tests/suites/step3_widget_inventory.cjs`
+   must pass `--strict` (card slots/repeat/loud-validation; inventory tagged items coexisting
+   with legacy shape).**
 4. **Roleplay export favorites/memoryCheckpoint UI (§4)** — pure consumption: reads the
    canonical log, the evaluator's spoiler queries, and the widget layer. No new evaluator,
-   no new log, no new rendering code.
+   no new log, no new rendering code. **Gate: `tests/suites/step4_export.cjs` must pass
+   `--strict`, including its no-duplicate-infrastructure purity checks.**
 5. **POT-001 (NPC portraits) lands with §2's portrait-variation work.**
 
 **Memory-log ownership decision (LOCKED 2026-09-14 — resolves the original step 3):**

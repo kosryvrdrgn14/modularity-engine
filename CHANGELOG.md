@@ -2,6 +2,20 @@
 
 ---
 
+## v2.3.4 — Autonomous Testing Architecture (per-step regression gates)
+**Date:** September 14, 2026
+**Status:** ✅ Complete (default run: 1 PASS + 4 loud SKIPs, exit 0; strict run: gate verified)
+
+Step 0b executed plus the testing layer for the plan of record:
+
+- **Trace relocated:** `isolate/test_pot_fixes.cjs` → `tests/regression_trace.cjs` (112/112 green post-move). isolate/ was gitignored — the trace was previously NOT in version control; it now is. Remaining isolate/ deletion is pure archive hygiene (confirm monolith backup recoverability first).
+- **Shared harness** (`tests/lib/harness.cjs`): boot helper (clean storage, file:// fallback boot, error net), step detectors, runner with PASS/FAIL accounting and exit codes.
+- **Step-gated suites** (`tests/suites/step1..4`): one per plan step (§6), encoding each step's contract — evaluator typed conditions + all/any/not + no-silent-fail; NPC location/dialogue fallback + canonical memory log (append, multi-NPC visibility, seq monotonicity, persistence round-trip, spoiler projection); widget card slots/repeat/loud validation + inventory tag coexistence with the legacy shape; export consumption + spoiler cutoff + favorites + no-duplicate-infrastructure purity checks. Suites SKIP loudly (exit 0) until their step's API exists, then enforce.
+- **Aggregator** (`tests/run_all.cjs`, `npm test` / `npm run test:strict` / `npm run test:trace`): per-suite artifacts in `tests/artifacts/<stamp>/`; `--strict` flips skips to failures so a step isn't "done" until its suite enforces.
+- **Docs:** KNOWLEDGE.md §2b (step-gate testing rule), MASTER_DESIGN §24 + compilation §6 gates wired, TESTING_PLAN L1 marked operational.
+
+---
+
 ## v2.3.3 — Data-Driven Systems Plan of Record
 **Date:** September 14, 2026
 **Status:** 📋 Plan (no runtime code changed)
