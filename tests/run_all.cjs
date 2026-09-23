@@ -23,6 +23,7 @@ const SUITES = [
   'tests/suites/calendar_time.cjs',
   'tests/suites/game_log.cjs',
   'tests/suites/step5_loadout_widgets.cjs',
+  'tests/suites/step6_shop_tabs.cjs',
   'tests/suites/widget_occlusion.cjs',
 ];
 

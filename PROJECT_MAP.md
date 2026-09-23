@@ -306,11 +306,12 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: shop screen — buy consumables/upgrades, sandbox launcher, farming loot handoff
 - Status: NORMATIVE
 - Defines: `ShopSystem`
+- Calls: `WidgetRenderer` (tab chips + stocked items are pooled repeats — §10 screen-6, v2.18.0; defs `TAB_CHIP_DEF`/`SHOP_ITEM_DEF` declare `widget:shopTab`/`widget:shopBuy`; active tab and cant-afford are DATA via v1.2 `selected.bind` / v1.3 `disabled.bind`; the inventory pilot's cardDef now rebinds the same host pool — v1.3 rebind swaps skins with the def)
 - Emits: `shopPurchase`, `shopEffect`, `startCombat`, `farmingLootCollected`
 - Listens: `resources:changed`
 - Store: writes inventory/gold **through progression APIs** (POT-012 clean — no direct branch writes)
-- DOM: `shop-overlay`, `shop-items`, `shop-gold`, `shop-tabs`, `shop-close`, `sb-launch`, `sb-difficulty`, `sb-diff-val`, `sb-show-dps`
-- GuardedBy: `tests/suites/step3_widget_inventory.cjs` (purchase/inventory round-trip)
+- DOM: `shop-overlay`, `shop-items` (widget pool host — no innerHTML wipes; farming/sandbox modes still wipe here, kept bespoke per §3.2), `shop-gold`, `shop-tabs` (pool host), `shop-close`, `sb-launch`, `sb-difficulty`, `sb-diff-val`, `sb-show-dps`
+- GuardedBy: `tests/suites/step3_widget_inventory.cjs` (purchase/inventory round-trip), `tests/suites/step6_shop_tabs.cjs` (tabs/disabled/round-trip pin)
 
 ### ui/townEngine.js
 - Purpose: town scene engine — location rendering/swiping, combat entry panel
@@ -502,3 +503,8 @@ UI files MUST list their DOM ids. New archetypes get a row here before the first
   this index makes the audit one lookup instead of a session.
 - **5.6 (open)** — `persistent.town` has two registered writers (townContent.js, game.js). POT-012
   spirit says one owner. Decide owner and route the other through APIs; update §3.3 + both blocks same change.
+- **5.7 (open, v2.18.0)** — townContent.js contains DUPLICATE farming/sandbox renderers
+  (openFarmingMenu + a sandbox config block) alongside shop.js's renderFarmingSlots/
+  renderSandboxConfig — two code paths for the same features, reachable from different entry
+  points. Consolidate one way when the farming/sandbox UI next changes; until then both are
+  live, so edits to farming/sandbox UI must check BOTH files.

@@ -139,8 +139,9 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step4_export.cjs` — roleplay export: spoiler cutoff, favorites, purity (8)
 - 🟩 `calendar_time.cjs` — event-driven days, biomes, locked modifier rule, log day-stamps (27)
 - 🟩 `game_log.cjs` — session console capture, ring buffer, UI, two-logs purity (18)
-- 🟩 `widget_occlusion.cjs` — §7 occlusion audit + negative control + §11 promoted gates (game-log panel, pause cards, town chips, dialogue choices, loadout cards at all 3 viewports) (31)
+- 🟩 `widget_occlusion.cjs` — §7 occlusion audit + negative control + §11 promoted gates (game-log panel, pause cards, town chips, dialogue choices, loadout cards, shop tabs at all 3 viewports) (34)
 - 🟩 `step5_loadout_widgets.cjs` — loadout pooled cards + chrome identity + v1.2 selected-bind/def-swap + confirm payload (11)
+- 🟩 `step6_shop_tabs.cjs` — shop chips/selected-bind, v1.3 disabled suppression, purchase flow, tab round-trip (former pilot pool bug), def-swap skin evidence (10)
 - Run everything: `npm test` (skip-safe) / `npm run test:strict` (skips fail).
 
 ### 4.8 Save integrity fuzz

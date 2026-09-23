@@ -3,6 +3,45 @@
 // ============================================================
 
 class ShopSystem {
+  // ── Widget defs (v2.18.0, §10 screen 6) ──────────────────
+  // Tab chips: ONE pooled repeat; the active tab is DATA (renderer v1.2
+  // selected.bind). Stocked item lists: ONE pooled card def; cant-afford is
+  // DATA (v1.3 disabled.bind — the renderer suppresses clicks, and buy()'s
+  // re-render refreshes affordability in place). Farming/sandbox modes stay
+  // bespoke: slider/form UI is not card material (graduation rule §3.2).
+  static SHOP_TABS = [
+    { tab: 'combat', icon: '⚔️', label: 'Combat' },
+    { tab: 'companion', icon: '🐕', label: 'Companion' },
+    { tab: 'estate', icon: '🏗️', label: 'Estate' },
+    { tab: 'gifts', icon: '💝', label: 'Gifts' },
+    { tab: 'inventory', icon: '🎒', label: 'Inventory' },
+  ];
+
+  static TAB_CHIP_DEF = {
+    template: 'card',
+    _v: 1,
+    layout: 'text-only-row',
+    size: 'small',
+    slots: { primaryText: { bind: 'label' } },
+    onClick: { emit: 'widget:shopTab', payload: { tab: '{{tab}}' } },
+    selected: { bind: 'selected' },
+  };
+
+  static SHOP_ITEM_DEF = {
+    template: 'card',
+    _v: 1,
+    layout: 'icon-left',
+    size: 'medium',
+    slots: {
+      icon: { bind: 'item.icon' },
+      primaryText: { bind: 'item.name' },
+      secondaryText: { bind: 'item.desc' },
+      badge: { bind: 'item.cost' },
+    },
+    onClick: { emit: 'widget:shopBuy', payload: { itemId: '{{item.id}}' } },
+    disabled: { bind: 'item.cantAfford' },
+  };
+
   constructor({ gameManager, eventBus, audioManager }) {
     this.gameManager = gameManager;
     this.eventBus = eventBus;
@@ -42,16 +81,41 @@ class ShopSystem {
       });
     }
 
-    // Tab switching
-    const tabs = document.querySelectorAll('.shop-tab');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        this.currentTab = tab.dataset.tab;
-        this.renderItems();
+    // Tab switching (v2.18.0: chips are pooled widget cards — the declared
+    // widget:shopTab event routes here; selected moves via data, not classes)
+    this._renderTabs();
+  }
+
+  /** Cached renderer + the two declared-event bridges (installed once). */
+  _renderer() {
+    if (!this.widgetRenderer) {
+      this.widgetRenderer = new WidgetRenderer({
+        skins: (typeof window !== 'undefined' && window.game?.dataManager?.uiSkins) || null,
       });
-    });
+      this._tabs?.addEventListener('widget:shopTab', (e) => {
+        const tab = e.detail?.tab;
+        if (!tab || tab === this.currentTab) return;
+        this.currentTab = tab;
+        this.renderItems();
+        this._renderTabs(); // selection moves — pooled rebind, cheap
+      });
+      this._items?.addEventListener('widget:shopBuy', (e) => {
+        const item = (SHOP_DATA[this.currentTab] || []).find((it) => it.id === e.detail?.itemId);
+        if (item) this.buy(item); // buy() re-renders — affordability refreshes everywhere
+      });
+    }
+    return this.widgetRenderer;
+  }
+
+  /** Tab strip: pooled repeat; active chip comes from currentTab (data). */
+  _renderTabs() {
+    if (!this._tabs || typeof WidgetRenderer === 'undefined') return;
+    this._renderer().repeatInto(this._tabs, ShopSystem.TAB_CHIP_DEF,
+      ShopSystem.SHOP_TABS.map((t) => ({
+        tab: t.tab,
+        label: `${t.icon} ${t.label}`,
+        selected: this.currentTab === t.tab,
+      })));
   }
 
   // --- Shop Mode (Grand Bazaar) ---
@@ -61,6 +125,7 @@ class ShopSystem {
     this.currentTab = 'combat';
     this._showOverlay('🛒 Grand Bazaar');
     this._showTabs(true);
+    this._renderTabs(); // v2.18.0: selection is data — strip rebinds on open
     this.renderItems();
   }
 
@@ -115,11 +180,8 @@ class ShopSystem {
       if (titleEl) titleEl.textContent = '🛒 Grand Bazaar';
     }
     this._showTabs(true);
-    // Reset tabs
-    const tabs = document.querySelectorAll('.shop-tab');
-    tabs.forEach(t => t.classList.remove('active'));
-    const combatTab = document.querySelector('.shop-tab[data-tab="combat"]');
-    if (combatTab) combatTab.classList.add('active');
+    // Reset tabs (v2.18.0: chips are pooled widget cards — rebind moves selection)
+    this._renderTabs();
     this.currentTab = 'combat';
   }
 
@@ -130,28 +192,24 @@ class ShopSystem {
     // §24 Step 3: the Inventory tab is the widget-system pilot screen
     // (widget_ui_system_spec.md §8) — rendered ENTIRELY through WidgetRenderer.
     if (this.currentTab === 'inventory') return this._renderInventory();
-    this._items.innerHTML = '';
-
+    // v2.18.0: stocked tabs are pooled widget cards (§10 screen 6). The host
+    // pool alternates between SHOP_ITEM_DEF and the inventory cardDef — the
+    // v1.3 rebind swaps events/payloads/skins with the def. NOTE: no
+    // innerHTML wipe — the pool owns this host (v1.3 hygiene guards
+    // externally-wiped hosts anyway).
     const items = SHOP_DATA[this.currentTab] || [];
     const gold = this.gameManager.get_currency() || 0;
-
-    for (const item of items) {
-      const canAfford = gold >= item.cost;
-      const card = document.createElement('div');
-      card.className = 'shop-item' + (canAfford ? '' : ' cant-afford');
-      card.innerHTML = `
-        <span class="item-icon">${item.icon}</span>
-        <div class="item-info">
-          <div class="item-name">${item.name}</div>
-          <div class="item-desc">${item.desc}</div>
-        </div>
-        <span class="item-cost">💰 ${item.cost}</span>
-      `;
-      if (canAfford) {
-        card.addEventListener('click', () => this.buy(item));
-      }
-      this._items.appendChild(card);
-    }
+    this._renderer().repeatInto(this._items, ShopSystem.SHOP_ITEM_DEF,
+      items.map((item) => ({
+        item: {
+          id: item.id,
+          icon: item.icon,
+          name: item.name,
+          desc: item.desc,
+          cost: `💰 ${item.cost}`,
+          cantAfford: gold < item.cost,
+        },
+      })));
   }
 
   // ── Widget-system pilot: the inventory grid (§24 Step 3) ──
@@ -162,11 +220,12 @@ class ShopSystem {
   // the grid rebinds through the pooled path (§5.1). Item display names come
   // from SHOP_DATA when the id matches a stocked item, else the raw id.
   _renderInventory() {
-    this._items.innerHTML = '';
-    if (!this.widgetRenderer) {
-      this.widgetRenderer = new WidgetRenderer({ skins: window.game?.dataManager?.uiSkins || null });
-    }
-    const R = this.widgetRenderer;
+    // v2.18.0: pool owns this host — NO innerHTML wipe. The old wipe detached
+    // pool nodes while _widgetPool kept referencing them: the first tab
+    // round-trip Combat→Inventory→Combat→Inventory would rebind DETACHED nodes
+    // and render NOTHING. Latent pilot bug, found during this migration; the
+    // v1.3 hygiene guard now protects every host against external wipes.
+    const R = this._renderer();
     const items = this.gameManager.getInventoryItems();
     const defs = SHOP_DATA.combat || [];
     const nameFor = (id) => (defs.find((d) => d.id === id) || {}).name || String(id).replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -196,8 +255,14 @@ class ShopSystem {
       },
     }));
     if (data.length === 0) {
+      // v2.18.0: hide stale pool cards first (the host pool may still hold the
+      // previous tab's nodes), then append the empty-state notice.
+      R.repeatInto(this._items, cardDef, []);
+      const stale = this._items.querySelector('#shop-empty-notice');
+      if (stale) stale.remove();
       const empty = document.createElement('div');
       empty.className = 'shop-item';
+      empty.id = 'shop-empty-notice';
       empty.innerHTML = '<span class="item-icon">🎒</span><div class="item-info"><div class="item-name">Inventory empty</div><div class="item-desc">Buy something from the tabs above — purchases land here.</div></div>';
       this._items.appendChild(empty);
       return;

@@ -108,6 +108,30 @@ const check = (name, pass, extra) => {
       return out;
     };
 
+    // ── Shop tab chips (v2.18.0, screen 6): §11 gates at all three viewports.
+    // The pilot phase already presents the shop through the REAL open path
+    // (townScreen.show() + openShop()) — gate the chip strip here. ──
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(120);
+      const tabGates = await page.evaluate(() => {
+        const chips = [...document.querySelectorAll('#shop-tabs .widget-card')];
+        return {
+          count: chips.length,
+          clickable: chips.filter((el) => {
+            const rct = el.getBoundingClientRect();
+            if (rct.width === 0 || rct.height === 0) return false;
+            const hit = document.elementFromPoint(rct.left + rct.width / 2, rct.top + rct.height / 2);
+            return !!(hit && (hit === el || el.contains(hit)));
+          }).length,
+          selected: chips.filter((el) => el.classList.contains('widget-selected')).length,
+        };
+      });
+      check(`[§11 gate: shop tabs @ ${vp.name}] 5 chips, all clickable, one selected`,
+        tabGates.count === 5 && tabGates.clickable === 5 && tabGates.selected === 1,
+        JSON.stringify(tabGates));
+    }
+
     // ── Viewport matrix (§11). Presentation persists across resizes; the
     // game's own resize handlers re-fit the canvas. ──
     const results = [];

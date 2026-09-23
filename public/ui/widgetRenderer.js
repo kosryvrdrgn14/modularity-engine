@@ -55,6 +55,13 @@
 //     the emitted event/payload too — a weapons card rebound as a companion
 //     must not keep firing the weapons payload. Rebind also refreshes
 //     layout/size classes (defs may vary per phase).
+//
+// v1.3 (v2.18.0 — shop tabs migration, screen 6):
+//   - `disabled` def flag: DATA-BOUND boolean (`disabled: { bind }`) toggling
+//     .widget-disabled — and a disabled card does NOT emit onClick. State read
+//     at click time (_instanceDisabled), so pooled rebinds update it too
+//     (e.g. an item becomes affordable after a purchase). Base CSS gives the
+//     semantic look (opacity/no-pointer); screens may theme further.
 // ============================================================
 
 class WidgetRenderer {
@@ -78,6 +85,9 @@ class WidgetRenderer {
     // click time (with the current data), so a warm pool rebound with a
     // different def emits the NEW event/payload, never the creation one.
     this._instanceDef = new Map();
+    // v1.3: CURRENT disabled state per interactive node — click handler
+    // suppresses emission when true (pooled rebinds update it).
+    this._instanceDisabled = new Map();
     // Class-level registry of ALL renderer instances (v2.14.0): audits and
     // inspectors enumerate every screen's widgets without knowing who owns
     // which renderer — screens are free to construct their own.
@@ -168,6 +178,11 @@ class WidgetRenderer {
       const sel = this._resolve(def.selected.bind, data);
       if (sel) el.classList.add('widget-selected');
     }
+    // v1.3 — disabled resolves from DATA at render (rebind re-resolves below)
+    if (def.disabled) {
+      const dis = this._resolve(def.disabled.bind, data);
+      if (dis) el.classList.add('widget-disabled');
+    }
 
     // Skin layer (§4): purely visual — classes + CSS custom props only.
     this._applySkin(el, def.skinId);
@@ -184,6 +199,9 @@ class WidgetRenderer {
     if (def.onClick) {
       el.classList.add('interactive');
       el.addEventListener('click', () => {
+        // v1.3: disabled cards emit nothing (state is click-time, so a pool
+        // node disabled by the latest rebind cannot fire a stale purchase).
+        if (this._instanceDisabled.get(el)) return;
         // v1.1.1/v1.2: resolve against the CURRENT def + data (repeatInto
         // rebinds may have replaced either since this node was created).
         const d = this._instanceDef.get(el) || def;
@@ -196,6 +214,7 @@ class WidgetRenderer {
       });
       this._instanceData.set(el, data);
       this._instanceDef.set(el, def);
+      this._instanceDisabled.set(el, !!(def.disabled && this._resolve(def.disabled.bind, data)));
       // §7 groundwork: register the live interactive instance.
       this._instances.add({ el, def, data });
       el.addEventListener('widget-detach', () => this._forget(el), { once: true });
@@ -219,6 +238,11 @@ class WidgetRenderer {
     this.validate(def);
     if (!container._widgetPool) container._widgetPool = [];
     const pool = container._widgetPool;
+    // v1.3 pool hygiene: an externally-wiped CONNECTED host (innerHTML='')
+    // leaves the pool referencing DETACHED nodes — rebinding those renders
+    // nothing. Wipe only then: a fully DETACHED host (staging fragments,
+    // isolated tests) legitimately pools disconnected nodes — leave it be.
+    if (pool.length && container.isConnected && !pool.some((el) => el.isConnected)) pool.length = 0;
     while (pool.length < items.length) {
       const el = this.render(def, {});
       container.appendChild(el);
@@ -229,6 +253,7 @@ class WidgetRenderer {
         this._rebind(el, def, items[i]);
         this._instanceData.set(el, items[i]); // v1.1.1: payloads rebind too
         this._instanceDef.set(el, def);        // v1.2: interaction def rebinds too
+        this._instanceDisabled.set(el, !!(def.disabled && this._resolve(def.disabled.bind, items[i]))); // v1.3
         el.style.display = '';
       } else {
         el.style.display = 'none';
@@ -333,11 +358,22 @@ class WidgetRenderer {
     el.classList.remove(...WidgetRenderer.LAYOUTS.map((l) => 'layout-' + l));
     el.classList.remove(...WidgetRenderer.SIZES.map((s) => 'size-' + s));
     el.classList.add('layout-' + (def.layout || 'icon-left'), 'size-' + (def.size || 'medium'));
-    // v1.2: selection is data — class re-resolves from the new binding.
-    if (def.selected) {
-      const sel = this._resolve(def.selected.bind, data);
-      el.classList.toggle('widget-selected', !!sel);
+    // v1.3: the SKIN layer re-syncs on rebind too — one pool may swap between
+    // skinned and unskinned defs (shop: bazaar_cloth inventory ↔ plain items).
+    const curSkin = [...el.classList].find((c) => c.startsWith('skin-'));
+    if ((def.skinId || '') !== (curSkin ? curSkin.slice(5) : '')) {
+      if (curSkin) el.classList.remove(curSkin);
+      el.style.removeProperty('--widget-skin-bg');
+      el.style.removeProperty('--widget-accent');
+      this._applySkin(el, def.skinId);
     }
+    // v1.2/v1.3 flag classes ALWAYS re-resolve — an absent flag means OFF.
+    // (A conditional toggle would leave a stale widget-disabled on a pool node
+    // swapped to a plain def: pointer-events:none dead-clicks the card AND
+    // makes elementFromPoint report it buried — both found by the §7 audit.)
+    el.classList.toggle('widget-selected', !!(def.selected && this._resolve(def.selected.bind, data)));
+    el.classList.toggle('widget-disabled', !!(def.disabled && this._resolve(def.disabled.bind, data)));
+    el.classList.toggle('widget-muted', !!def.muted);
     // Context accent must re-resolve too (severity can change per item).
     if (def.accent) {
       const v = this._resolve(def.accent.bind, data);
@@ -369,6 +405,7 @@ class WidgetRenderer {
   _forget(el) {
     this._instanceData.delete(el); // v1.1.1
     this._instanceDef.delete(el);  // v1.2
+    this._instanceDisabled.delete(el); // v1.3
     for (const inst of this._instances) {
       if (inst.el === el) this._instances.delete(inst);
     }

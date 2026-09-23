@@ -1933,6 +1933,7 @@
   --widget-accent-error: #FF6B6B;
 }
 .widget-card.widget-muted { opacity: 0.55; }
+.widget-card.widget-disabled { opacity: 0.4; pointer-events: none; }
 /* Screen-scoped theming of slots is allowed (structure from the system, theme from the screen). */
 #gamelog-list .widget-card { background: transparent; box-shadow: none; border: none; padding: 2px 0; min-height: 0; gap: 6px; }
 #gamelog-list .slot-primaryText { font-size: 0.75rem; line-height: 1.45; }
@@ -2046,3 +2047,45 @@
 }
 #loadout-overlay #loadout-slots .widget-card.widget-selected .slot-primaryText { color: #4CAF50; }
 #loadout-overlay #loadout-slots .widget-card .slot-secondaryText { color: #666; font-size: 9px; margin-top: 3px; }
+/* ── §10 screen-6 (v2.18.0): shop tabs + stocked items as widget cards ── */
+/* Structure from the widget system; this screen's theme is scoped here.
+   Mirrors the retired .shop-tab / .shop-item look exactly. */
+#shop-tabs .widget-card {
+  flex: 1;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #999;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 4px;
+  min-height: 0;
+}
+#shop-tabs .widget-card.widget-selected {
+  color: #FFD700;
+  border-bottom-color: #FFD700;
+}
+#shop-tabs .widget-card.interactive:hover { color: #ccc; background: transparent; }
+/* Stocked item cards: the retired .shop-item look (hover gold; cost badge). */
+#shop-items .widget-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+#shop-items .widget-card.interactive:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 215, 0, 0.35);
+}
+#shop-items .widget-card.widget-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+#shop-items .widget-card .slot-badge {
+  color: #FFD700;
+  background: rgba(255, 215, 0, 0.08);
+  border-color: rgba(255, 215, 0, 0.25);
+  white-space: nowrap;
+}

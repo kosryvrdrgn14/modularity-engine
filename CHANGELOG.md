@@ -2,6 +2,54 @@
 
 ---
 
+## v2.18.0 — Screen 6: shop tabs + stocked items → pooled widget chips/cards (the pilot comes home)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (battery green incl. strict across 10 suites; audit 34/34; step6 suite 10/10)
+
+### Migration (spec §10 screen 6)
+- **Tab chips are ONE pooled repeat** (`TAB_CHIP_DEF`) — the active tab is DATA via v1.2
+  `selected.bind`; adding a shop tab is now an array entry. Selection rebinds on open/close/tab
+  click (the old close() active-class reset removed).
+- **Stocked item tabs are ONE pooled card def** (`SHOP_ITEM_DEF`) — icon/name/desc/cost with
+  **cant-afford as DATA** (v1.3 `disabled.bind`): the renderer suppresses clicks on disabled
+  cards, and buy()'s re-render refreshes affordability in place.
+- **The Inventory pilot now shares the item pool**: the same host alternates SHOP_ITEM_DEF
+  (combat/etc.) and the pilot's cardDef (bazaar_cloth skinned) — pinned by skin-present/absent
+  assertions across tab switches.
+- **Farming/sandbox modes stay bespoke code** (documented): slider/form UI is not card material
+  (graduation rule §3.2). Their renderers still wipe `#shop-items` — now safe against pooled
+  hosts via v1.3 hygiene (below). NOTE for future edits: townContent.js carries DUPLICATE
+  farming/sandbox renderers (PROJECT_MAP §5.7).
+
+### WidgetRenderer v1.3
+- **`disabled: { bind }`** — disabled state becomes card DATA; disabled cards emit nothing
+  (click-time `_instanceDisabled`, pooled rebinds update it). Base CSS gives the semantic look
+  (opacity 0.4, pointer-events none).
+- **Pool hygiene**: a CONNECTED host whose pooled nodes are all disconnected (externally wiped
+  by innerHTML) resets its pool instead of silently rebinding detached nodes. Detached hosts
+  (staging fragments, isolated tests) legitimately pool disconnected nodes and are left alone —
+  the too-eager first version broke the step3 contract assertions and was caught by the battery.
+- **Rebind re-syncs the skin layer** — one pool can swap skinned ↔ unskinned defs (the shop case).
+- **Flag classes ALWAYS re-resolve on rebind; an absent flag means OFF** — the audit caught a
+  stale `widget-disabled` on pool nodes swapped to a plain def (dead clicks + false burial
+  reports). Contract now: selected/disabled/muted all unconditional toggles from current def+data.
+
+### Latent pilot bug found and killed
+- `_renderInventory` wiped the pooled host before repeatInto — the first tab round-trip
+  (Combat→Inventory→Combat→Inventory) rebound DETACHED nodes and rendered NOTHING. Live probe
+  reproduced it pre-fix; step6 pins the round-trip renders cards EVERY time.
+
+### Incidents (recorded per house rules)
+- One deliberately-skipped edit: I caught myself writing an oldString from memory against
+  game2.html — composed the check so the recall-based anchor failed safe (verified file read
+  first, then re-anchored). Rule holds: READ the region, never reconstruct it.
+- The v1.3 hygiene guard's first version was too aggressive (pooled nodes in detached hosts are
+  legitimate) — the battery caught it within one run; fixed to gate on host connectivity.
+- str_replace on styles.css cannot see scripted-append content (sync divergence, same as v2.14);
+  the file's established scripted-modify pattern was used after two failed tool attempts.
+
+---
+
 ## v2.17.0 — Screen 5: loadout → persistent chrome + pooled grids (the §5.1 pooling promise, done properly)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (battery green incl. strict across 9 suites; audit 31/31; preview green with v1.2 regressions)
