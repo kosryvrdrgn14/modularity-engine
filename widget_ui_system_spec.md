@@ -261,7 +261,7 @@ around it. This spec is a strong starting point, not a permanent commitment.
   tool (§6.3) renders every token a skin uses, which is where the eyeball check happens;
   automation deferred until tokens are enumerable in one place.
 
-**Migration order (small → large, one screen at a time per §8):**
+**Migration order (small → large, one screen at a time per §8, §11 folded into each):**
 
 | # | Screen | Why here |
 |---|--------|----------|
@@ -281,6 +281,31 @@ with `npm run widget:preview` → swap the hand-rolled render code for WidgetRen
 **unchanged events and DOM ids** → update the screen's PROJECT_MAP block (the event index must
 not drift silently) → add the screen to the suites driving real state + run the occlusion audit →
 `npm run verify` + full battery + one manual visual pass (M-list).
+
+---
+
+## 11. Device & Input Parity (locked 2026-09-23, v2.12.1)
+
+**Decisions (owner):** target = don't-break parity; orientation = both, no primary;
+sequencing = spec now, fold into §10 migrations. Never two UIs.
+
+- **Parity rule.** Desktop (1280×800) is the regression baseline: any change that breaks it is
+  red regardless of mobile gains. Mobile/landscape audit results are REPORTED from day one but
+  only become GATES when a screen's migration makes them pass (report-only ≠ ignore — the
+  per-viewport artifact shows drift). No screen may be migrated twice: responsive behavior and
+  input targets ship WITH each §10 migration.
+- **One UI, two input modes.** A capability class on the root (`data-input="coarse|fine"`, from
+  the `pointer` media query, set once at boot) selects input-oriented styling only — never a
+  second screen tree. Interactive widgets get ≥44px hit targets under `coarse`; hover may never
+  be the sole information channel (extends §4.4).
+- **Orientation: both, no primary.** The audit matrix is symmetric (390×844 portrait AND
+  844×390 landscape). No fixed viewport-height layouts; widget size tokens + layout presets are
+  the density mechanism — a compact skin variant is data, not a CSS fork.
+- **Fold-in mapping (per-migration DoD additions):** (1) size/preset tokens chosen so the screen
+  reflows at 390px without horizontal scroll; (2) coarse-pointer hit targets on all interactive
+  elements; (3) viewport matrix green — desktop gating, and THIS screen's mobile+landscape
+  promoted to gating at migration time. Bespoke screens that stay code get shared media queries
+  only — enough to remain usable, no bespoke mobile layouts.
 
 ---
 

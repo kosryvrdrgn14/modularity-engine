@@ -2,6 +2,30 @@
 
 ---
 
+## v2.12.1 — §11 Device & Input Parity: viewport matrix in the occlusion audit
+**Date:** September 23, 2026
+**Status:** ✅ Complete (audit 8/8; full battery green)
+
+### Locked decisions (owner)
+- **Target: don't-break parity.** Desktop (1280×800) stays the regression baseline — always
+  gating. Mobile/landscape results REPORT from day one, become GATES only per screen at that
+  screen's migration (report-only ≠ ignore — the artifact shows drift).
+- **Orientation: both, no primary.** Matrix is symmetric (390×844 AND 844×390).
+- **Sequencing: spec now, fold into migrations.** §11 added to the widget spec; per-migration
+  definition of done extended (reflow at 390px, ≥44px coarse hit targets, this screen's
+  mobile+landscape promoted to gates at migration time). One UI, two input modes
+  (`data-input="coarse|fine"`); never a second screen tree.
+
+### Built
+- **`tests/suites/widget_occlusion.cjs`** upgraded to the 3-viewport matrix: desktop gates,
+  mobile rows report-only with USABLE/HAS-ISSUES verdicts, per-viewport artifact
+  (`widget_occlusion.json` now carries all three scans). Negative control retained at the
+  gating viewport. Battery count: 8 checks.
+- First matrix result on record: the pilot inventory screen is already USABLE at both mobile
+  viewports — the widget token system reflows without bespoke mobile CSS.
+
+---
+
 ## v2.12.0 — Widget tooling: live-preview + occlusion detection (§10 tool-first phase)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (preview green 15/15; occlusion 6/6; full battery green incl. strict)

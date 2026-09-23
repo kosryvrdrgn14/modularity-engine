@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // ============================================================
 // widget_occlusion.cjs — Occlusion Detection (widget_ui_system_spec.md §7)
+// with the §11 Device & Input Parity viewport matrix.
 //   npm run widget:audit   (also registered in tests/run_all.cjs)
 //
 // Asks the BROWSER whether every rendered interactive widget instance is
@@ -8,6 +9,12 @@
 // bug class hit twice in this project (titleMenu never hidden; shop overlay
 // HTML silently deleted during a split). Consumes the renderer's _instances
 // registry — the §7 groundwork that every interactive render registers.
+//
+// Viewport matrix (§11: parity target, both orientations, no primary):
+//   desktop 1280×800       — GATING. Breaking it is red, always.
+//   mobile-portrait 390×844  — REPORT-ONLY until a screen's migration makes
+//   mobile-landscape 844×390  it pass (then promoted to a gate, per screen).
+//   Report-only ≠ ignore: per-viewport artifacts make drift visible.
 //
 // Includes a NEGATIVE CONTROL: after the live audit, an overlay is injected
 // over the cards and the audit is re-run — it MUST now report occlusion.
@@ -20,7 +27,13 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const r = { n: 0, bad: 0, skips: 0 };
+const VIEWPORTS = [
+  { name: 'desktop', width: 1280, height: 800, gate: true },
+  { name: 'mobile-portrait', width: 390, height: 844, gate: false },
+  { name: 'mobile-landscape', width: 844, height: 390, gate: false },
+];
+
+const r = { n: 0, bad: 0 };
 const check = (name, pass, extra) => {
   r.n++;
   if (pass) console.log(`  ✓ ${name}`);
@@ -35,7 +48,9 @@ const check = (name, pass, extra) => {
 
   try {
     // Seed the pilot screen (fresh save = empty inventory → the audit would be
-    // vacuously green with 0 instances). Same recipe as step3_widget_inventory.
+    // vacuously green with 0 instances). Real presentation path: rendering
+    // with the overlay closed yields 0×0 rects — a "screen not open" state,
+    // not occlusion (§7 targets burial, not presentation).
     const seed = await page.evaluate(() => {
       const gm = window.game.gameManager;
       gm._addToInventory({ id: 'health_potion', count: 2 });
@@ -54,7 +69,8 @@ const check = (name, pass, extra) => {
       typeof seed === 'object' && seed.instances > 0,
       typeof seed === 'string' ? seed : JSON.stringify(seed));
 
-    // §7.2 mechanism — the scan, as a reusable page function (used twice).
+    // §7.2 mechanism — reusable scan. "offscreen/zero-size" (presentation) is
+    // reported separately from "occluded" (buried under another element).
     const scanFn = () => {
       const R = window.game.townScreen.shopSystem.widgetRenderer;
       const out = { checked: 0, occluded: [], offscreen: [] };
@@ -80,16 +96,37 @@ const check = (name, pass, extra) => {
       return out;
     };
 
-    const live = await page.evaluate(scanFn);
-    check('live audit ran non-vacuously (checked > 0)', live.checked > 0, JSON.stringify(live));
-    check('every interactive instance clickable at its visual position',
-      live.occluded.length === 0,
-      `occluded: ${live.occluded.join(' ; ')}`);
-    check('no interactive instance offscreen/zero-size',
-      live.offscreen.length === 0,
-      `offscreen: ${live.offscreen.join(' ; ')}`);
+    // ── Viewport matrix (§11). Presentation persists across resizes; the
+    // game's own resize handlers re-fit the canvas. ──
+    const results = [];
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(150); // let resize handlers settle
+      const scan = await page.evaluate(scanFn);
+      results.push({ name: vp.name, width: vp.width, height: vp.height, gate: vp.gate, ...scan });
+    }
 
-    // Negative control: an overlay that buries the cards MUST be detected.
+    for (const res of results) {
+      if (res.gate) {
+        check(`[desktop gate] scan ran non-vacuously`, res.checked > 0, JSON.stringify(res));
+        check(`[desktop gate] every interactive instance clickable at its position`,
+          res.occluded.length === 0, `occluded: ${res.occluded.join(' ; ')}`);
+        check(`[desktop gate] no interactive instance offscreen/zero-size`,
+          res.offscreen.length === 0, `offscreen: ${res.offscreen.join(' ; ')}`);
+      } else {
+        // §11 report-only: becomes a gate per screen at migration time.
+        check(`[${res.name}] scan ran non-vacuously (report-only viewport)`, res.checked > 0);
+        const usable = res.occluded.length === 0 && res.offscreen.length === 0;
+        console.log(`  ◦ [${res.name}] REPORT-ONLY: checked=${res.checked}, occluded=${res.occluded.length}, offscreen=${res.offscreen.length} → ${usable ? 'USABLE' : 'HAS ISSUES (promote to gate at this screen\'s migration)'}`);
+        if (res.occluded.length) console.log(`      occluded: ${res.occluded.join(' ; ')}`);
+        if (res.offscreen.length) console.log(`      offscreen: ${res.offscreen.join(' ; ')}`);
+      }
+    }
+
+    // Negative control (back at the gating viewport): a burying overlay MUST
+    // be detected — an audit that cannot fail proves nothing.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForTimeout(100);
     await page.evaluate(() => {
       const d = document.createElement('div');
       d.id = '__audit_cover__';
@@ -98,23 +135,26 @@ const check = (name, pass, extra) => {
     });
     const covered = await page.evaluate(scanFn);
     await page.evaluate(() => { const d = document.getElementById('__audit_cover__'); if (d) d.remove(); });
+    const desktop = results.find((x) => x.name === 'desktop');
     check('negative control: audit detects a burying overlay (can fail)',
-      covered.occluded.length >= live.checked && covered.checked === live.checked,
+      covered.occluded.length >= desktop.checked && covered.checked === desktop.checked,
       `covered scan: ${JSON.stringify({ checked: covered.checked, occluded: covered.occluded.length })}`);
 
-    check('no page errors during audit', errors.length === 0, errors.slice(0, 3).join(' | '));
+    check('no page errors across all viewports', errors.length === 0, errors.slice(0, 3).join(' | '));
 
     fs.writeFileSync(path.join(artifacts, 'widget_occlusion.json'),
-      JSON.stringify({ when: new Date().toISOString(), live, coveredControl: { checked: covered.checked, occluded: covered.occluded.length }, ok: r.bad === 0 }, null, 2));
+      JSON.stringify({ when: new Date().toISOString(), viewports: results, negativeControl: { checked: covered.checked, occluded: covered.occluded.length }, ok: r.bad === 0 }, null, 2));
   } finally {
     await browser.close();
   }
-  console.log(r.bad === 0 && r.n > 0 ? `WIDGET OCCLUSION GREEN (${r.n}/${r.n})` : `WIDGET OCCLUSION RED — ${r.bad}/${r.n} failed`);
+  console.log(r.bad === 0 && r.n > 0
+    ? `WIDGET OCCLUSION GREEN (${r.n}/${r.n}) — matrix artifact written (mobile rows are report-only per §11)`
+    : `WIDGET OCCLUSION RED — ${r.bad}/${r.n} failed`);
   process.exit(r.bad === 0 ? 0 : 1);
 })().catch((e) => {
   const msg = String(e && e.message || e);
   // Loud skip = detection point not yet live (pre-implementation convention).
-  if (/no shopSystem|widgetRenderer/.test(msg)) {
+  if (/no shopSystem|widgetRenderer|townScreen/.test(msg)) {
     console.log(`  SKIP widget_occlusion: ${msg}`);
     process.exit(0);
   }
