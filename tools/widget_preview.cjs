@@ -127,6 +127,15 @@ const pageHtml = `<!DOCTYPE html>
   const accentRow = ${JSON.stringify(ACCENT_SEVERITIES)}.map((sev) =>
     R.render(accentDef, { item: { sev, name: 'severity: ' + sev, ts: '[Day 12 · 03:41]' } }));
   section('context accents (§2.6 v1.1 — bogus token falls back to default)', accentRow);
+  // 6) v1.1.1 click-time data (v2.16.0): a POOLED card rebound AFTER creation
+  // must emit the REBOUND payload — the dialogue-overlay migration depends on it.
+  const poolHost = document.createElement('div'); poolHost.id = 'preview-pool'; root.appendChild(poolHost);
+  const poolDef = { template: 'card', _v: 1, layout: 'text-only-row', size: 'small',
+    slots: { primaryText: { bind: 'label' } },
+    onClick: { emit: 'previewPoolClick', payload: { topicId: '{{topicId}}' } } };
+  R.repeatInto(poolHost, poolDef, [{ topicId: 'a', label: 'Choice A' }, { topicId: 'b', label: 'Choice B' }]);
+  R.repeatInto(poolHost, poolDef, [{ topicId: 'a2', label: 'Choice A' }, { topicId: 'b2', label: 'Choice B' }]);
+  document.addEventListener('previewPoolClick', (e) => console.log('[preview-pool]', JSON.stringify(e.detail)));
 <\/script></body></html>`;
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -145,14 +154,14 @@ fs.writeFileSync(pagePath, pageHtml);
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
-    if (msg.text().startsWith('[preview-click]')) clickEvents.push(msg.text());
+    if (msg.text().startsWith('[preview-click]') || msg.text().startsWith('[preview-pool]')) clickEvents.push(msg.text());
   });
   await page.goto('file://' + pagePath);
   await page.waitForFunction(() => window.WidgetRenderer && document.querySelectorAll('.widget-card').length > 0, null, { timeout: 10000 });
 
   const counts = await page.evaluate(() => ({ cards: document.querySelectorAll('.widget-card').length }));
-  const expected = layouts.length * sizes.length + skinIds.length + 2 + ACCENT_SEVERITIES.length;
-  if (counts.cards === expected) ok(`${counts.cards}/${expected} preview cards rendered (layouts×sizes + ${skinIds.length} skins + 2 edges)`);
+  const expected = layouts.length * sizes.length + skinIds.length + 4 + ACCENT_SEVERITIES.length;
+  if (counts.cards === expected) ok(`${counts.cards}/${expected} preview cards rendered (layouts×sizes + ${skinIds.length} skins + 4 edges)`);
   else fail(`expected ${expected} preview cards, got ${counts.cards}`);
 
   if (errors.length === 0) ok('no page errors — missing-data edge rendered empty without throwing');
@@ -163,6 +172,13 @@ fs.writeFileSync(pagePath, pageHtml);
   const clickOk = clickEvents.some((t) => t.includes('"itemId":"axe_01"'));
   if (clickOk) ok("interactive edge: click emitted the DECLARED event with resolved payload ('axe_01')");
   else fail(`interactive edge: declared event not observed (got: ${clickEvents.join(' ; ') || 'nothing'})`);
+
+  // v1.1.1 regression: pooled card rebound after creation emits the REBOUND payload
+  await page.click('#preview-pool .widget-card:first-child');
+  await page.waitForTimeout(150);
+  const poolOk = clickEvents.some((t) => t.includes('"topicId":"a2"'));
+  if (poolOk) ok('v1.1.1: pooled card emitted the REBOUND payload (click-time data holds)');
+  else fail(`v1.1.1: pooled card emitted a stale payload (got: ${clickEvents.join(' ; ') || 'nothing'})`);
 
   const shot = path.join(outDir, 'matrix.png');
   await page.screenshot({ path: shot, fullPage: true });

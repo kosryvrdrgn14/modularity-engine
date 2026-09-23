@@ -36,6 +36,13 @@
 //     never per-screen CSS. Re-resolved on pooled rebind.
 //   - `muted` def flag: bounded variation → .widget-muted class (dimmed
 //     history rendering). Structure/class only, like layout presets.
+//
+// v1.1.1 (v2.16.0 — dialogue overlay migration, screen 4):
+//   - Click-time data: interactive nodes read their CURRENT binding data at
+//     click time (this._instanceData), so repeatInto rebinding updates
+//     onClick payloads too. Previously a pooled card kept its creation-time
+//     data (empty for pool-created nodes) — harmless while consumers
+//     recreated their grids, wrong once a true pool rebinds payloads.
 // ============================================================
 
 class WidgetRenderer {
@@ -50,6 +57,11 @@ class WidgetRenderer {
     // Registry of the defs behind the currently-live instances (§6.4 inspector
     // groundwork + §7 occlusion audit: every interactive instance is here).
     this._instances = new Set();
+    // v1.1.1 (v2.16.0): CURRENT binding data per interactive node. The click
+    // handler reads THIS at click time, so pooled rebinding (repeatInto →
+    // _rebind) also updates the payload — a pooled card is a fresh card.
+    // Keyed by element; cleaned up in _forget.
+    this._instanceData = new Map();
     // Class-level registry of ALL renderer instances (v2.14.0): audits and
     // inspectors enumerate every screen's widgets without knowing who owns
     // which renderer — screens are free to construct their own.
@@ -151,12 +163,16 @@ class WidgetRenderer {
     if (def.onClick) {
       el.classList.add('interactive');
       el.addEventListener('click', () => {
+        // v1.1.1: resolve against the CURRENT binding data (repeatInto
+        // rebinds may have replaced `data` since this node was created).
+        const current = this._instanceData.get(el) || data;
         const payload = {};
         for (const [k, tpl] of Object.entries(def.onClick.payload || {})) {
-          payload[k] = typeof tpl === 'string' ? this._resolveTemplate(tpl, data) : tpl;
+          payload[k] = typeof tpl === 'string' ? this._resolveTemplate(tpl, current) : tpl;
         }
         el.dispatchEvent(new CustomEvent(def.onClick.emit, { detail: payload, bubbles: true }));
       });
+      this._instanceData.set(el, data);
       // §7 groundwork: register the live interactive instance.
       this._instances.add({ el, def, data });
       el.addEventListener('widget-detach', () => this._forget(el), { once: true });
@@ -188,6 +204,7 @@ class WidgetRenderer {
     pool.forEach((el, i) => {
       if (i < items.length) {
         this._rebind(el, def, items[i]);
+        this._instanceData.set(el, items[i]); // v1.1.1: payloads rebind too
         el.style.display = '';
       } else {
         el.style.display = 'none';
@@ -316,6 +333,7 @@ class WidgetRenderer {
   }
 
   _forget(el) {
+    this._instanceData.delete(el); // v1.1.1
     for (const inst of this._instances) {
       if (inst.el === el) this._instances.delete(inst);
     }

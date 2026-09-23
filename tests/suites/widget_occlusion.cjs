@@ -216,6 +216,33 @@ const check = (name, pass, extra) => {
       check(`[§11 gate: town chips @ ${vp.name}] clickable, unburied`,
         chipScan.occluded.length === 0, JSON.stringify(chipScan));
     }
+    // ── Dialogue choices (v2.16.0, screen 4): §11 gates at all three viewports.
+    // Presented through the REAL flow (townContent.openDialogue on a live NPC);
+    // choices render after the typewriter finishes, so scans wait for cards. ──
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const dlgSeed = await page.evaluate(() => {
+      document.getElementById('shop-overlay')?.classList.remove('active');
+      window.game.titleMenu.hide();
+      window.game.townScreen.show();
+      const npcs = (typeof NPC_DATA !== 'undefined' && NPC_DATA) || {};
+      const npc = npcs['blacksmith'] || Object.values(npcs)[0];
+      if (!npc) return 'no NPC_DATA to open dialogue with';
+      window.game.townScreen.content.openDialogue(npc);
+      return { npc: npc.id };
+    });
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(1400); // typewriter completes, then choices render
+      const dscan = await page.evaluate(scanFn);
+      check(`[§11 gate: dialogue choices @ ${vp.name}] presented and clickable`,
+        dscan.occluded.length === 0 && dscan.checked >= 1,
+        JSON.stringify({ ...dscan, seed: typeof dlgSeed === 'string' ? dlgSeed : dlgSeed.npc }));
+    }
+    await page.evaluate(() => {
+      document.getElementById('dialogue-overlay')?.classList.remove('active');
+      window.game.townScreen.content.dom.dialogueChoices.style.display = 'none';
+    });
+
     // Leave town-base presentation active — it is the negative control's baseline.
 
     // Negative control (back at the gating viewport): a burying overlay MUST

@@ -4,6 +4,34 @@
 // ============================================================
 
 class TownContent {
+  // v2.16.0 (screen 4): ONE text-only-row def drives every dialogue choice and
+  // the export entry (pooled repeat; §10 of widget_ui_system_spec.md). The
+  // card's declared event routes to _handleTopicChoice via the instance-level
+  // bridge installed in showChoices — data selects the action, code implements
+  // it. CustomEvent payloads are strings only, so the event carries the topic
+  // ID and _topicFor resolves it back to the live topic object.
+  static DIALOGUE_CHOICE_DEF = {
+    template: 'card',
+    layout: 'text-only-row',
+    size: 'medium',
+    slots: { primaryText: { bind: 'topicText' } },
+    onClick: { emit: 'widget:dialogueChoice', payload: { topicId: '{{topicId}}' } },
+  };
+
+  // v2.16.0: dog-variant choices (§10 screen 4). Same vocabulary, warm theme
+  // via #dog-dialogue scoped CSS; behavior lives in _handleDogChoice.
+  static DOG_CHOICE_DEF = {
+    template: 'card',
+    layout: 'text-only-row',
+    size: 'medium',
+    slots: { primaryText: { bind: 'label' } },
+    onClick: { emit: 'widget:dogChoice', payload: { action: '{{action}}' } },
+  };
+  static DOG_CHOICES = [
+    { action: 'pet', label: '🐕 Pet the dog' },
+    { action: 'ignore', label: 'Walk away' },
+  ];
+
   constructor({ audioManager, gameManager, eventBus, companionSystem, estateSystem, affectionSystem, farmingSystem, disasterSystem, sandboxSystem, locationManager, shopSystem, getPendingDisaster, clearPendingDisaster, onExitToTitle }) {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
@@ -534,6 +562,7 @@ class TownContent {
   openDialogue(npc) {
     if (!npc || (!npc.topics && !npc.dialogueSets)) return;
     this._lastDialogueNpcId = npc.id;
+    this._activeNpc = npc; // v2.16.0: widget-card choice events route through _handleTopicChoice(this._activeNpc, topic)
 
     // §24 Step 2: data-driven dialogue selection (spec:
     // npc_condition_system_spec.md §3.4). When npcSystem is live, the winning
@@ -580,7 +609,8 @@ class TownContent {
 
   showChoices(npc) {
     if (!this.dom.dialogueChoices) return;
-    this.dom.dialogueChoices.innerHTML = '';
+    // v2.16.0: this container is a dedicated widget pool (repeatInto hides
+    // surplus cards) — no innerHTML clearing here, that would detach pooled nodes.
     this.dom.dialogueChoices.style.display = 'flex';
 
     // §24 Step 2: topics come from the conversation selected in openDialogue
@@ -591,99 +621,148 @@ class TownContent {
     // npcExportUI, never by the topic machinery below.
     const exportUi = (typeof window !== 'undefined' && window.game?.npcExportUI) || null;
     const exportTopic = exportUi ? exportUi.exportTopicFor(npc.id) : null;
-    for (const topic of topics) {
-      const btn = document.createElement('button');
-      btn.className = 'dialogue-choice';
-      btn.textContent = topic.text;
-      btn.addEventListener('click', () => {
-        this.audioManager.playMenuSound('select');
-        // §24 Step 2: THE single choice-logging point (spec §3.5). One emit,
-        // one central listener — no per-topic log writes anywhere.
-        if (this.eventBus) {
-          this.eventBus.emit('npc:dialogueChoice', {
-            npcId: npc.id,
-            conversationId: this._activeConversationId || null,
-            choiceId: topic.id || topic.text || null,
-          });
-        }
-        if (topic.close) {
-          this.dom.dialogueOverlay.classList.remove('active');
-          // Trigger dog dialogue after Lina's conversation
-          if (this._lastDialogueNpcId === 'cute_girl' && !this.gameManager.has_companion('dog')) {
-            setTimeout(() => this.showDogDialogue(), 300);
-          }
-          return;
-        }
-        // Set flag if defined (flagSet logged — curation: dialogue-authored
-        // flags only, spec §2.3)
-        if (topic.flag) {
-          this.gameManager.set_flag(topic.flag, true);
-          if (this.eventBus) {
-            this.eventBus.emit('npc:dialogueFlag', {
-              npcId: npc.id,
-              flagId: topic.flag,
-              conversationId: this._activeConversationId || null,
-            });
-          }
-        }
-        // Add affection (giftGiven logged once per choice — dedupe lives in
-        // the central listener, spec §2.3 curation)
-        if (topic.affection > 0 && this.affectionSystem) {
-          this.affectionSystem.addAffection(npc.id, topic.affection);
-          if (this.eventBus) {
-            this.eventBus.emit('npc:dialogueAffection', {
-              npcId: npc.id,
-              affection: topic.affection,
-              choiceId: topic.id || null,
-              conversationId: this._activeConversationId || null,
-            });
-          }
-        } else if (topic.affection > 0) {
-          const key = `affection_${npc.id}`;
-          this.gameManager.add_counter(key, topic.affection);
-          if (this.eventBus) {
-            this.eventBus.emit('npc:dialogueAffection', {
-              npcId: npc.id,
-              affection: topic.affection,
-              choiceId: topic.id || null,
-              conversationId: this._activeConversationId || null,
-            });
-          }
-        }
-        // Show response
-        this.dom.dialogueChoices.style.display = 'none';
-        if (topic.response) {
-          this._engine.typewriteText(topic.response, () => {
-            this.dom.dialogueContinue.style.display = 'block';
-            this.dom.dialogueContinue.onclick = () => {
-              this.audioManager?.playMenuSound('select');
-              this.dom.dialogueContinue.style.display = 'none';
-              this.showChoices(npc);
-            };
-          });
-        } else {
-          this._engine.typewriteText('', () => {
-            this.dom.dialogueContinue.style.display = 'block';
-            this.dom.dialogueContinue.onclick = () => {
-              this.audioManager?.playMenuSound('select');
-              this.dom.dialogueContinue.style.display = 'none';
-              this.showChoices(npc);
-            };
-          });
-        }
+    // v2.16.0: choices are pooled widget cards (screen 4, widget_ui_system_spec
+    // §10). ONE text-only-row def; per-topic data carries the label, the
+    // declared event routes to _handleTopicChoice (behavior preserved verbatim
+    // from the old inline listener), and the export entry rides the same pool.
+    if (typeof WidgetRenderer === 'undefined') return; // defensive: widget system missing → no choice list rather than a broken overlay
+    if (!this._topicRenderer) {
+      this._topicRenderer = new WidgetRenderer({
+        skins: (typeof window !== 'undefined' && window.game?.dataManager?.uiSkins) || null,
       });
-      this.dom.dialogueChoices.appendChild(btn);
     }
-    if (exportTopic) {
-      const btn = document.createElement('button');
-      btn.className = 'dialogue-choice';
-      btn.textContent = exportTopic.text;
-      btn.addEventListener('click', () => {
-        this.audioManager.playMenuSound('select');
+    const items = topics.map(t => ({ topicId: t.id || t.text || '', topicText: t.text }));
+    if (exportTopic) items.push({ topicId: '__export__', topicText: exportTopic.text });
+    // Instance-level bridge (installed once per renderer): declared widget
+    // events → behavior. Replaces the old per-button addEventListener wiring.
+    if (!this._topicRenderer._dialogueBridgeInstalled) {
+      this._topicRenderer._dialogueBridgeInstalled = true;
+      this._topicRenderer._hostEl = (this.dom.dialogueChoices && this.dom.dialogueChoices.closest('#dialogue-overlay')) || null;
+      this._topicRenderer._hostEl?.addEventListener('widget:dialogueChoice', (e) => {
+        this.audioManager?.playMenuSound('select');
+        this._handleTopicChoice(e.detail?.topicId);
+      });
+    }
+    this._topicRenderer.repeatInto(this.dom.dialogueChoices, TownContent.DIALOGUE_CHOICE_DEF, items);
+    this._topicRenderer.lastItems = items; // click handlers need their topic object — see _topicFor
+  }
+
+  /** v2.16.0: choice behavior — VERBATIM from the pre-migration inline click
+   *  listener (flags, affection, logging, dog hook, response cycle). The
+   *  widget event carries the topic ID; this resolves it back to the live
+   *  topic object so re-renders can never desync the pool from the list. */
+  _topicFor(topicId) {
+    const items = (this._topicRenderer && this._topicRenderer.lastItems) || [];
+    const item = items.find(i => i.topicId === topicId);
+    if (!item) return null;
+    if (item.topicId === '__export__') return { __export__: true };
+    const topics = this._activeTopics || [];
+    return topics.find(t => (t.id || t.text || '') === item.topicId) || null;
+  }
+
+  /** Declared-event target for the pooled choice cards (widget_ui_system_spec
+   * §2.2: data selects actions by name, code implements them). */
+  _handleTopicChoice(topicId) {
+    const topic = this._topicFor(topicId);
+    if (!topic) return;
+    const npc = this._activeNpc;
+    if (!npc) return;
+    // (select sound is played by the instance-level bridge — one per click)
+    // §10 export entry: close the overlay and hand off to npcExportUI.
+    if (topic.__export__) {
+      const exportUi = (typeof window !== 'undefined' && window.game?.npcExportUI) || null;
+      if (exportUi) {
         this.dom.dialogueOverlay.classList.remove('active');
         exportUi.openPreview(npc.id);
+      }
+      return;
+    }
+    // §24 Step 2: THE single choice-logging point (spec §3.5). One emit,
+    // one central listener — no per-topic log writes anywhere.
+    if (this.eventBus) {
+      this.eventBus.emit('npc:dialogueChoice', {
+        npcId: npc.id,
+        conversationId: this._activeConversationId || null,
+        choiceId: topic.id || topic.text || null,
       });
-      this.dom.dialogueChoices.appendChild(btn);
+    }
+    if (topic.close) {
+      this.dom.dialogueOverlay.classList.remove('active');
+      // Trigger dog dialogue after Lina's conversation
+      if (this._lastDialogueNpcId === 'cute_girl' && !this.gameManager.has_companion('dog')) {
+        setTimeout(() => this.showDogDialogue(), 300);
+      }
+      return;
+    }
+    // Set flag if defined (flagSet logged — curation: dialogue-authored
+    // flags only, spec §2.3)
+    if (topic.flag) {
+      this.gameManager.set_flag(topic.flag, true);
+      if (this.eventBus) {
+        this.eventBus.emit('npc:dialogueFlag', {
+          npcId: npc.id,
+          flagId: topic.flag,
+          conversationId: this._activeConversationId || null,
+        });
+      }
+    }
+    // Add affection (giftGiven logged once per choice — dedupe lives in
+    // the central listener, spec §2.3 curation)
+    if (topic.affection > 0 && this.affectionSystem) {
+      this.affectionSystem.addAffection(npc.id, topic.affection);
+      if (this.eventBus) {
+        this.eventBus.emit('npc:dialogueAffection', {
+          npcId: npc.id,
+          affection: topic.affection,
+          choiceId: topic.id || null,
+          conversationId: this._activeConversationId || null,
+        });
+      }
+    } else if (topic.affection > 0) {
+      const key = `affection_${npc.id}`;
+      this.gameManager.add_counter(key, topic.affection);
+      if (this.eventBus) {
+        this.eventBus.emit('npc:dialogueAffection', {
+          npcId: npc.id,
+          affection: topic.affection,
+          choiceId: topic.id || null,
+          conversationId: this._activeConversationId || null,
+        });
+      }
+    }
+    // Show response
+    this.dom.dialogueChoices.style.display = 'none';
+    if (topic.response) {
+      this._engine.typewriteText(topic.response, () => {
+        this.dom.dialogueContinue.style.display = 'block';
+        this.dom.dialogueContinue.onclick = () => {
+          this.audioManager?.playMenuSound('select');
+          this.dom.dialogueContinue.style.display = 'none';
+          this.showChoices(npc);
+        };
+      });
+    } else {
+      this._engine.typewriteText('', () => {
+        this.dom.dialogueContinue.style.display = 'block';
+        this.dom.dialogueContinue.onclick = () => {
+          this.audioManager?.playMenuSound('select');
+          this.dom.dialogueContinue.style.display = 'none';
+          this.showChoices(npc);
+        };
+      });
+    }
+  }
+  /** v2.16.0: dog-variant behavior — verbatim from the pre-migration buttons. */
+  _handleDogChoice(action) {
+    if (action === 'pet') {
+      this.audioManager.playMenuSound('select');
+      this._dogDialogue.classList.remove('active');
+      this.gameManager.add_companion('dog');
+      this.showCompanionNotification('Dog', 'Has joined your party!');
+      this.renderCompanionSlots();
+    } else {
+      this.audioManager.playMenuSound('back');
+      this._dogDialogue.classList.remove('active');
     }
   }
 
@@ -701,34 +780,21 @@ class TownContent {
     if (this._dogChoices) this._dogChoices.style.display = 'none';
 
     const greetings = ['Woof! *tail wag*', '*sniff sniff* ...Woof!', 'Arf! *happy dance*'];
-    const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-
-    this._engine.typewriteText(greeting, () => {
+    const greeting = greetings[Math.floor(Math.random() * greetings.length)];    this._engine.typewriteText(greeting, () => {
       if (this._dogChoices) {
         this._dogChoices.style.display = 'flex';
-        this._dogChoices.innerHTML = '';
-
-        const petBtn = document.createElement('button');
-        petBtn.className = 'dog-choice';
-        petBtn.textContent = '🐕 Pet the dog';
-        petBtn.addEventListener('click', () => {
-          this.audioManager.playMenuSound('select');
-          this._dogDialogue.classList.remove('active');
-          gm.add_companion('dog');
-          this.showCompanionNotification('Dog', 'Has joined your party!');
-          this.renderCompanionSlots();
-        });
-
-        const ignoreBtn = document.createElement('button');
-        ignoreBtn.className = 'dog-choice ignore';
-        ignoreBtn.textContent = 'Walk away';
-        ignoreBtn.addEventListener('click', () => {
-          this.audioManager.playMenuSound('back');
-          this._dogDialogue.classList.remove('active');
-        });
-
-        this._dogChoices.appendChild(petBtn);
-        this._dogChoices.appendChild(ignoreBtn);
+        // v2.16.0: dog choices are pooled widget cards (same screen, warm
+        // variant — themed by scoped CSS, structure from the renderer).
+        if (typeof WidgetRenderer === 'undefined') return;
+        if (!this._dogRenderer) {
+          this._dogRenderer = new WidgetRenderer({
+            skins: (typeof window !== 'undefined' && window.game?.dataManager?.uiSkins) || null,
+          });
+          this._dogDialogue?.addEventListener('widget:dogChoice', (e) => {
+            this._handleDogChoice(e.detail?.action);
+          });
+        }
+        this._dogRenderer.repeatInto(this._dogChoices, TownContent.DOG_CHOICE_DEF, TownContent.DOG_CHOICES);
       }
     });
   }

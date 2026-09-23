@@ -295,12 +295,12 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - GuardedBy: trace
 
 ### ui/widgetRenderer.js
-- Purpose: WidgetRenderer — data-driven card rendering (pooled), skins from content; v1.1: data-bound context accent (`accent.bind` → bounded `--widget-accent-<token>` palette) + `muted` flag
+- Purpose: WidgetRenderer — data-driven card rendering (pooled), skins from content; v1.1: data-bound context accent (`accent.bind` → bounded `--widget-accent-<token>` palette) + `muted` flag; v1.1.1: click-time binding data (`_instanceData`) — pooled rebind updates onClick payloads too
 - Status: NORMATIVE
 - Defines: `WidgetRenderer` (+ static `WidgetRenderer._all`: registry of every renderer instance — consumed by the occlusion audit / future inspector)
 - Calls: `DataManager.uiSkins`, `game` (registry access)
 - Content: `ui_skins.json`
-- GuardedBy: `tests/suites/step3_widget_inventory.cjs`
+- GuardedBy: `tests/suites/step3_widget_inventory.cjs` (render contract), `tools/widget_preview.cjs` (v1.1.1 rebound-payload regression)
 
 ### ui/shop.js
 - Purpose: shop screen — buy consumables/upgrades, sandbox launcher, farming loot handoff
@@ -324,7 +324,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: town screens content — NPC dialogue engine (dialogueSets through condition engine), farming UI, HUD chips (date/log/gold/run stats)
 - Status: NORMATIVE
 - Defines: `TownContent`
-- Calls: `WidgetRenderer` (HUD chips are one pooled widget-card repeat — §10 screen-3, v2.15.0; ids `town-log-toggle/town-date/town-run-stats` preserved; log chip declares `widget:toggleGameLog`, bridged document-level to gameLog toggle)
+- Calls: `WidgetRenderer` (HUD chips: one pooled repeat — §10 screen-3, v2.15.0, ids `town-log-toggle/town-date/town-run-stats`, log chip declares `widget:toggleGameLog`; dialogue + dog choices: pooled repeats — §10 screen-4, v2.16.0, defs `DIALOGUE_CHOICE_DEF`/`DOG_CHOICE_DEF` declare `widget:dialogueChoice`/`widget:dogChoice`, behavior in `_handleTopicChoice`/`_handleDogChoice`, verbatim from the pre-migration listeners)
 - Emits: `npc:talked`, `npc:dialogueChoice`, `npc:dialogueFlag`, `npc:dialogueAffection`, `farmingLootCollected`
 - Listens: `quest:completed`, `quest:time_event`
 - Store: reads/writes `persistent.town` (HUD + town state) — **shared branch with engine/game.js, see §5.6**

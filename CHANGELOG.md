@@ -2,6 +2,48 @@
 
 ---
 
+## v2.16.0 — Screen 4: dialogue overlay → pooled widget cards (NPC presentation becomes content-shaped)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (battery green; audit 25/25 with dialogue gated at all 3 viewports; preview 23/23 with the v1.1.1 regression)
+
+### Migration (spec §10 screen 4)
+- **Dialogue choices + the export entry are one pooled widget-card repeat** in
+  `TownContent.showChoices()` — a single `DIALOGUE_CHOICE_DEF` (`text-only-row`), per-topic data,
+  and the export option rides the same pool as a `__export__` item. **Adding a choice is now data.**
+- **Choice behavior extracted VERBATIM** from the old inline listeners into `_handleTopicChoice()`
+  (choice logging §3.5, flags §2.3, affection, dog hook after Lina, response cycle) — code implements
+  the action the data selects, per §2.2. `_topicFor()` resolves the event's topic ID back to the live
+  topic object, so pool re-renders can never desync the list.
+- **Dog variant joins the same migration**: `DOG_CHOICE_DEF` + `DOG_CHOICES` data, `_handleDogChoice()`
+  (pet → companion grant, walk away → close), themed by `#dog-dialogue` scoped CSS. Two bespoke needs,
+  zero new renderer vocabulary — the bounded system held.
+- Response/continue and typewriter flow untouched; overlay ids preserved; the trace still drives the
+  pause/end flows through the migrated ids.
+
+### WidgetRenderer v1.1.1 (render contract fix the migration surfaced)
+- Interactive cards now read their **CURRENT binding data at click time** (`_instanceData`), so
+  `repeatInto` rebinding updates onClick payloads too. Previously a pooled card kept its creation-time
+  data (empty for pool-created nodes) — harmless while consumers recreated their grids, wrong once a
+  true pool rebinds payloads (exactly the dialogue case).
+- Pinned by a **preview regression**: pool → rebind → click must emit the *rebound* payload; the
+  preview now also proves the pool hides surplus nodes instead of leaking them across renders.
+
+### Audit (§11 promotion executed)
+- Dialogue choices gate at **desktop 1280×800, mobile-portrait 390×844, and mobile-landscape 844×390**
+  (presented through the real `openDialogue` flow; typewriter-aware wait). Audit now **25/25**.
+
+### Incidents (recorded per house rules)
+- A two-part edit to `townContent.js` half-applied (first oldString mismatched, second landed), briefly
+  splitting `showChoices`. Caught by `node --check` and repaired in one exact replacement — same lesson
+  as v2.15.0: verify both replacements report success, syntax-check immediately after multi-part edits.
+- The step2 suite caught a constructor signature slip (`clearPendingDisaster` dropped) before it could
+  ship — the GuardedBy net working as intended.
+- The first v1.1.1 preview run went red because the harness only captured `[preview-click]` logs, not the
+  pool row's `[preview-pool]` — a harness bug, fixed in place (§5 tooling lesson: a RED can indict the
+  tool, not the code).
+
+---
+
 ## v2.15.0 — Screen 3: town HUD chips → one pooled widget repeat (repeat-over-array showcase)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (battery green incl. strict; audit 22/22 with chips gated at all 3 viewports)
