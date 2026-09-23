@@ -2,6 +2,44 @@
 
 ---
 
+## v2.12.0 — Widget tooling: live-preview + occlusion detection (§10 tool-first phase)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (preview green 15/15; occlusion 6/6; full battery green incl. strict)
+
+### Added
+- **`widget_ui_system_spec.md` §10 — Screen Migration Plan (locked).** Phase-1 decisions settled:
+  context accent = per-screen default with per-instance override (instance wins); skin contrast
+  stays a manual authoring check performed on the preview matrix. Migration order locked
+  (game-log panel → pause/end → HUD chips → dialogue overlay → loadout → shop tabs → title menu;
+  combat canvas HUD stays code per the graduation rule) plus the per-screen definition of done.
+  §9 open questions marked SETTLED.
+- **`tools/widget_preview.cjs` (`npm run widget:preview`) — §6.3 Live-Preview Tool.** Renders
+  every layout preset × size token × registered skin against rich dummy data, plus both contract
+  edges (missing DATA renders empty without throwing; interactive click emits the DECLARED event
+  with the resolved payload). Inlines the REAL renderer file and REAL widget CSS — no copies to
+  drift. Screenshot matrix lands in `tests/artifacts/widget_preview/<stamp>/` — that is where the
+  §4.4 contrast eyeball check happens.
+- **`tests/suites/widget_occlusion.cjs` (`npm run widget:audit`, in the battery) — §7 Occlusion
+  Detection.** Boots the real game, opens the real shop via the real presentation path
+  (`townScreen.show()` + `openShop()`), seeds the pilot inventory, and asks the browser via
+  `elementFromPoint` whether every registered interactive instance is actually clickable.
+  Non-vacuous by construction: a negative control buries the screen and REQUIRES the audit to
+  flag it — an audit that cannot fail proves nothing.
+
+### Lessons recorded (also in TOOLING_MAP §5)
+- `require('widgetRenderer.js')` does not return the class in this environment — the file's
+  `globalThis` bridge is the dependable import path (module.exports assignment is unreliable).
+- Rendering a screen without its real presentation path yields 0×0 rects — a "screen not open"
+  state, not occlusion. The audit checks offscreen/zero-size separately from buried.
+
+### Status
+- Tool-first phase of the data-driven-UI campaign is complete: the authoring loop
+  (def → preview → migrate → audit) now exists before the first screen migration.
+- Remaining §6 unbuilt: Widget Inspector (§6.4 — registry hook point already exists),
+  9-slice border skins. First migration target when work resumes: the game-log panel.
+
+---
+
 ## v2.11.0 — Tooling: PROJECT_MAP.md (enforced file contracts)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (verify green incl. map checks; full battery green)

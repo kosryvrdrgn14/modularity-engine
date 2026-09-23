@@ -15,7 +15,9 @@
     "test:strict": "node tests/run_all.cjs --strict",
     "test:trace": "node tests/regression_trace.cjs",
     "verify": "node tools/verify.cjs",
-    "verify:trace": "node tools/verify.cjs --trace"
+    "verify:trace": "node tools/verify.cjs --trace",
+    "widget:preview": "node tools/widget_preview.cjs",
+    "widget:audit": "node tests/suites/widget_occlusion.cjs"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

@@ -250,12 +250,46 @@ around it. This spec is a strong starting point, not a permanent commitment.
 
 ---
 
+## 10. Screen Migration Plan (locked 2026-09-23, v2.12.0)
+
+**Phase-1 decisions (settled from §9):**
+
+- **Context accent (§2.6):** per-screen default accent declared on the screen definition, with
+  per-instance override allowed (instance wins). Screen-level default keeps authoring simple;
+  the override is the escape hatch for status-colored cards — §2.6's motivating case.
+- **Skin contrast validation (§4.4):** stays a manual authoring discipline for v1. The preview
+  tool (§6.3) renders every token a skin uses, which is where the eyeball check happens;
+  automation deferred until tokens are enumerable in one place.
+
+**Migration order (small → large, one screen at a time per §8):**
+
+| # | Screen | Why here |
+|---|--------|----------|
+| 1 | Game-log panel | smallest list UI, already bus-driven — lowest-risk first |
+| 2 | Pause / end screens | small fixed card sets |
+| 3 | Town HUD chips | repeat-over-array showcase |
+| 4 | Dialogue overlay | highest payoff: NPC presentation becomes content-editable |
+| 5 | Loadout screens | larger card lists |
+| 6 | Shop tabs | remaining tabs beyond the piloted Inventory tab |
+| 7 | Title menu | most bespoke today — last |
+
+Combat canvas HUD stays code: it is a render-loop surface, not DOM widget material — the
+graduation rule (§3.2) applied at plan level.
+
+**Per-screen loop (definition of done):** author the layout def → preview it against dummy data
+with `npm run widget:preview` → swap the hand-rolled render code for WidgetRenderer with
+**unchanged events and DOM ids** → update the screen's PROJECT_MAP block (the event index must
+not drift silently) → add the screen to the suites driving real state + run the occlusion audit →
+`npm run verify` + full battery + one manual visual pass (M-list).
+
+---
+
 ## 9. Open Questions
 
-- Exact context-accent (§2.6) mechanism — a per-screen default vs. an explicit per-instance
+- [SETTLED v2.12.0 — see §10] Exact context-accent (§2.6) mechanism — a per-screen default vs. an explicit per-instance
   override — worth settling once the pilot screen is built and there's a real second screen to
   compare against.
-- Whether skin accessibility validation (§4.4) can be partially automated (e.g., a contrast-ratio
+- [SETTLED v2.12.0 — see §10] Whether skin accessibility validation (§4.4) can be partially automated (e.g., a contrast-ratio
   check at authoring time) or needs to stay a manual authoring discipline for v1.
 - Whether the specialized-template registry (§3.3) needs its own doc or lives inside
   `MASTER_DESIGN.md` — a scope/location decision, not a design one.

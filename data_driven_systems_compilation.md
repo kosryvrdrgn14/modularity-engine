@@ -200,7 +200,8 @@ slot bindings, layout presets (`icon-left`/`icon-right`/`stacked`), size tokens,
 tokens, repeat-over-array, instance pooling (rebind-in-place, hide-on-shrink), context accents,
 loud schema validation (fail-closed on malformed defs), version tagging (`_v`), and the visual
 skinning layer via `public/content/ui_skins.json` (color-token only; missing skin degrades to
-unskinned with structure intact). NOT yet built: 9-slice border skins, live-preview tool, widget
+unskinned with structure intact). Built since (v2.12.0): live-preview tool (`npm run widget:preview`)
+and occlusion detection (`tests/suites/widget_occlusion.cjs`, in the battery). Still NOT built: 9-slice border skins, widget
 inspector, occlusion detection. Reference implementation: `public/ui/widgetRenderer.js`
 (`window.WidgetRenderer`), piloted on the shop's Inventory tab.
 

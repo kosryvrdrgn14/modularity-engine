@@ -31,7 +31,7 @@ running. Console tools: open DevTools, type the accessor.
 | NPC Condition Inspector | Built (v2.5.0) | Why an NPC's location/dialogueSet/mood resolved the way it did; log queries; full schema reference | Console: `__NPC_DEBUG__.evaluate('old_man')`, `.explain('old_man')`, `.log(id)`, `.schema()` |
 | Game Log Inspector | Built (v2.9.0) | Session console tail: filter, dump-to-clipboard, clear | Console: `__GAMELOG_DEBUG__.last(20)`, `.filter(q)`, `.dump()` |
 | Widget Inspector | **Planned** (`widget_ui_system_spec.md` §6.4) | Which layout/skin/bindings produced a given on-screen card | Not yet built (renderer already keeps a def registry — hook point exists) |
-| Widget Live-Preview | **Planned** (`widget_ui_system_spec.md` §6.3) | Render a layout/skin against dummy data without a game session | Not yet built |
+| Widget Live-Preview | **Built (v2.12.0)** (`widget_ui_system_spec.md` §6.3) | Render every layout × size × skin against dummy data + both contract edges, screenshot the matrix for the manual §4.4 contrast check | `npm run widget:preview` |
 | Date/Time Inspector | Built (v2.8.0) | Current day, resolved season per region, active festivals, modifiers | Console: `game.timeService.getDateContext()`, `.getSeason('graveyard')`, `.getActiveModifiers()` |
 
 **Known gap (confirmed 2026-09-14):** entry points are inconsistent — Stage Select/Weapons/
@@ -59,13 +59,15 @@ named npm scripts (see standardization below) — that is what makes them agent-
 | Duplicate-method/key/switch-case AST checker | **LOST — not on disk** (original draft said Built; no acorn script exists in the tree and acorn is not a dependency) | Was a session artifact. Rebuild is cheap (~50 lines with acorn) if duplicate-declaration bugs reappear — log an entry first per §5 |
 | Orphan-file cleanup script | **LOST — not on disk.** What exists: the generator's unregistered-content guard (narrow, content-only) and `tools/audit_monolithic_backup.cjs` (backup-recoverability audits) | If orphan cleanup is needed again, rebuild as a tools/ script with dry-run default; do NOT hand-delete |
 | Data-extraction script | Historical (one-time) | Monolith-split era; the split is long done. Root fossils `generate_copy.cjs`, `extract_engine.html`, `file_split.html`, `gamesplit/`, `test_enemy_fix.cjs`, `test_upgrade_bug.cjs`, `test_upgrade_fix.cjs`, `test_weapon_unlock.cjs` are the same era — candidates for the §22.3-style audit-then-delete pass, NOT living tools |
-| Occlusion detection (`elementFromPoint`) | **Planned** (`widget_ui_system_spec.md` §7) | Every widget declaring onClick must actually be clickable at its position. Natural home: a Playwright check in the existing harness |
+| Occlusion detection (`elementFromPoint`) | **Built (v2.12.0)** (`widget_ui_system_spec.md` §7) | Every interactive widget instance must actually be clickable at its position; non-vacuous (negative control proves it can fail); runs in the battery + `npm run widget:audit` | `tests/suites/widget_occlusion.cjs` |
 | `tools/recover_styles_css.cjs` + `tools/audit_monolithic_backup.cjs` | Built (v2.7.0/v2.9.1) | Read-only git-object-DB readers (no git CLI — it's blocked in this environment). Recovery of an accidentally-deleted/mangled tracked file; audit-before-delete for any backup. Reference implementations for KNOWLEDGE §15/§18 patterns |
 
 ### npm script standardization (synced with package.json — these all exist)
 
 ```
 npm run verify          # tools/verify.cjs — load-order syntax + content + mirror sync + PROJECT_MAP contracts
+npm run widget:preview  # tools/widget_preview.cjs — §6.3 live-preview matrix + screenshot
+npm run widget:audit    # tests/suites/widget_occlusion.cjs — §7 occlusion audit (also in battery)
 npm run verify:trace    # verify + the full headless regression trace
 npm run test            # all 7 suites (skips allowed pre-implementation)
 npm run test:strict     # all suites, skips FAIL — post-implementation gate
@@ -173,3 +175,17 @@ used. Keep entries short — date, what happened, what changed as a result.
 - Adjustment made: this row. Open items live in PROJECT_MAP §5, not here: §5.5 dead-event audit
   list (19 emitted events with no static listener), §5.6 `persistent.town` dual-writer decision —
   map-scoped, not tool-scoped.
+
+---
+
+- Date: 2026-09-23
+- Tool/section affected: §1 (Live-Preview, occlusion), §2 (npm block)
+- What happened: Built both tools per widget_ui_system_spec.md §10's tool-first phase. Preview
+  inlines the real renderer + real widget CSS (no copy drift); its Node import goes through the
+  file's globalThis bridge (module.exports is unreliable in this environment). Occlusion audit
+  consumes the renderer's `_instances` registry; required the REAL presentation path
+  (townScreen.show() + shop.openShop()) — rendering with overlay classes missing yields 0×0 rects,
+  a "screen not open" state §7 explicitly does not target. Suite includes a negative control so it
+  cannot pass vacuously.
+- Adjustment made: rows moved Planned→Built; npm block updated. Open: Widget Inspector (§6.4)
+  remains Planned — registry hook point already exists.
