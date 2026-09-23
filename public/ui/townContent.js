@@ -175,46 +175,16 @@ class TownContent {
     const campNameEl = document.getElementById('town-camp-name');
     const goldEl = document.getElementById('town-gold');
     const bgEl = document.getElementById('town-bg');
-    const runStatsEl = document.getElementById('town-run-stats');
-    // Calendar date chip (calendar_time_system_spec.md §3): short label in
-    // the chip, full context as the hover title.
-    // 📖 Log chip → session console (game_log_system_spec.md §3)
-    const logChip = document.getElementById('town-log-toggle');
-    if (logChip && !logChip._logWired) {
-      logChip._logWired = true;
-      logChip.addEventListener('click', () => {
-        this.audioManager?.playMenuSound('select');
-        const gl = (typeof window !== 'undefined' && window.game?.gameLog) || null;
-        if (gl) gl.togglePanel();
-      });
-    }
-
-    const dateEl = document.getElementById('town-date');
-    if (dateEl) {
-      const ts = this._engine?.timeService || (typeof window !== 'undefined' && window.game?.timeService) || null;
-      if (ts) {
-        const day = ts.getCurrentDay();
-        dateEl.textContent = `📅 Day ${day}`;
-        const ctx = ts.getDateContext(day);
-        dateEl.title = [ctx.label, ctx.season ? `${ctx.season} season` : null, ctx.festivals.length ? `festivals: ${ctx.festivals.join(', ')}` : null]
-          .filter(Boolean).join(' · ');
-      } else {
-        dateEl.textContent = '📅 —';
-      }
-    }
+    // ── §10 screen-3 migration (v2.15.0): the town-hdr-meta chips are ONE
+    // pooled widget-card repeat (repeat-over-array, §2.5) — data-driven
+    // values, ids preserved for all consumers. The 📖 Log chip's open behavior
+    // is its DECLARED event (widget:toggleGameLog, bridged in _renderTownChips);
+    // the date chip's hover-title context is re-applied per render. ──
+    this._renderTownChips();
 
     if (campNameEl) campNameEl.textContent = campName;
     if (goldEl) goldEl.textContent = `💰 ${gold}`;
     if (bgEl) bgEl.src = phase >= 2 ? 'assets/town_wooden_shacks.svg' : 'assets/town_refugee_camp.svg';
-
-    if (runStatsEl) {
-      const s = this._lastRunStats;
-      if (s && s.time !== undefined && s.level !== undefined && s.kills !== undefined) {
-        runStatsEl.textContent = `⏱ ${s.time}  Lv${s.level}  ☠ ${s.kills}`;
-      } else {
-        runStatsEl.textContent = '⚔Lv1';
-      }
-    }
 
     // Update unlocked NPCs
     const _npcsData = this.locationManager?._getNPCsData() || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
@@ -253,6 +223,68 @@ class TownContent {
         }
       }
     }
+  }
+
+  /** Town HUD chips (v2.15.0): one def, pooled repeat, data-driven values. */
+  _renderTownChips() {
+    const host = document.getElementById('town-chips');
+    if (!host || typeof WidgetRenderer === 'undefined') return;
+    if (!this.widgetRenderer) {
+      this.widgetRenderer = new WidgetRenderer({
+        skins: (typeof window !== 'undefined' && window.game?.dataManager?.uiSkins) || null,
+      });
+    }
+    // Bridge: the log chip's declared event → open the session console
+    // (replaces the old per-chip addEventListener wiring; installed once).
+    if (!this._logBridgeWired && typeof document !== 'undefined') {
+      this._logBridgeWired = true;
+      document.addEventListener('widget:toggleGameLog', () => {
+        this.audioManager?.playMenuSound('select');
+        const gl = (typeof window !== 'undefined' && window.game?.gameLog) || null;
+        if (gl) gl.togglePanel();
+      });
+    }
+    const R = this.widgetRenderer;
+    const def = {
+      template: 'card',
+      _v: 1,
+      layout: 'text-only-row',
+      size: 'small',
+      slots: { primaryText: { bind: 'chip.text' } },
+      onClick: { emit: 'widget:toggleGameLog' },
+    };
+    const ts = this._engine?.timeService || (typeof window !== 'undefined' && window.game?.timeService) || null;
+    let dateText = '📅 —';
+    let dateTitle = '';
+    if (ts) {
+      const day = ts.getCurrentDay();
+      dateText = `📅 Day ${day}`;
+      const ctx = ts.getDateContext(day);
+      dateTitle = [ctx.label, ctx.season ? `${ctx.season} season` : null, ctx.festivals.length ? `festivals: ${ctx.festivals.join(', ')}` : null]
+        .filter(Boolean).join(' · ');
+    }
+    const items = [
+      { id: 'town-log-toggle', text: '📖 Log', title: 'Session log — recent events & errors' },
+      { id: 'town-date', text: dateText, title: dateTitle },
+    ];
+    const s = this._lastRunStats;
+    items.push({
+      id: 'town-run-stats',
+      title: '',
+      text: (s && s.time !== undefined && s.level !== undefined && s.kills !== undefined)
+        ? `⏱ ${s.time}  Lv${s.level}  ☠ ${s.kills}`
+        : '⚔Lv1',
+    });
+    R.repeatInto(host, def, items.map((it) => ({ chip: it })));
+    // Per-item identity + hover context (beyond the def's vocabulary).
+    const pool = host._widgetPool || [];
+    pool.forEach((el, i) => {
+      const it = items[i];
+      if (!it) return;
+      el.id = it.id;
+      el.title = it.title || '';
+      el.classList.toggle('gamelog-chip', it.id === 'town-log-toggle');
+    });
   }
 
   // --- Panel Rendering (Left & Right) ---

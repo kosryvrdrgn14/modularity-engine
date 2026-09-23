@@ -75,7 +75,7 @@ const check = (name, pass, extra) => {
     //     cards legitimately sit at 0×0 until their overlay opens)
     //   occluded: presented but buried under another element (the §7 bug class)
     const scanFn = () => {
-      const out = { checked: 0, occluded: [], unpresented: [] };
+      const out = { checked: 0, occluded: [], unpresented: [], contextBuried: [] };
       const label = (inst) => {
         const d = inst.def || {};
         const name = (inst.data && inst.data.item && inst.data.item.name) ||
@@ -83,6 +83,9 @@ const check = (name, pass, extra) => {
           (d.onClick && d.onClick.emit) || 'widget';
         return `${d.layout || 'card'} · ${name}`;
       };
+      // Fullscreen modals legitimately own the viewport when open — persistent
+      // header chips (v2.15.0) are contextually buried, NOT bug-occluded.
+      const modalOpen = !!document.querySelector('#shop-overlay.active, #pause-overlay.active');
       // Scan EVERY renderer's registry (WidgetRenderer._all, v2.14.0) — the
       // audit owns no assumptions about which screen owns which renderer.
       for (const R of WidgetRenderer._all) {
@@ -96,7 +99,10 @@ const check = (name, pass, extra) => {
           if (cy < 0 || cx < 0 || cy > window.innerHeight || cx > window.innerWidth) { out.unpresented.push(label(inst)); continue; }
           const hit = document.elementFromPoint(cx, cy);
           out.checked++;
-          if (!hit || !(hit === el || el.contains(hit))) out.occluded.push(label(inst));
+          if (!hit || !(hit === el || el.contains(hit))) {
+            if (modalOpen && el.closest('#town-chips')) out.contextBuried.push(label(inst));
+            else out.occluded.push(label(inst));
+          }
         }
       }
       return out;
@@ -190,16 +196,37 @@ const check = (name, pass, extra) => {
     }
     await page.evaluate(() => window.game.gameLog.closePanel());
 
+    // ── Town HUD chips (v2.15.0, screen 3): §11 gates at all three viewports
+    // in town-base presentation (the phase where the header actually lives —
+    // shop closed, town shown; the chips are the always-visible HUD). ──
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(120);
+      const chips = await page.evaluate(() => {
+        document.getElementById('shop-overlay')?.classList.remove('active');
+        window.game.titleMenu.hide();
+        window.game.townScreen.show();
+        const cards = document.querySelectorAll('#town-chips .widget-card');
+        return { count: cards.length, ids: [...cards].map((c) => c.id) };
+      });
+      const chipScan = await page.evaluate(scanFn);
+      check(`[§11 gate: town chips @ ${vp.name}] 3 chips rendered with stable ids`,
+        chips.count === 3 && chips.ids.join(',') === 'town-log-toggle,town-date,town-run-stats',
+        JSON.stringify(chips));
+      check(`[§11 gate: town chips @ ${vp.name}] clickable, unburied`,
+        chipScan.occluded.length === 0, JSON.stringify(chipScan));
+    }
+    // Leave town-base presentation active — it is the negative control's baseline.
+
     // Negative control (back at the gating viewport): a burying overlay MUST
     // be detected — an audit that cannot fail proves nothing. Self-consistent
     // design: open a screen with cards, baseline scan → cover → scan again AT
     // THE SAME MOMENT, so the comparison never depends on stale state.
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.waitForTimeout(100);
-    // Interactive target for the control (the audit enumerates onClick-bearing
-    // instances only, per §7): re-present the pause menu — title menu/town are
-    // already hidden at this point in the run.
-    await page.evaluate(() => window.game.uiManager.showPauseMenu('negctl'));
+    // Interactive targets for the control (the audit enumerates onClick-bearing
+    // instances only, per §7): the town-base state from the chips gates already
+    // presents the three chips — no modal stacking needed for the baseline.
     const baseline = await page.evaluate(scanFn);
     await page.evaluate(() => {
       const d = document.createElement('div');

@@ -324,6 +324,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: town screens content — NPC dialogue engine (dialogueSets through condition engine), farming UI, HUD chips (date/log/gold/run stats)
 - Status: NORMATIVE
 - Defines: `TownContent`
+- Calls: `WidgetRenderer` (HUD chips are one pooled widget-card repeat — §10 screen-3, v2.15.0; ids `town-log-toggle/town-date/town-run-stats` preserved; log chip declares `widget:toggleGameLog`, bridged document-level to gameLog toggle)
 - Emits: `npc:talked`, `npc:dialogueChoice`, `npc:dialogueFlag`, `npc:dialogueAffection`, `farmingLootCollected`
 - Listens: `quest:completed`, `quest:time_event`
 - Store: reads/writes `persistent.town` (HUD + town state) — **shared branch with engine/game.js, see §5.6**

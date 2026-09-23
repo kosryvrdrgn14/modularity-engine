@@ -1957,3 +1957,18 @@
    exactly that cascade bug: force-shown buried cards). */
 #pause-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
 #end-actions .widget-card { min-width: 220px; text-align: center; }
+/* ── §10 screen-3 (v2.15.0): town HUD chips as widget cards ── */
+/* The chips ARE .widget-cards now; #town-chips replaces .town-hdr-meta's
+   layout slot. Scoped theming mirrors the original .res-chip look exactly. */
+#town-chips { display: flex; align-items: center; gap: 6px; margin-left: 4px; }
+#town-chips .widget-card {
+  background: transparent; box-shadow: none; border: none;
+  font-size: 0.75rem; color: #bbb;
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  min-height: 0; gap: 0;
+}
+#town-chips .widget-card .slot-primaryText { font-size: 0.75rem; color: #bbb; }
+#town-chips .widget-card.gamelog-chip { cursor: pointer; transition: color 0.15s, background 0.15s; }
+#town-chips .widget-card.gamelog-chip:hover { color: #FFD700; background: rgba(255, 215, 0, 0.12); }
+#town-chips .slot-primaryText:empty { display: none; }

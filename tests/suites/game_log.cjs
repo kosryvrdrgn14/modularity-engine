@@ -67,8 +67,12 @@ STEP_DETECTORS.game_log = () => !!(window.game?.gameLog || window.__GAMELOG_DEBU
   r.check('clear() empties the buffer', cleared.size === 0, JSON.stringify(cleared));
 
   // ── Town console UI: chip toggles panel, entries render ──
+  // (v2.15.0: the chips are rendered with the town screen — present the town
+  // first. The old static HTML existed even at the title screen; the widget
+  // render is scoped to where the HUD actually lives.)
   const ui = await page.evaluate(() => {
     const gl = window.game.gameLog;
+    window.game.townScreen?.show();
     const chip = document.getElementById('town-log-toggle');
     const chipExists = !!chip;
     gl.log('ui-probe-entry', { kind: 'info' });

@@ -2,6 +2,36 @@
 
 ---
 
+## v2.15.0 — Screen 3: town HUD chips → one pooled widget repeat (repeat-over-array showcase)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (battery green incl. strict; audit 22/22 with chips gated at all 3 viewports)
+
+### Migration (spec §10 screen 3)
+- The header meta chips (📖 Log, 📅 Day, run stats) are **one pooled widget-card repeat**
+  (`repeatInto`) in `TownContent._renderTownChips()` — a single def, per-item data, ids preserved
+  (`town-log-toggle` / `town-date` / `town-run-stats`). Adding a chip is now an array entry.
+- The 📖 Log chip's behavior is its **declared event** (`widget:toggleGameLog`), bridged once at
+  document level to the gameLog toggle (audio select sound preserved); date chip's hover-context
+  re-applied per render. Scoped CSS mirrors the original `.res-chip` look exactly.
+
+### Audit hardening (§11 + §7)
+- **`contextBuried` classification:** fullscreen modals (shop/pause) legitimately own the
+  viewport — persistent header chips buried while a modal is open are contextually buried, not
+  bug-occluded. Only unexplained burial fails gates.
+- **§11 promotion:** the three chips gate at desktop + mobile-portrait + landscape (stable ids,
+  clickable, unburied in town-base presentation).
+- Suite world-changes recorded: the game_log suite's chip check now presents the town first —
+  the chips render where the HUD lives (town screen), not at the title screen as the old static
+  HTML did.
+
+### Session incident (recorded per convention)
+- A two-part `str_replace` to townContent.js half-applied (first oldString mismatched → skipped,
+  second applied → method split, orphan tail at class level). Caught by `node --check` + a read
+  of the damaged span; repaired in one exact replacement. Reminder: after any multi-part edit,
+  syntax-check immediately and verify BOTH replacements reported success in the tool result.
+
+---
+
 ## v2.14.0 — Screen 2: pause/end action buttons → widget cards (+ audit hardening)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (battery green incl. trace; audit 16/16 with §11 gates for both migrated screens)
