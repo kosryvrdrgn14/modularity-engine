@@ -1924,3 +1924,16 @@
 .gamelog-entry.gamelog-prev { opacity: 0.55; }
 .gamelog-divider { color: #555; font-size: 0.68rem; text-align: center; padding: 4px 0 2px 0;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.08); margin-bottom: 4px; }
+/* ── Widget context-accent palette (§2.6, renderer v1.1) + muted variation ── */
+/* Bounded tokens only — data selects the token name, never a raw color. */
+.widget-card {
+  --widget-accent-event: #7EE8A2;
+  --widget-accent-reward: #FFD54F;
+  --widget-accent-warn: #FFB74D;
+  --widget-accent-error: #FF6B6B;
+}
+.widget-card.widget-muted { opacity: 0.55; }
+/* Screen-scoped theming of slots is allowed (structure from the system, theme from the screen). */
+#gamelog-list .widget-card { background: transparent; box-shadow: none; border: none; padding: 2px 0; min-height: 0; gap: 6px; }
+#gamelog-list .slot-primaryText { font-size: 0.75rem; line-height: 1.45; }
+#gamelog-list .slot-secondaryText { font-family: Consolas, monospace; font-size: 0.68rem; color: #666; }

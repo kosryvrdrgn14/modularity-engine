@@ -83,6 +83,32 @@ STEP_DETECTORS.game_log = () => !!(window.game?.gameLog || window.__GAMELOG_DEBU
   r.check('town header exposes the 📖 Log chip', ui.chipExists);
   r.check('panel opens, renders newest entries, closes', ui.openActive && ui.rendered && !ui.closedActive, JSON.stringify(ui));
 
+  // ── §10 screen-1 migration pin (v2.13.0): entries render through the ONE
+  // widget renderer with data-bound context accents — regression back to
+  // innerHTML string rendering fails here. ──
+  const widgetUI = await page.evaluate(() => {
+    const gl = window.game.gameLog;
+    gl.clear();
+    gl.log('accent-info-entry', { kind: 'info' });
+    gl.log('accent-error-entry', { kind: 'error' });
+    gl.openPanel();
+    const R = gl.widgetRenderer;
+    const cur = document.getElementById('gamelog-cur-list');
+    const cards = cur ? cur.querySelectorAll('.widget-card') : [];
+    const first = cards[0]; // newest first → the error entry
+    return {
+      renderer: !!R,
+      cardCount: cards.length,
+      accentToken: first ? first.getAttribute('style').includes('--widget-accent-error') : false,
+      textOk: (first?.textContent || '').includes('accent-error-entry'),
+      pooled: !!(cur && cur._widgetPool),
+      prevPoolEmpty: (() => { const p = document.getElementById('gamelog-prev-list'); return p && p._widgetPool ? p._widgetPool.every((el) => el.style.display === 'none') : false; })(),
+    };
+  });
+  r.check('game-log entries render as pooled widget cards with data-bound accents',
+    widgetUI.renderer && widgetUI.cardCount === 2 && widgetUI.accentToken && widgetUI.textOk && widgetUI.pooled && widgetUI.prevPoolEmpty,
+    JSON.stringify(widgetUI));
+
   // ── Capped persisted tail: log → save → reload → hydrated as previous ──
   const tailSaved = await page.evaluate(() => {
     const g = window.game;

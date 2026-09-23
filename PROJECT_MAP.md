@@ -146,6 +146,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: session play-log console (ring buffer + persisted capped tail). **Display-only — never a data source (one-rule, KNOWLEDGE §17)**
 - Status: NORMATIVE
 - Defines: `GameLogSystem`, `__GAMELOG_DEBUG__`, `__GAMELOG_ERRNET__`
+- Calls: `WidgetRenderer` (entries render as pooled cards — §10 screen-1 migration, v2.13.0; accents via bounded §2.6 tokens)
 - Listens: `time:dayAdvanced`, `quest:completed`, `levelUp`, `weaponLevelUp`, `shopPurchase`, `farmingLootCollected`, `resources:changed`, `gameLog:updated` (self)
 - Emits: `gameLog:updated`
 - Store: mirrors tail into `persistent.gameLog.tail` (branch shape owned by progression.js)

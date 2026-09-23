@@ -27,6 +27,15 @@
 //     applied is cosmetic class + CSS custom props only.
 //   - Version tag (§6.2): definitions may carry `_v`; skin entries carry
 //     `version`. Unknown/missing versions render but warn once.
+//
+// v1.1 (v2.13.0 — first screen migration, game-log panel):
+//   - Context accent (§2.6): def-level `accent: { bind }` — a DATA-BOUND
+//     accent token name resolved against a bounded palette
+//     (--widget-accent-<token> in styles.css; unknown token falls back to the
+//     default --widget-accent). Severity/status colors become entry data,
+//     never per-screen CSS. Re-resolved on pooled rebind.
+//   - `muted` def flag: bounded variation → .widget-muted class (dimmed
+//     history rendering). Structure/class only, like layout presets.
 // ============================================================
 
 class WidgetRenderer {
@@ -90,6 +99,14 @@ class WidgetRenderer {
     if (def.skinId !== undefined && (typeof def.skinId !== 'string' || !def.skinId)) {
       problems.push('skinId must be a non-empty string');
     }
+    if (def.accent !== undefined) {
+      if (!def.accent || typeof def.accent !== 'object' || typeof def.accent.bind !== 'string' || !def.accent.bind) {
+        problems.push('accent.bind must be a non-empty dotted path');
+      }
+    }
+    if (def.muted !== undefined && typeof def.muted !== 'boolean') {
+      problems.push('muted must be a boolean');
+    }
     if (problems.length) {
       throw new Error(`WIDGET DEF invalid: ${problems.join('; ')}`);
     }
@@ -111,9 +128,12 @@ class WidgetRenderer {
     el.classList.add(`layout-${def.layout || 'icon-left'}`);
     el.classList.add(`size-${def.size || 'medium'}`);
     el.dataset.widgetTemplate = 'card';
+    if (def.muted) el.classList.add('widget-muted');
 
     // Skin layer (§4): purely visual — classes + CSS custom props only.
     this._applySkin(el, def.skinId);
+    // Context accent (§2.6): data-bound bounded token.
+    this._applyAccent(el, def.accent, data);
 
     // Slots (§2.1 — optional; only declared slots exist).
     for (const [name, spec] of Object.entries(def.slots || {})) {
@@ -226,6 +246,17 @@ class WidgetRenderer {
     });
   }
 
+  /** Context accent (§2.6 v1.1): resolve def.accent.bind against the data and
+   *  apply the bounded palette token. Unknown/missing token → default accent
+   *  (fail-safe, never a raw value from data). */
+  _applyAccent(el, accentSpec, data) {
+    if (!accentSpec || typeof accentSpec.bind !== 'string') return;
+    const v = this._resolve(accentSpec.bind, data);
+    if (typeof v === 'string' && /^[a-z][a-z0-9-]*$/.test(v)) {
+      el.style.setProperty('--widget-accent', `var(--widget-accent-${v}, var(--widget-accent))`);
+    }
+  }
+
   _applySkin(el, skinId) {
     if (!skinId) return;
     const skin = this._skins && typeof this._skins === 'object' ? this._skins[skinId] : null;
@@ -250,6 +281,13 @@ class WidgetRenderer {
 
   /** Pooled rebind: rewrite slot contents of an existing node (no node churn). */
   _rebind(el, def, data) {
+    // Context accent must re-resolve too (severity can change per item).
+    if (def.accent) {
+      const v = this._resolve(def.accent.bind, data);
+      if (typeof v === 'string' && /^[a-z][a-z0-9-]*$/.test(v)) {
+        el.style.setProperty('--widget-accent', `var(--widget-accent-${v}, var(--widget-accent))`);
+      }
+    }
     for (const [name, spec] of Object.entries(def.slots || {})) {
       const slotEl = el.querySelector(`[data-slot="${name}"]`);
       if (!slotEl) continue;

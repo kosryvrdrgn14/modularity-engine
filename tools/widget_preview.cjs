@@ -63,6 +63,7 @@ else ok('renderer.validate() fail-closed contract holds (Node side)');
 const layouts = WidgetRenderer.LAYOUTS;
 const sizes = WidgetRenderer.SIZES;
 const skinIds = Object.keys(skins).filter((k) => k !== '_note');
+const ACCENT_SEVERITIES = ['event', 'reward', 'warn', 'error', 'info', 'bogus_token'];
 
 // ── Build the self-contained preview page ──
 const showcaseSlots = {
@@ -120,6 +121,12 @@ const pageHtml = `<!DOCTYPE html>
   inter.id = 'preview-interactive';
   section('edge: interactive (click → declared event)', [inter]);
   document.addEventListener('invItemSelected', (e) => console.log('[preview-click]', JSON.stringify(e.detail)));
+  // 5) context accent (§2.6, v1.1) — data-bound bounded tokens
+  const accentDef = { template: 'card', _v: 1, layout: 'text-only-row', size: 'small', accent: { bind: 'item.sev' },
+    slots: { primaryText: { bind: 'item.name' }, secondaryText: { bind: 'item.ts' } } };
+  const accentRow = ${JSON.stringify(ACCENT_SEVERITIES)}.map((sev) =>
+    R.render(accentDef, { item: { sev, name: 'severity: ' + sev, ts: '[Day 12 · 03:41]' } }));
+  section('context accents (§2.6 v1.1 — bogus token falls back to default)', accentRow);
 <\/script></body></html>`;
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -144,7 +151,7 @@ fs.writeFileSync(pagePath, pageHtml);
   await page.waitForFunction(() => window.WidgetRenderer && document.querySelectorAll('.widget-card').length > 0, null, { timeout: 10000 });
 
   const counts = await page.evaluate(() => ({ cards: document.querySelectorAll('.widget-card').length }));
-  const expected = layouts.length * sizes.length + skinIds.length + 2;
+  const expected = layouts.length * sizes.length + skinIds.length + 2 + ACCENT_SEVERITIES.length;
   if (counts.cards === expected) ok(`${counts.cards}/${expected} preview cards rendered (layouts×sizes + ${skinIds.length} skins + 2 edges)`);
   else fail(`expected ${expected} preview cards, got ${counts.cards}`);
 

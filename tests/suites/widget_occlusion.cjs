@@ -123,6 +123,44 @@ const check = (name, pass, extra) => {
       }
     }
 
+    // ── §11 promotion (v2.13.0, migration screen 1: game-log panel). ──
+    // The screen's own mobile/landscape gates are now GATING (element-specific:
+    // fits viewport, no horizontal overflow, renders). The generic full-screen
+    // scans above stay report-only until their screens migrate.
+    const glog = await page.evaluate(() => {
+      const gl = window.game.gameLog;
+      gl.clear();
+      gl.log('parity-probe-info', { kind: 'info' });
+      gl.log('parity-probe-error', { kind: 'error' });
+      gl.openPanel();
+      const panel = document.getElementById('gamelog-panel');
+      const list = document.getElementById('gamelog-list');
+      const rect = panel.getBoundingClientRect();
+      return {
+        cards: panel.querySelectorAll('.widget-card').length,
+        fitsViewport: rect.left >= -1 && rect.right <= window.innerWidth + 1,
+        noHOverflow: list.scrollWidth <= list.clientWidth + 1,
+      };
+    });
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(120);
+      const now = await page.evaluate(() => {
+        const panel = document.getElementById('gamelog-panel');
+        const list = document.getElementById('gamelog-list');
+        const rect = panel.getBoundingClientRect();
+        return {
+          cards: panel.querySelectorAll('.widget-card').length,
+          fitsViewport: rect.left >= -1 && rect.right <= window.innerWidth + 1,
+          noHOverflow: list.scrollWidth <= list.clientWidth + 1,
+        };
+      });
+      check(`[§11 gate: game-log panel @ ${vp.name}] renders widget cards`, now.cards >= 2, JSON.stringify(now));
+      check(`[§11 gate: game-log panel @ ${vp.name}] fits viewport, no horizontal overflow`,
+        now.fitsViewport && now.noHOverflow, JSON.stringify(now));
+    }
+    await page.evaluate(() => window.game.gameLog.closePanel());
+
     // Negative control (back at the gating viewport): a burying overlay MUST
     // be detected — an audit that cannot fail proves nothing.
     await page.setViewportSize({ width: 1280, height: 800 });

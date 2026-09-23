@@ -2,6 +2,36 @@
 
 ---
 
+## v2.13.0 — First screen migration: game-log panel → widget cards (renderer v1.1)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (battery green; audit 14/14 incl. new §11 gates; preview 21/21)
+
+### Renderer v1.1 (flexibility extensions proven by the migration)
+- **Context accent (§2.6, now real):** def-level `accent: { bind }` — severity/status color comes
+  from the ENTRY DATA as a bounded token (`--widget-accent-<token>` palette; unknown token falls
+  back to the default; validated token-name pattern). Re-resolved on pooled rebind. Per-screen
+  severity CSS is no longer needed anywhere.
+- **`muted` def flag:** bounded variation → `.widget-muted` (dimmed history rendering).
+- validate() extended fail-closed for both.
+
+### Screen 1: game-log panel (spec §10 migration order)
+- Entries render as **pooled widget cards** (`text-only-row`/`small`) through the ONE renderer;
+  per-entry severity = data-bound accent tokens (`event/reward/warn/error` = the exact previous
+  colors); previous-session dimming = `muted`. Behavior preserved: same ids, newest-first,
+  divider + empty state, count. Suite pins the migration (innerHTML regression = red).
+- **§11 promotion executed:** this screen's mobile-portrait + landscape checks are now GATING
+  (fits viewport, no horizontal overflow, renders) — all green first run; the panel's
+  `min(420px, 92vw)` sizing reflows on a 390px phone with zero changes.
+- Preview tool gains a context-accent row (incl. bogus-token fallback case).
+
+### Notes
+- Flexibility verdict so far: bounded tokens + data-bound accents absorbed the screen's two
+  custom needs (severity colors, muted history) as data — no new templates, no per-screen CSS
+  forks beyond scoped theming of slot typography.
+- Next screens: pause/end (fixed card sets) → town HUD chips (repeat showcase).
+
+---
+
 ## v2.12.1 — §11 Device & Input Parity: viewport matrix in the occlusion audit
 **Date:** September 23, 2026
 **Status:** ✅ Complete (audit 8/8; full battery green)

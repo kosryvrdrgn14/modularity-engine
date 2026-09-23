@@ -175,17 +175,52 @@ class GameLogSystem {
     if (!panel) return;
     const list = panel.querySelector('#gamelog-list');
     if (!list) return;
+
+    // MIGRATION (v2.13.0, widget spec §10 screen 1): entries render through
+    // the ONE widget renderer — layout/pooling/accent are data. Per-entry
+    // severity = context accent (§2.6, bounded tokens); previous-session
+    // dimming = the bounded `muted` flag. Behavior preserved: same ids,
+    // same newest-first order, same divider/empty state, same count.
+    if (!this.widgetRenderer) {
+      this.widgetRenderer = new WidgetRenderer({
+        skins: (typeof window !== 'undefined' && window.game?.dataManager?.uiSkins) || null,
+      });
+    }
+    const R = this.widgetRenderer;
+    const baseDef = {
+      template: 'card',
+      _v: 1,
+      layout: 'text-only-row',
+      size: 'small',
+      accent: { bind: 'kind' },
+      slots: {
+        primaryText: { bind: 'text' },
+        secondaryText: { bind: 'ts' },
+      },
+    };
+    const curDef = baseDef;
+    const prevDef = { ...baseDef, muted: true };
+
     const entries = this.getEntries().slice().reverse(); // newest first
     const prev = this.getPreviousEntries().slice().reverse();
-    if (entries.length === 0 && prev.length === 0) {
-      list.innerHTML = '<div class="gamelog-empty">Nothing logged yet this session.</div>';
-    } else {
-      const render = (e) =>
-        `<div class="gamelog-entry kind-${e.kind}${e.previous ? ' gamelog-prev' : ''}"><span class="gamelog-ts">[Day ${e.day ?? '—'} · ${e.at}]</span> ${GameLogSystem._esc(e.text)}</div>`;
-      list.innerHTML =
-        (prev.length ? `<div class="gamelog-divider">— previous session —</div>${prev.map(render).join('')}` : '') +
-        entries.map(render).join('');
-    }
+    const toData = (e) => ({
+      kind: e.kind,
+      text: String(e.text ?? ''),
+      ts: `[Day ${e.day ?? '—'} · ${e.at}]`,
+    });
+
+    const emptyEl = list.querySelector('.gamelog-empty');
+    const dividerEl = list.querySelector('.gamelog-prev-divider');
+    const prevList = list.querySelector('#gamelog-prev-list');
+    const curList = list.querySelector('#gamelog-cur-list');
+    if (!emptyEl || !dividerEl || !prevList || !curList) return; // panel not installed
+
+    const hasAny = entries.length > 0 || prev.length > 0;
+    emptyEl.style.display = hasAny ? 'none' : '';
+    dividerEl.style.display = prev.length > 0 ? '' : 'none';
+    R.repeatInto(prevList, prevDef, prev.map(toData));
+    R.repeatInto(curList, curDef, entries.map(toData));
+
     const count = panel.querySelector('#gamelog-count');
     if (count) count.textContent = String(this.size());
   }
@@ -205,7 +240,12 @@ class GameLogSystem {
         <button class="gamelog-btn" id="gamelog-clear">Clear</button>
         <button class="gamelog-btn" id="gamelog-close">✕</button>
       </div>
-      <div id="gamelog-list" class="gamelog-list"></div>
+      <div id="gamelog-list" class="gamelog-list">
+        <div class="gamelog-empty">Nothing logged yet this session.</div>
+        <div class="gamelog-divider gamelog-prev-divider" style="display:none">— previous session —</div>
+        <div id="gamelog-prev-list"></div>
+        <div id="gamelog-cur-list"></div>
+      </div>
     `;
     document.body.appendChild(panel);
     panel.querySelector('#gamelog-clear')?.addEventListener('click', () => this.clear());
