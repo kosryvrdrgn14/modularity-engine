@@ -18,19 +18,12 @@
   <div id="pause-overlay">
     <div id="pause-title">PAUSED</div>
     <div id="pause-snapshot">—</div>
-  <div id="pause-actions">
-      <div class="pause-btn primary" id="pause-resume">[1] Resume</div>
-      <div class="pause-btn" id="pause-exit">[2] Exit to Town (run is saved)</div>
-      <div class="pause-btn" id="pause-quit">[3] Quit to Title (run is saved)</div>
-  </div>
+  <div id="pause-actions"></div><!-- v2.14.0: buttons rendered by UIManager as widget cards (ids preserved) -->
     <div id="pause-hint">ESC or [1] resumes · [2]/[3] keep the run for later</div>
   </div>
   <!-- §23.6: end-screen action buttons (the canvas end screen draws stats;
        these are the discoverable Retry/Town affordances for mouse/touch) -->
-  <div id="end-actions">
-    <div class="pause-btn primary" id="end-retry">⟲ Retry (R)</div>
-    <div class="pause-btn" id="end-town">🏘 Return to Town (any key)</div>
-  </div>
+  <div id="end-actions"></div><!-- v2.14.0: buttons rendered by UIManager as widget cards (ids preserved) -->
   <!-- §21 chunk 3: resume-interrupted-run banner (town overlay, non-blocking) -->
   <div id="resume-banner">
     <div class="resume-text">

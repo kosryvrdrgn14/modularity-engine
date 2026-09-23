@@ -50,7 +50,13 @@ class WidgetRenderer {
     // Registry of the defs behind the currently-live instances (§6.4 inspector
     // groundwork + §7 occlusion audit: every interactive instance is here).
     this._instances = new Set();
+    // Class-level registry of ALL renderer instances (v2.14.0): audits and
+    // inspectors enumerate every screen's widgets without knowing who owns
+    // which renderer — screens are free to construct their own.
+    WidgetRenderer._all.add(this);
   }
+
+  static _all = new Set();
 
   // ── Schema validation — THROWS (spec §6.1: fail loudly at load/use) ──
 

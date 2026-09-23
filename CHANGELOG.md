@@ -2,6 +2,41 @@
 
 ---
 
+## v2.14.0 — Screen 2: pause/end action buttons → widget cards (+ audit hardening)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (battery green incl. trace; audit 16/16 with §11 gates for both migrated screens)
+
+### Migration (spec §10 screen 2 — fixed card sets)
+- Pause menu + end-screen buttons are now **widget cards** with DECLARED events
+  (`widget:pauseMenuAction`/`widget:restart`/`widget:endScreenDismiss`), bridged by UIManager to
+  the central bus. Ids preserved (`pause-resume/exit/quit`, `end-retry/town`) — the trace drives
+  the real flows unchanged. Rendered ONCE (no listener stacking on re-shows).
+- Scoped CSS themes the cards; structure/layout come from the widget system.
+
+### Renderer/audit hardening (lessons the migration forced out)
+- **`WidgetRenderer._all`** — class-level registry of every renderer instance: audits and future
+  inspectors enumerate all screens' widgets without knowing who owns which renderer (screens may
+  construct their own).
+- **`unpresented` vs `occluded`** — the audit now distinguishes not-rendered/0×0/out-of-bounds
+  (a presentation state, legitimate for closed overlays) from buried-while-presented (the §7 bug).
+- **Realistic context requirement** — presenting pause over the boot screen buries its cards
+  under title-menu items (the historical titleMenu-never-hidden class, in reverse). The audit
+  reproduces the game's own funnel: title hidden, town hidden, shop closed — one screen at a time.
+- **Negative control hardened** — baseline scan → cover → scan at the SAME MOMENT with an
+  interactive target presented; a control that depends on stale matrix state proves nothing.
+
+### The audit caught my own CSS bug
+My theming block re-declared `display:flex` on a shared `#pause-actions, #end-actions` selector,
+cascade-overriding `#end-actions { display:none }` — force-showing two buried cards that poisoned
+every scan. The occlusion audit flagged exactly it (a cascade rule violated by the same block's
+own comment). Fixed by scoping layout to the new container only.
+
+### §11 promotion
+- Pause cards gate at all three viewports (presented + unburied ≥3 targets). Migrated screens
+  gated so far: game-log panel, pause menu. Next: town HUD chips (repeat-over-array showcase).
+
+---
+
 ## v2.13.0 — First screen migration: game-log panel → widget cards (renderer v1.1)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (battery green; audit 14/14 incl. new §11 gates; preview 21/21)

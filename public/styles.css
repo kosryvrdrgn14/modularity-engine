@@ -1937,3 +1937,23 @@
 #gamelog-list .widget-card { background: transparent; box-shadow: none; border: none; padding: 2px 0; min-height: 0; gap: 6px; }
 #gamelog-list .slot-primaryText { font-size: 0.75rem; line-height: 1.45; }
 #gamelog-list .slot-secondaryText { font-family: Consolas, monospace; font-size: 0.68rem; color: #666; }
+/* ── §10 screen-2 (v2.14.0): pause/end action buttons as widget cards ── */
+/* Structure from the widget system; this screen's theme is scoped here. */
+#pause-actions .widget-card, #end-actions .widget-card {
+  border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04); cursor: pointer; padding: 10px 18px;
+}
+#pause-actions .widget-card.interactive:hover, #end-actions .widget-card.interactive:hover {
+  background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 215, 0, 0.55);
+}
+#pause-actions .widget-card.primary, #end-actions .widget-card.primary {
+  border-color: rgba(76, 175, 80, 0.65); background: rgba(76, 175, 80, 0.18);
+}
+#pause-actions .widget-card.primary.interactive:hover, #end-actions .widget-card.primary.interactive:hover {
+  background: rgba(76, 175, 80, 0.4);
+}
+/* Layout: #pause-actions is a NEW container (flex column). #end-actions has its own
+   original display/visibility rules — never re-declare display here (the audit caught
+   exactly that cascade bug: force-shown buried cards). */
+#pause-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+#end-actions .widget-card { min-width: 220px; text-align: center; }

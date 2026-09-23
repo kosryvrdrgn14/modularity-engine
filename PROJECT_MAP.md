@@ -282,6 +282,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: `UIManager` — combat HUD DOM: level-up cards, pause menu, end screen
 - Status: NORMATIVE
 - Defines: `UIManager`
+- Calls: `WidgetRenderer` (pause/end action buttons are widget cards, v2.14.0 — declared `widget:*` document events bridged to the bus; ids `pause-resume/exit/quit`, `end-retry/town` preserved)
 - Emits: `selectUpgrade`, `pauseMenuAction`, `restart`, `endScreenDismiss`
 - DOM: `levelup-overlay`, `levelup-cards`, `pause-overlay`, `pause-resume`, `pause-quit`, `pause-exit`, `end-actions`, `end-retry`, `end-town`
 - GuardedBy: trace (pause/end flows)
@@ -294,9 +295,9 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - GuardedBy: trace
 
 ### ui/widgetRenderer.js
-- Purpose: WidgetRenderer — data-driven card rendering (pooled), skins from content
+- Purpose: WidgetRenderer — data-driven card rendering (pooled), skins from content; v1.1: data-bound context accent (`accent.bind` → bounded `--widget-accent-<token>` palette) + `muted` flag
 - Status: NORMATIVE
-- Defines: `WidgetRenderer`
+- Defines: `WidgetRenderer` (+ static `WidgetRenderer._all`: registry of every renderer instance — consumed by the occlusion audit / future inspector)
 - Calls: `DataManager.uiSkins`, `game` (registry access)
 - Content: `ui_skins.json`
 - GuardedBy: `tests/suites/step3_widget_inventory.cjs`

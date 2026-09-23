@@ -10,13 +10,46 @@ class UIManager {
     this._levelupCards = document.getElementById('levelup-cards');
     // §23: combat pause menu overlay
     this._pauseOverlay = document.getElementById('pause-overlay');
-    // onclick (not addEventListener) so re-shows never stack listeners.
-    const pauseResume = document.getElementById('pause-resume');
-    const pauseExit = document.getElementById('pause-exit');
-    const pauseQuit = document.getElementById('pause-quit');
-    if (pauseResume) pauseResume.onclick = () => this.eventBus.emit('pauseMenuAction', { action: 'resume' });
-    if (pauseExit) pauseExit.onclick = () => this.eventBus.emit('pauseMenuAction', { action: 'exit' });
-    if (pauseQuit) pauseQuit.onclick = () => this.eventBus.emit('pauseMenuAction', { action: 'quit' });
+    // ── §10 screen-2 migration (v2.14.0): pause/end buttons are WIDGET CARDS —
+    // fixed card sets rendered once here, events DECLARED on each def, ids
+    // preserved (trace clicks them). Widget CustomEvents bridge to the bus;
+    // re-shows never stack listeners because render happens once.
+    this.widgetRenderer = new WidgetRenderer({ skins: null });
+    this._renderFixedActionCards();
+    // Bridge: declared widget events surface on the central bus.
+    document.addEventListener('widget:pauseMenuAction', (e) => this.eventBus.emit('pauseMenuAction', e.detail || {}));
+    document.addEventListener('widget:restart', () => this.eventBus.emit('restart', {}));
+    document.addEventListener('widget:endScreenDismiss', () => this.eventBus.emit('endScreenDismiss', {}));
+  }
+
+  /** Fixed action cards (pause menu + end screen) — data-declared, rendered
+   *  once; hidden containers until their overlay activates. */
+  _renderFixedActionCards() {
+    const R = this.widgetRenderer;
+    const mk = (hostId, defs) => {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      host.innerHTML = '';
+      for (const d of defs) {
+        const el = R.render({
+          template: 'card', _v: 1, layout: 'text-only-row', size: 'medium',
+          slots: { primaryText: { bind: 'label' } },
+          onClick: { emit: d.emit, payload: d.payload || {} },
+        }, { label: d.label });
+        el.id = d.id;
+        if (d.cls) el.classList.add(d.cls);
+        host.appendChild(el);
+      }
+    };
+    mk('pause-actions', [
+      { id: 'pause-resume', label: '[1] Resume', cls: 'primary', emit: 'widget:pauseMenuAction', payload: { action: 'resume' } },
+      { id: 'pause-exit', label: '[2] Exit to Town (run is saved)', emit: 'widget:pauseMenuAction', payload: { action: 'exit' } },
+      { id: 'pause-quit', label: '[3] Quit to Title (run is saved)', emit: 'widget:pauseMenuAction', payload: { action: 'quit' } },
+    ]);
+    mk('end-actions', [
+      { id: 'end-retry', label: '⟲ Retry (R)', cls: 'primary', emit: 'widget:restart' },
+      { id: 'end-town', label: '🏘 Return to Town (any key)', emit: 'widget:endScreenDismiss' },
+    ]);
   }
 
   showLevelUp(options) {
@@ -76,17 +109,11 @@ class UIManager {
     if (stats && !stats.stars && result && result.stars) {
       this.endScreen.stats.stars = result.stars;
     }
-    // §23.6: explicit end-screen buttons (mouse/touch discoverability;
-    // keyboard paths R → retry / any-key → town are unchanged). onclick is
-    // overwritten each show — re-shows never stack listeners.
+    // §23.6: end-screen buttons are widget cards (v2.14.0) — events already
+    // declared/bridged; showing is just the overlay class. Keyboard paths
+    // R → retry / any-key → town are unchanged.
     const bar = document.getElementById('end-actions');
-    if (bar) {
-      bar.classList.add('active');
-      const retry = document.getElementById('end-retry');
-      const town = document.getElementById('end-town');
-      if (retry) retry.onclick = () => this.eventBus.emit('restart');
-      if (town) town.onclick = () => this.eventBus.emit('endScreenDismiss');
-    }
+    if (bar) bar.classList.add('active');
   }
 
   hideEndScreen() {

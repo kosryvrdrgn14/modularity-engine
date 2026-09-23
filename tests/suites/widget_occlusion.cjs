@@ -69,11 +69,13 @@ const check = (name, pass, extra) => {
       typeof seed === 'object' && seed.instances > 0,
       typeof seed === 'string' ? seed : JSON.stringify(seed));
 
-    // §7.2 mechanism — reusable scan. "offscreen/zero-size" (presentation) is
-    // reported separately from "occluded" (buried under another element).
+    // §7.2 mechanism — reusable scan. Three states, never conflated:
+    //   unpresented: not rendered / 0×0 / outside viewport bounds (screen
+    //     closed — a presentation state, NOT an occlusion bug; hidden screens'
+    //     cards legitimately sit at 0×0 until their overlay opens)
+    //   occluded: presented but buried under another element (the §7 bug class)
     const scanFn = () => {
-      const R = window.game.townScreen.shopSystem.widgetRenderer;
-      const out = { checked: 0, occluded: [], offscreen: [] };
+      const out = { checked: 0, occluded: [], unpresented: [] };
       const label = (inst) => {
         const d = inst.def || {};
         const name = (inst.data && inst.data.item && inst.data.item.name) ||
@@ -81,17 +83,21 @@ const check = (name, pass, extra) => {
           (d.onClick && d.onClick.emit) || 'widget';
         return `${d.layout || 'card'} · ${name}`;
       };
-      for (const inst of R._instances) {
-        const el = inst.el;
-        if (!el.isConnected) continue;
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) { out.offscreen.push(label(inst)); continue; }
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        if (cy < 0 || cx < 0 || cy > window.innerHeight || cx > window.innerWidth) { out.offscreen.push(label(inst)); continue; }
-        const hit = document.elementFromPoint(cx, cy);
-        out.checked++;
-        if (!hit || !(hit === el || el.contains(hit))) out.occluded.push(label(inst));
+      // Scan EVERY renderer's registry (WidgetRenderer._all, v2.14.0) — the
+      // audit owns no assumptions about which screen owns which renderer.
+      for (const R of WidgetRenderer._all) {
+        for (const inst of R._instances) {
+          const el = inst.el;
+          if (!el.isConnected) { out.unpresented.push(label(inst)); continue; }
+          const rect = el.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) { out.unpresented.push(label(inst)); continue; }
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          if (cy < 0 || cx < 0 || cy > window.innerHeight || cx > window.innerWidth) { out.unpresented.push(label(inst)); continue; }
+          const hit = document.elementFromPoint(cx, cy);
+          out.checked++;
+          if (!hit || !(hit === el || el.contains(hit))) out.occluded.push(label(inst));
+        }
       }
       return out;
     };
@@ -111,17 +117,40 @@ const check = (name, pass, extra) => {
         check(`[desktop gate] scan ran non-vacuously`, res.checked > 0, JSON.stringify(res));
         check(`[desktop gate] every interactive instance clickable at its position`,
           res.occluded.length === 0, `occluded: ${res.occluded.join(' ; ')}`);
-        check(`[desktop gate] no interactive instance offscreen/zero-size`,
-          res.offscreen.length === 0, `offscreen: ${res.offscreen.join(' ; ')}`);
       } else {
         // §11 report-only: becomes a gate per screen at migration time.
         check(`[${res.name}] scan ran non-vacuously (report-only viewport)`, res.checked > 0);
-        const usable = res.occluded.length === 0 && res.offscreen.length === 0;
-        console.log(`  ◦ [${res.name}] REPORT-ONLY: checked=${res.checked}, occluded=${res.occluded.length}, offscreen=${res.offscreen.length} → ${usable ? 'USABLE' : 'HAS ISSUES (promote to gate at this screen\'s migration)'}`);
+        const usable = res.occluded.length === 0;
+        console.log(`  ◦ [${res.name}] REPORT-ONLY: checked=${res.checked}, occluded=${res.occluded.length}, unpresented=${res.unpresented.length} → ${usable ? 'USABLE' : 'HAS ISSUES (promote to gate at this screen\'s migration)'}`);
         if (res.occluded.length) console.log(`      occluded: ${res.occluded.join(' ; ')}`);
-        if (res.offscreen.length) console.log(`      offscreen: ${res.offscreen.join(' ; ')}`);
       }
     }
+
+    // ── Pause-menu cards (v2.14.0, screen 2): presented here so the desktop
+    // gate covers them (they sit 0×0/unpresented while their overlay is
+    // closed — which is why 'unpresented' is a state, not a failure). ──
+    // Realistic pause context, per the game's own startGame funnel: the title
+    // menu and town screen are HIDDEN by the time a pause menu can ever open
+    // mid-run. The audit must reproduce that — showing pause over the boot
+    // screen buries the cards under title-menu items (a setup artifact, not
+    // a game bug; the titleMenu-never-hidden bug class in reverse).
+    await page.evaluate(() => {
+      document.getElementById('shop-overlay')?.classList.remove('active');
+      window.game.titleMenu.hide();
+      window.game.townScreen?.hide();
+      window.game.uiManager.showPauseMenu('audit-snapshot');
+    });
+    // §11 promotion (v2.14.0, migration screen 2): pause cards gate at ALL
+    // three viewports — presented, unburied, ≥3 interactive targets.
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(120);
+      const pauseScan = await page.evaluate(scanFn);
+      check(`[§11 gate: pause cards @ ${vp.name}] presented and clickable`,
+        pauseScan.occluded.length === 0 && pauseScan.checked >= 3,
+        JSON.stringify(pauseScan));
+    }
+    await page.evaluate(() => window.game.uiManager.hidePauseMenu());
 
     // ── §11 promotion (v2.13.0, migration screen 1: game-log panel). ──
     // The screen's own mobile/landscape gates are now GATING (element-specific:
@@ -162,9 +191,16 @@ const check = (name, pass, extra) => {
     await page.evaluate(() => window.game.gameLog.closePanel());
 
     // Negative control (back at the gating viewport): a burying overlay MUST
-    // be detected — an audit that cannot fail proves nothing.
+    // be detected — an audit that cannot fail proves nothing. Self-consistent
+    // design: open a screen with cards, baseline scan → cover → scan again AT
+    // THE SAME MOMENT, so the comparison never depends on stale state.
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.waitForTimeout(100);
+    // Interactive target for the control (the audit enumerates onClick-bearing
+    // instances only, per §7): re-present the pause menu — title menu/town are
+    // already hidden at this point in the run.
+    await page.evaluate(() => window.game.uiManager.showPauseMenu('negctl'));
+    const baseline = await page.evaluate(scanFn);
     await page.evaluate(() => {
       const d = document.createElement('div');
       d.id = '__audit_cover__';
@@ -173,10 +209,12 @@ const check = (name, pass, extra) => {
     });
     const covered = await page.evaluate(scanFn);
     await page.evaluate(() => { const d = document.getElementById('__audit_cover__'); if (d) d.remove(); });
-    const desktop = results.find((x) => x.name === 'desktop');
     check('negative control: audit detects a burying overlay (can fail)',
-      covered.occluded.length >= desktop.checked && covered.checked === desktop.checked,
-      `covered scan: ${JSON.stringify({ checked: covered.checked, occluded: covered.occluded.length })}`);
+      baseline.occluded.length === 0 && baseline.checked >= 3 &&
+      covered.checked === baseline.checked &&
+      covered.occluded.length === covered.checked,
+      `baseline: ${JSON.stringify(baseline)} | covered: ${JSON.stringify(covered)}`);
+    await page.evaluate(() => window.game.uiManager.hidePauseMenu());
 
     check('no page errors across all viewports', errors.length === 0, errors.slice(0, 3).join(' | '));
 
