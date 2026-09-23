@@ -163,8 +163,9 @@ exposing raw layout files, since it's foolproof by construction.
 ### 5.1 Instance pooling for lists
 
 Long lists (companion roster, inventory grid, quest log) reuse a pool of card instances and
-rebind data on scroll/filter changes, rather than destroying and recreating DOM. Most visible as
-avoided jank on mobile specifically.
+rebind data on scroll/filter changes, rather than destroying and recreating DOM — and a rebind
+must update onClick payloads too (renderer v1.1.1 reads binding data at click time). Most
+visible as avoided jank on mobile specifically.
 
 ### 5.2 Reactive re-render, not polling
 
@@ -188,13 +189,15 @@ invisible-but-technically-present interactive element.
 
 Layout and skin files carry a version tag, same discipline as save-schema versioning. When the
 widget vocabulary changes in a future update, an old mod's file gets flagged as needing an
-update rather than silently breaking or misrendering.
+update rather than silently breaking or misrendering. Vocabulary is at **v1.1.1**
+(v1.1: context accent + muted flag, v2.13.0; v1.1.1: click-time binding data, v2.16.0).
 
 ### 6.3 Live-preview tool
 
 A lightweight standalone previewer — feed it a layout/skin plus dummy data, see the rendered
 result instantly, without booting the full game. Cheap once the renderer exists (same renderer,
-synthetic data), and meaningfully speeds up iteration for both you and modders.
+synthetic data), and meaningfully speeds up iteration for both you and modders. **Built v2.12.0** —
+also proves the §5.1 pooled-rebind contract (v1.1.1 regression row).
 
 ### 6.4 Widget inspector (dev tool)
 
@@ -265,10 +268,10 @@ around it. This spec is a strong starting point, not a permanent commitment.
 
 | # | Screen | Why here |
 |---|--------|----------|
-| 1 | Game-log panel | smallest list UI, already bus-driven — lowest-risk first |
-| 2 | Pause / end screens | small fixed card sets |
-| 3 | Town HUD chips | repeat-over-array showcase |
-| 4 | Dialogue overlay | highest payoff: NPC presentation becomes content-editable |
+| 1 | Game-log panel | smallest list UI, already bus-driven — lowest-risk first — **MIGRATED v2.13.0** |
+| 2 | Pause / end screens | small fixed card sets — **MIGRATED v2.14.0** |
+| 3 | Town HUD chips | repeat-over-array showcase — **MIGRATED v2.15.0** |
+| 4 | Dialogue overlay | highest payoff: NPC presentation becomes content-editable — **MIGRATED v2.16.0** |
 | 5 | Loadout screens | larger card lists |
 | 6 | Shop tabs | remaining tabs beyond the piloted Inventory tab |
 | 7 | Title menu | most bespoke today — last |

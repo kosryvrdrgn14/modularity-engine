@@ -42,6 +42,20 @@
   pool row's `[preview-pool]` — a harness bug, fixed in place (§5 tooling lesson: a RED can indict the
   tool, not the code).
 
+### Documentation maintenance (same session)
+- Spec: §10 table rows 1–4 marked **MIGRATED** with versions; §5.1 now states the pooling contract
+  (rebinds update onClick payloads — v1.1.1); §6.2 records the vocabulary version (v1.1.1); §6.3
+  marked Built with the regression note.
+- TOOLING_MAP: Live-Preview row corrected (4 contract edges, not 2); Playwright row corrected
+  (8 suites — stale check-count dropped); §5 entry documenting the counts-drift-every-migration
+  pattern.
+- TESTING_PLAN §4.9: occlusion suite added; game_log check count refreshed (12→18).
+- KNOWLEDGE §16: step2's constructor-slip catch + the harness-RED lesson appended.
+- Incident: multi-line `str_replace` replacements into the CRLF spec silently JOINED adjacent
+  lines (newlines consumed at both ends of each oldString match) — caught by reading back the
+  edited regions, repaired to proper prose. Rule confirmed the hard way: CRLF files get
+  single-line anchored edits, and every CRLF edit is verified by reading the region back.
+
 ---
 
 ## v2.15.0 — Screen 3: town HUD chips → one pooled widget repeat (repeat-over-array showcase)

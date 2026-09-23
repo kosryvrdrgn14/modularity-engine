@@ -251,6 +251,11 @@ synthetic `levelUp` emit crashed `Game._checkWeaponUnlocks()` — a REAL latent 
 deliberate rejections is correct; silencing unexpected errors is how bugs hide.
 When the error net goes red, diagnose before dismissing.
 
+**Re-proven twice more (2026-09-23, v2.16.0):** the step2 suite's console-error net caught a
+constructor signature slip (`clearPendingDisaster` dropped in a signature rewrite) before it
+could ship, and the preview tool went RED on its own harness filter bug — the tool's RED is
+also evidence about the tool, not just the code.
+
 ## 17. Two logs, two purposes — never merge (added 2026-09-14)
 
 The **game log** (`GameLogSystem`) is a session-scoped play/debug surface: noisy,

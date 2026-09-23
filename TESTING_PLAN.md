@@ -138,7 +138,8 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step3_widget_inventory.cjs` — widget pilot + inventory canonical home + POT-015 + gold chip (22)
 - 🟩 `step4_export.cjs` — roleplay export: spoiler cutoff, favorites, purity (8)
 - 🟩 `calendar_time.cjs` — event-driven days, biomes, locked modifier rule, log day-stamps (27)
-- 🟩 `game_log.cjs` — session console capture, ring buffer, UI, two-logs purity (12)
+- 🟩 `game_log.cjs` — session console capture, ring buffer, UI, two-logs purity (18)
+- 🟩 `widget_occlusion.cjs` — §7 occlusion audit + negative control + §11 promoted gates (game-log panel, pause cards, town chips, dialogue choices at all 3 viewports) (25)
 - Run everything: `npm test` (skip-safe) / `npm run test:strict` (skips fail).
 
 ### 4.8 Save integrity fuzz

@@ -31,7 +31,7 @@ running. Console tools: open DevTools, type the accessor.
 | NPC Condition Inspector | Built (v2.5.0) | Why an NPC's location/dialogueSet/mood resolved the way it did; log queries; full schema reference | Console: `__NPC_DEBUG__.evaluate('old_man')`, `.explain('old_man')`, `.log(id)`, `.schema()` |
 | Game Log Inspector | Built (v2.9.0) | Session console tail: filter, dump-to-clipboard, clear | Console: `__GAMELOG_DEBUG__.last(20)`, `.filter(q)`, `.dump()` |
 | Widget Inspector | **Planned** (`widget_ui_system_spec.md` §6.4) | Which layout/skin/bindings produced a given on-screen card | Not yet built (renderer already keeps a def registry — hook point exists) |
-| Widget Live-Preview | **Built (v2.12.0)** (`widget_ui_system_spec.md` §6.3) | Render every layout × size × skin against dummy data + both contract edges, screenshot the matrix for the manual §4.4 contrast check | `npm run widget:preview` |
+| Widget Live-Preview | **Built (v2.12.0; v1.1.1 regression v2.16.0)** (`widget_ui_system_spec.md` §6.3) | Render every layout × size × skin against dummy data + 4 contract edges (missing data renders empty; declared-event click; v1.1.1 pooled-rebind-emits-rebound-payload; pool hides surplus nodes), screenshot the matrix for the manual §4.4 contrast check | `npm run widget:preview` |
 | Date/Time Inspector | Built (v2.8.0) | Current day, resolved season per region, active festivals, modifiers | Console: `game.timeService.getDateContext()`, `.getSeason('graveyard')`, `.getActiveModifiers()` |
 
 **Known gap (confirmed 2026-09-14):** entry points are inconsistent — Stage Select/Weapons/
@@ -48,7 +48,7 @@ named npm scripts (see standardization below) — that is what makes them agent-
 
 | Tool | Status | Purpose |
 |---|---|---|
-| **Playwright headless suite** | **Built & primary safety net** — 7 suites, 265 contract checks + 112-check regression trace, all green, in version control (`tests/`) | Drives the REAL game (bootGame harness, real state transitions per KNOWLEDGE §2b): gate engine, NPC/memory log, widgets/inventory, export purity, calendar, game log, plus the full historical trace. `npm test` (skip-safe) / `npm run test:strict` (skips fail) / `npm run test:trace`. Artifacts in `tests/artifacts/` |
+| **Playwright headless suite** | **Built & primary safety net** — 8 suites + 112-check regression trace, all green, in version control (`tests/`) | Drives the REAL game (bootGame harness, real state transitions per KNOWLEDGE §2b): gate engine, NPC/memory log, widgets/inventory, export purity, calendar, game log, occlusion/§11 viewport gates, plus the full historical trace. `npm test` (skip-safe) / `npm run test:strict` (skips fail) / `npm run test:trace`. Artifacts in `tests/artifacts/` |
 | **Trace harness (`tests/lib/harness.cjs`)** | Built | `bootGame()` headless browser boot with error net, storage control (`keepStorage` + reload for true persistence round-trips), per-step API detectors, PASS/FAIL runner with CI-friendly exit codes. THE canonical way any agent drives real game state |
 | **`tools/verify.cjs`** | **Built (v2.10.0; map checks v2.11.0)** | `npm run verify` — syntax-checks all 37 game files IN REAL LOAD ORDER + validates all 16 content JSONs + embeddedData mirror sync + **enforces PROJECT_MAP.md** (block coverage both ways, `Defines:` symbol presence, Status enum, GuardedBy suites, §3.1 content rows). `npm run verify:trace` adds the regression trace. ~2s without trace; the first command to run after any edit |
 | **`PROJECT_MAP.md`** | **Built (v2.11.0), verify-enforced** | The file-contract map: one block per load-order file (cross-file edges only), load-order tiers, §3 reverse indexes (content consumers, event emitters→listeners, store-branch ownership), §4 archetype templates, §5 health log. Maintenance law: KNOWLEDGE §19 |
@@ -189,3 +189,18 @@ used. Keep entries short — date, what happened, what changed as a result.
   cannot pass vacuously.
 - Adjustment made: rows moved Planned→Built; npm block updated. Open: Widget Inspector (§6.4)
   remains Planned — registry hook point already exists.
+
+---
+
+- Date: 2026-09-23
+- Tool/section affected: §2 (Playwright suite row, Live-Preview row), TESTING_PLAN §4.9
+- What happened: Documentation-maintenance pass after v2.16.0 (dialogue-overlay migration).
+  Found drift caught early: the Playwright row still said "7 suites, 265 contract checks" (battery
+  is 8 suites since widget_occlusion joined; check counts go stale every session, so the count was
+  dropped in favor of naming the suites); the Live-Preview row said "both contract edges" (it now
+  proves 4, including the v1.1.1 pooled-rebind regression); TESTING_PLAN §4.9 was missing the
+  occlusion suite and showed game_log at its old check count (12→18). Same lesson as the audit
+  rows: statuses and counts drift every migration — a two-minute grep of "Built (v" + suite names
+  per doc catches it.
+- Adjustment made: rows and §4.9 updated. Note: per-suite check counts in TESTING_PLAN are
+  re-verified against battery output at each documentation pass, not trusted from memory.
