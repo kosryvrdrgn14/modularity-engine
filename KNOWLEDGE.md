@@ -269,6 +269,24 @@ audit was the only thing standing between a casual `rm` and permanent loss. The 
 stays in `tools/` as the reference for any future "is this backup safe to delete?"
 question: audit first, delete second.
 
+## 19. PROJECT_MAP.md is a contract, not documentation (added 2026-09-23)
+
+`PROJECT_MAP.md` maps every load-order file's cross-file edges (Defines / Calls / bus events /
+content / store ownership / GuardedBy). It is **enforced**, not aspirational:
+
+- **Contract updates ride along with the change that invalidates them.** Renaming a global,
+  moving a store write, adding a listener — the same change updates the map block and any §3 index row.
+- **A new or renamed file without a contract block is a red suite, not a TODO.** `npm run verify`
+  fails on coverage in both directions (load-order file without a block; block pointing at a missing
+  file), on `Defines:` symbols absent from source, on invalid Status values, and on §3.1 rows that
+  name content files that don't exist.
+- **Status is a lifecycle decision, exactly one per file:** `NORMATIVE` (load-bearing — edits are
+  contract negotiations), `IN-FLUX` (mid-refactor), `DEPRECATED` (do not build on it; deletion is the goal).
+- **If the map disagrees with the code, the code wins** — and the map gets a §5 health-log entry,
+  same discipline as TOOLING_MAP §5.
+- **Never describe internal logic in a block.** The moment a block explains how something works
+  inside one file, it duplicates the file and starts lying. Cross-file edges only.
+
 Standing rules I follow on every task, so future sessions inherit them:
 
 - **Default path for scoped lookups:** terminal `rg` (`rg -n "pattern" public/engine`).

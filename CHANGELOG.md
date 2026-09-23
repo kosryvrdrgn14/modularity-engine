@@ -2,6 +2,44 @@
 
 ---
 
+## v2.11.0 — Tooling: PROJECT_MAP.md (enforced file contracts)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (verify green incl. map checks; full battery green)
+
+### Added
+- **`PROJECT_MAP.md`** — per-file contract map for all 37 load-order files: cross-file edges only
+  (Defines / Calls / bus Listens+Emits / content consumed / `persistent.*` ownership per POT-012 /
+  GuardedBy suites), plus §1 load-order tiers, §3 reverse indexes (content consumers, event
+  emitters→listeners, store-branch ownership), §4 archetype templates, §5 pre-seeded health log.
+- **Map enforcement inside `tools/verify.cjs`** (runs in `npm run verify`): coverage both directions
+  (load-order file without block = red; block pointing at missing file = red), `Defines:` symbols
+  must exist in source, `Status:` enum (NORMATIVE / IN-FLUX / DEPRECATED), GuardedBy suites must
+  exist, §3.1 rows must point at real content files. New/renamed file without a block is a red
+  suite — the map cannot silently rot (KNOWLEDGE §19).
+- **KNOWLEDGE.md §19** — the maintenance law: contract updates ride along with the invalidating
+  change; lifecycle statuses; "code wins, log the map error"; no internal-logic descriptions.
+- **Docs:** TOOLING_MAP gains the map + enforcement rows, npm-block note, §5 log entry;
+  TESTING_PLAN §4.9 notes the static gate.
+
+### Birth corrections (caught before first green, recorded per convention)
+- Map initially misattributed `evaluateCondition` (actual API: `ConditionEngine.evaluate`) and
+  `__QUEST_DEBUG__` (a flag SET in engine/game.js, READ by quest/npcSystem — listed in the setter's
+  Defines and the readers' Calls, not as a class-style Define everywhere).
+- Parser bug fixed pre-green: block-body lookahead terminated at its own header line; replaced
+  with a true-EOF assertion.
+
+### Findings logged for future work (PROJECT_MAP §5)
+- **§5.5 dead-event candidates:** 19 emitted bus events with no static listener (`playSound`,
+  `telegraphSpawn/Resolve`, `floatingText`, `bossIntroComplete`, `shopEffect`, `startCombat`,
+  `player:levelUp`, `quest:available/started/flag_set`, `counter:changed`, `farmingComplete`,
+  `save:reset/slotSwitched/slotWiped`, `unlock:weapon/stage/feature`) — audit before deleting any
+  emitter; the index makes that audit one lookup.
+- **§5.6 open decision:** `persistent.town` has two registered writers (townContent.js, game.js);
+  POT-012 spirit says one owner.
+- **§5.4:** `data/shopData.js` marked IN-FLUX — content/-pipeline migration candidate.
+
+---
+
 ## v2.10.0 — Tooling: TOOLING_MAP.md (verified) + tools/verify.cjs
 **Date:** September 14, 2026
 **Status:** ✅ Complete (verify green incl. trace; full battery untouched and green)

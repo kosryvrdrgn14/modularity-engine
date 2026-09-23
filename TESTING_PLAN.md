@@ -128,6 +128,11 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟥 POT-014 real flow: title→combat transition fires exactly one stop (D4 call count)
 
 ### 4.9 Post-plan system suites (added 2026-09-14)
+
+> **Static gate (v2.11.0):** `npm run verify` additionally enforces `PROJECT_MAP.md` — every
+> load-order file must have a contract block, every block's `Defines:` symbols must exist in
+> source, Status must be a valid lifecycle value, GuardedBy suites must exist, §3.1 content rows
+> must point at real files. New/renamed file without a block = red, per KNOWLEDGE §19.
 - 🟩 `step1_gate_engine.cjs` — ConditionEngine: typed conditions, combinators, fail-closed, quest routing (30)
 - 🟩 `step2_npc_system.cjs` — NPC system + canonical memory log incl. save/reload round-trip (30)
 - 🟩 `step3_widget_inventory.cjs` — widget pilot + inventory canonical home + POT-015 + gold chip (22)
