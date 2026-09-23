@@ -272,7 +272,7 @@ around it. This spec is a strong starting point, not a permanent commitment.
 | 2 | Pause / end screens | small fixed card sets — **MIGRATED v2.14.0** |
 | 3 | Town HUD chips | repeat-over-array showcase — **MIGRATED v2.15.0** |
 | 4 | Dialogue overlay | highest payoff: NPC presentation becomes content-editable — **MIGRATED v2.16.0** |
-| 5 | Loadout screens | larger card lists |
+| 5 | Loadout screens | larger card lists — **MIGRATED v2.17.0** |
 | 6 | Shop tabs | remaining tabs beyond the piloted Inventory tab |
 | 7 | Title menu | most bespoke today — last |
 

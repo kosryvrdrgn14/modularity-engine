@@ -295,12 +295,12 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - GuardedBy: trace
 
 ### ui/widgetRenderer.js
-- Purpose: WidgetRenderer — data-driven card rendering (pooled), skins from content; v1.1: data-bound context accent (`accent.bind` → bounded `--widget-accent-<token>` palette) + `muted` flag; v1.1.1: click-time binding data (`_instanceData`) — pooled rebind updates onClick payloads too
+- Purpose: WidgetRenderer — data-driven card rendering (pooled), skins from content; v1.1: data-bound context accent (`accent.bind` → bounded `--widget-accent-<token>` palette) + `muted` flag; v1.1.1: click-time binding data (`_instanceData`) — pooled rebind updates onClick payloads too; v1.2: data-bound `selected.bind` (`.widget-selected` on render+rebind) + click-time DEF (`_instanceDef`) — a warm pool rebound with a different def emits the NEW event, and layout/size classes refresh on rebind
 - Status: NORMATIVE
 - Defines: `WidgetRenderer` (+ static `WidgetRenderer._all`: registry of every renderer instance — consumed by the occlusion audit / future inspector)
 - Calls: `DataManager.uiSkins`, `game` (registry access)
 - Content: `ui_skins.json`
-- GuardedBy: `tests/suites/step3_widget_inventory.cjs` (render contract), `tools/widget_preview.cjs` (v1.1.1 rebound-payload regression)
+- GuardedBy: `tests/suites/step3_widget_inventory.cjs` (render contract), `tools/widget_preview.cjs` (v1.1.1/v1.2 pool regressions), `tests/suites/step5_loadout_widgets.cjs` (def-swap + selected-bind live)
 
 ### ui/shop.js
 - Purpose: shop screen — buy consumables/upgrades, sandbox launcher, farming loot handoff
@@ -335,9 +335,9 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: pre-combat loadout picker (stage → weapons → companions)
 - Status: NORMATIVE
 - Defines: `LoadoutScreen`
-- Calls: `COMPANION_DATA` (guarded), `DataManager.stages`
-- DOM: `loadout-overlay`, `loadout-next`, `loadout-confirm`, `loadout-back`, `loadout-back-companions`
-- GuardedBy: trace
+- Calls: `COMPANION_DATA` (guarded), `DataManager.stages`, `WidgetRenderer` (cards + slot chips are pooled repeats — §10 screen-5, v2.17.0; defs `WEAPON_CARD_DEF`/`COMPANION_CARD_DEF`/`SLOT_CHIP_DEF` declare `widget:loadoutPick`/`widget:loadoutClear`, bridged on the overlay; persistent chrome skeleton, phase renders only re-populate hosts; selection via renderer v1.2 `selected.bind`)
+- DOM: `loadout-overlay`, `loadout-next`, `loadout-confirm`, `loadout-back`, `loadout-back-companions`, `loadout-slots` (pool host), `loadout-grid` (pool host)
+- GuardedBy: `tests/suites/step5_loadout_widgets.cjs`
 
 ### ui/town.js
 - Purpose: `TownScreen` — town shell/root controller

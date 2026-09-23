@@ -34,6 +34,109 @@ class LoadoutScreen {
     this.overlay = overlay;
   }
 
+  // ── Widget defs (v2.17.0, §10 screen 5) ──────────────────
+  // Cards + slot chips are pooled widget cards (one def each); chrome buttons
+  // stay bespoke code (their enabled/disabled state toggles classes the widget
+  // vocabulary does not own). Selection is DATA (renderer v1.2 `selected.bind`).
+
+  static WEAPON_CARD_DEF = {
+    template: 'card',
+    layout: 'icon-top',
+    size: 'small',
+    slots: {
+      icon: { bind: 'icon' },
+      primaryText: { bind: 'name' },
+      secondaryText: { bind: 'meta' },
+    },
+    onClick: { emit: 'widget:loadoutPick', payload: { kind: 'weapon', id: '{{id}}' } },
+    selected: { bind: 'selected' },
+  };
+
+  static COMPANION_CARD_DEF = {
+    template: 'card',
+    layout: 'icon-top',
+    size: 'small',
+    slots: {
+      icon: { bind: 'icon' },
+      primaryText: { bind: 'name' },
+      secondaryText: { bind: 'meta' },
+    },
+    onClick: { emit: 'widget:loadoutPick', payload: { kind: 'companion', id: '{{id}}' } },
+    selected: { bind: 'selected' },
+  };
+
+  static SLOT_CHIP_DEF = {
+    template: 'card',
+    layout: 'text-only-row',
+    size: 'small',
+    slots: {
+      primaryText: { bind: 'label' },
+      secondaryText: { bind: 'hint' },
+    },
+    onClick: { emit: 'widget:loadoutClear', payload: { kind: '{{kind}}', index: '{{index}}' } },
+    selected: { bind: 'filled' },
+  };
+
+  /** Shared per-item card data. `meta` mirrors the pre-migration meta line. */
+  _itemData(list, id, selectedIds, kind) {
+    const d = list.find(x => x.id === id) || {};
+    return {
+      id,
+      icon: d.icon || '?',
+      name: d.name || id,
+      meta: kind === 'weapon'
+        ? this._weaponTypeLabel(d.type) + ' \u00b7 Lv' + (d.unlockLevel || 1)
+        : (d.desc || d.role || ''),
+      selected: selectedIds.includes(id),
+    };
+  }
+
+  /** Per-slot chip data (label/hint mirror the pre-migration slot markup). */
+  _slotData(id, list, kind, index) {
+    const filled = !!id;
+    const d = filled ? (list.find(x => x.id === id) || {}) : {};
+    return {
+      kind,
+      index: String(index),
+      filled,
+      // Slot number rides inline (old markup stacked it; text-only-row has
+      // two text slots — same information, one line).
+      label: 'Slot ' + (index + 1) + ' \u00b7 ' + (filled ? ((d.icon || '') + ' ' + (d.name || id)) : 'Empty'),
+      hint: filled ? 'Tap to remove' : '',
+    };
+  }
+
+  /** Persistent chrome skeleton: header + slot host + grid host + both action
+   *  buttons, built once per show() (hide() wipes the overlay). Phase renders
+   *  only re-populate hosts — no full-panel innerHTML rebuild per click. */
+  _ensureChrome() {
+    if (document.getElementById('loadout-next')) return; // skeleton present
+    this.overlay.innerHTML =
+      '<div class="loadout-panel">' +
+      '<div class="loadout-header">' +
+      '<button class="loadout-back" id="loadout-back">◀ Back</button>' +
+      '<span class="loadout-title" id="loadout-title"></span>' +
+      '<span class="loadout-subtitle" id="loadout-subtitle"></span>' +
+      '</div>' +
+      '<div class="loadout-slots" id="loadout-slots"></div>' +
+      '<div class="loadout-grid" id="loadout-grid"></div>' +
+      '<button class="loadout-confirm" id="loadout-next"></button>' +
+      '<button class="loadout-confirm active" id="loadout-confirm" style="display:none"></button>' +
+      '</div>';
+  }
+
+  /** Cached pool renderer + the two declared-event bridges (installed once). */
+  _gridRenderer() {
+    if (!this._renderer) {
+      this._renderer = new WidgetRenderer({
+        skins: (typeof window !== 'undefined' && window.game?.dataManager?.uiSkins) || null,
+      });
+      this.overlay.addEventListener('widget:loadoutPick', (e) => this._handlePick(e.detail || {}));
+      this.overlay.addEventListener('widget:loadoutClear', (e) => this._handleClear(e.detail || {}));
+    }
+    return this._renderer;
+  }
+
   // ── Public API ──────────────────────────────────────────
 
   show({ stageId, stageTier, onConfirm, onBack }) {
@@ -58,6 +161,12 @@ class LoadoutScreen {
   hide() {
     this.overlay.classList.add('hidden');
     this.overlay.innerHTML = '';
+    // Pools lived inside the wiped overlay — drop stale references so the next
+    // show() builds fresh pool nodes (reuse of detached nodes would render nothing).
+    for (const id of ['loadout-slots', 'loadout-grid']) {
+      const host = document.getElementById(id);
+      if (host) delete host._widgetPool;
+    }
   }
 
   // ── Data Sources (redirectable for future progression) ──
@@ -120,217 +229,115 @@ class LoadoutScreen {
   _renderWeapons() {
     const weapons = this.getAvailableWeapons();
     const stageName = this._getStageName();
+    const R = this._gridRenderer();
 
-    let html = '';
-    html += '<div class="loadout-panel">';
-    html += '<div class="loadout-header">';
-    html += '<button class="loadout-back" id="loadout-back">◀ Back</button>';
-    html += '<span class="loadout-title">⚔️ Choose Weapons</span>';
-    html += '<span class="loadout-subtitle">' + stageName + ' — ' + this._tierLabel() + '</span>';
-    html += '</div>';
-
-    // Slot indicators
-    html += '<div class="loadout-slots">';
-    for (let i = 0; i < 3; i++) {
-      const wid = this.selectedWeapons[i];
-      const wDef = wid ? weapons.find(w => w.id === wid) : null;
-      const label = wDef ? (wDef.icon || '') + ' ' + wDef.name : 'Empty';
-      const active = wid ? 'filled' : '';
-      html += '<div class="loadout-slot ' + active + '" data-slot="' + i + '">';
-      html += '<div class="loadout-slot-label">Slot ' + (i + 1) + '</div>';
-      html += '<div class="loadout-slot-value">' + label + '</div>';
-      if (wid) html += '<div class="loadout-slot-hint">Tap to remove</div>';
-      html += '</div>';
-    }
-    html += '</div>';
-
-    // Weapon grid
-    html += '<div class="loadout-grid">';
-    for (const w of weapons) {
-      const isSelected = this.selectedWeapons.includes(w.id);
-      const classes = 'loadout-card' + (isSelected ? ' selected' : '');
-      const wType = this._weaponTypeLabel(w.type);
-      html += '<div class="' + classes + '" data-wid="' + w.id + '">';
-      html += '<div class="loadout-card-icon">' + (w.icon || '?') + '</div>';
-      html += '<div class="loadout-card-name">' + w.name + '</div>';
-      html += '<div class="loadout-card-meta">' + wType + ' · Lv' + (w.unlockLevel || 1) + '</div>';
-      html += '</div>';
-    }
-    html += '</div>';
-
-    // Next button
-    // BUG-015 follow-up: require AT LEAST 1 weapon, not exactly 3 — a fresh
-    // story player may only have 1 unlocked weapon. (3+ was only reachable
-    // before because the prefill stuffed locked weapons into slots.)
+    // Persistent chrome (v2.17.0): build once per show(); phases fill hosts.
+    this._ensureChrome();
+    const backBtn = document.getElementById('loadout-back') || document.getElementById('loadout-back-companions');
+    if (backBtn) backBtn.id = 'loadout-back';
+    document.getElementById('loadout-title').textContent = '⚔️ Choose Weapons';
+    document.getElementById('loadout-subtitle').textContent = stageName + ' — ' + this._tierLabel();
+    backBtn.textContent = '◀ Back';
+    const nextBtn = document.getElementById('loadout-next');
+    const confirmBtn = document.getElementById('loadout-confirm');
+    nextBtn.style.display = '';
+    confirmBtn.style.display = 'none';
+    backBtn.onclick = () => {
+      if (this.audioManager) this.audioManager.playMenuSound('back');
+      this.hide();
+      if (this.onBack) this.onBack();
+    };
+    // BUG-015 follow-up preserved: require AT LEAST 1 weapon, not exactly 3.
     const canProceed = this.selectedWeapons.filter(Boolean).length > 0;
-    html += '<button class="loadout-confirm ' + (canProceed ? 'active' : '') + '" id="loadout-next">';
-    html += 'Next: Companions ▶';
-    html += '</button>';
+    nextBtn.classList.toggle('active', canProceed);
+    nextBtn.onclick = canProceed ? () => {
+      this.phase = 'companions';
+      if (this.audioManager) this.audioManager.playMenuSound('select');
+      this._renderCompanions();
+    } : null;
 
-    html += '</div>';
-
-    this.overlay.innerHTML = html;
-    this._wireWeaponEvents();
+    // Slot chips + weapon grid — pooled repeats (§5.1); selection is data.
+    R.repeatInto(document.getElementById('loadout-slots'), LoadoutScreen.SLOT_CHIP_DEF,
+      this.selectedWeapons.map((wid, i) => this._slotData(wid, weapons, 'weapon', i)));
+    R.repeatInto(document.getElementById('loadout-grid'), LoadoutScreen.WEAPON_CARD_DEF,
+      weapons.map(w => this._itemData(weapons, w.id, this.selectedWeapons, 'weapon')));
   }
 
-  _wireWeaponEvents() {
-    // Back button
-    const backBtn = document.getElementById('loadout-back');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        if (this.audioManager) this.audioManager.playMenuSound('back');
-        this.hide();
-        if (this.onBack) this.onBack();
-      });
-    }
+  /** Declared-event handler for card picks — behavior verbatim from the old
+   *  per-card listeners (duplicate guard, empty-slot fill, last-slot replace). */
+  _handlePick({ kind, id }) {
+    if (!id) return;
+    const slots = kind === 'weapon' ? this.selectedWeapons : this.selectedCompanions;
+    if (slots.includes(id)) return;
+    const emptyIdx = slots.indexOf(null);
+    slots[emptyIdx >= 0 ? emptyIdx : 2] = id;
+    if (this.audioManager) this.audioManager.playMenuSound('select');
+    if (kind === 'weapon') this._renderWeapons(); else this._renderCompanions();
+  }
 
-    // Slot click → remove
-    this.overlay.querySelectorAll('.loadout-slot').forEach(slot => {
-      slot.addEventListener('click', () => {
-        const idx = parseInt(slot.dataset.slot);
-        this.selectedWeapons[idx] = null;
-        if (this.audioManager) this.audioManager.playMenuSound('back');
-        this._renderWeapons();
-      });
-    });
-
-    // Card click → add
-    this.overlay.querySelectorAll('.loadout-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const wid = card.dataset.wid;
-        if (this.selectedWeapons.includes(wid)) return;
-        const emptyIdx = this.selectedWeapons.indexOf(null);
-        if (emptyIdx >= 0) {
-          this.selectedWeapons[emptyIdx] = wid;
-        } else {
-          this.selectedWeapons[2] = wid; // replace last
-        }
-        if (this.audioManager) this.audioManager.playMenuSound('select');
-        this._renderWeapons();
-      });
-    });
-
-    // Next button
-    const nextBtn = document.getElementById('loadout-next');
-    if (nextBtn && this.selectedWeapons.filter(Boolean).length > 0) {
-      nextBtn.addEventListener('click', () => {
-        this.phase = 'companions';
-        if (this.audioManager) this.audioManager.playMenuSound('select');
-        this._renderCompanions();
-      });
-    }
+  /** Declared-event handler for slot clears — verbatim (always allowed). */
+  _handleClear({ kind, index }) {
+    const i = parseInt(index);
+    if (kind === 'weapon') this.selectedWeapons[i] = null;
+    else this.selectedCompanions[i] = null;
+    if (this.audioManager) this.audioManager.playMenuSound('back');
+    if (kind === 'weapon') this._renderWeapons(); else this._renderCompanions();
   }
 
   // ── Companion Selection ─────────────────────────────────
 
   _renderCompanions() {
     const companions = this.getAvailableCompanions();
+    const R = this._gridRenderer();
 
-    let html = '';
-    html += '<div class="loadout-panel">';
-    html += '<div class="loadout-header">';
-    html += '<button class="loadout-back" id="loadout-back-companions">◀ Weapons</button>';
-    html += '<span class="loadout-title">🐾 Choose Companions</span>';
-    html += '<span class="loadout-subtitle">Select up to 3 companions</span>';
-    html += '</div>';
+    // Persistent chrome reused across phases — only hosts + labels change.
+    this._ensureChrome();
+    document.getElementById('loadout-title').textContent = '🐾 Choose Companions';
+    document.getElementById('loadout-subtitle').textContent = 'Select up to 3 companions';
+    const nextBtn = document.getElementById('loadout-next');
+    const confirmBtn = document.getElementById('loadout-confirm');
+    nextBtn.style.display = 'none';
+    confirmBtn.style.display = '';
+    const backBtn = document.getElementById('loadout-back') || document.getElementById('loadout-back-companions');
+    if (backBtn) backBtn.id = 'loadout-back-companions';
+    backBtn.textContent = '◀ Weapons';
+    backBtn.onclick = () => {
+      this.phase = 'weapons';
+      if (this.audioManager) this.audioManager.playMenuSound('back');
+      this._renderWeapons();
+    };
 
-    // Slot indicators
-    html += '<div class="loadout-slots">';
-    for (let i = 0; i < 3; i++) {
-      const cid = this.selectedCompanions[i];
-      const cDef = cid ? companions.find(c => c.id === cid) : null;
-      const label = cDef ? (cDef.icon || '') + ' ' + cDef.name : 'Empty';
-      const active = cid ? 'filled' : '';
-      html += '<div class="loadout-slot ' + active + '" data-cslot="' + i + '">';
-      html += '<div class="loadout-slot-label">Slot ' + (i + 1) + '</div>';
-      html += '<div class="loadout-slot-value">' + label + '</div>';
-      if (cid) html += '<div class="loadout-slot-hint">Tap to remove</div>';
-      html += '</div>';
-    }
-    html += '</div>';
+    // Slot chips + companion grid — pooled repeats (§5.1); selection is data.
+    R.repeatInto(document.getElementById('loadout-slots'), LoadoutScreen.SLOT_CHIP_DEF,
+      this.selectedCompanions.map((cid, i) => this._slotData(cid, companions, 'companion', i)));
+    R.repeatInto(document.getElementById('loadout-grid'), LoadoutScreen.COMPANION_CARD_DEF,
+      companions.map(c => this._itemData(companions, c.id, this.selectedCompanions, 'companion')));
 
-    // Companion grid
-    html += '<div class="loadout-grid">';
-    for (const c of companions) {
-      const isSelected = this.selectedCompanions.includes(c.id);
-      const classes = 'loadout-card' + (isSelected ? ' selected' : '');
-      html += '<div class="' + classes + '" data-cid="' + c.id + '">';
-      html += '<div class="loadout-card-icon">' + (c.icon || '?') + '</div>';
-      html += '<div class="loadout-card-name">' + c.name + '</div>';
-      html += '<div class="loadout-card-meta">' + (c.desc || c.role || '') + '</div>';
-      html += '</div>';
-    }
-    html += '</div>';
-
-    // Confirm button
+    // Confirm button (chrome): label reflects whether companions are chosen;
+    // behavior verbatim incl. the BUG-015 belt-and-suspenders gate.
     const hasCompanions = this.selectedCompanions.filter(Boolean).length > 0;
-    html += '<button class="loadout-confirm active" id="loadout-confirm">';
-    html += hasCompanions ? '⚔️ Start Combat' : '⏭️ Skip Companions';
-    html += '</button>';
-
-    html += '</div>';
-
-    this.overlay.innerHTML = html;
-    this._wireCompanionEvents();
+    confirmBtn.textContent = hasCompanions ? '⚔️ Start Combat' : '⏭️ Skip Companions';
+    confirmBtn.onclick = () => {
+      if (this.audioManager) this.audioManager.playMenuSound('select');
+      // BUG-015 fix: belt-and-suspenders — never ship a locked weapon even
+      // if one somehow reaches a slot. Mirrors getAvailableWeapons() gating.
+      let confirmedWeapons = this.selectedWeapons.filter(Boolean);
+      if (this.questSystem && this.questSystem._initialized) {
+        confirmedWeapons = confirmedWeapons.filter(id =>
+          this.questSystem.isContentUnlocked('weapons', id));
+      }
+      const loadout = {
+        weapons: confirmedWeapons,
+        companions: this.selectedCompanions.filter(Boolean),
+      };
+      this.hide();
+      if (this.onConfirm) this.onConfirm(loadout);
+    };
   }
 
   _wireCompanionEvents() {
-    // Back to weapons
-    const backBtn = document.getElementById('loadout-back-companions');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        this.phase = 'weapons';
-        if (this.audioManager) this.audioManager.playMenuSound('back');
-        this._renderWeapons();
-      });
-    }
-
-    // Slot click → remove
-    this.overlay.querySelectorAll('.loadout-slot').forEach(slot => {
-      slot.addEventListener('click', () => {
-        const idx = parseInt(slot.dataset.cslot);
-        this.selectedCompanions[idx] = null;
-        if (this.audioManager) this.audioManager.playMenuSound('back');
-        this._renderCompanions();
-      });
-    });
-
-    // Card click → add
-    this.overlay.querySelectorAll('.loadout-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const cid = card.dataset.cid;
-        if (this.selectedCompanions.includes(cid)) return;
-        const emptyIdx = this.selectedCompanions.indexOf(null);
-        if (emptyIdx >= 0) {
-          this.selectedCompanions[emptyIdx] = cid;
-        } else {
-          this.selectedCompanions[2] = cid;
-        }
-        if (this.audioManager) this.audioManager.playMenuSound('select');
-        this._renderCompanions();
-      });
-    });
-
-    // Confirm
-    const confirmBtn = document.getElementById('loadout-confirm');
-    if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
-        if (this.audioManager) this.audioManager.playMenuSound('select');
-        // BUG-015 fix: belt-and-suspenders — never ship a locked weapon even
-        // if one somehow reaches a slot. Mirrors getAvailableWeapons() gating.
-        let confirmedWeapons = this.selectedWeapons.filter(Boolean);
-        if (this.questSystem && this.questSystem._initialized) {
-          confirmedWeapons = confirmedWeapons.filter(id =>
-            this.questSystem.isContentUnlocked('weapons', id));
-        }
-        const loadout = {
-          weapons: confirmedWeapons,
-          companions: this.selectedCompanions.filter(Boolean),
-        };
-        this.hide();
-        if (this.onConfirm) this.onConfirm(loadout);
-      });
-    }
+    // Retired v2.17.0 — wiring lives in _renderCompanions now; kept as a
+    // no-op so any stray caller degrades instead of crashing.
   }
 
   // ── Helpers ─────────────────────────────────────────────

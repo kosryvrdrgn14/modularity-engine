@@ -135,6 +135,17 @@ const pageHtml = `<!DOCTYPE html>
     onClick: { emit: 'previewPoolClick', payload: { topicId: '{{topicId}}' } } };
   R.repeatInto(poolHost, poolDef, [{ topicId: 'a', label: 'Choice A' }, { topicId: 'b', label: 'Choice B' }]);
   R.repeatInto(poolHost, poolDef, [{ topicId: 'a2', label: 'Choice A' }, { topicId: 'b2', label: 'Choice B' }]);
+  // v1.2: a WARM pool (built by the rebind above) re-created with a DIFFERENT
+  // def — its click must emit the NEW event and carry the selected class.
+  // (Separate host so the v1.1.1 regression card is not def-swapped under it.)
+  const poolHost2 = document.createElement('div'); poolHost2.id = 'preview-pool2'; root.appendChild(poolHost2);
+  const poolDef2 = { template: 'card', _v: 1, layout: 'icon-top', size: 'medium',
+    slots: { icon: { bind: 'icon' }, primaryText: { bind: 'label' } },
+    onClick: { emit: 'previewPoolClick2', payload: { topicId: '{{topicId}}' } },
+    selected: { bind: 'selected' } };
+  R.repeatInto(poolHost2, poolDef, [{ topicId: 'warm', label: 'Warm A' }]);
+  R.repeatInto(poolHost2, poolDef2, [{ topicId: 'x', icon: '★', label: 'Rebound', selected: true }]);
+  document.addEventListener('previewPoolClick2', (e) => console.log('[preview-pool2]', JSON.stringify(e.detail)));
   document.addEventListener('previewPoolClick', (e) => console.log('[preview-pool]', JSON.stringify(e.detail)));
 <\/script></body></html>`;
 
@@ -154,14 +165,14 @@ fs.writeFileSync(pagePath, pageHtml);
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
-    if (msg.text().startsWith('[preview-click]') || msg.text().startsWith('[preview-pool]')) clickEvents.push(msg.text());
+    if (msg.text().startsWith('[preview-click]') || msg.text().startsWith('[preview-pool]') || msg.text().startsWith('[preview-pool2]')) clickEvents.push(msg.text());
   });
   await page.goto('file://' + pagePath);
   await page.waitForFunction(() => window.WidgetRenderer && document.querySelectorAll('.widget-card').length > 0, null, { timeout: 10000 });
 
   const counts = await page.evaluate(() => ({ cards: document.querySelectorAll('.widget-card').length }));
-  const expected = layouts.length * sizes.length + skinIds.length + 4 + ACCENT_SEVERITIES.length;
-  if (counts.cards === expected) ok(`${counts.cards}/${expected} preview cards rendered (layouts×sizes + ${skinIds.length} skins + 4 edges)`);
+  const expected = layouts.length * sizes.length + skinIds.length + 5 + ACCENT_SEVERITIES.length;
+  if (counts.cards === expected) ok(`${counts.cards}/${expected} preview cards rendered (layouts×sizes + ${skinIds.length} skins + 4 edges + 1 warm-pool seed)`);
   else fail(`expected ${expected} preview cards, got ${counts.cards}`);
 
   if (errors.length === 0) ok('no page errors — missing-data edge rendered empty without throwing');
@@ -179,6 +190,22 @@ fs.writeFileSync(pagePath, pageHtml);
   const poolOk = clickEvents.some((t) => t.includes('"topicId":"a2"'));
   if (poolOk) ok('v1.1.1: pooled card emitted the REBOUND payload (click-time data holds)');
   else fail(`v1.1.1: pooled card emitted a stale payload (got: ${clickEvents.join(' ; ') || 'nothing'})`);
+
+  // v1.2 regression: warm pool rebound with a DIFFERENT def — new event, new
+  // layout classes, and selected-bind resolves from data.
+  await page.click('#preview-pool2 .widget-card:first-child');
+  await page.waitForTimeout(150);
+  const swapOk = clickEvents.some((t) => t.includes('[preview-pool2]') && t.includes('"topicId":"x"'));
+  const selOk = await page.evaluate(() =>
+    document.querySelector('#preview-pool2 .widget-card:first-child').classList.contains('widget-selected'));
+  const layoutOk = await page.evaluate(() => {
+    const el = document.querySelector('#preview-pool2 .widget-card:first-child');
+    return el.classList.contains('layout-icon-top') && el.classList.contains('size-medium');
+  });
+  if (swapOk) ok('v1.2: warm-pool card emitted the NEW def event after rebind (click-time def holds)');
+  else fail(`v1.2: def-swap event not observed (got: ${clickEvents.join(' ; ') || 'nothing'})`);
+  if (selOk && layoutOk) ok('v1.2: selected-bind + layout/size classes re-resolved on rebind');
+  else fail(`v1.2: rebind classes wrong (selected=${selOk}, layout=${layoutOk})`);
 
   const shot = path.join(outDir, 'matrix.png');
   await page.screenshot({ path: shot, fullPage: true });

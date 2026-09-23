@@ -31,7 +31,7 @@ running. Console tools: open DevTools, type the accessor.
 | NPC Condition Inspector | Built (v2.5.0) | Why an NPC's location/dialogueSet/mood resolved the way it did; log queries; full schema reference | Console: `__NPC_DEBUG__.evaluate('old_man')`, `.explain('old_man')`, `.log(id)`, `.schema()` |
 | Game Log Inspector | Built (v2.9.0) | Session console tail: filter, dump-to-clipboard, clear | Console: `__GAMELOG_DEBUG__.last(20)`, `.filter(q)`, `.dump()` |
 | Widget Inspector | **Planned** (`widget_ui_system_spec.md` §6.4) | Which layout/skin/bindings produced a given on-screen card | Not yet built (renderer already keeps a def registry — hook point exists) |
-| Widget Live-Preview | **Built (v2.12.0; v1.1.1 regression v2.16.0)** (`widget_ui_system_spec.md` §6.3) | Render every layout × size × skin against dummy data + 4 contract edges (missing data renders empty; declared-event click; v1.1.1 pooled-rebind-emits-rebound-payload; pool hides surplus nodes), screenshot the matrix for the manual §4.4 contrast check | `npm run widget:preview` |
+| Widget Live-Preview | **Built (v2.12.0; v1.1.1 + v1.2 regressions v2.16.0–v2.17.0)** (`widget_ui_system_spec.md` §6.3) | Render every layout × size × skin against dummy data + contract edges (missing data renders empty; declared-event click; pooled rebind emits rebound payload; warm-pool def-swap emits the NEW event + selected-bind; pool hides surplus nodes), screenshot the matrix for the manual §4.4 contrast check | `npm run widget:preview` |
 | Date/Time Inspector | Built (v2.8.0) | Current day, resolved season per region, active festivals, modifiers | Console: `game.timeService.getDateContext()`, `.getSeason('graveyard')`, `.getActiveModifiers()` |
 
 **Known gap (confirmed 2026-09-14):** entry points are inconsistent — Stage Select/Weapons/
@@ -48,7 +48,7 @@ named npm scripts (see standardization below) — that is what makes them agent-
 
 | Tool | Status | Purpose |
 |---|---|---|
-| **Playwright headless suite** | **Built & primary safety net** — 8 suites + 112-check regression trace, all green, in version control (`tests/`) | Drives the REAL game (bootGame harness, real state transitions per KNOWLEDGE §2b): gate engine, NPC/memory log, widgets/inventory, export purity, calendar, game log, occlusion/§11 viewport gates, plus the full historical trace. `npm test` (skip-safe) / `npm run test:strict` (skips fail) / `npm run test:trace`. Artifacts in `tests/artifacts/` |
+| **Playwright headless suite** | **Built & primary safety net** — 9 suites + 112-check regression trace, all green, in version control (`tests/`) | Drives the REAL game (bootGame harness, real state transitions per KNOWLEDGE §2b): gate engine, NPC/memory log, widgets/inventory, export purity, calendar, game log, loadout widgets, occlusion/§11 viewport gates, plus the full historical trace. `npm test` (skip-safe) / `npm run test:strict` (skips fail) / `npm run test:trace`. Artifacts in `tests/artifacts/` |
 | **Trace harness (`tests/lib/harness.cjs`)** | Built | `bootGame()` headless browser boot with error net, storage control (`keepStorage` + reload for true persistence round-trips), per-step API detectors, PASS/FAIL runner with CI-friendly exit codes. THE canonical way any agent drives real game state |
 | **`tools/verify.cjs`** | **Built (v2.10.0; map checks v2.11.0)** | `npm run verify` — syntax-checks all 37 game files IN REAL LOAD ORDER + validates all 16 content JSONs + embeddedData mirror sync + **enforces PROJECT_MAP.md** (block coverage both ways, `Defines:` symbol presence, Status enum, GuardedBy suites, §3.1 content rows). `npm run verify:trace` adds the regression trace. ~2s without trace; the first command to run after any edit |
 | **`PROJECT_MAP.md`** | **Built (v2.11.0), verify-enforced** | The file-contract map: one block per load-order file (cross-file edges only), load-order tiers, §3 reverse indexes (content consumers, event emitters→listeners, store-branch ownership), §4 archetype templates, §5 health log. Maintenance law: KNOWLEDGE §19 |
@@ -67,7 +67,7 @@ named npm scripts (see standardization below) — that is what makes them agent-
 ```
 npm run verify          # tools/verify.cjs — load-order syntax + content + mirror sync + PROJECT_MAP contracts
 npm run widget:preview  # tools/widget_preview.cjs — §6.3 live-preview matrix + screenshot
-npm run widget:audit    # tests/suites/widget_occlusion.cjs — §7 occlusion audit (also in battery)
+npm run widget:audit    # tests/suites/widget_occlusion.cjs — §7 occlusion audit (also in battery; §11 gates: game-log, pause, chips, dialogue, loadout)
 npm run verify:trace    # verify + the full headless regression trace
 npm run test            # all 7 suites (skips allowed pre-implementation)
 npm run test:strict     # all suites, skips FAIL — post-implementation gate

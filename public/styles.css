@@ -2014,3 +2014,35 @@
   font-size: inherit;
   color: inherit;
 }
+/* ── §10 screen-5 (v2.17.0): loadout cards + slot chips as widget cards ── */
+/* Structure from the widget system; this screen's theme is scoped here.
+   Mirrors the retired .loadout-card / .loadout-slot look exactly. */
+#loadout-overlay .widget-card {
+  background: #0a0a18;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+#loadout-overlay .widget-card.interactive:hover {
+  border-color: #FFD700;
+  background: rgba(255, 215, 0, 0.05);
+}
+#loadout-overlay .widget-card.widget-selected {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.12);
+}
+/* Cards: base typography + the retired per-line look */
+#loadout-overlay .widget-card .slot-icon { font-size: 22px; }
+#loadout-overlay .widget-card .slot-primaryText { color: #ddd; font-size: 11px; margin-top: 3px; }
+#loadout-overlay .widget-card .slot-secondaryText { color: #666; font-size: 9px; margin-top: 2px; }
+/* Slot chips: the retired .loadout-slot metrics (filled bg 0.08, value 12px) */
+#loadout-overlay #loadout-slots .widget-card { padding: 10px 6px; }
+#loadout-overlay #loadout-slots .widget-card.widget-selected { background: rgba(76, 175, 80, 0.08); }
+#loadout-overlay #loadout-slots .widget-card .slot-primaryText {
+  color: #ccc; font-size: 12px; margin-top: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#loadout-overlay #loadout-slots .widget-card.widget-selected .slot-primaryText { color: #4CAF50; }
+#loadout-overlay #loadout-slots .widget-card .slot-secondaryText { color: #666; font-size: 9px; margin-top: 3px; }

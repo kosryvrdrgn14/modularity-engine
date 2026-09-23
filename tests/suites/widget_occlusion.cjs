@@ -85,7 +85,7 @@ const check = (name, pass, extra) => {
       };
       // Fullscreen modals legitimately own the viewport when open — persistent
       // header chips (v2.15.0) are contextually buried, NOT bug-occluded.
-      const modalOpen = !!document.querySelector('#shop-overlay.active, #pause-overlay.active');
+      const modalOpen = !!document.querySelector('#shop-overlay.active, #pause-overlay.active, #loadout-overlay:not(.hidden)');
       // Scan EVERY renderer's registry (WidgetRenderer._all, v2.14.0) — the
       // audit owns no assumptions about which screen owns which renderer.
       for (const R of WidgetRenderer._all) {
@@ -242,6 +242,49 @@ const check = (name, pass, extra) => {
       document.getElementById('dialogue-overlay')?.classList.remove('active');
       window.game.townScreen.content.dom.dialogueChoices.style.display = 'none';
     });
+
+    // ── Loadout cards (v2.17.0, screen 5): §11 gates at all three viewports.
+    // The panel is a scrollable list (max-height 88vh) — parity here means every
+    // interactive card is REACHABLE (scroll → clickable, like a real user), so
+    // the gate scrolls each card into view before probing. ──
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const loSeed = await page.evaluate(() => {
+      document.getElementById('shop-overlay')?.classList.remove('active');
+      document.getElementById('dialogue-overlay')?.classList.remove('active');
+      window.game.titleMenu.hide();
+      window.game.townScreen.show();
+      const ls = window.game.townScreen.loadoutScreen;
+      if (!ls) return 'no loadoutScreen';
+      ls.show({ stageId: null, onConfirm: () => {}, onBack: () => {} });
+      return { cards: document.querySelectorAll('#loadout-grid .widget-card').length };
+    });
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(120);
+      const lo = await page.evaluate(() => {
+        const panel = document.querySelector('#loadout-overlay .loadout-panel');
+        const cards = [...panel.querySelectorAll('#loadout-grid .widget-card')];
+        const chips = [...panel.querySelectorAll('#loadout-slots .widget-card')];
+        const reachable = (el) => {
+          el.scrollIntoView({ block: 'center' });
+          const rct = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(rct.left + rct.width / 2, rct.top + rct.height / 2);
+          return !!(hit && (hit === el || el.contains(hit)));
+        };
+        return {
+          cards: cards.length,
+          chips: chips.length,
+          allCardsReachable: cards.every(reachable),
+          allChipsReachable: chips.every(reachable),
+        };
+      });
+      check(`[§11 gate: loadout @ ${vp.name}] cards+chips rendered as widgets`,
+        typeof loSeed === 'object' && lo.cards >= 5 && lo.chips === 3,
+        JSON.stringify({ loSeed, lo }));
+      check(`[§11 gate: loadout @ ${vp.name}] every card reachable (scroll→clickable)`,
+        lo.allCardsReachable && lo.allChipsReachable, JSON.stringify(lo));
+    }
+    await page.evaluate(() => window.game.townScreen.loadoutScreen.hide());
 
     // Leave town-base presentation active — it is the negative control's baseline.
 

@@ -2,6 +2,52 @@
 
 ---
 
+## v2.17.0 — Screen 5: loadout → persistent chrome + pooled grids (the §5.1 pooling promise, done properly)
+**Date:** September 23, 2026
+**Status:** ✅ Complete (battery green incl. strict across 9 suites; audit 31/31; preview green with v1.2 regressions)
+
+### Migration (spec §10 screen 5)
+- **Cards + slot chips are pooled widget repeats** — `WEAPON_CARD_DEF` / `COMPANION_CARD_DEF` /
+  `SLOT_CHIP_DEF`; per-item data; picking/clearing re-renders hosts, never the panel. **Adding a
+  weapon or companion to the picker is now automatic** (any data-driven list rides the same pool).
+- **The §5.1 pooling promise is finally fully kept**: the old code rebuilt the whole panel via
+  innerHTML on EVERY click; the migration gives the screen a **persistent chrome skeleton** built
+  once per show() — phase renders only re-populate the slot/grid hosts. Pinned by a chrome
+  node-identity check in the suite (the #loadout-title DOM node survives every interaction).
+- **Chrome buttons stay bespoke code** (documented decision): their enabled/disabled state is a
+  conditional `.active` class + null handler — not widget vocabulary. Behavior verbatim:
+  duplicate-guard/empty-slot/last-slot-replace picks, slot clears, BUG-015 belt-and-suspenders
+  confirm gate, back-button relabel per phase, select/back sounds.
+- **hide() pool hygiene**: hide() wipes the overlay, so pool hosts drop `_widgetPool` references —
+  next show() builds fresh nodes instead of silently reusing detached ones.
+
+### WidgetRenderer v1.2
+- **`selected: { bind }`** — selection state becomes card DATA (`.widget-selected` on render +
+  rebind), same bounded-flag discipline as `muted` (v1.1). Screens no longer hand-toggle classes.
+- **Click-time DEF (completes the v1.1.1 contract)**: pooled nodes read their CURRENT def at
+  click time (`_instanceDef`) — a warm pool rebound from weapons defs to companion defs emits the
+  NEW event/payload. Found by the live probe BEFORE the suite existed: a weapons card rebound as
+  a companion still emitted `kind:'weapon'` and filled a weapon slot with the dog.
+- Rebind also refreshes layout/size classes (defs may differ per phase).
+- Pinned in the preview tool: warm-pool def-swap regression (new event + selected-bind + classes).
+
+### Audit (§11 promotion)
+- Loadout cards + chips gate at all three viewports with the **scroll→clickable reachability
+  model** — the panel is a scrollable list (max-height 88vh), so parity means every interactive
+  element is reachable like a real user reaches it, not viewport-fixed. Audit now **31/31**.
+
+### Incidents (recorded per house rules)
+- Another half-applied multi-part edit (two of three oldStrings were recalled, not read — they
+  skipped while the third applied, splicing the retired stub inside the surviving method). Caught
+  by grep + node --check; repaired in one verified pass. Rule: READ the region, don't trust recall.
+- A TDZ bug (backBtn used before its const declaration) survived node --check — caught by the
+  live probe, not by syntax checking. Rule: probe behavior, not just syntax, before pinning.
+- One Node one-liner was used for a spec text edit, violating KNOWLEDGE §15 — done out of CRLF
+  fear, but the correct lesson is the opposite: single-line str_replace without explicit \r
+  anchors works cleanly on CRLF files. Logged here as the record of the violation.
+
+---
+
 ## v2.16.0 — Screen 4: dialogue overlay → pooled widget cards (NPC presentation becomes content-shaped)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (battery green; audit 25/25 with dialogue gated at all 3 viewports; preview 23/23 with the v1.1.1 regression)

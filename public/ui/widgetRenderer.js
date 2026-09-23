@@ -44,6 +44,18 @@
 //     data (empty for pool-created nodes) — harmless while consumers
 //     recreated their grids, wrong once a true pool rebinds payloads.
 // ============================================================
+//
+// v1.2 (v2.17.0 — loadout migration, screen 5):
+//   - `selected` def flag: a DATA-BOUND boolean (`selected: { bind }`) that
+//     toggles the .widget-selected class on rebind — bounded variation, same
+//     discipline as `muted` (v1.1). Selection state becomes card data; screens
+//     no longer toggle classes by hand.
+//   - Click-time DEF (completes v1.1.1): pooled nodes store their CURRENT def
+//     (_instanceDef), so repeatInto with a DIFFERENT def on a warm pool swaps
+//     the emitted event/payload too — a weapons card rebound as a companion
+//     must not keep firing the weapons payload. Rebind also refreshes
+//     layout/size classes (defs may vary per phase).
+// ============================================================
 
 class WidgetRenderer {
   static LAYOUTS = ['icon-left', 'icon-top', 'icon-only', 'text-only-row'];
@@ -62,6 +74,10 @@ class WidgetRenderer {
     // _rebind) also updates the payload — a pooled card is a fresh card.
     // Keyed by element; cleaned up in _forget.
     this._instanceData = new Map();
+    // v1.2: CURRENT def per interactive node — the click handler reads this at
+    // click time (with the current data), so a warm pool rebound with a
+    // different def emits the NEW event/payload, never the creation one.
+    this._instanceDef = new Map();
     // Class-level registry of ALL renderer instances (v2.14.0): audits and
     // inspectors enumerate every screen's widgets without knowing who owns
     // which renderer — screens are free to construct their own.
@@ -147,6 +163,11 @@ class WidgetRenderer {
     el.classList.add(`size-${def.size || 'medium'}`);
     el.dataset.widgetTemplate = 'card';
     if (def.muted) el.classList.add('widget-muted');
+    // v1.2 — selection resolves from DATA at render (rebind re-resolves below)
+    if (def.selected) {
+      const sel = this._resolve(def.selected.bind, data);
+      if (sel) el.classList.add('widget-selected');
+    }
 
     // Skin layer (§4): purely visual — classes + CSS custom props only.
     this._applySkin(el, def.skinId);
@@ -163,16 +184,18 @@ class WidgetRenderer {
     if (def.onClick) {
       el.classList.add('interactive');
       el.addEventListener('click', () => {
-        // v1.1.1: resolve against the CURRENT binding data (repeatInto
-        // rebinds may have replaced `data` since this node was created).
+        // v1.1.1/v1.2: resolve against the CURRENT def + data (repeatInto
+        // rebinds may have replaced either since this node was created).
+        const d = this._instanceDef.get(el) || def;
         const current = this._instanceData.get(el) || data;
         const payload = {};
-        for (const [k, tpl] of Object.entries(def.onClick.payload || {})) {
+        for (const [k, tpl] of Object.entries(d.onClick.payload || {})) {
           payload[k] = typeof tpl === 'string' ? this._resolveTemplate(tpl, current) : tpl;
         }
-        el.dispatchEvent(new CustomEvent(def.onClick.emit, { detail: payload, bubbles: true }));
+        el.dispatchEvent(new CustomEvent(d.onClick.emit, { detail: payload, bubbles: true }));
       });
       this._instanceData.set(el, data);
+      this._instanceDef.set(el, def);
       // §7 groundwork: register the live interactive instance.
       this._instances.add({ el, def, data });
       el.addEventListener('widget-detach', () => this._forget(el), { once: true });
@@ -205,6 +228,7 @@ class WidgetRenderer {
       if (i < items.length) {
         this._rebind(el, def, items[i]);
         this._instanceData.set(el, items[i]); // v1.1.1: payloads rebind too
+        this._instanceDef.set(el, def);        // v1.2: interaction def rebinds too
         el.style.display = '';
       } else {
         el.style.display = 'none';
@@ -304,6 +328,16 @@ class WidgetRenderer {
 
   /** Pooled rebind: rewrite slot contents of an existing node (no node churn). */
   _rebind(el, def, data) {
+    // v1.2: layout/size classes refresh too — a pool node may be rebound with
+    // a def that differs per phase (stale classes would misrender silently).
+    el.classList.remove(...WidgetRenderer.LAYOUTS.map((l) => 'layout-' + l));
+    el.classList.remove(...WidgetRenderer.SIZES.map((s) => 'size-' + s));
+    el.classList.add('layout-' + (def.layout || 'icon-left'), 'size-' + (def.size || 'medium'));
+    // v1.2: selection is data — class re-resolves from the new binding.
+    if (def.selected) {
+      const sel = this._resolve(def.selected.bind, data);
+      el.classList.toggle('widget-selected', !!sel);
+    }
     // Context accent must re-resolve too (severity can change per item).
     if (def.accent) {
       const v = this._resolve(def.accent.bind, data);
@@ -334,6 +368,7 @@ class WidgetRenderer {
 
   _forget(el) {
     this._instanceData.delete(el); // v1.1.1
+    this._instanceDef.delete(el);  // v1.2
     for (const inst of this._instances) {
       if (inst.el === el) this._instances.delete(inst);
     }
