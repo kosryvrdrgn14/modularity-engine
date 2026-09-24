@@ -2,6 +2,61 @@
 
 ---
 
+## v2.19.0 — Screen 7: title menu → pooled widget strip (§10 campaign complete)
+**Date:** September 24, 2026
+**Status:** ✅ Complete (battery green incl. strict across 11 suites; audit 37/37; step7 suite 15/15; preview 24/24; verify green)
+
+### Migration (spec §10 screen 7)
+- **The menu strip is ONE pooled repeat** — `MENU_ITEMS` static def table + `MENU_ITEM_DEF`
+  (`card`/`icon-left`); **adding a menu entry is now an array entry.** Static menu markup removed
+  from game2.html; the pool owns `#title-menu`; ids preserved.
+- **Selected is DATA** (v1.2 `selected.bind`), **locked is DATA** (v1.3 `disabled.bind`): the
+  renderer suppresses emission from locked cards, while the DENIAL feedback (locked sound +
+  tooltip) stays code via the click guard — the locked interaction kept verbatim.
+- Per-entry color is the §2.6 bounded accent token (`accent.bind`: `story`/`fav`/`town`/`dev`);
+  palette extended with the dev token (v2.13 accent contract — no raw colors in data).
+- **Clicks route through the declared event** (`widget:titleAction`, one bridge on #title-menu);
+  hover still moves keyboard selection (desktop parity). Chrome stays bespoke (graduation rule
+  §3.2): tooltip, info chips, slot picker, dev-stage/weapon/companion overlays.
+- **§11 promotion:** title menu entries gate at desktop + mobile-portrait + mobile-landscape —
+  audit 34 → **37/37**.
+
+### The fix the battery forced out (recorded per house rules)
+- **Three red checks, one root cause:** the `widget:titleAction` bridge moved `selectedIndex`
+  to the clicked card, so a Story-Mode click → picker round-trip left the keyboard selection on
+  index 4 and shifted every later keyboard assertion. Fix: clicks **activate by explicit index
+  and never claim keyboard selection** (pre-migration behavior; real mouse users hover first, so
+  live UX is unchanged; programmatic clicks no longer desync it). Pinned by step7.
+- **A suite expectation bug was caught by its own passing check:** the suite claimed
+  "ArrowDown ×2 = Settings" while its green `disabledIdx=[1,2]` assertion proves index 2 is
+  locked Stages — the check could never pass with the correct menu order. Keyboard activation
+  re-pinned on index 3 with a legacy-parity note (locked entries stay selectable; arrows do not
+  skip). Lesson: when a check contradicts a passing sibling, suspect the check first.
+- **Half-applied multi-part edit corrupted the suite file** (malformed oldString landed a
+  garbled expression and swallowed the Escape-flow lines — newline-consumption lesson recurring
+  on a .cjs file). Caught by reading the region back + `node --check`; repaired in one exact
+  pass. Rules re-proven: READ the region, never reconstruct it; verify every replacement in a
+  multi-part edit reports success.
+- **Interrupted-session hygiene:** the v2.19 code had landed but verification + docs tail never
+  ran (preview reset mid-test). `tools/_v219_css_block.css` staging file verified byte-identical
+  to the landed styles.css block via diff, then deleted (orphan rule, KNOWLEDGE §5 checklist).
+
+### Documentation maintenance (same session)
+- Spec §10: row 7 marked **MIGRATED v2.19.0** — **all 7 screens of the migration order are now
+  widget-backed; the campaign is complete.** Combat canvas HUD stays code (graduation rule).
+- PROJECT_MAP: titleMenu contract block refreshed (WidgetRenderer pooled-strip edge, declared
+  event, selected/locked as DATA, pool host, `MENU_ITEMS` Defines, GuardedBy step7); stale
+  `COMPANION_DATA` call dropped (POT-003 already removed it).
+- TESTING_PLAN §4.9: step7 suite row added (15 checks); occlusion count refreshed 34→37.
+
+### Notes / next frontier
+- With §10 done, the remaining §6 build items are the **Widget Inspector (§6.4** — the
+  `WidgetRenderer._all` registry hook point already exists**)** and 9-slice border skins.
+- The §10 workflow (def → preview → migrate → suite → audit → docs) is now the standing pattern
+  for any future DOM screen; the tools have validated themselves across all seven migrations.
+
+---
+
 ## v2.18.0 — Screen 6: shop tabs + stocked items → pooled widget chips/cards (the pilot comes home)
 **Date:** September 23, 2026
 **Status:** ✅ Complete (battery green incl. strict across 10 suites; audit 34/34; step6 suite 10/10)

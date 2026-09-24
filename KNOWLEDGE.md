@@ -256,6 +256,13 @@ constructor signature slip (`clearPendingDisaster` dropped in a signature rewrit
 could ship, and the preview tool went RED on its own harness filter bug — the tool's RED is
 also evidence about the tool, not just the code.
 
+**Re-proven again (2026-09-24, v2.19.0):** the step7 suite's first red run hid three failures
+behind one root cause — a click-bridge that claimed keyboard selection — plus a suite
+expectation that contradicted its own green sibling check (`disabledIdx=[1,2]` proves index 2
+is locked Stages, so "ArrowDown ×2 = Settings" could never pass). Lesson generalized: **when
+a check contradicts a passing sibling, suspect the check first**; a multi-failure cascade
+usually has one root — fix the cause, re-pin each expectation deliberately.
+
 ## 17. Two logs, two purposes — never merge (added 2026-09-14)
 
 The **game log** (`GameLogSystem`) is a session-scoped play/debug surface: noisy,

@@ -83,9 +83,11 @@ class TitleMenu {
       this.dom.menu?.addEventListener('widget:titleAction', (e) => {
         const idx = TitleMenu.MENU_ITEMS.findIndex((it) => it.action === e.detail?.action);
         if (idx < 0) return;
-        this.selectedIndex = idx;
-        this._renderMenu(); // selection moves via data, not classes
-        this._select();
+        // Clicks ACTIVATE without claiming keyboard selection (pre-migration
+        // behavior, pinned by step7): route by explicit index — selectedIndex
+        // stays where keyboard/hover left it (mouse users hover first, so real
+        // UX is unchanged; programmatic clicks must not move it).
+        this._select(idx);
       });
       // Locked entries: the renderer suppresses their declared event (v1.3
       // disabled) — this guard restores the DENIAL feedback (locked sound +
@@ -191,8 +193,8 @@ class TitleMenu {
     this._renderMenu();
   }
 
-  _select() {
-    const item = this.items[this.selectedIndex];
+  _select(idx = this.selectedIndex) {
+    const item = this.items[idx];
     if (item.locked) {
       if (this.audioManager) this.audioManager.playMenuSound('locked');
       this._showTooltip('Complete more runs to unlock!');

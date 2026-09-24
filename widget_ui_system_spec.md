@@ -274,7 +274,7 @@ around it. This spec is a strong starting point, not a permanent commitment.
 | 4 | Dialogue overlay | highest payoff: NPC presentation becomes content-editable — **MIGRATED v2.16.0** |
 | 5 | Loadout screens | larger card lists — **MIGRATED v2.17.0** |
 | 6 | Shop tabs | remaining tabs beyond the piloted Inventory tab — **MIGRATED v2.18.0** |
-| 7 | Title menu | most bespoke today — last |
+| 7 | Title menu | most bespoke today — last — **MIGRATED v2.19.0** |
 
 Combat canvas HUD stays code: it is a render-loop surface, not DOM widget material — the
 graduation rule (§3.2) applied at plan level.

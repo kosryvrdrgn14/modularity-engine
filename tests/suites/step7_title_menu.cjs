@@ -109,7 +109,13 @@ const check = (name, pass, extra) => {
     check('pool reuses nodes on selection move (no churn)', moved.sameNode && moved.count === 8,
       JSON.stringify(moved));
 
-    await page.keyboard.press('Enter'); // index 2 = Settings
+    await page.keyboard.press('ArrowDown'); // 2 → 3: skip locked Stages; index 3 = Settings
+    const afterSkip = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('#title-menu .widget-card')];
+      return cards.findIndex((c) => c.classList.contains('widget-selected'));
+    });
+    check('ArrowDown lands on Settings (locked entries stay selectable, matching legacy menu)', afterSkip === 3, `sel=${afterSkip}`);
+    await page.keyboard.press('Enter'); // index 3 = Settings
     const settingsOpen = await page.evaluate(() =>
       document.getElementById('settings-screen')?.classList.contains('active') === true);
     check('Enter activates selection (Settings screen opens)', settingsOpen);

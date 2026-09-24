@@ -120,9 +120,9 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 ### engine/titleMenu_refactored.js
 - Purpose: title screen, save-slot picker, settings entry, dev-stage overlay
 - Status: NORMATIVE
-- Defines: `TitleMenu`
-- Calls: `COMPANION_DATA` (guarded), `DataManager.enemies`, DOM: `title-screen`, `title-menu`, `slot-picker-overlay`, `settings-screen`, `dev-stage-overlay`
-- GuardedBy: trace (title flow checks)
+- Defines: `TitleMenu` (+ static `MENU_ITEMS` def table — adding a menu entry is an array entry)
+- Calls: `DataManager.enemies`, `DataManager.companions`, `DataManager.stages`, `WidgetRenderer` (menu strip is ONE pooled repeat — §10 screen-7, v2.19.0; def `MENU_ITEM_DEF` declares `widget:titleAction`; selected + locked are DATA via v1.2 `selected.bind` / v1.3 `disabled.bind`, locked denial stays code; clicks activate by explicit index and never claim keyboard selection), DOM: `title-screen`, `title-menu` (widget pool host — no innerHTML wipes), `title-tooltip`, `info-version`, `info-best-run`, `info-total-gold`, `slot-picker-overlay`, `settings-screen`, `dev-stage-overlay`
+- GuardedBy: trace (title flow checks), `tests/suites/step7_title_menu.cjs`
 
 ### systems/npcExport.js
 - Purpose: roleplay-export — derives facts from the canonical memory log with spoiler gating; favorites; constraint template. **Pure consumer — never a data source (one-rule)**
