@@ -12,7 +12,7 @@
 // ============================================================
 module.exports.PROJECT_GLOBALS = [
   // T0 data blobs
-  'EMBEDDED_DATA', 'ASSET_MAP', 'SHOP_DATA', 'DISASTER_EVENTS', 'FARMING_CONFIG',
+  'EMBEDDED_DATA', 'ASSET_MAP', 'DISASTER_EVENTS', 'FARMING_CONFIG',
   'AFFECTION_TIERS', 'ESTATE_TIERS', 'CHILD_GROWTH_STAGES', 'SANDBOX_DEFAULTS', 'SVG_PORTRAITS',
   // T1 early systems
   'TitleMenu', 'NPCExportSystem', 'TimeService', 'GameLogSystem', 'NPCExportUI',

@@ -47,6 +47,7 @@ const REGISTRY = [
   { key: 'contentGates', file: 'content_gates.json', type: 'object' },
   { key: 'uiSkins', file: 'ui_skins.json', type: 'object' },
   { key: 'calendar', file: 'calendar.json', type: 'object', required: ['calendar', 'seasons', 'regionBiomes', 'eventModifiers', 'daySources'] },
+  { key: 'shop', file: 'shop.json', type: 'object', required: ['combat', 'companion', 'estate', 'gifts'] },
 ];
 
 const errors = [];

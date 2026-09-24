@@ -120,8 +120,8 @@ events + ids unchanged → step suite pins the migration (incl. a real-bug regre
   pattern, reused everywhere).
 - **Effectiveness: HIGH.** 16 content files; AI authoring of new content is safe (schema +
   registry + mirror enforced); the calendar/NPC/dialogue systems proved bespoke behavior can
-  stay content-shaped. Open items: `data/shopData.js` migration (§5.4) and the POT-006 write-up
-  in TOOLING_MAP — the pipeline exists but is under-documented (backlog B8).
+  stay content-shaped. Open items: none — `data/shopData.js` migrated to `content/shop.json`
+  (§5.4, v2.19.7, 17 content files) and the POT-006 write-up in TOOLING_MAP is current.
 
 ## 6. Docs-as-code & housekeeping
 
@@ -195,7 +195,7 @@ Never: dismiss a red as flaky without reading the artifact; silence an error net
 | §2 Verification ladder | STRONGEST | Freeze-class bugs dead; v2.19 red→green in minutes; 11 suites green incl. strict | Runner count display drift; mobile report-only until promoted |
 | §3 Spec-first | HIGH | 7 specs; zero decision reversals; locked decisions held 7 migrations | Doc-count rule needed (and now holds) |
 | §4 UI migration loop | VALIDATED | 7/7 screens; every migration yielded a bug/hardening | Vocabulary growth needs a forcing function |
-| §5 Content pipeline | HIGH | 16 JSONs; AI-safe authoring | shopData IN-FLUX; POT-006 under-documented |
+| §5 Content pipeline | HIGH | 17 JSONs; AI-safe authoring | none open (shopData migrated v2.19.7) |
 | §6 Docs housekeeping | HIGH | Map checks catch drift; rides-along held 7 releases | Doc tail can lag code when sessions break |
 | §7 Failure handling | HIGH | Re-proven lessons; incidents recorded every release | No formal postmortem format for multi-session failures yet |
 
@@ -214,7 +214,7 @@ backlog aging.
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
 | B6 | ~~Task decomposition for content batches~~ **DONE v2.19.6** (file-at-a-time rule landed as §5.6 of the content sub-workflow) | Safer large content additions | — | — |
 | B7 | Widget Inspector (§6.4) + 9-slice skins | §6 remainder; hook point exists | M/L | P3 |
-| B8 | Consolidate §5.7 duplicate farming/sandbox renderers to shop.js; migrate shopData.js → content/shop.json (POT-006) | Open map items; §5.5/§5.6 CLOSED v2.19.2 (audit + typed setTownLevel/v9 migration); POT-006 was already documented v2.10.0 — the draft rationale here was stale | M | P2 |
+| B8 | ~~Consolidate §5.7 + shopData → content/shop.json~~ **DONE v2.19.7** (shop.json via POT-006, 17th content file; §5.7 renderers single-homed in shop.js; audit found the town panel Sandbox button was a dead no-op — now wired through `onSandbox` → `ShopSystem.openSandbox`) | Open map items; §5.5/§5.6 CLOSED v2.19.2 | — | — |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
 | B10 | Perf budget/benchmark for the combat loop | Later; performance not yet a demonstrated pain | M | P3 |
 | B11 | WCAG-based accessibility audit of the widget system (extends §4.4/§11) | Later; after content/build phases settle | M | P3 |
@@ -245,6 +245,25 @@ backlog aging.
 - Change made: B1 closed; fuzz suite added to the battery (12 suites); lesson logged
   in KNOWLEDGE §16 ("a fuzz suite isn't done when green — done when its negative
   control has proven it can go red").
+
+- Date: 2026-09-24
+- Section affected: §5 content pipeline + §10 (B8) — shop migration + §5.7 consolidation
+- What happened: executed as two §5.6 units, verified between. **Unit A** migrated the last
+  non-content T0 catalog: `data/shopData.js` → `content/shop.json` (registered generator +
+  core.js, mirror re-synced, shop.js reads `DataManager.shop` via a `_stockedItems()` accessor,
+  T0 script tag + map block + `SHOP_DATA` global retired). The map gate went RED on the stale
+  block mid-unit — the rides-along law working as designed. **Unit B** deleted townContent's
+  duplicated farming/sandbox overlay renderers (122 lines) and single-homed the modes in
+  shop.js. The §5.7 audit inverted its own premise: the duplicated townContent block's only
+  callers were each other — its `openSandbox` had NO entry point — and the town panel's
+  Sandbox button was a silent no-op the whole time (TownEngine accepts `onSandbox`, town.js
+  never passed one). "Both paths live" was map-prose, not wiring. Fixed: farming card →
+  `shopSystem.openFarming`, panel button → `onSandbox` → `shopSystem.openSandbox` (sandbox
+  becomes REACHABLE — a behavior delta, not a regression); `sandboxSystem` dependency dropped
+  from TownContent. Battery green between units and after (394 checks/13 suites; DOM id refs
+  115→106 with the deleted ids).
+- Change made: B8 closed; §5 open items cleared; PROJECT_MAP §1/§2/§3.1/§5.4/§5.7 rides-along;
+  game_globals rot-guard updated; TOOLING_MAP pipeline count 16→17.
 
 - Date: 2026-09-24
 - Section affected: §5 content sub-workflow + §10 (B2 slice 1, B6) — visual QA + batch rule

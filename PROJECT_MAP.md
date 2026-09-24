@@ -52,7 +52,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 
 | Tier | Files | Why the order exists |
 |---|---|---|
-| **T0 data** | `data/embeddedData.js` → `data/assetMap.js` → `shopData.js` → `disasterEvents.js` → `farmingConfig.js` → `affectionTiers.js` → `estateTiers.js` → `childGrowthStages.js` → `sandboxDefaults.js` → `svgPortraits.js` | Plain global consts (`EMBEDDED_DATA`, …). Everything later reads these. `embeddedData.js` is **generated** (`npm run content:sync`) — never hand-edit |
+| **T0 data** | `data/embeddedData.js` → `data/assetMap.js` → `disasterEvents.js` → `farmingConfig.js` → `affectionTiers.js` → `estateTiers.js` → `childGrowthStages.js` → `sandboxDefaults.js` → `svgPortraits.js` | Plain global consts (`EMBEDDED_DATA`, …). Everything later reads these. `embeddedData.js` is **generated** (`npm run content:sync`) — never hand-edit. The shop catalog left T0 in v2.19.7: it is `content/shop.json` (`DataManager.shop`) now |
 | **T1 early systems** | `engine/titleMenu_refactored.js` → `systems/npcExport.js` → `systems/calendarTime.js` → `systems/gameLog.js` → `ui/npcExportUi.js` | Class declarations only (no construction) — safe before core |
 | **T2 core** | `engine/core.js` | `DataManager`, `EventBus`, `GameLoop`, `Camera`, `InputManager`, `GameState` — the substrate |
 | **T3 sim** | `engine/entities.js` → `combat.js` → `pickup.js` → `rendering.js` → `systems/companion.js` → `conditionEngine.js` → `npcSystem.js` → `progression.js` → `loot.js` → `quest.js` → `engine/locationManager.js` | Class declarations; reference T0/T2 globals inside methods only |
@@ -77,12 +77,6 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: asset path map for preloading
 - Status: NORMATIVE
 - Defines: `ASSET_MAP`
-
-### data/shopData.js
-- Purpose: static shop catalog data (complements content/ JSONs)
-- Status: IN-FLUX
-- Defines: `SHOP_DATA`
-- Note: candidate for migration into `content/` + POT-006 pipeline; see §5.4
 
 ### data/disasterEvents.js
 - Purpose: disaster event definitions
@@ -316,9 +310,11 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Calls: `WidgetRenderer` (tab chips + stocked items are pooled repeats — §10 screen-6, v2.18.0; defs `TAB_CHIP_DEF`/`SHOP_ITEM_DEF` declare `widget:shopTab`/`widget:shopBuy`; active tab and cant-afford are DATA via v1.2 `selected.bind` / v1.3 `disabled.bind`; the inventory pilot's cardDef now rebinds the same host pool — v1.3 rebind swaps skins with the def)
 - Emits: `shopPurchase`, `shopEffect`, `startCombat`, `farmingLootCollected`
 - Listens: `resources:changed`
+- Content: `shop.json` (v2.19.7 — the stocked catalog via `DataManager.shop`; POT-006)
 - Store: writes inventory/gold **through progression APIs** (POT-012 clean — no direct branch writes)
 - DOM: `shop-overlay`, `shop-items` (widget pool host — no innerHTML wipes; farming/sandbox modes still wipe here, kept bespoke per §3.2), `shop-gold`, `shop-tabs` (pool host), `shop-close`, `sb-launch`, `sb-difficulty`, `sb-diff-val`, `sb-show-dps`
 - Dynamic-create: [sb-launch, sb-difficulty, sb-diff-val, sb-show-dps, shop-empty-notice] (farming/sandbox mode UI built in renderers — F2 gate)
+- Note: v2.19.7 §5.7 consolidation — the farming/sandbox overlay UI single-homes here (`openFarming`/`openSandbox`); townContent's town-root farming card and the town panel's Sandbox button both route into this system
 - GuardedBy: `tests/suites/step3_widget_inventory.cjs` (purchase/inventory round-trip), `tests/suites/step6_shop_tabs.cjs` (tabs/disabled/round-trip pin)
 
 ### ui/townEngine.js
@@ -331,15 +327,15 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - GuardedBy: trace (town)
 
 ### ui/townContent.js
-- Purpose: town screens content — NPC dialogue engine (dialogueSets through condition engine), farming UI, HUD chips (date/log/gold/run stats)
+- Purpose: town screens content — NPC dialogue engine (dialogueSets through condition engine), HUD chips (date/log/gold/run stats), town-root farming entry card
 - Status: NORMATIVE
 - Defines: `TownContent`
-- Calls: `WidgetRenderer` (HUD chips: one pooled repeat — §10 screen-3, v2.15.0, ids `town-log-toggle/town-date/town-run-stats`, log chip declares `widget:toggleGameLog`; dialogue + dog choices: pooled repeats — §10 screen-4, v2.16.0, defs `DIALOGUE_CHOICE_DEF`/`DOG_CHOICE_DEF` declare `widget:dialogueChoice`/`widget:dogChoice`, behavior in `_handleTopicChoice`/`_handleDogChoice`, verbatim from the pre-migration listeners)
-- Emits: `npc:talked`, `npc:dialogueChoice`, `npc:dialogueFlag`, `npc:dialogueAffection`, `farmingLootCollected`
+- Calls: `WidgetRenderer` (HUD chips: one pooled repeat — §10 screen-3, v2.15.0, ids `town-log-toggle/town-date/town-run-stats`, log chip declares `widget:toggleGameLog`; dialogue + dog choices: pooled repeats — §10 screen-4, v2.16.0, defs `DIALOGUE_CHOICE_DEF`/`DOG_CHOICE_DEF` declare `widget:dialogueChoice`/`widget:dogChoice`, behavior in `_handleTopicChoice`/`_handleDogChoice`, verbatim from the pre-migration listeners); `ShopSystem.openFarming` (v2.19.7 — the town-root farming card opens shop.js's single-homed farming mode)
+- Emits: `npc:talked`, `npc:dialogueChoice`, `npc:dialogueFlag`, `npc:dialogueAffection`
 - Listens: `quest:completed`, `quest:time_event`
 - Store: town level read/written via typed `GameManager.getTownLevel`/`setTownLevel` (§5.6 closed v2.19.2 — no direct branch writes)
 - DOM: `dialogue-overlay`, `dialogue-name`, `dialogue-text`, `dialogue-choices`, `dialogue-continue`, `dialogue-portrait`, `dog-dialogue*`, `companion-slot-*`, `companion-notification`
-- Dynamic-create: [sb-launch, sb-difficulty, sb-diff-val, sb-show-dps, town-run-stats] (duplicate farming/sandbox renderers §5.7 + widget chip def ids — F2 gate)
+- Dynamic-create: [town-run-stats] (widget chip def id — F2 gate; v2.19.7 removed the duplicated farming/sandbox overlay renderers and their sb-* ids, see §5.7)
 - GuardedBy: `tests/suites/step2_npc_system.cjs` (dialogue selection)
 
 ### ui/loadout.js
@@ -379,6 +375,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 |---|---|
 | calendar.json | calendarTime.js |
 | npcs.json | npcSystem.js, locationManager.js |
+| shop.json | shop.js (catalog tabs + inventory display-name fallback) |
 | locations.json | locationManager.js, npcSystem.js (location rules) |
 | quests.json | quest.js |
 | content_gates.json | quest.js (gate inputs) |
@@ -509,12 +506,20 @@ UI files MUST list their DOM ids. New archetypes get a row here before the first
   DELETED (companion feedback → `FloatingTextSystem.spawn`); the rest KEPT as reserved API surface
   (`save:*`, `unlock:*`, `quest:available/started/flag_set`, `player:levelUp`, `counter:changed`,
   `farmingComplete`, `startCombat`, `shopEffect`, `bossIntroComplete`). §3.2 updated.
+- **5.4 (RESOLVED v2.19.7)** — `data/shopData.js` migrated to `content/shop.json` (POT-006):
+  registered in the generator registry + `engine/core.js` fetch list, mirror re-synced,
+  `SHOP_DATA` reads replaced with `DataManager.shop` in shop.js, T0 script tag and map block
+  removed. `SHOP_DATA` is no longer a global; §3.1 gains the shop.json row.
 - **5.6 (RESOLVED v2.19.2)** — progression.js is the sole writer via typed `setTownLevel`/`getTownLevel`;
   the `persistent.town.phase` writable path was RETIRED (WRITABLE_PATHS now session-only) and _migrate
   v9 canonicalizes saves carrying the retired `phase` field (level stays canonical; phase never wins).
   The old path's auto-vivification was a live split-brain — §5.6's original concern, now closed.
-- **5.7 (open, v2.18.0)** — townContent.js contains DUPLICATE farming/sandbox renderers
-  (openFarmingMenu + a sandbox config block) alongside shop.js's renderFarmingSlots/
-  renderSandboxConfig — two code paths for the same features, reachable from different entry
-  points. Consolidate one way when the farming/sandbox UI next changes; until then both are
-  live, so edits to farming/sandbox UI must check BOTH files.
+- **5.7 (RESOLVED v2.19.7)** — the duplicate farming/sandbox overlay renderers in townContent.js
+  are DELETED; shop.js is the single home (`openFarming`/`openSandbox`). Audit finding recorded:
+  the duplicated townContent block's only callers were each other (its `openSandbox` had NO
+  entry point), and the town panel's Sandbox button was a silent no-op all along — TownEngine
+  accepts `onSandbox` but town.js never passed one. Now wired: `onSandbox →
+  shopSystem.openSandbox(sandboxSystem)`; the town-root farming card routes into
+  `shopSystem.openFarming`. Behavior delta: sandbox is reachable (new), farming overlay close
+  restores the default shop chrome via `ShopSystem.close()` (same visual result, one owner).
+- **5.4 (RESOLVED v2.19.7)**

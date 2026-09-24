@@ -42,10 +42,12 @@ class ShopSystem {
     disabled: { bind: 'item.cantAfford' },
   };
 
-  constructor({ gameManager, eventBus, audioManager }) {
+  constructor({ gameManager, eventBus, audioManager, dataManager }) {
     this.gameManager = gameManager;
     this.eventBus = eventBus;
     this.audioManager = audioManager;
+    // v2.19.7: the catalog is content (DataManager.shop / content/shop.json)
+    this.dataManager = dataManager || (typeof window !== 'undefined' ? window.game?.dataManager : null);
     this.currentMode = null;  // 'shop', 'farming', 'sandbox'
     this.currentTab = 'combat';
 
@@ -100,7 +102,7 @@ class ShopSystem {
         this._renderTabs(); // selection moves — pooled rebind, cheap
       });
       this._items?.addEventListener('widget:shopBuy', (e) => {
-        const item = (SHOP_DATA[this.currentTab] || []).find((it) => it.id === e.detail?.itemId);
+        const item = this._stockedItems().find((it) => it.id === e.detail?.itemId);
         if (item) this.buy(item); // buy() re-renders — affordability refreshes everywhere
       });
     }
@@ -187,6 +189,14 @@ class ShopSystem {
 
   // --- Shop Rendering ---
 
+  /** Catalog accessor (v2.19.7): the stocked catalog is CONTENT now —
+   *  DataManager.shop (content/shop.json via the POT-006 pipeline, with the
+   *  embeddedData fallback). Fails soft to empty tabs while booting. */
+  _stockedItems(tabId = this.currentTab) {
+    const shop = this.dataManager?.shop || (typeof window !== 'undefined' ? window.game?.dataManager?.shop : null) || {};
+    return shop[tabId] || [];
+  }
+
   renderItems() {
     if (!this._items || this.currentMode !== 'shop') return;
     // §24 Step 3: the Inventory tab is the widget-system pilot screen
@@ -197,7 +207,7 @@ class ShopSystem {
     // v1.3 rebind swaps events/payloads/skins with the def. NOTE: no
     // innerHTML wipe — the pool owns this host (v1.3 hygiene guards
     // externally-wiped hosts anyway).
-    const items = SHOP_DATA[this.currentTab] || [];
+    const items = this._stockedItems();
     const gold = this.gameManager.get_currency() || 0;
     this._renderer().repeatInto(this._items, ShopSystem.SHOP_ITEM_DEF,
       items.map((item) => ({
@@ -227,7 +237,7 @@ class ShopSystem {
     // v1.3 hygiene guard now protects every host against external wipes.
     const R = this._renderer();
     const items = this.gameManager.getInventoryItems();
-    const defs = SHOP_DATA.combat || [];
+    const defs = this._stockedItems('combat');
     const nameFor = (id) => (defs.find((d) => d.id === id) || {}).name || String(id).replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
     const descFor = (id) => (defs.find((d) => d.id === id) || {}).desc || (String(id).startsWith('probe') ? 'Purchased from the Grand Bazaar.' : '');
     const cardDef = {

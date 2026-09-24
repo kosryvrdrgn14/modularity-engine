@@ -16,8 +16,8 @@ class TownScreen {
     // Create LoadoutScreen (pre-combat weapon & companion selection)
     this.loadoutScreen = new LoadoutScreen({ gameManager, dataManager, audioManager });
 
-    // Create ShopSystem (new data-driven version)
-    this.shopSystem = new ShopSystem({ gameManager, eventBus, audioManager });
+    // Create ShopSystem (new data-driven version; catalog = DataManager.shop)
+    this.shopSystem = new ShopSystem({ gameManager, eventBus, audioManager, dataManager });
 
     // Create Engine
     this.engine = new TownEngine({
@@ -25,8 +25,14 @@ class TownScreen {
       dataManager,
       gameManager,
       onCombat: () => this._handleCombat(),
+      onSandbox: () => this.shopSystem.openSandbox(sandboxSystem),
     });
     this.engine.setLocationManager(this.locationManager);
+
+    // v2.19.7 (§5.7 + a §5-class find): the town panel's Sandbox button was a
+    // silent no-op — TownEngine accepts an onSandbox callback but town.js never
+    // passed one. Single-homed sandbox config (ShopSystem.openSandbox) now IS
+    // the handler; openFarming/openSandbox both route through shop.js.
 
     // Create Dock Menu
     this.dockMenu = new DockMenu({
@@ -45,7 +51,6 @@ class TownScreen {
       affectionSystem,
       farmingSystem,
       disasterSystem,
-      sandboxSystem,
       locationManager: this.locationManager,
       shopSystem: this.shopSystem,
       getPendingDisaster,

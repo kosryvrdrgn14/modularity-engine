@@ -2,6 +2,43 @@
 
 ---
 
+## v2.19.7 — B8 closed: shop catalog → content/shop.json + §5.7 renderers single-homed
+**Date:** September 24, 2026
+**Status:** ✅ Complete (battery 13 suites green between units and after; verify green)
+
+### Unit A — the shop catalog joins the content pipeline (17th file)
+`data/shopData.js` → **`content/shop.json`** via the full POT-006 contract: generator registry
++ `engine/core.js` fetch list entries, `npm run content:sync` (mirror 16→17 files), shop.js
+reads **`DataManager.shop`** through a `_stockedItems()` accessor (fails soft to empty tabs
+while booting), `SHOP_DATA` global + T0 script tag + map block retired (game_globals rot-guard
+updated; the map gate went RED mid-unit on the stale block — the rides-along law working).
+### Unit B — §5.7: one code path for one feature
+townContent.js's duplicated farming/sandbox overlay renderers (122 lines) are DELETED; shop.js
+is the single home. The farming card now routes `openFarming → shopSystem.openFarming`.
+
+### The audit inverted §5.7's premise (§5-class find, recorded in the map)
+- townContent's `openSandbox` had **no entry point** — its only callers were the duplicated
+  methods themselves; "both paths live" in §5.7 was map-prose, not wiring.
+- The town panel's **Sandbox button was a silent no-op the whole time**: TownEngine accepts an
+  `onSandbox` callback that town.js never passed. Now wired → `shopSystem.openSandbox`
+  (sandbox becomes reachable — a behavior delta, not a regression).
+- `sandboxSystem` dependency dropped from TownContent; DOM id refs 115→106 with the deleted ids.
+
+### Incidents / lessons
+- `code_search` ignored `cwd` twice more (leaked specs/CHANGELOG into results) — §14 rule held:
+  one diagnosis, switch to terminal `rg`/targeted reads.
+- §5.7 is the second proven instance of **auditing a map claim's wiring before honoring it** —
+  §5.5 (dead events) and §5.7 (dead renderers) both hid real dead code behind "live" labels.
+
+### Documentation rides-along (same change)
+- PROJECT_MAP: §1 T0 tier, shop.js block (Content line + consolidation note), townContent block
+  (farming entry, sb-* ids removed, `farmingLootCollected` emit dropped), §3.1 shop.json row,
+  §5.4 + §5.7 RESOLVED with the wiring audit recorded.
+- WORKFLOW: §5 open items cleared, §9 §5-row updated, §10 B8 closed, §11 entry.
+- TOOLING_MAP: pipeline count 16→17. CHANGELOG: this entry.
+
+---
+
 ## v2.19.6 — B2 slice 1: visual probe suite + B6: content-batch decomposition rule
 **Date:** September 24, 2026
 **Status:** ✅ Complete (battery 13 suites green incl. strict; visual_probe 14/14)
