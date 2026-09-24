@@ -148,7 +148,7 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step6_shop_tabs.cjs` — shop chips/selected-bind, v1.3 disabled suppression, purchase flow, tab round-trip (former pilot pool bug), def-swap skin evidence (10)
 - 🟩 `step7_title_menu.cjs` — title menu pooled strip + locked-as-DATA (no emission, denial kept) + declared-event funnel + keyboard parity + pool identity + selection-reset (15)
 - 🟩 `save_fuzz.cjs` — B1 save-integrity fuzz: 50 seeded mutants + 5 corrupt-JSON roots → boot survives, v9 lands, phase stays dead; double-boot race preserves totals (57)
-- 🟩 `visual_probe.cjs` — B2 slice 1 (v2.19.6): screenshot QA landed in the battery — structural screenshots (title/town/combat/paused) into `artifacts/visual_*/` + pixel probes: DOM-layer render checks for the DOM screens, canvas variance (blank-cleared = 0.0) + timer text pixels for combat, paused frame-stillness (pixel diff < 5%/400ms), negative control proving the blank detector fires on solid buffers (14)
+- 🟩 `visual_probe.cjs` — B2 COMPLETE (slice 1 v2.19.6 + slice 2 v2.19.8): screenshot QA in the battery — structural screenshots (title/town/combat/paused/levelup/boss/end/shop) into `artifacts/visual_*/` + pixel probes: DOM-layer render checks for the DOM screens, canvas variance + timer/gold/XP text pixels for combat, paused frame-stillness, real-path flows (XP-grant level-up incl. drain, skipToBoss boss spawn, end-screen show, shop catalog on content/shop.json), negative control proving the blank detector fires on solid buffers (22)
 - Run everything: `npm test` (skip-safe) / `npm run test:strict` (skips fail).
 
 ### 4.8 Save integrity fuzz — 🟩 DONE v2.19.3 (`tests/suites/save_fuzz.cjs`, 57 checks)
@@ -161,16 +161,16 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 
 No golden-image gating yet. Instead, cheap deterministic heuristics per screenshot:
 
-> **Status (v2.19.6):** slice 1 of this layer is BUILT as `tests/suites/visual_probe.cjs`
-> (in the battery): title/town/combat/paused structural screenshots, layer-correct render
-> probes (DOM visibility + pooled widget content for DOM screens; canvas luminance variance +
-> HUD text pixels for the canvas screen), paused frame-stillness, and a negative control
-> (solid buffer ≈ 0 variance proves the blank detector can fire). Items 1–3 below are
-> partially automated by that suite; item 4 remains the later phase.
+> **Status (v2.19.8):** B2 is COMPLETE — `tests/suites/visual_probe.cjs` (in the battery, 22
+> checks) automates items 1–3 across all eight §5.2 structural scenarios (title, town, combat,
+> paused, level-up, boss, end screen, shop) with layer-correct render probes and the blank-
+> detector negative control. What remains open is item 4 only (golden-image diffing), which
+> stays a later-phase decision. The M-list (§9) is untouched — probes verify presence, never
+> aesthetic quality.
 
-1. **Pixel probes on the live canvas** (already proven): HUD gold chip color present at expected coords; XP bar numbers rendered; kill chip renders; end-screen breakdown text (DOM) matches `_killsByType`.
-2. **Structural screenshots** saved per scenario: `artifacts/<runid>/NN_<name>.png` — title, town, shop open, combat T+30/T+120, boss spawn, level-up screen, end screen, pause menu. A human skims the artifact folder after each run — this is the "screenshot" channel doing real QA work without automation overhead. *(title/town/combat/paused now captured by visual_probe every battery run)*
-3. **Cheap frame checks:** non-blank variance (stdev > threshold in a downsampled buffer — catches blank-preview class), HUD region unchanged when it shouldn't change (paused state really frozen). *(both live in visual_probe; threshold-tuning and more regions remain open)*
+1. **Pixel probes on the live canvas** (already proven): HUD gold chip color present at expected coords; XP bar numbers rendered; kill chip renders; end-screen breakdown text (DOM) matches `_killsByType`. *(gold chip + XP bar live in visual_probe; kill chip + end-screen breakdown remain trace checks)*
+2. **Structural screenshots** saved per scenario: `artifacts/<runid>/NN_<name>.png` — title, town, shop open, combat T+30/T+120, boss spawn, level-up screen, end screen, pause menu. A human skims the artifact folder after each run — this is the "screenshot" channel doing real QA work without automation overhead. *(all eight captured by visual_probe every battery run)*
+3. **Cheap frame checks:** non-blank variance (stdev > threshold in a downsampled buffer — catches blank-preview class), HUD region unchanged when it shouldn't change (paused state really frozen). *(both live in visual_probe, incl. combat/boss variance)*
 4. Later (v2): pixel-diff against last-*approved* screenshots with a small tolerance, gated on explicit approval commits.
 
 ---

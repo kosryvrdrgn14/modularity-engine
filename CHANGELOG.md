@@ -2,6 +2,37 @@
 
 ---
 
+## v2.19.8 — B2 closed: visual probe slice 2 (boss/level-up/end/shop + HUD regions)
+**Date:** September 24, 2026
+**Status:** ✅ Complete (visual_probe 22/22; battery 13 suites green incl. strict)
+
+### Slice 2 — the four remaining §5.2 scenarios + the rest of the §5.1 HUD regions
+`tests/suites/visual_probe.cjs` grew 14 → **22 checks**, every new flow driven through the
+real path:
+- **Level-up:** grant exactly one level of XP → overlay opens → screenshot → key `1` → drain
+  verified (POT-013 flow, now with pixel evidence + the `05_levelup.png` artifact).
+- **Boss:** the game's own debug entry (`window.skipToBoss()`) → spawn flag + still-playing +
+  non-blank encounter canvas (`06_boss.png`).
+- **End screen:** `showEndScreen` + `_renderEndScreen` with action row (`07_end.png`), then
+  dismissed.
+- **Shop:** `openShop` renders the stocked catalog as pooled widget cards from
+  **content/shop.json** (`08_shop.png`) — the first battery check over yesterday's B8 migration
+  surface.
+- **HUD regions:** gold chip (POT-011 probe) + XP bar text (BUG-029 probe) join the timer
+  region — all three trace-proven coordinate/threshold pairs now run every battery.
+
+### Run-one lesson (twice makes it a rule for this suite)
+The level-up probe counted `.widget-card` and found 0 — level-up cards are bespoke
+`.levelup-card` markup (the one overlay never migrated to the widget system). Same shape as
+slice 1's DOM-vs-canvas misfire: **read the markup, probe the layer that renders.**
+
+### Documentation rides-along
+- TESTING_PLAN: §4.9 row + §5 status — items 1–3 of the visual layer now fully automated;
+  item 4 (golden-image diffing) stays the deliberate v2 non-goal. WORKFLOW: §10 B2 closed,
+  §11 entry. TOOLING_MAP: Playwright row note. CHANGELOG: this entry.
+
+---
+
 ## v2.19.7 — B8 closed: shop catalog → content/shop.json + §5.7 renderers single-homed
 **Date:** September 24, 2026
 **Status:** ✅ Complete (battery 13 suites green between units and after; verify green)

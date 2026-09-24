@@ -208,7 +208,7 @@ backlog aging.
 | ID | Item | Why | Effort | Priority |
 |---|---|---|---|---|
 | B1 | ~~Save-integrity fuzz tests~~ **DONE v2.19.3** (`save_fuzz.cjs`, 57 checks) | First seeded run caught 3 real bugs (version-string chain bypass, counters=null boot crash, scalar-root acceptance) + a harness seeding flaw — fixed; lesson in KNOWLEDGE §16 | — | — |
-| B2 | Screenshot pixel-probe QA — **slice 1 DONE v2.19.6** (`tests/suites/visual_probe.cjs` in the battery: screenshots title/town/combat/paused, layer-correct render probes, paused frame-stillness, blank-detector negative control). **Slice 2 remainder:** boss/level-up/end-screen shots, more probe regions, threshold tuning | Catches visual regressions automation currently can't | M | P2 |
+| B2 | ~~Screenshot pixel-probe QA~~ **DONE v2.19.8** (`visual_probe.cjs`, 22 checks in the battery: all 8 structural screenshots — title/town/combat/paused/levelup/boss/end/shop — HUD pixel regions for timer/gold/XP, paused frame-stillness, real-path level-up/boss/end/shop flows, blank-detector negative control; golden-image diffing stays the deliberate v2 non-goal) | Catches visual regressions automation currently can't | — | — |
 | B3 | ~~Criteria-based release checklist + release hygiene~~ **DONE v2.19.5** (`npm run release:check` — verify + strict battery + CHANGELOG header hygiene; negative control proved it red on a duplicate header) | Makes "done" mechanical when sessions break | — | — |
 | B4 | ~~Plan-first forcing function: commit the plan~~ **RE-SCOPED v2.19.4 (docs-only):** multi-file plans get restated in the session summary; commit-based gate retired — its premise is dead here (git CLI blocked, platform auto-syncs, no local commit step to hook) | The rule can't be mechanical on this platform; shrink it rather than re-log a skippable reminder | S | P3 |
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
@@ -245,6 +245,20 @@ backlog aging.
 - Change made: B1 closed; fuzz suite added to the battery (12 suites); lesson logged
   in KNOWLEDGE §16 ("a fuzz suite isn't done when green — done when its negative
   control has proven it can go red").
+
+- Date: 2026-09-24
+- Section affected: §2 ladder (§10 B2) — visual QA slice 2, B2 closed
+- What happened: visual_probe grew from 14 to 22 checks — the four remaining §5.2 structural
+  scenarios (level-up, boss, end screen, shop) plus the gold-chip/XP-bar pixel regions from the
+  trace's proven probes, all driven through real paths (XP-grant → overlay → key selection →
+  drain; `window.skipToBoss()`; `showEndScreen`; `openShop` against content/shop.json). Run-one
+  lesson again: the level-up probe counted `.widget-card` and found 0 — level-up cards are
+  bespoke `.levelup-card` markup, NOT widget cards (the only screen-2 overlay never migrated).
+  Read the markup, probe the layer that renders — same lesson as slice 1's DOM-vs-canvas,
+  now twice-proven as a general rule for this suite. All 8 artifact screenshots land every
+  battery run for the human-skim channel.
+- Change made: B2 closed (golden-image diffing remains the deliberate §5.4 non-goal);
+  TESTING_PLAN §4.9 row + §5 status updated; CHANGELOG v2.19.8.
 
 - Date: 2026-09-24
 - Section affected: §5 content pipeline + §10 (B8) — shop migration + §5.7 consolidation
