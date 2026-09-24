@@ -215,7 +215,7 @@ class TownContent {
     if (bgEl) bgEl.src = phase >= 2 ? 'assets/town_wooden_shacks.svg' : 'assets/town_refugee_camp.svg';
 
     // Update unlocked NPCs
-    const _npcsData = this.locationManager?._getNPCsData() || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
+    const _npcsData = this.locationManager?._getNPCsData() || {}; // F5 gate v2.19.4: dead NPC_DATA fallback removed (POT-003)
     for (const key in _npcsData) {
       const npc = _npcsData[key];
       if (npc.unlockCondition) {
@@ -894,7 +894,7 @@ class TownContent {
         gm.spend_currency(100, 'camp_upgrade');
         gm.set_flag('town_camp_upgraded', true);
         gm.setTownLevel(2, 'campUpgrade'); // §5.6 (v2.19.2): typed write
-        const _npcsUpgrade = this.locationManager?._getNPCsData() || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
+        const _npcsUpgrade = this.locationManager?._getNPCsData() || {}; // F5 gate v2.19.4: dead NPC_DATA fallback removed (POT-003)
         if (_npcsUpgrade.cute_girl) _npcsUpgrade.cute_girl.unlocked = true;
         this.updateDisplay();
         if (this._engine) this._engine.renderLocationCards();

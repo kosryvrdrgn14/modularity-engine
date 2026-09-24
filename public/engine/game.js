@@ -895,7 +895,7 @@ class Game {
       this.gameManager.add_currency(100, 'debug');
       this.gameManager.setTownLevel(1, 'debug'); // §5.6 (v2.19.2): typed API, phase path retired
       this.gameManager.set_flag('town_camp_upgraded', false);
-      const _npcs = this.dataManager?.npcs || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
+      const _npcs = this.dataManager?.npcs || {}; // F5 gate v2.19.4: dead NPC_DATA fallback removed (POT-003)
       if (_npcs.cute_girl) _npcs.cute_girl.unlocked = false;
     }
     this.gameState.setState('town');

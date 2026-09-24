@@ -43,8 +43,8 @@ class NPCExportSystem {
   }
 
   _npcContent(npcId) {
-    const npcs = this.dataManager?.npcs
-      || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
+    // F5 gate (v2.19.4): dead legacy NPC_DATA fallback removed (POT-003).
+    const npcs = this.dataManager?.npcs || {};
     return npcs[npcId] || null;
   }
 

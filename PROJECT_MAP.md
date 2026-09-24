@@ -122,6 +122,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `TitleMenu` (+ static `MENU_ITEMS` def table — adding a menu entry is an array entry)
 - Calls: `DataManager.enemies`, `DataManager.companions`, `DataManager.stages`, `WidgetRenderer` (menu strip is ONE pooled repeat — §10 screen-7, v2.19.0; def `MENU_ITEM_DEF` declares `widget:titleAction`; selected + locked are DATA via v1.2 `selected.bind` / v1.3 `disabled.bind`, locked denial stays code; clicks activate by explicit index and never claim keyboard selection), DOM: `title-screen`, `title-menu` (widget pool host — no innerHTML wipes), `title-tooltip`, `info-version`, `info-best-run`, `info-total-gold`, `slot-picker-overlay`, `settings-screen`, `dev-stage-overlay`
+- Dynamic-create: [slot-picker-overlay, slot-picker-close, dev-stage-overlay] (overlays created on demand — F2 gate)
 - GuardedBy: trace (title flow checks), `tests/suites/step7_title_menu.cjs`
 
 ### systems/npcExport.js
@@ -151,6 +152,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Emits: `gameLog:updated`
 - Store: mirrors tail into `persistent.gameLog.tail` (branch shape owned by progression.js)
 - DOM: `gamelog-panel`
+- Dynamic-create: [gamelog-panel, gamelog-list, gamelog-prev-list, gamelog-cur-list, gamelog-count, gamelog-clear, gamelog-close] (console panel built in JS — F2 gate)
 - GuardedBy: `tests/suites/game_log.cjs`
 
 ### ui/npcExportUi.js
@@ -159,6 +161,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `NPCExportUI`
 - Calls: `NPCExportSystem`, `WidgetRenderer` (pooled path)
 - DOM: `export-overlay`, `export-list`, `export-copy-current`, `export-close`, `export-back`
+- Dynamic-create: [export-overlay, export-list, export-copy-current, export-close, export-back] (overlay built on demand — F2 gate)
 - GuardedBy: `tests/suites/step4_export.cjs` (UI purity checks)
 
 ### T2 — core
@@ -177,7 +180,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 ### engine/entities.js
 - Purpose: `EntityManager` (entity pools), `SpawnSystem` (stage waves), `MovementSystem`
 - Status: NORMATIVE
-- Defines: `EntityManager`, `SpawnSystem`, `MovementSystem`
+- Defines: `EntityManager`, `SpawnSystem`, `MovementSystem`, `distBetween`, `isInCone` (cross-file helper functions — declared in tools/game_globals.cjs)
 - Calls: `DataManager.enemies`, `DataManager.stages`
 - Emits: `bossSpawn`
 - GuardedBy: trace (spawning)
@@ -194,7 +197,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 ### engine/pickup.js
 - Purpose: `PickupSystem` (xp/gold/magnet), `LevelingSystem` (xp curve, level-ups), `TelegraphSystem` (power-up drop telegraphs)
 - Status: NORMATIVE
-- Defines: `PickupSystem`, `LevelingSystem`, `TelegraphSystem`
+- Defines: `PickupSystem`, `LevelingSystem`, `TelegraphSystem`, `preloadAssets` (cross-file helper — declared in tools/game_globals.cjs)
 - Calls: `DataManager.leveling`
 - Emits: `pickup`, `levelUp`, `damage`
 - Listens: `pickup`, `magnetActivate`, `death`
@@ -311,6 +314,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Listens: `resources:changed`
 - Store: writes inventory/gold **through progression APIs** (POT-012 clean — no direct branch writes)
 - DOM: `shop-overlay`, `shop-items` (widget pool host — no innerHTML wipes; farming/sandbox modes still wipe here, kept bespoke per §3.2), `shop-gold`, `shop-tabs` (pool host), `shop-close`, `sb-launch`, `sb-difficulty`, `sb-diff-val`, `sb-show-dps`
+- Dynamic-create: [sb-launch, sb-difficulty, sb-diff-val, sb-show-dps, shop-empty-notice] (farming/sandbox mode UI built in renderers — F2 gate)
 - GuardedBy: `tests/suites/step3_widget_inventory.cjs` (purchase/inventory round-trip), `tests/suites/step6_shop_tabs.cjs` (tabs/disabled/round-trip pin)
 
 ### ui/townEngine.js
@@ -319,6 +323,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `TownEngine`
 - Calls: `DataManager.stages`, `DataManager.weapons`
 - DOM: `town-bg`, `town-gold`, `town-camp-name`, `town-breadcrumb`, `dock-map`, `town-left-panel`, `town-back`, `town-arrow-left`, `town-arrow-right`, `panel-backdrop`, `panel-enter-combat`, `panel-open-sandbox`, `swipe-region-name`, `dialogue-text` (shared)
+- Dynamic-create: [town-run-stats] (referenced by the engine's DOM cache; the chip id is a v2.15 widget def in townContent — F2 gate)
 - GuardedBy: trace (town)
 
 ### ui/townContent.js
@@ -330,6 +335,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Listens: `quest:completed`, `quest:time_event`
 - Store: town level read/written via typed `GameManager.getTownLevel`/`setTownLevel` (§5.6 closed v2.19.2 — no direct branch writes)
 - DOM: `dialogue-overlay`, `dialogue-name`, `dialogue-text`, `dialogue-choices`, `dialogue-continue`, `dialogue-portrait`, `dog-dialogue*`, `companion-slot-*`, `companion-notification`
+- Dynamic-create: [sb-launch, sb-difficulty, sb-diff-val, sb-show-dps, town-run-stats] (duplicate farming/sandbox renderers §5.7 + widget chip def ids — F2 gate)
 - GuardedBy: `tests/suites/step2_npc_system.cjs` (dialogue selection)
 
 ### ui/loadout.js
@@ -338,6 +344,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `LoadoutScreen`
 - Calls: `COMPANION_DATA` (guarded), `DataManager.stages`, `WidgetRenderer` (cards + slot chips are pooled repeats — §10 screen-5, v2.17.0; defs `WEAPON_CARD_DEF`/`COMPANION_CARD_DEF`/`SLOT_CHIP_DEF` declare `widget:loadoutPick`/`widget:loadoutClear`, bridged on the overlay; persistent chrome skeleton, phase renders only re-populate hosts; selection via renderer v1.2 `selected.bind`)
 - DOM: `loadout-overlay`, `loadout-next`, `loadout-confirm`, `loadout-back`, `loadout-back-companions`, `loadout-slots` (pool host), `loadout-grid` (pool host)
+- Dynamic-create: [loadout-overlay, loadout-title, loadout-subtitle, loadout-next, loadout-confirm, loadout-back, loadout-back-companions, loadout-slots, loadout-grid] (chrome skeleton built once per show() — F2 gate)
 - GuardedBy: `tests/suites/step5_loadout_widgets.cjs`
 
 ### ui/town.js

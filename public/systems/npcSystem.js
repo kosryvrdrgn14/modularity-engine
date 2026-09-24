@@ -243,7 +243,8 @@ class NPCSystem {
 
   _npcsData() {
     if (this.dataManager?.npcs) return this.dataManager.npcs;
-    if (typeof NPC_DATA !== 'undefined') return NPC_DATA;
+    // F5 gate (v2.19.4): dead legacy fallback removed — NPC_DATA global no
+    // longer exists anywhere (POT-003); content-driven load is the only path.
     return {};
   }
 

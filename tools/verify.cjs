@@ -17,7 +17,19 @@
 //      in its file, every GuardedBy suite exists, §3.1 content rows point
 //      at real content files. A new/renamed file without a map block = RED
 //      (KNOWLEDGE §19: the map may not silently rot).
-//   4. TRACE (opt-in): the 112-check Playwright regression suite.
+//   4. TEST SYNTAX (F1, v2.19.4): every tests/**/*.cjs and tools/*.cjs file
+//      parses. The recall-not-read lesson (half-applied multi-part edits,
+//      KNOWLEDGE §16) had its net OUTSIDE the gate — two of three incidents
+//      were in suite files verify never checked. Now the net is unconditional.
+//   5. NO-UNDEF (F5, v2.19.4): the game files pass ESLint no-undef — the
+//      partyBtn lesson (undefined-variable reference) moves into the gate.
+//      Cross-file lexical bindings are declared in game_globals.cjs, whose
+//      entries are meta-checked against PROJECT_MAP (the list cannot rot).
+//   6. DOM IDS (F2, v2.19.4): every literal getElementById('id') in game
+//      code must exist in game2.html OR be documented as dynamically created
+//      (dynamic-create lines in the file's PROJECT_MAP block). The
+//      shop-overlay bug class (KNOWLEDGE §5) is now caught statically.
+//   7. TRACE (opt-in): the Playwright regression suite.
 //
 // Exit codes: 0 green, 1 red. Built to be invoked by humans AND agents —
 // no interactive prompts, no environment assumptions beyond Node.
@@ -128,6 +140,21 @@ if (!fs.existsSync(MAP)) {
   }
   if (checked > 0) ok(`${checked} Defines/GuardedBy symbols cross-checked against disk`);
 
+  // 3d. game_globals.cjs meta-check (F5 companion, v2.19.4): every declared
+  // global must be documented (backticked) in the map, so the no-undef
+  // globals list cannot silently diverge from the documented surface.
+  try {
+    const { PROJECT_GLOBALS } = require(path.join(ROOT, 'tools', 'game_globals.cjs'));
+    let gOk = 0;
+    for (const g of PROJECT_GLOBALS) {
+      if (mapText.includes(`\`${g}\``)) gOk++;
+      else fail(`game_globals: \`${g}\` is not documented in PROJECT_MAP.md (add to the owning file's Defines)`);
+    }
+    if (gOk === PROJECT_GLOBALS.length && gOk > 0) ok(`${gOk} declared globals documented in the map (rot-guard)`);
+  } catch (e) {
+    fail(`game_globals meta-check crashed: ${e.message.split('\n')[0]}`);
+  }
+
   // 3c. §3.1 content rows point at real content files.
   const c3 = mapText.match(/### §3\.1[\s\S]*?(?=### §3\.2)/);
   if (c3) {
@@ -153,6 +180,108 @@ if (TRACE) {
   } catch (e) {
     fail(`trace failed: ${e.stdout?.toString().split('\n').slice(-4).join(' | ') || e.message}`);
   }
+}
+
+// ── 4. TEST/TOOL SYNTAX (F1) — the recall-not-read gate ──
+console.log('== Syntax: tests/ + tools/ (F1 gate) ==');
+const gateDirs = ['tests', 'tools'];
+const gateFiles = [];
+for (const dir of gateDirs) {
+  const d = path.join(ROOT, dir);
+  if (!fs.existsSync(d)) continue;
+  (function walk(p) {
+    for (const e of fs.readdirSync(p, { withFileTypes: true })) {
+      const full = path.join(p, e.name);
+      if (e.isDirectory()) {
+        if (e.name === 'artifacts') continue; // test OUTPUT, not source
+        walk(full);
+      } else if (/\.(cjs|mjs|js)$/.test(e.name)) gateFiles.push(full);
+    }
+  })(d);
+}
+let gateOk = true;
+for (const f of gateFiles) {
+  try {
+    execFileSync(process.execPath, ['--check', f], { stdio: 'pipe' });
+  } catch (e) {
+    gateOk = false;
+    fail(`${path.relative(ROOT, f)}: ${e.stderr?.toString().split('\n')[0] || 'syntax error'}`);
+  }
+}
+if (gateOk) ok(`${gateFiles.length} test/tool files parse`);
+
+// ── 5. NO-UNDEF (F5) — the partyBtn gate ──
+console.log('== no-undef: game files (F5 gate) ==');
+try {
+  const eslintBin = path.join(ROOT, 'node_modules', 'eslint', 'bin', 'eslint.js');
+  if (!fs.existsSync(eslintBin)) {
+    fail('F5 gate: eslint not installed (node_modules/eslint missing)');
+  } else {
+    const gameFiles = srcs.map((s) => path.join(ROOT, 'public', s));
+    // The gate config (tools/eslint.game.cjs) enforces exactly ONE rule —
+    // no-undef — with cross-file bindings declared in game_globals.cjs.
+    // JSON output is parsed so the failure message names the offender.
+    let out = '';
+    try {
+      out = execFileSync(process.execPath, [
+        eslintBin, '--no-fix', '--format', 'json',
+        '--config', path.join(ROOT, 'tools', 'eslint.game.cjs'),
+        ...gameFiles,
+      ], { cwd: ROOT, stdio: 'pipe' }).toString();
+    } catch (e2) {
+      out = (e2.stdout || '').toString(); // violations → non-zero exit, JSON on stdout
+      if (!out) throw e2;
+    }
+    const results = JSON.parse(out || '[]');
+    const undef = [];
+    for (const res of results) {
+      for (const msg of res.messages || []) {
+        if (msg.ruleId === 'no-undef') {
+          undef.push(`${path.relative(ROOT, res.filePath)}:${msg.line}: '${(msg.message.match(/'(.+?)'/) || [])[1] || '?'}' is not defined`);
+        }
+      }
+    }
+    for (const u of undef.slice(0, 8)) fail(`no-undef: ${u}`);
+    if (undef.length > 8) fail(`no-undef gate: …and ${undef.length - 8} more`);
+    if (undef.length === 0) ok(`${gameFiles.length} game files pass no-undef (globals meta-checked vs PROJECT_MAP)`);
+  }
+} catch (e) {
+  fail(`F5 gate crashed: ${e.message.split('\n')[0]}`);
+}
+
+// ── 6. DOM IDS (F2) — the shop-overlay gate ──
+console.log('== DOM ids: game code vs game2.html (F2 gate) ==');
+{
+  const htmlIds = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+  const blockText = fs.existsSync(MAP) ? fs.readFileSync(MAP, 'utf8') : '';
+  const dynamicIds = new Set();
+  for (const b of blockText.matchAll(/dynamic-create: ?\[([^\]]*)\]/gi)) {
+    // Ids are bare, comma-separated in the map (authoring-friendly):
+    // Dynamic-create: [id1, id2, ...] — strip optional quotes, validate charset.
+    for (const raw of b[1].split(',')) {
+      const id = raw.trim().replace(/^['"]|['"]$/g, '');
+      if (/^[a-zA-Z0-9_-]+$/.test(id)) dynamicIds.add(id);
+    }
+  }
+  const idRefs = new Map(); // file -> Set(ids)
+  for (const src of srcs) {
+    const text = fs.readFileSync(path.join(ROOT, 'public', src), 'utf8');
+    const ids = new Set();
+    for (const m2 of text.matchAll(/getElementById\(\s*['"]([a-zA-Z0-9_-]+)['"]\s*\)/g)) ids.add(m2[1]);
+    for (const m2 of text.matchAll(/querySelector(?:All)?\(\s*['"]#([a-zA-Z0-9_-]+)['"]/g)) ids.add(m2[1]);
+    if (ids.size) idRefs.set(src, ids);
+  }
+  let idChecked = 0;
+  const missing = [];
+  for (const [src, ids] of idRefs) {
+    for (const id of ids) {
+      if (htmlIds.has(id) || dynamicIds.has(id)) { idChecked++; continue; }
+      missing.push(`${src}: #${id}`);
+    }
+  }
+  for (const m2 of missing.slice(0, 10)) fail(`DOM id not found in game2.html (add dynamic-create: [...] to its PROJECT_MAP block if created at runtime): ${m2}`);
+  if (missing.length > 10) fail(`DOM id gate: …and ${missing.length - 10} more`);
+  if (missing.length === 0 && idChecked > 0) ok(`${idChecked} DOM id references resolve (html or documented dynamic-create)`);
 }
 
 console.log(failed === 0 ? 'VERIFY GREEN' : `VERIFY RED — ${failed} problem(s)`);

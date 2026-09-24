@@ -8,11 +8,11 @@ class LocationManager {
     this.onNavigate = null; // callback
   }
 
-  /** Get locations data from DataManager (JSON) or fallback to global LOCATION_TREE */
+  /** Get locations data from DataManager (JSON content — the only path;
+   *  the dead legacy LOCATION_TREE fallback was removed by the F5 gate,
+   *  v2.19.4). */
   _getLocationsData() {
     if (this.dataManager?.locations) return this.dataManager.locations;
-    // Fallback for legacy JS global (during migration)
-    if (typeof LOCATION_TREE !== 'undefined') return LOCATION_TREE;
     return { regions: [] };
   }
 
@@ -102,11 +102,11 @@ class LocationManager {
     }).filter(Boolean);
   }
 
-  /** Get NPCs data from DataManager (JSON) or fallback to global NPC_DATA */
+  /** Get NPCs data from DataManager (JSON content — the only path since
+   *  POT-003; the dead legacy NPC_DATA fallback was removed by the F5 gate,
+   *  v2.19.4). */
   _getNPCsData() {
     if (this.dataManager?.npcs) return this.dataManager.npcs;
-    // Fallback for legacy JS global (during migration)
-    if (typeof NPC_DATA !== 'undefined') return NPC_DATA;
     return {};
   }
 
