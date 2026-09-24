@@ -108,6 +108,11 @@ events + ids unchanged → step suite pins the migration (incl. a real-bug regre
 2. Never hand-edit data/embeddedData.js (generated mirror; npm run content:sync).
 3. New content types that need runtime behavior get a system + suite BEFORE the content lands.
 4. Lookup by stable ID, never array index (KNOWLEDGE §6).
+5. Batches decompose file-at-a-time (B6, v2.19.6): one content file per change unit —
+   author → content:sync → verify → battery for that file — never a multi-file dump.
+   The batch prompt states the file order up front; a failed file blocks only its own
+   unit, not the batch. (Anthropic agent guidance: decompose large tasks into
+   independently-verifiable units; pairs with §1 BUILD SMALL.)
 ```
 
 - **Derived from:** data-driven design (engine/content split from the v1 plan — vs_plan.md);
@@ -203,11 +208,11 @@ backlog aging.
 | ID | Item | Why | Effort | Priority |
 |---|---|---|---|---|
 | B1 | ~~Save-integrity fuzz tests~~ **DONE v2.19.3** (`save_fuzz.cjs`, 57 checks) | First seeded run caught 3 real bugs (version-string chain bypass, counters=null boot crash, scalar-root acceptance) + a harness seeding flaw — fixed; lesson in KNOWLEDGE §16 | — | — |
-| B2 | Screenshot pixel-probe QA (TESTING_PLAN §5) | Catches visual regressions automation currently can't | M | P2 |
+| B2 | Screenshot pixel-probe QA — **slice 1 DONE v2.19.6** (`tests/suites/visual_probe.cjs` in the battery: screenshots title/town/combat/paused, layer-correct render probes, paused frame-stillness, blank-detector negative control). **Slice 2 remainder:** boss/level-up/end-screen shots, more probe regions, threshold tuning | Catches visual regressions automation currently can't | M | P2 |
 | B3 | ~~Criteria-based release checklist + release hygiene~~ **DONE v2.19.5** (`npm run release:check` — verify + strict battery + CHANGELOG header hygiene; negative control proved it red on a duplicate header) | Makes "done" mechanical when sessions break | — | — |
 | B4 | ~~Plan-first forcing function: commit the plan~~ **RE-SCOPED v2.19.4 (docs-only):** multi-file plans get restated in the session summary; commit-based gate retired — its premise is dead here (git CLI blocked, platform auto-syncs, no local commit step to hook) | The rule can't be mechanical on this platform; shrink it rather than re-log a skippable reminder | S | P3 |
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
-| B6 | Task decomposition for content batches (file-at-a-time prompts, per Anthropic guidance) | Safer large content additions | S | P2 |
+| B6 | ~~Task decomposition for content batches~~ **DONE v2.19.6** (file-at-a-time rule landed as §5.6 of the content sub-workflow) | Safer large content additions | — | — |
 | B7 | Widget Inspector (§6.4) + 9-slice skins | §6 remainder; hook point exists | M/L | P3 |
 | B8 | Consolidate §5.7 duplicate farming/sandbox renderers to shop.js; migrate shopData.js → content/shop.json (POT-006) | Open map items; §5.5/§5.6 CLOSED v2.19.2 (audit + typed setTownLevel/v9 migration); POT-006 was already documented v2.10.0 — the draft rationale here was stale | M | P2 |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
@@ -240,6 +245,24 @@ backlog aging.
 - Change made: B1 closed; fuzz suite added to the battery (12 suites); lesson logged
   in KNOWLEDGE §16 ("a fuzz suite isn't done when green — done when its negative
   control has proven it can go red").
+
+- Date: 2026-09-24
+- Section affected: §5 content sub-workflow + §10 (B2 slice 1, B6) — visual QA + batch rule
+- What happened: **B2 slice 1** landed as `tests/suites/visual_probe.cjs` (in the battery):
+  structural screenshots (title/town/combat/paused → artifacts/visual_*/), layer-correct
+  render probes — DOM visibility + pooled widget content for the DOM screens, canvas
+  luminance variance + HUD text pixels for combat — paused frame-stillness (pixel diff
+  < 5% over 400ms), and the v2.19.3 negative-control rule honored up front: a solid
+  synthetic buffer must report ≈0 variance, proving the blank detector can fire. Honest
+  run-one lesson: the first draft probed canvas variance on title/town and went red —
+  they are DOM screens; the canvas behind them is uniform. Probe the layer that renders
+  (generalizes §16's "suspect the check first": here the check was measuring the wrong
+  layer entirely). **B6** landed as §5.6: content batches decompose file-at-a-time,
+  each file its own author→sync→verify→battery unit, order stated up front, failures
+  contained to their own unit.
+- Change made: B2 re-scoped to slice 2 remainder (boss/level-up/end-screen shots, more
+  probe regions, threshold tuning); B6 closed; TESTING_PLAN §4.9 + §5 status updated;
+  CHANGELOG v2.19.6.
 
 - Date: 2026-09-24
 - Section affected: §6 housekeeping + §10 backlog (B3, B5) — release gate landed

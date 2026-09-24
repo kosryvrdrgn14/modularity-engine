@@ -2,6 +2,42 @@
 
 ---
 
+## v2.19.6 — B2 slice 1: visual probe suite + B6: content-batch decomposition rule
+**Date:** September 24, 2026
+**Status:** ✅ Complete (battery 13 suites green incl. strict; visual_probe 14/14)
+
+### B2 slice 1 — `tests/suites/visual_probe.cjs` (in the battery, 14 checks)
+The first automated layer of TESTING_PLAN §5, built on the trace's proven techniques:
+- **Structural screenshots** every battery run: title / town / combat / paused →
+  `tests/artifacts/visual_*/` (the human-skimmable channel, §5.2).
+- **Layer-correct render probes:** DOM visibility + pooled widget content for title/town
+  (DOM screens), canvas luminance variance + HUD timer text pixels for combat (canvas screen).
+- **Paused frame-stillness:** timer region pixel diff < 5% over 400ms + gameTime frozen
+  (extends the §23 state check to the drawn frame).
+- **Negative control per the v2.19.3 rule:** a solid synthetic buffer reports ≈0 variance
+  (blank IS detectable) and a noisy buffer reports high variance (direction of comparison
+  verified) — the suite shipped already-proven, not vacuously green.
+
+### The run-one lesson (recorded per house rules)
+First draft probed CANVAS variance on title/town and went red — they are DOM screens; the
+canvas behind them is uniform. The check was measuring the wrong layer. Fix: probe the layer
+that actually renders. Generalizes KNOWLEDGE §16 (suspect the check first): when a probe fails
+on known-good output, ask what layer it is measuring, not just what threshold.
+
+### B6 — content-batch decomposition (closed)
+Landed as **§5.6** of the content sub-workflow (WORKFLOW.md): batches decompose
+file-at-a-time — one content file per change unit, author → content:sync → verify → battery
+for that file, batch order stated up front, a failed file blocks only its own unit. Derived
+from Anthropic's agent guidance (independently-verifiable units) paired with §1 BUILD SMALL.
+
+### Documentation rides-along
+- WORKFLOW: §5.6 rule, §10 B2 re-scoped to slice-2 remainder + B6 closed, §11 log entry.
+- TESTING_PLAN: §4.9 suite row (13 suites), §5 status block (what slice 1 covers, what
+  remains: boss/level-up/end-screen shots, more probe regions, threshold tuning).
+- TOOLING_MAP: Playwright row 12→13 suites.
+
+---
+
 ## v2.19.5 — B3 + B5: release gate (`release:check`) + run_all check counts fixed
 **Date:** September 24, 2026
 **Status:** ✅ Complete (release:check GREEN; battery 380 checks/12 suites strict-green; controls proven)
