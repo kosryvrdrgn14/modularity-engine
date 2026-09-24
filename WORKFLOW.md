@@ -198,7 +198,7 @@ backlog aging.
 
 | ID | Item | Why | Effort | Priority |
 |---|---|---|---|---|
-| B1 | Save-integrity fuzz tests (TESTING_PLAN 4.8) | Longest-lived red item; persistence is our risk surface | M | P1 |
+| B1 | ~~Save-integrity fuzz tests~~ **DONE v2.19.3** (`save_fuzz.cjs`, 57 checks) | First seeded run caught 3 real bugs (version-string chain bypass, counters=null boot crash, scalar-root acceptance) + a harness seeding flaw — fixed; lesson in KNOWLEDGE §16 | — | — |
 | B2 | Screenshot pixel-probe QA (TESTING_PLAN §5) | Catches visual regressions automation currently can't | M | P2 |
 | B3 | Criteria-based release checklist + release hygiene (double CHANGELOG headers seen pre-2.9.2) | Makes "done" mechanical when sessions break | S | P2 |
 | B4 | Plan-first forcing function: commit the plan (environment permitting) before multi-file work | Closes §1's known gap | S | P2 |
@@ -226,4 +226,14 @@ backlog aging.
   item had outlived its written reason.
 - Change made: B8 row rescoped to the real remainder (§5.7 + shopData migration); first
   entry in this log.
+
+- Date: 2026-09-24
+- Section affected: §2 verification ladder (§10 backlog B1)
+- What happened: B1's fuzz suite validated the ladder end-to-end — its own harness
+  flaw was caught by the suite's negative control, then its first properly-seeded run
+  caught 3 real migration-boundary bugs the 112-check trace never reached (no prior
+  test ever fed a corrupt save to a real boot).
+- Change made: B1 closed; fuzz suite added to the battery (12 suites); lesson logged
+  in KNOWLEDGE §16 ("a fuzz suite isn't done when green — done when its negative
+  control has proven it can go red").
 ```

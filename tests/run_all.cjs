@@ -25,6 +25,7 @@ const SUITES = [
   'tests/suites/step5_loadout_widgets.cjs',
   'tests/suites/step6_shop_tabs.cjs',
   'tests/suites/step7_title_menu.cjs',
+  'tests/suites/save_fuzz.cjs',
   'tests/suites/widget_occlusion.cjs',
 ];
 

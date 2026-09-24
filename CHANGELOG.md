@@ -2,6 +2,49 @@
 
 ---
 
+## v2.19.3 — B1: save-integrity fuzz suite (+ the 3 real bugs it caught on run one)
+**Date:** September 24, 2026
+**Status:** ✅ Complete (battery green incl. strict across 12 suites; save_fuzz 57/57; verify green)
+
+### Added
+- **`tests/suites/save_fuzz.cjs`** (TESTING_PLAN §4.8, WORKFLOW B1 — in the battery, strict-gated):
+  50 seeded deterministic mutants of a real v9 save (dropped keys, wrong types, ghost entries,
+  version chaos — 1–3 stacked via an LCG so any red reproduces exactly) + 5 corrupt-JSON roots,
+  each booted in its own clean headless context; plus a 3-boot refresh-storm race probe
+  (POT-010 family: totals never duplicated/lost).
+- **Harness: `bootGame({ initScripts })`** — pre-boot storage seeding via context init scripts,
+  replacing the boot→setItem→reload dance the game's lifecycle saves were clobbering.
+
+### The suite caught 3 REAL game bugs on its first properly-seeded run
+1. **String `save_version` ('nine') silently skipped the ENTIRE migration chain** — every
+   `v < N` gate is false for a non-coercible string. Fixed: numeric coercion at the
+   `_migrate` entry.
+2. **`counters: null` crashed the title screen at boot** (`get_counter` unguarded inside
+   `TitleMenu._updateInfo` during `Game.init`). Fixed: shape gate normalizes `counters`/`flags`
+   to `{}` + optional-chained reader.
+3. **Scalar JSON roots were silently accepted** (property writes on string primitives are
+   no-ops in sloppy mode → store stayed a string). Fixed: `_migrate` fail-closed shape gate —
+   non-object roots and corrupt `persistent` branches degrade to a fresh default, loudly.
+
+### Incidents (recorded per house rules)
+- **The suite's first draft was vacuously green** — lifecycle saves overwrote injected seeds,
+  all mutant boots ran on default stores and passed for nothing. The race probe's VALUE
+  assertions were the negative control that exposed it (runs=0/kills=0 vs seeded 2/7). Fixed in
+  the harness, not worked around; anti-vacuous `__fuzzSeeded` control now required per boot.
+  New rule (KNOWLEDGE §16): **a fuzz suite is done when its negative control has proven it can
+  go red — not when it goes green.**
+- One stray str_replace replacement targeted text from the wrong file (skipped harmlessly —
+  the tool's skip-report did its job).
+- Platform 502s interrupted two terminal runs; retried clean. No state lost.
+
+### Documentation rides-along
+- TESTING_PLAN: §4.8 promoted 🟥→🟩 with the bug list; §4.9 suite row added.
+- PROJECT_MAP: progression.js GuardedBy gains save_fuzz (migration shape gate, v9, race).
+- TOOLING_MAP: Playwright row 10→11 suites.
+- KNOWLEDGE §16 + WORKFLOW §11 entries; WORKFLOW B1 row closed.
+
+---
+
 ## v2.19.2 — B8 items 1–2: dead-event cleanup (§5.5) + town store canonicalization (§5.6)
 **Date:** September 24, 2026
 **Status:** ✅ Complete (battery green incl. strict across 11 suites; trace 115/115; verify green)

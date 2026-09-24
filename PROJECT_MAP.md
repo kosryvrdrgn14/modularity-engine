@@ -241,7 +241,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `GameManager`, `StorageBackend`, `LocalStorageBackend`, `AffectionSystem`, `ChildrenSystem`, `EstateSystem`, `FarmingSystem`, `DisasterSystem`, `SandboxSystem`, `CHILD_GROWTH_THRESHOLD`, `setTownLevel`, `getTownLevel`
 - Emits: `resources:changed`, `player:levelUp`, `counter:changed`, `farmingComplete`, `combat:sessionEnd`, `save:reset`, `save:slotSwitched`, `save:slotWiped`, `unlock:weapon`, `unlock:stage`, `unlock:feature`
 - Store: **owns the default shape of ALL `persistent.*` branches** (combat, currency, factions, gameLog, inventory, npcs, player, quests, skills, time, town, unlocks) + migrations (current: v9)
-- GuardedBy: trace (saves/slots), `tests/suites/step3_widget_inventory.cjs` (inventory)
+- GuardedBy: trace (saves/slots), `tests/suites/step3_widget_inventory.cjs` (inventory), `tests/suites/save_fuzz.cjs` (migration shape gate, v9, double-boot race)
 
 ### systems/loot.js
 - Purpose: `StarSystem`, `FrenzySystem`, `GachaProtection` (drop flavor/luck layers)

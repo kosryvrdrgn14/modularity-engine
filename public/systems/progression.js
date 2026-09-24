@@ -173,7 +173,26 @@ class GameManager {
   }
 
   _migrate(data) {
-    const v = data.save_version || data.version || 0;
+    // ── Shape gate (B1 fuzz, v2.19.3): fail-closed normalization BEFORE the
+    // version dispatch. Corrupt saves degrade to a fresh default; a wrong-
+    // typed branch is repaired to its canonical shape so every migration
+    // step below can rely on object roots. The v-string gap ('nine' < 1 is
+    // false ⇒ the WHOLE chain silently skipped) is closed by numeric coercion.
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      console.warn('[STORE] _migrate: non-object save (corrupt JSON root) — fresh default');
+      return this._createDefault();
+    }
+    if (typeof data.persistent !== 'object' || data.persistent === null || Array.isArray(data.persistent)) {
+      console.warn('[STORE] _migrate: persistent branch corrupt — fresh default');
+      return this._createDefault();
+    }
+    if (typeof data.counters !== 'object' || data.counters === null || Array.isArray(data.counters)) {
+      data.counters = {};
+    }
+    if (typeof data.flags !== 'object' || data.flags === null || Array.isArray(data.flags)) {
+      data.flags = {};
+    }
+    const v = Number(data.save_version ?? data.version ?? 0) || 0;
     if (v < 1) {
       data.inventory = data.inventory || {};
       data.inventory.maxSlots = data.inventory.maxSlots || 24;
@@ -488,7 +507,7 @@ class GameManager {
     this._dirty = true;
     this.eventBus.emit('counter:changed', { key, value: this.store.counters[key] });
   }
-  get_counter(key) { return this.store.counters[key] || 0; }
+  get_counter(key) { return this.store?.counters?.[key] || 0; } // optional-chained per B1 fuzz (counters=null crashed title boot)
   set_counter(key, value) { this.store.counters[key] = value; this._dirty = true; }
 
   // ---- Companion system ----

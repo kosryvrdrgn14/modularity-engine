@@ -23,6 +23,15 @@ const PUBLIC_DIR = path.resolve(__dirname, '..', '..', 'public');
 async function bootGame(opts = {}) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
+  // B1 (v2.19.3): pre-boot storage seeding via context init scripts — runs
+  // BEFORE any game script on every navigation in this context. The old
+  // boot→setItem→reload dance was clobbered by the game's lifecycle saves
+  // (save:runInterrupted/pagehide paths write the CURRENT store on unload),
+  // so injected seeds never reached the boot under test — caught by the
+  // save_fuzz race probe (a negative control doing its job).
+  if (Array.isArray(opts.initScripts)) {
+    for (const s of opts.initScripts) await context.addInitScript(s.fn, s.arg);
+  }
   const page = await context.newPage();
   const errors = [];
   page.on('console', (m) => {

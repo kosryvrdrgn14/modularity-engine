@@ -258,10 +258,19 @@ also evidence about the tool, not just the code.
 
 **Re-proven again (2026-09-24, v2.19.0):** the step7 suite's first red run hid three failures
 behind one root cause — a click-bridge that claimed keyboard selection — plus a suite
-expectation that contradicted its own green sibling check (`disabledIdx=[1,2]` proves index 2
+expectation that contradicts its own green sibling check (`disabledIdx=[1,2]` proves index 2
 is locked Stages, so "ArrowDown ×2 = Settings" could never pass). Lesson generalized: **when
 a check contradicts a passing sibling, suspect the check first**; a multi-failure cascade
 usually has one root — fix the cause, re-pin each expectation deliberately.
+
+**Re-proven twice more (2026-09-24, v2.19.3):** the save-fuzz suite's race probe was RED
+because the boot→setItem→reload seeding dance was clobbered by lifecycle saves — the suite
+had a flaw AND its value assertions were the negative control that exposed it (vacuous-green
+detection working as designed). Fixed properly in the harness (`initScripts` pre-boot seeding);
+the next run caught THREE real game bugs (string save_version silently skipping the whole
+migration chain; `counters=null` crashing the title boot; scalar JSON roots accepted). **A
+fuzz suite is not done when it goes green — it's done when its negative control has proven the
+suite can go red.**
 
 ## 17. Two logs, two purposes — never merge (added 2026-09-14)
 

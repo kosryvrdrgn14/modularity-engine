@@ -143,11 +143,12 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step5_loadout_widgets.cjs` — loadout pooled cards + chrome identity + v1.2 selected-bind/def-swap + confirm payload (11)
 - 🟩 `step6_shop_tabs.cjs` — shop chips/selected-bind, v1.3 disabled suppression, purchase flow, tab round-trip (former pilot pool bug), def-swap skin evidence (10)
 - 🟩 `step7_title_menu.cjs` — title menu pooled strip + locked-as-DATA (no emission, denial kept) + declared-event funnel + keyboard parity + pool identity + selection-reset (15)
+- 🟩 `save_fuzz.cjs` — B1 save-integrity fuzz: 50 seeded mutants + 5 corrupt-JSON roots → boot survives, v9 lands, phase stays dead; double-boot race preserves totals (57)
 - Run everything: `npm test` (skip-safe) / `npm run test:strict` (skips fail).
 
-### 4.8 Save integrity fuzz
-- 🟥 50 seeded random mutations of a valid save (dropped keys, wrong types, injected ghosts) → boot never throws, degraded-mode path or migration handles each
-- 🟥 Double-boot race: two boots against same slot (refresh storm) → no duplicate totals (POT-010 family)
+### 4.8 Save integrity fuzz — 🟩 DONE v2.19.3 (`tests/suites/save_fuzz.cjs`, 57 checks)
+- 🟩 50 seeded random mutations of a valid v9 save (dropped keys, wrong types, injected ghosts, version chaos) + 5 corrupt-JSON roots → boot never throws, migration lands v9, retired `phase` never resurrects (first run caught 3 real gaps: string-version chain bypass, `counters=null` title crash, scalar-root acceptance — all fixed at the `_migrate` shape gate)
+- 🟩 Double-boot race: 3 consecutive boots against one seeded slot → totals never duplicated/lost (POT-010 family); anti-vacuous seed control (`__fuzzSeeded`) required per boot
 
 ---
 
