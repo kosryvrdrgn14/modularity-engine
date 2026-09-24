@@ -38,6 +38,10 @@ review confirms truth. Never describe internal logic here — read the file for 
 1. New/renamed file ⇒ new/renamed block **in the same change** (verify fails otherwise).
 2. Renamed global, event, content file, or store branch ⇒ update every block + §3 index referencing it.
 3. If the map disagrees with the code, the code wins *and* §5 gets an entry — the map was wrong.
+4. **Dynamic-create lines are load-bearing (v2.19.4):** they are the allowlist for the verify F2
+   gate — a `getElementById`/`querySelector('#…')` id that exists only at runtime must be listed
+   in its owning file's `Dynamic-create: [...]` or verify goes red. Add the id in the same change
+   that creates it.
 
 ---
 

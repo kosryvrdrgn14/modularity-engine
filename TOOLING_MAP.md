@@ -50,10 +50,10 @@ named npm scripts (see standardization below) — that is what makes them agent-
 |---|---|---|
 | **Playwright headless suite** | **Built & primary safety net** — 11 suites + 115-check regression trace, all green, in version control (`tests/`) | Drives the REAL game (bootGame harness, real state transitions per KNOWLEDGE §2b): gate engine, NPC/memory log, widgets/inventory, export purity, calendar, game log, loadout + shop widget screens, occlusion/§11 viewport gates, plus the full historical trace. `npm test` (skip-safe) / `npm run test:strict` (skips fail) / `npm run test:trace`. Artifacts in `tests/artifacts/` |
 | **Trace harness (`tests/lib/harness.cjs`)** | Built | `bootGame()` headless browser boot with error net, storage control (`keepStorage` + reload for true persistence round-trips), per-step API detectors, PASS/FAIL runner with CI-friendly exit codes. THE canonical way any agent drives real game state |
-| **`tools/verify.cjs`** | **Built (v2.10.0; map checks v2.11.0)** | `npm run verify` — syntax-checks all 37 game files IN REAL LOAD ORDER + validates all 16 content JSONs + embeddedData mirror sync + **enforces PROJECT_MAP.md** (block coverage both ways, `Defines:` symbol presence, Status enum, GuardedBy suites, §3.1 content rows). `npm run verify:trace` adds the regression trace. ~2s without trace; the first command to run after any edit |
+| **`tools/verify.cjs`** | **Built (v2.10.0; map checks v2.11.0; F1/F5/F2 gates v2.19.4)** | `npm run verify` — syntax-checks all 37 game files IN REAL LOAD ORDER + validates all 16 content JSONs + embeddedData mirror sync + **enforces PROJECT_MAP.md** (block coverage both ways, `Defines:` symbol presence, Status enum, GuardedBy suites, §3.1 content rows, game_globals rot-guard) + **F1:** syntax-checks every tests/tools file + **F5:** ESLint no-undef on game files (tools/eslint.game.cjs; cross-file globals declared in tools/game_globals.cjs, meta-checked against the map) + **F2:** every literal `getElementById`/`querySelector('#…')` id must exist in game2.html or be documented `Dynamic-create:` in its PROJECT_MAP block. `npm run verify:trace` adds the regression trace. ~2s without trace; the first command to run after any edit |
 | **`PROJECT_MAP.md`** | **Built (v2.11.0), verify-enforced** | The file-contract map: one block per load-order file (cross-file edges only), load-order tiers, §3 reverse indexes (content consumers, event emitters→listeners, store-branch ownership), §4 archetype templates, §5 health log. Maintenance law: KNOWLEDGE §19 |
 | `node --check` | Available (Node built-in) | Per-file syntax. verify.cjs wraps it across the load order; use directly for a single file |
-| ESLint | **Limited: TS/React only** — `eslint.config.js` scopes `**/*.{ts,tsx}`; the game's plain JS in `public/` is NOT linted (`npm run lint` will not catch game-code `no-undef`) | For the Vite/React shell. The real JS safety net is verify.cjs + the trace. Scoping ESLint onto `public/` is possible but will flood with game-style findings — decide deliberately (§5) |
+| ESLint | **Split-scoped** — `eslint.config.js` lints the TS/React shell; `tools/eslint.game.cjs` lints the game's plain JS for exactly one rule (no-undef, v2.19.4) inside `npm run verify` (F5 gate), with cross-file bindings declared in tools/game_globals.cjs (meta-checked against PROJECT_MAP so the list cannot rot). `npm run lint` still covers TS/React only — game-code no-undef lives in verify | For the Vite/React shell. The F5 decision resolved the old scoping open item: ONE rule deliberately, not a style flood |
 | **POT-006 content pipeline** | Built & documented-here | `public/content/*.json` are the single content source. Registration contract: a new content file joins BOTH `DataManager.loadAll()`'s fetch list (`engine/core.js`) AND the generator registry (`tools/generateEmbeddedData.mjs`) — miss either and the mirror goes out of sync / the orphan guard errors. Scripts: `npm run content:sync` (regenerate `public/data/embeddedData.js`), `npm run content:check` (byte-verify). Build-time condition validation runs through the shared ConditionEngine |
 | ConditionEngine `validate()` | Built (v2.4.0) | Load-time validation of condition objects with human-readable paths; wired into the content pipeline for quest + NPC gates, and into TimeService for calendar modifiers |
 | Duplicate-method/key/switch-case AST checker | **LOST — not on disk** (original draft said Built; no acorn script exists in the tree and acorn is not a dependency) | Was a session artifact. Rebuild is cheap (~50 lines with acorn) if duplicate-declaration bugs reappear — log an entry first per §5 |
@@ -65,11 +65,11 @@ named npm scripts (see standardization below) — that is what makes them agent-
 ### npm script standardization (synced with package.json — these all exist)
 
 ```
-npm run verify          # tools/verify.cjs — load-order syntax + content + mirror sync + PROJECT_MAP contracts
+npm run verify          # tools/verify.cjs — load-order syntax + content + mirror sync + PROJECT_MAP contracts + F1/F5/F2 gates (test/tool syntax, no-undef, DOM ids)
 npm run widget:preview  # tools/widget_preview.cjs — §6.3 live-preview matrix + screenshot
 npm run widget:audit    # tests/suites/widget_occlusion.cjs — §7 occlusion audit (also in battery; §11 gates: game-log, pause, chips, dialogue, loadout, shop tabs)
 npm run verify:trace    # verify + the full headless regression trace
-npm run test            # all 7 suites (skips allowed pre-implementation)
+npm run test            # all 12 suites (skips allowed pre-implementation)
 npm run test:strict     # all suites, skips FAIL — post-implementation gate
 npm run test:trace      # regression trace only
 npm run content:sync    # regenerate public/data/embeddedData.js from public/content/*.json
@@ -190,6 +190,19 @@ used. Keep entries short — date, what happened, what changed as a result.
   cannot pass vacuously.
 - Adjustment made: rows moved Planned→Built; npm block updated. Open: Widget Inspector (§6.4)
   remains Planned — registry hook point already exists.
+
+---
+
+- Date: 2026-09-24
+- Tool/section affected: §2 (verify.cjs row, ESLint row, npm block)
+- What happened: mechanical-gate landing (v2.19.4). verify gained three gates: F1 (tests/tools
+  syntax — the recall-not-read lesson's net is now unconditional), F5 (no-undef on game files via
+  tools/eslint.game.cjs + tools/game_globals.cjs rot-guard — closes the old "decide deliberately"
+  ESLint scoping question: one rule, deliberately), F2 (DOM ids vs game2.html + PROJECT_MAP
+  dynamic-create allowlist). All three proven non-vacuous by injected-defect negative controls
+  before landing. The npm block had drifted to "7 suites" (battery is 12 since save_fuzz joined) —
+  same count-drift class as the v2.16 note below.
+- Adjustment made: rows + npm block updated; drift noted here per §5 convention.
 
 ---
 

@@ -1,7 +1,19 @@
 # TEMP_GATE_AUDIT_FOR_CLAUDE.md — Mechanical-Gate Feasibility Audit (handoff)
 
-**Status:** Investigation complete. **Nothing implemented** — awaiting user go-ahead on the
-recommendation package (§4 below), per WORKFLOW §1 / KNOWLEDGE §1.
+**Status:** ✅ **RECOMMENDATION PACKAGE EXECUTED (v2.19.4).** F1 (tests/tools syntax), F5
+(no-undef gate), and F2 (DOM-id gate) are built, green, and proven non-vacuous via injected-defect
+negative controls. B4 re-scoped docs-only P3. Docs folded into WORKFLOW §11 / §10, TOOLING_MAP,
+TESTING_PLAN, PROJECT_MAP §0 rule 4, CHANGELOG v2.19.4. This file is retained for YOUR review
+(free-tier cooldown) — Claude: please sanity-check the F5/F2 gate designs (§1a detection path,
+§2 table) and the dynamic-create-as-allowlist decision, then it can be deleted per the lifecycle
+note below. Your earlier feasibility verdicts were confirmed: pre-commit hooking is impossible
+here (git CLI blocked), and edit-tool interception is platform-side.
+**For:** Claude's review (written for cold pickup — no session context needed).
+**Origin:** your review task "find where a logged lesson is doing the job a mechanical gate
+should be doing." This is Buffy's report-back.
+**Lifecycle:** TEMPORARY — delete this file after its conclusions are folded into WORKFLOW §11
+(and Claude's review) — it is intentionally NOT in the TOOLING_MAP §4 doc index; it should never
+become a fourth audit doc (KNOWLEDGE §3).
 **For:** Claude's review (written for cold pickup — no session context needed).
 **Origin:** your review task "find where a logged lesson is doing the job a mechanical gate
 should be doing." This is Buffy's report-back.

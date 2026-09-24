@@ -129,10 +129,14 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 
 ### 4.9 Post-plan system suites (added 2026-09-14)
 
-> **Static gate (v2.11.0):** `npm run verify` additionally enforces `PROJECT_MAP.md` — every
-> load-order file must have a contract block, every block's `Defines:` symbols must exist in
-> source, Status must be a valid lifecycle value, GuardedBy suites must exist, §3.1 content rows
-> must point at real files. New/renamed file without a block = red, per KNOWLEDGE §19.
+> **Static gate (v2.11.0; F1/F5/F2 v2.19.4):** `npm run verify` additionally enforces
+> `PROJECT_MAP.md` — every load-order file must have a contract block, every block's `Defines:`
+> symbols must exist in source, Status must be a valid lifecycle value, GuardedBy suites must
+> exist, §3.1 content rows must point at real files — plus three mechanical gates: **F1**
+> syntax-checks every `tests/`/`tools/` file, **F5** runs ESLint no-undef over the game files
+> (cross-file globals declared in `tools/game_globals.cjs`, rot-guarded against this map), and
+> **F2** cross-checks every literal DOM id against game2.html + the map's Dynamic-create
+> allowlist. New/renamed file without a block = red, per KNOWLEDGE §19.
 - 🟩 `step1_gate_engine.cjs` — ConditionEngine: typed conditions, combinators, fail-closed, quest routing (30)
 - 🟩 `step2_npc_system.cjs` — NPC system + canonical memory log incl. save/reload round-trip (30)
 - 🟩 `step3_widget_inventory.cjs` — widget pilot + inventory canonical home + POT-015 + gold chip (22)

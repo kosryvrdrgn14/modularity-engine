@@ -2,6 +2,50 @@
 
 ---
 
+## v2.19.4 — Mechanical gates: F1/F5/F2 land in `npm run verify` (audit executed)
+**Date:** September 24, 2026
+**Status:** ✅ Complete (verify green — 22 test/tool files, 37 game files no-undef, 115 DOM ids resolve; controls proven)
+
+### The move (audit → build, in one release)
+The gate-feasibility audit (Claude handoff; user-approved package) found the recurring lessons are
+exactly the ones whose nets live OUTSIDE the two enforced gates. Three became unconditional — the
+same coverage-expansion move that made verify catch map rot in v2.11:
+
+- **F1 — test/tool syntax** (`tests/` + `tools/`, `.cjs/.mjs/.js`, artifacts excluded): the
+  recall-not-read lesson (str_replace from stale memory, 4× recurred v2.15→v2.19) had its net
+  OUTSIDE the gate; two of three multi-part-edit incidents were in suite files verify never read.
+- **F5 — no-undef on game files:** `tools/eslint.game.cjs` (exactly one rule, deliberately) with
+  cross-file bindings declared in `tools/game_globals.cjs` — verify meta-checks every declared
+  global is documented (backticked) in PROJECT_MAP, so the globals list cannot rot (66 checked).
+  Closes backlog B9 (partyBtn class caught statically).
+- **F2 — DOM ids:** every literal `getElementById('…')` / `querySelector('#…')` id in game code
+  must exist in game2.html OR be documented `Dynamic-create:` in the file's PROJECT_MAP block
+  (the map's existing dynamic-create lines double as the allowlist — no new doc surface). Kills
+  the shop-overlay bug class (KNOWLEDGE §5 checklist) statically: 115 references resolve.
+
+### Negative controls (per the v2.19.3 rule: done when it can go red, not when green)
+`tools/_negctl_f5_f2.cjs` injected a bare undefined global + an unknown id into loot.js, ran
+verify, and reverted byte-identically. F2 fired cleanly; F5's npm-path stderr capture initially
+masked the message, so the control was re-run direct — **`no-undef: loot.js '__negCtlUndef2' is
+not defined` fired and verify went RED**, then reverted clean. Both gates proven non-vacuous.
+
+### Settled in the same pass
+- **B4 re-scoped, not built:** its commit-based mechanism is impossible here (git CLI blocked,
+  platform auto-syncs — no local commit step exists to hook). Re-scoped to docs-only P3 in
+  WORKFLOW §10 rather than keeping an unenforceable rule on the books.
+- **Documented can't-fixes** (plan-first interception — edit tools are platform-side; rides-along
+  docs beyond PROJECT_MAP; mobile gate promotion; negative-control presence convention; M-list):
+  reviewed in the audit, remain human/soft by design, recorded in WORKFLOW §11.
+
+### Documentation rides-along
+- WORKFLOW: §2 ladder row gains F1/F5/F2; §10 B4 re-scoped + B9 closed; §11 full log entry.
+- PROJECT_MAP: §0 now notes Dynamic-create lines are load-bearing (they ARE the F2 allowlist);
+  TOOLING_MAP §2 verify/ESLint rows + npm block synced (12 suites), §5 log entry.
+- Full audit report retained in TEMP_GATE_AUDIT_FOR_CLAUDE.md for Claude's review (free-tier
+  cooldown), then delete per its lifecycle note.
+
+---
+
 ## v2.19.3 — B1: save-integrity fuzz suite (+ the 3 real bugs it caught on run one)
 **Date:** September 24, 2026
 **Status:** ✅ Complete (battery green incl. strict across 12 suites; save_fuzz 57/57; verify green)

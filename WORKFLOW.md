@@ -45,7 +45,7 @@ or immediately after any incident (§7).
 |---|---|---|---|
 | 0 | Read the region before editing (never edit from recall) | half-applied/malformed edits | zero |
 | 1 | `node --check` after every multi-part edit | syntax, split methods | seconds |
-| 2 | `npm run verify` after every edit to `public/` | load-order syntax, content JSON, map drift | seconds |
+| 2 | `npm run verify` after every edit to `public/` (or `tests/`/`tools/`) | load-order syntax, content JSON, map drift, test/tool syntax (F1), no-undef (F5), DOM ids (F2) | seconds |
 | 3 | Feature suite for the touched area (`tests/suites/*`) | behavior, contracts, persistence round-trips | ~1 min |
 | 4 | Full battery `npm test` (strict before closing work) | cross-system regressions, step-gate skips | minutes |
 | 5 | `npm run widget:preview` / `widget:audit` when UI moved | renderer contract, occlusion, viewport parity | ~1 min |
@@ -201,12 +201,12 @@ backlog aging.
 | B1 | ~~Save-integrity fuzz tests~~ **DONE v2.19.3** (`save_fuzz.cjs`, 57 checks) | First seeded run caught 3 real bugs (version-string chain bypass, counters=null boot crash, scalar-root acceptance) + a harness seeding flaw — fixed; lesson in KNOWLEDGE §16 | — | — |
 | B2 | Screenshot pixel-probe QA (TESTING_PLAN §5) | Catches visual regressions automation currently can't | M | P2 |
 | B3 | Criteria-based release checklist + release hygiene (double CHANGELOG headers seen pre-2.9.2) | Makes "done" mechanical when sessions break | S | P2 |
-| B4 | Plan-first forcing function: commit the plan (environment permitting) before multi-file work | Closes §1's known gap | S | P2 |
+| B4 | ~~Plan-first forcing function: commit the plan~~ **RE-SCOPED v2.19.4 (docs-only):** multi-file plans get restated in the session summary; commit-based gate retired — its premise is dead here (git CLI blocked, platform auto-syncs, no local commit step to hook) | The rule can't be mechanical on this platform; shrink it rather than re-log a skippable reminder | S | P3 |
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
 | B6 | Task decomposition for content batches (file-at-a-time prompts, per Anthropic guidance) | Safer large content additions | S | P2 |
 | B7 | Widget Inspector (§6.4) + 9-slice skins | §6 remainder; hook point exists | M/L | P3 |
 | B8 | Consolidate §5.7 duplicate farming/sandbox renderers to shop.js; migrate shopData.js → content/shop.json (POT-006) | Open map items; §5.5/§5.6 CLOSED v2.19.2 (audit + typed setTownLevel/v9 migration); POT-006 was already documented v2.10.0 — the draft rationale here was stale | M | P2 |
-| B9 | Evaluate ESLint `no-undef` as a battery gate (it caught partyBtn; not yet automated in battery) | Cheap static win | S | P3 |
+| B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
 | B10 | Perf budget/benchmark for the combat loop | Later; performance not yet a demonstrated pain | M | P3 |
 | B11 | WCAG-based accessibility audit of the widget system (extends §4.4/§11) | Later; after content/build phases settle | M | P3 |
 
@@ -236,4 +236,27 @@ backlog aging.
 - Change made: B1 closed; fuzz suite added to the battery (12 suites); lesson logged
   in KNOWLEDGE §16 ("a fuzz suite isn't done when green — done when its negative
   control has proven it can go red").
+
+- Date: 2026-09-24
+- Section affected: §2 ladder + §10 backlog (B4, B9) — mechanical-gate landing (F1/F5/F2)
+- What happened: the gate-feasibility audit (handoff: Claude; full report folded from
+  TEMP_GATE_AUDIT_FOR_CLAUDE.md) found the lessons that keep recurring are exactly the ones
+  whose nets live OUTSIDE the two enforced gates. Three were made mechanical in `npm run verify`:
+  **F1** — verify now syntax-checks tests/ + tools/ (the recall-not-read lesson, 4× recurred,
+  had its net outside the gate; two of three multi-part-edit incidents were in suite files);
+  **F5** — ESLint no-undef on the game files via tools/eslint.game.cjs + tools/game_globals.cjs,
+  whose entries are meta-checked against PROJECT_MAP so the globals list cannot rot (partyBtn
+  class; closes B9); **F2** — DOM-id cross-check: every literal getElementById/querySelector('#…')
+  in game code must exist in game2.html or be documented as dynamic-create in the file's
+  PROJECT_MAP block (the shop-overlay bug class, KNOWLEDGE §5). All three proven non-vacuous
+  by injected-defect negative controls (a bare undefined global and an unknown id each turned
+  verify RED, then reverted byte-identically). Also settled: B4's commit-based mechanism is
+  impossible on this platform (git CLI blocked, platform auto-syncs) — re-scoped to docs-only,
+  P3. Documented can't-fixes (plan-first interception, rides-along docs beyond the map, mobile
+  gate promotion, negative-control presence convention, M-list): reviewed, remain soft/human
+  by design.
+- Change made: F1/F5/F2 gates landed in tools/verify.cjs; eslint.game.cjs + game_globals.cjs
+  added; B9 closed, B4 re-scoped; PROJECT_MAP dynamic-create lines adopted as the F2 allowlist;
+  TOOLING_MAP §2 verify row + npm block updated; full audit retained for Claude in
+  TEMP_GATE_AUDIT_FOR_CLAUDE.md until his review, then delete.
 ```
