@@ -2,6 +2,41 @@
 
 ---
 
+## v2.19.5 — B3 + B5: release gate (`release:check`) + run_all check counts fixed
+**Date:** September 24, 2026
+**Status:** ✅ Complete (release:check GREEN; battery 380 checks/12 suites strict-green; controls proven)
+
+### B5 — run_all per-suite check counts (closed)
+The summary counted only the harness runner's `PASS/FAIL/SKIP —` verdict lines; suites 5–12
+(step5/6/7, save_fuzz, widget_occlusion) print a local `✓/✗` check format run_all never saw, so
+five suites reported `checks~0` and per-suite counts couldn't be trusted. run_all now counts
+both verdict formats and prints a TOTAL line: **380 checks across 12 suites** — every per-suite
+number now matches its TESTING_PLAN §4.9 documented count (step5=11, step6=10, step7=15,
+save_fuzz=57, occlusion=37, trace=115…).
+
+### B3 — criteria-based release gate (closed)
+**`tools/release_check.cjs`** + `npm run release:check` — "done" is now mechanical (the same
+"just there" property as verify and the battery):
+1. `npm run verify` green (static gates).
+2. Battery green in `--strict` — skips fail, so a suite that silently skips can't pass a release.
+3. CHANGELOG hygiene — exactly one header per top version (the pre-2.9.2 double-header class),
+   with only title/blank/`---` before it (the doc-tail/prose-drift class).
+`--no-battery` flag for fast verify+docs feedback.
+
+### Negative control + an honest first-run misfire
+- The gate's own first run went RED on the legitimate `---` divider between the CHANGELOG title
+  and the first version header — check contradicted known-good content, so the check was the
+  bug; divider exempted, lesson re-proven (KNOWLEDGE §16).
+- Then proven non-vacuous per the v2.19.3 rule: a duplicate `v2.19.4` header was injected →
+  **RED on "2 headers for v2.19.4"** → reverted byte-identically (single header confirmed).
+
+### Documentation rides-along
+- WORKFLOW: §6 gains the release-gate step; §10 B3/B5 closed; §11 log entry.
+- TOOLING_MAP: release_check row + npm block; §5 log entry. TESTING_PLAN: suite counts now
+  trustable from run_all output directly.
+
+---
+
 ## v2.19.4 — Mechanical gates: F1/F5/F2 land in `npm run verify` (audit executed)
 **Date:** September 24, 2026
 **Status:** ✅ Complete (verify green — 22 test/tool files, 37 game files no-undef, 115 DOM ids resolve; controls proven)

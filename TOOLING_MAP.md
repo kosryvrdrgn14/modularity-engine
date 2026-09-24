@@ -53,6 +53,7 @@ named npm scripts (see standardization below) — that is what makes them agent-
 | **`tools/verify.cjs`** | **Built (v2.10.0; map checks v2.11.0; F1/F5/F2 gates v2.19.4)** | `npm run verify` — syntax-checks all 37 game files IN REAL LOAD ORDER + validates all 16 content JSONs + embeddedData mirror sync + **enforces PROJECT_MAP.md** (block coverage both ways, `Defines:` symbol presence, Status enum, GuardedBy suites, §3.1 content rows, game_globals rot-guard) + **F1:** syntax-checks every tests/tools file + **F5:** ESLint no-undef on game files (tools/eslint.game.cjs; cross-file globals declared in tools/game_globals.cjs, meta-checked against the map) + **F2:** every literal `getElementById`/`querySelector('#…')` id must exist in game2.html or be documented `Dynamic-create:` in its PROJECT_MAP block. `npm run verify:trace` adds the regression trace. ~2s without trace; the first command to run after any edit |
 | **`PROJECT_MAP.md`** | **Built (v2.11.0), verify-enforced** | The file-contract map: one block per load-order file (cross-file edges only), load-order tiers, §3 reverse indexes (content consumers, event emitters→listeners, store-branch ownership), §4 archetype templates, §5 health log. Maintenance law: KNOWLEDGE §19 |
 | `node --check` | Available (Node built-in) | Per-file syntax. verify.cjs wraps it across the load order; use directly for a single file |
+| **`tools/release_check.cjs`** | **Built (v2.19.5, B3)** | `npm run release:check` — the mechanical release gate: verify green + battery strict-green (skips fail) + CHANGELOG single-version-header hygiene. Proven non-vacuous (duplicate-header injection → RED). `--no-battery` runs verify+docs only for fast feedback |
 | ESLint | **Split-scoped** — `eslint.config.js` lints the TS/React shell; `tools/eslint.game.cjs` lints the game's plain JS for exactly one rule (no-undef, v2.19.4) inside `npm run verify` (F5 gate), with cross-file bindings declared in tools/game_globals.cjs (meta-checked against PROJECT_MAP so the list cannot rot). `npm run lint` still covers TS/React only — game-code no-undef lives in verify | For the Vite/React shell. The F5 decision resolved the old scoping open item: ONE rule deliberately, not a style flood |
 | **POT-006 content pipeline** | Built & documented-here | `public/content/*.json` are the single content source. Registration contract: a new content file joins BOTH `DataManager.loadAll()`'s fetch list (`engine/core.js`) AND the generator registry (`tools/generateEmbeddedData.mjs`) — miss either and the mirror goes out of sync / the orphan guard errors. Scripts: `npm run content:sync` (regenerate `public/data/embeddedData.js`), `npm run content:check` (byte-verify). Build-time condition validation runs through the shared ConditionEngine |
 | ConditionEngine `validate()` | Built (v2.4.0) | Load-time validation of condition objects with human-readable paths; wired into the content pipeline for quest + NPC gates, and into TimeService for calendar modifiers |
@@ -66,6 +67,7 @@ named npm scripts (see standardization below) — that is what makes them agent-
 
 ```
 npm run verify          # tools/verify.cjs — load-order syntax + content + mirror sync + PROJECT_MAP contracts + F1/F5/F2 gates (test/tool syntax, no-undef, DOM ids)
+npm run release:check   # tools/release_check.cjs — B3 release gate: verify + strict battery + CHANGELOG header hygiene (--no-battery for fast feedback)
 npm run widget:preview  # tools/widget_preview.cjs — §6.3 live-preview matrix + screenshot
 npm run widget:audit    # tests/suites/widget_occlusion.cjs — §7 occlusion audit (also in battery; §11 gates: game-log, pause, chips, dialogue, loadout, shop tabs)
 npm run verify:trace    # verify + the full headless regression trace
@@ -190,6 +192,18 @@ used. Keep entries short — date, what happened, what changed as a result.
   cannot pass vacuously.
 - Adjustment made: rows moved Planned→Built; npm block updated. Open: Widget Inspector (§6.4)
   remains Planned — registry hook point already exists.
+
+---
+
+- Date: 2026-09-24
+- Tool/section affected: §2 (release_check row, npm block)
+- What happened: B3 landed as `npm run release:check` (verify + strict battery + CHANGELOG
+  hygiene; negative control proved RED on a duplicate header). Same session, B5 fixed run_all's
+  per-suite check counts (both verdict formats now counted; TOTAL line added — 380 checks/12
+  suites, all matching TESTING_PLAN §4.9's documented numbers).
+- Adjustment made: release_check row added; npm block updated. Note for future runs: criterion 3
+  allows only title/blank/`---` before the top version header (its own first draft misfired on
+  the legitimate divider — recorded in the tool header).
 
 ---
 

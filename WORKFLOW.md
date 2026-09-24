@@ -124,6 +124,10 @@ events + ids unchanged → step suite pins the migration (incl. a real-bug regre
   `verify`'s map checks (coverage, symbols, statuses, GuardedBy existence).
 - Every post-refactor session: orphan pass (delete/flag immediately). Every major feature:
   stale-doc pass against MASTER_DESIGN.
+- **Release gate (B3, v2.19.5):** `npm run release:check` makes "done" mechanical — verify
+  green + battery strict-green + CHANGELOG single-version-header hygiene. Run it before
+  calling any release complete (this is what catches the double-header / doc-tail class when
+  sessions break mid-release).
 - Health logs, not silent fixes: PROJECT_MAP §5, TOOLING_MAP §5, WORKFLOW §11 — "the map was
   wrong" is an entry, not an embarrassment.
 - Docs index lives in TOOLING_MAP §4; new docs join it in the same change.
@@ -200,7 +204,7 @@ backlog aging.
 |---|---|---|---|---|
 | B1 | ~~Save-integrity fuzz tests~~ **DONE v2.19.3** (`save_fuzz.cjs`, 57 checks) | First seeded run caught 3 real bugs (version-string chain bypass, counters=null boot crash, scalar-root acceptance) + a harness seeding flaw — fixed; lesson in KNOWLEDGE §16 | — | — |
 | B2 | Screenshot pixel-probe QA (TESTING_PLAN §5) | Catches visual regressions automation currently can't | M | P2 |
-| B3 | Criteria-based release checklist + release hygiene (double CHANGELOG headers seen pre-2.9.2) | Makes "done" mechanical when sessions break | S | P2 |
+| B3 | ~~Criteria-based release checklist + release hygiene~~ **DONE v2.19.5** (`npm run release:check` — verify + strict battery + CHANGELOG header hygiene; negative control proved it red on a duplicate header) | Makes "done" mechanical when sessions break | — | — |
 | B4 | ~~Plan-first forcing function: commit the plan~~ **RE-SCOPED v2.19.4 (docs-only):** multi-file plans get restated in the session summary; commit-based gate retired — its premise is dead here (git CLI blocked, platform auto-syncs, no local commit step to hook) | The rule can't be mechanical on this platform; shrink it rather than re-log a skippable reminder | S | P3 |
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
 | B6 | Task decomposition for content batches (file-at-a-time prompts, per Anthropic guidance) | Safer large content additions | S | P2 |
@@ -236,6 +240,23 @@ backlog aging.
 - Change made: B1 closed; fuzz suite added to the battery (12 suites); lesson logged
   in KNOWLEDGE §16 ("a fuzz suite isn't done when green — done when its negative
   control has proven it can go red").
+
+- Date: 2026-09-24
+- Section affected: §6 housekeeping + §10 backlog (B3, B5) — release gate landed
+- What happened: executed together because they share a root: run_all's `checks~0` display for
+  suites 5–12 (B5) and the missing release checklist (B3) were both trust gaps in the SAME
+  evidence chain the release decision reads. **B5:** the summary counted only the harness
+  runner's `PASS/FAIL/SKIP —` lines; five suites print a local `✓/✗` format, so their counts
+  showed 0 (step5=0 vs its real 11, save_fuzz=0 vs its real 57…). run_all now counts both
+  verdict formats and prints a TOTAL line — 380 checks/12 suites, matching every count
+  documented in TESTING_PLAN §4.9. **B3:** `tools/release_check.cjs` + `npm run release:check`
+  gates a release on: verify green, battery strict-green (skips fail), CHANGELOG
+  single-version-header hygiene (the pre-2.9.2 double-header class) with title/divider-only
+  preamble. Its first draft went red on the legitimate `---` divider (check contradicted
+  known-good content — suspect the check first); fixed, then proven non-vacuous by injecting
+  a duplicate v2.19.4 header → RED → reverted byte-identically.
+- Change made: B5 closed, B3 closed; release:check added to §6 and TOOLING_MAP §2/npm block;
+  CHANGELOG v2.19.5.
 
 - Date: 2026-09-24
 - Section affected: §2 ladder + §10 backlog (B4, B9) — mechanical-gate landing (F1/F5/F2)

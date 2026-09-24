@@ -45,21 +45,33 @@ for (const suite of SUITES) {
   const failed = res.status !== 0;
   // --strict: a skip is a failure (post-implementation gate)
   const countsAsFailure = failed || (STRICT && skipped);
+  // B5 (v2.19.5): count verdict lines in BOTH output conventions — the harness
+  // runner's `PASS/FAIL/SKIP —` lines (trace + step1–4, calendar, game_log) AND
+  // the local `✓/✗` check format (step5/6/7, save_fuzz, widget_occlusion).
+  // Previously only the first was counted, so five suites reported checks~0
+  // and per-suite check counts couldn't be trusted in the summary.
+  let checks = 0;
+  for (const l of out.split('\n')) {
+    if (/^(PASS|FAIL|SKIP)\b/.test(l) || /^\s*[✓✗]\s/.test(l)) checks++;
+  }
   results.push({
     suite: path.basename(suite),
     status: failed ? 'FAIL' : skipped ? 'SKIP' : 'PASS',
     strictFail: STRICT && skipped,
     exit: res.status,
-    lines: out.trim().split('\n').filter(l => /^(PASS|FAIL|SKIP)/.test(l)).length,
+    checks,
   });
 }
 
 console.log('\n================ RUN_ALL SUMMARY ================');
+let totalChecks = 0;
 for (const r of results) {
   const tag = r.strictFail ? 'FAIL (skip in --strict)' : r.status;
-  console.log(`${r.status.padEnd(5)}  ${r.suite.padEnd(28)} exit=${r.exit}  checks~${r.lines}  ${tag}`);
+  totalChecks += r.checks;
+  console.log(`${r.status.padEnd(5)}  ${r.suite.padEnd(28)} exit=${r.exit}  checks~${r.checks}  ${tag}`);
 }
 const fails = results.filter(r => r.status === 'FAIL' || r.strictFail).length;
 console.log('=================================================');
+console.log(`TOTAL: ${totalChecks} checks across ${results.length} suites (${results.filter(r => r.status === 'PASS').length} green)`);
 console.log(`${fails === 0 ? 'ALL SUITES GREEN' : fails + ' SUITE(S) RED'}${STRICT ? ' (strict)' : ''} — artifacts in tests/artifacts/${stamp}/`);
 process.exit(fails === 0 ? 0 : 1);
