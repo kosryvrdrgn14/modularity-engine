@@ -109,6 +109,7 @@ Not automatable, or not worth automating — named so they're deliberate steps, 
 | `MASTER_DESIGN.md` | Overall architecture, §24 plan-of-record, implementation status |
 | `PROJECT_MAP.md` | Per-file contract blocks, load-order tiers, coupling indexes, archetype templates — enforced by `npm run verify` |
 | `KNOWLEDGE.md` | Working-agreement rules for human/AI collaboration (incl. §15–18 session lessons) |
+| `WORKFLOW.md` | The standing development workflow: session loop, verification ladder, sub-workflows, provenance of each practice, effectiveness review + improvement backlog |
 | `TESTING_PLAN.md` | Three-layer test architecture, manual checklist M1–M12, unsupervised operation |
 | `TOOL_AUDIT_PLAN.md` | Per-tool verdicts and probe recipes for THIS environment's toolset |
 | `CHANGELOG.md` | What changed, when, and why — the status record |

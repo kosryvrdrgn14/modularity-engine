@@ -2,6 +2,34 @@
 
 ---
 
+## v2.19.1 — Docs: WORKFLOW.md — the standing development workflow (baseline v1)
+**Date:** September 24, 2026
+**Status:** ✅ Complete (docs only; verify green)
+
+### Added
+- **`WORKFLOW.md`** — the one document describing HOW we build: the session loop (§1), the
+  per-change verification ladder (§2), the four sub-workflows — spec-first (§3), the now-standing
+  data-driven UI migration loop (§4, validated 7/7 screens), content pipeline (§5), docs
+  housekeeping (§6) — plus failure-handling/incident recording (§7).
+- **Provenance table (§8):** every workflow practice mapped to the proven practice it derives
+  from (test pyramid, TDD, strangler-fig, ADRs/design controls, docs-as-code/Diátaxis, SRE
+  postmortems, agent working agreements) with sources; unlisted practices are honestly marked
+  "internal origin" rather than guessed.
+- **Effectiveness review (§9):** per-section verdicts with evidence and known weaknesses —
+  the verification ladder is the strongest section (freeze-class bugs dead, v2.19 red→green in
+  minutes); session loop's known gap is plan-first under momentum; doc tails can lag code when
+  sessions break. Measurable proxies defined for future reviews.
+- **Improvement backlog (§10):** B1–B11 priors (save-fuzz P1; screenshot QA, release checklists,
+  plan-commit forcing function, POT-006 write-up among P2s). §11 improvement log opened.
+- Index: TOOLING_MAP §4 gains the WORKFLOW.md row (same change, per §6's own rule).
+
+### Notes
+- Doc-only change — no code touched; `npm run verify` re-run green after the TOOLING_MAP edit.
+- Next workflow review: after the first content-batch build using this baseline, or immediately
+  after any multi-session incident.
+
+---
+
 ## v2.19.0 — Screen 7: title menu → pooled widget strip (§10 campaign complete)
 **Date:** September 24, 2026
 **Status:** ✅ Complete (battery green incl. strict across 11 suites; audit 37/37; step7 suite 15/15; preview 24/24; verify green)
