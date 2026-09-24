@@ -2089,3 +2089,73 @@
   border-color: rgba(255, 215, 0, 0.25);
   white-space: nowrap;
 }
+/* ── §2.6 accent palette extension (v2.19.0, screen 7 title menu) ── */
+/* Bounded tokens only — data selects the token name, never a raw color.
+   `plain` resolves to currentColor so un-accented entries keep the screen's
+   default label color, including the gold selected state. */
+.widget-card {
+  --widget-accent-plain: currentColor;
+  --widget-accent-story: #C77DFF;
+  --widget-accent-fav: #7EE8A2;
+  --widget-accent-town: #FF9100;
+  --widget-accent-dev: #4FC3F7;
+}
+/* ── §10 screen-7 (v2.19.0): title menu entries as widget cards ── */
+/* Structure from the widget system; this screen's theme is scoped here.
+   Mirrors the retired .menu-item / .menu-item.selected look exactly. */
+#title-menu .widget-card {
+  padding: 12px 16px;
+  font-size: 1.1rem;
+  color: #ccc;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  min-height: 0;
+  gap: 10px;
+  transition: all 0.15s ease;
+  user-select: none;
+  pointer-events: auto; /* locked entries keep their denial sound + tooltip */
+}
+#title-menu .widget-card:hover { background: rgba(255, 215, 0, 0.06); }
+#title-menu .widget-card.widget-selected {
+  color: #FFD700;
+  background: rgba(255, 215, 0, 0.08);
+  transform: scale(1.02);
+}
+/* The ▶ arrow: hidden until its entry is selected (.menu-arrow parity). */
+#title-menu .widget-card .slot-icon { font-size: 0.9rem; opacity: 0; transition: opacity 0.15s; }
+#title-menu .widget-card.widget-selected .slot-icon { opacity: 1; }
+/* Label inherits the card color via the `plain` accent token; entries with a
+   colorToken get their bounded token instead (wins over selected gold, like
+   the retired inline span styles did). */
+#title-menu .widget-card .slot-primaryText {
+  font-weight: 400;
+  color: var(--widget-accent-plain);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Locked entries: the retired .menu-item.locked look — dim, italic, flat hover.
+   (Base .widget-disabled opacity/pointer-events is intentionally overridden:
+   the denial sound + tooltip ARE the locked interaction.) */
+#title-menu .widget-card.widget-disabled { color: #555; cursor: default; font-style: italic; }
+#title-menu .widget-card.widget-disabled:hover { background: transparent; }
+/* Meta badges (+100g / DEV): the retired muted small-text look, not pill badges. */
+#title-menu .widget-card .slot-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #666;
+  background: transparent;
+  border: none;
+  padding: 0;
+  white-space: nowrap;
+}
+/* The retired utility divider travels with the Test Town entry (index 6 —
+   pool order always mirrors MENU_ITEMS order). */
+#title-menu .widget-card:nth-child(7) {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}

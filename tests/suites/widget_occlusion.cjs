@@ -132,6 +132,34 @@ const check = (name, pass, extra) => {
         JSON.stringify(tabGates));
     }
 
+    // ── Title menu entries (v2.19.0, screen 7): §11 gates at all three
+    // viewports. Presented through the REAL path (titleMenu.show()), gate,
+    // then hidden again — the menu must never linger active over other
+    // screens' setups (the titleMenu-never-hidden bug class). Single-select
+    // via v1.2 selected.bind; locked entries count as clickable (screen CSS
+    // keeps pointer-events so the denial sound + tooltip survive). ──
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(120);
+      const menuGates = await page.evaluate(() => {
+        document.getElementById('shop-overlay')?.classList.remove('active');
+        window.game.titleMenu.show();
+        const cards = [...document.querySelectorAll('#title-menu .widget-card')];
+        const clickable = cards.filter((el) => {
+          const rct = el.getBoundingClientRect();
+          if (rct.width === 0 || rct.height === 0) return false;
+          const hit = document.elementFromPoint(rct.left + rct.width / 2, rct.top + rct.height / 2);
+          return !!(hit && (hit === el || el.contains(hit)));
+        }).length;
+        const sel = cards.filter((el) => el.classList.contains('widget-selected')).length;
+        window.game.titleMenu.hide(); // restore baseline for the matrix scan
+        return { count: cards.length, clickable, sel };
+      });
+      check(`[§11 gate: title menu @ ${vp.name}] 8 entries, all clickable, one selected`,
+        menuGates.count === 8 && menuGates.clickable === 8 && menuGates.sel === 1,
+        JSON.stringify(menuGates));
+    }
+
     // ── Viewport matrix (§11). Presentation persists across resizes; the
     // game's own resize handlers re-fit the canvas. ──
     const results = [];

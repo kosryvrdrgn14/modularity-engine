@@ -4,6 +4,39 @@
 // ============================================================
 
 class TitleMenu {
+  // ── Widget defs (v2.19.0, §10 screen 7) ───────────────────
+  // Menu entries are ONE pooled repeat of a single card def; the selected
+  // entry is DATA (renderer v1.2 selected.bind) and a locked entry is DATA
+  // (v1.3 disabled.bind — the renderer suppresses emission, _select() keeps
+  // the tooltip denial). Per-entry label color is the §2.6 bounded accent
+  // token (accent.bind), never a raw color in data.
+  static MENU_ITEMS = [
+    { action: 'play', locked: false, icon: '▶', label: 'Play', colorToken: null, badge: null, divider: false },
+    { action: 'characters', locked: true, icon: '▶', label: 'Characters', colorToken: null, badge: null, divider: false },
+    { action: 'stages', locked: true, icon: '▶', label: 'Stages', colorToken: null, badge: null, divider: false },
+    { action: 'settings', locked: false, icon: '▶', label: 'Settings', colorToken: null, badge: null, divider: false },
+    { action: 'story-mode', locked: false, icon: '▶', label: '📖 Story Mode', colorToken: 'story', badge: null, divider: false },
+    { action: 'favorites', locked: false, icon: '▶', label: '🕯️ Favorite Memories', colorToken: 'fav', badge: null, divider: false },
+    { action: 'test-town', locked: false, icon: '▶', label: 'Test Town', colorToken: 'town', badge: '+100g', divider: true },
+    { action: 'dev-stage', locked: false, icon: '▶', label: '🧪 Stage Select', colorToken: 'dev', badge: 'DEV', divider: false },
+  ];
+
+  static MENU_ITEM_DEF = {
+    template: 'card',
+    _v: 1,
+    layout: 'icon-left',
+    size: 'medium',
+    slots: {
+      icon: { bind: 'icon' },
+      primaryText: { bind: 'label' },
+      badge: { bind: 'badge' },
+    },
+    onClick: { emit: 'widget:titleAction', payload: { action: '{{action}}' } },
+    selected: { bind: 'selected' },
+    disabled: { bind: 'locked' },
+    accent: { bind: 'colorToken' },
+  };
+
   constructor({ audioManager, gameManager, dataManager, onStart, onSettings, onTestTown, onStoryMode, onSlotPlay, onSlotWipe, getSlotSummaries, onFavorites }) {
     this.audioManager = audioManager;
     this.gameManager = gameManager;
@@ -21,16 +54,10 @@ class TitleMenu {
     this.onFavorites = onFavorites || null;
 
     this.selectedIndex = 0;
-    this.items = [
-      { action: 'play', locked: false },
-      { action: 'characters', locked: true },
-      { action: 'stages', locked: true },
-      { action: 'settings', locked: false },
-      { action: 'story-mode', locked: false },
-      { action: 'favorites', locked: false },
-      { action: 'test-town', locked: false },
-      { action: 'dev-stage', locked: false },
-    ];
+    // v2.19.0: entries live in the MENU_ITEMS def table (selected/locked are
+    // card data now); this.items stays as the action/locked index for the
+    // keyboard path and _select().
+    this.items = TitleMenu.MENU_ITEMS.map((it) => ({ action: it.action, locked: it.locked }));
     this.dom = {
       screen: document.getElementById('title-screen'),
       menu: document.getElementById('title-menu'),
@@ -41,24 +68,69 @@ class TitleMenu {
     };
     this._tooltipTimer = null;
     this._boundKeyDown = this._handleKeyDown.bind(this);
-    this._boundClick = this._handleClick.bind(this);
+    // v2.19.0: no _boundClick — clicks route through the declared
+    // widget:titleAction bridge (see _renderer); only hover remains at screen
+    // level for selection movement.
     this._boundMouseMove = this._handleMouseMove.bind(this);
+  }
+
+  /** Cached renderer + the declared-event bridge (installed once). Lazy like
+   *  shop.js: this script tag loads BEFORE ui/widgetRenderer.js, so the
+   *  constructor must not touch the renderer class. */
+  _renderer() {
+    if (!this.widgetRenderer) {
+      this.widgetRenderer = new WidgetRenderer({});
+      this.dom.menu?.addEventListener('widget:titleAction', (e) => {
+        const idx = TitleMenu.MENU_ITEMS.findIndex((it) => it.action === e.detail?.action);
+        if (idx < 0) return;
+        this.selectedIndex = idx;
+        this._renderMenu(); // selection moves via data, not classes
+        this._select();
+      });
+      // Locked entries: the renderer suppresses their declared event (v1.3
+      // disabled) — this guard restores the DENIAL feedback (locked sound +
+      // tooltip) without routing. Unlocked clicks carry no widget-disabled
+      // class and fall through silently (the bridge owns routing).
+      this.dom.menu?.addEventListener('click', (e) => {
+        const card = e.target.closest ? e.target.closest('#title-menu .widget-card') : null;
+        if (!card || !card.classList.contains('widget-disabled')) return;
+        if (this.audioManager) this.audioManager.playMenuSound('locked');
+        this._showTooltip('Complete more runs to unlock!');
+      });
+    }
+    return this.widgetRenderer;
+  }
+
+  /** Menu strip: pooled repeat; the selected entry comes from selectedIndex
+   *  (data). Keys must mirror the _select() switch (play/settings/story-mode/
+   *  favorites/test-town/dev-stage). */
+  _renderMenu() {
+    if (!this.dom.menu || typeof WidgetRenderer === 'undefined') return;
+    this._renderer().repeatInto(this.dom.menu, TitleMenu.MENU_ITEM_DEF,
+      TitleMenu.MENU_ITEMS.map((it, i) => ({
+        action: it.action,
+        icon: it.icon,
+        label: it.label,
+        badge: it.badge || '',
+        colorToken: it.colorToken || '',
+        locked: !!it.locked,
+        selected: i === this.selectedIndex,
+      })));
   }
 
   show() {
     this.dom.screen.classList.add('active');
     this.selectedIndex = 0;
+    // v2.19.0: static markup was replaced by the pooled widget strip — first
+    // show() (or any _updateSelection) renders/rebinds it.
     this._updateSelection();
     this._updateInfo();
     this._bindEvents();
-    this.dom.screen.addEventListener('click', this._boundClick);
     this.dom.screen.addEventListener('mousemove', this._boundMouseMove);
   }
-
   hide() {
     this.dom.screen.classList.remove('active');
     this._unbindEvents();
-    this.dom.screen.removeEventListener('click', this._boundClick);
     this.dom.screen.removeEventListener('mousemove', this._boundMouseMove);
     this._hideTooltip();
   }
@@ -91,21 +163,17 @@ class TitleMenu {
     }
   }
 
-  _handleClick(e) {
-    const item = e.target.closest('.menu-item');
-    if (!item) return;
-    const idx = parseInt(item.dataset.index);
-    if (isNaN(idx)) return;
-    this.selectedIndex = idx;
-    this._updateSelection();
-    this._select();
-  }
+  // ── Pointer routing (v2.19.0) ──
+  // Clicks arrive via the declared widget:titleAction event (one bridge on
+  // #title-menu — see _renderer); the screen-level listener remains the
+  // outside-click guard. Hover still MOVES the selection (desktop parity with
+  // the pre-migration menu), resolved against the pooled card order.
 
   _handleMouseMove(e) {
-    const item = e.target.closest('.menu-item');
-    if (!item) return;
-    const idx = parseInt(item.dataset.index);
-    if (isNaN(idx) || idx === this.selectedIndex) return;
+    const card = e.target && e.target.closest ? e.target.closest('#title-menu .widget-card') : null;
+    if (!card || !this.dom.menu) return;
+    const idx = Array.prototype.indexOf.call(this.dom.menu.children, card);
+    if (idx < 0 || idx === this.selectedIndex) return;
     this.selectedIndex = idx;
     this._updateSelection();
     if (this.audioManager) this.audioManager.playMenuSound('hover');
@@ -119,10 +187,8 @@ class TitleMenu {
   }
 
   _updateSelection() {
-    const items = this.dom.menu.querySelectorAll('.menu-item');
-    items.forEach((el, i) => {
-      el.classList.toggle('selected', i === this.selectedIndex);
-    });
+    // v2.19.0: selection is card DATA — pooled rebind refreshes the strip.
+    this._renderMenu();
   }
 
   _select() {
@@ -134,6 +200,8 @@ class TitleMenu {
     }
     if (this.audioManager) this.audioManager.playMenuSound('select');
 
+    // v2.19.0: routes are keyed by action — unchanged contract (widget:titleAction
+    // and the keyboard path both funnel through here).
     switch(item.action) {
       case 'play':
         this.onStart();
