@@ -878,7 +878,7 @@ class TownContent {
 
   renderUpgradeCard(area) {
     const gm = this.gameManager;
-    const phase = gm.get('persistent.town.phase') || 1;
+    const phase = gm.getTownLevel(); // §5.6 (v2.19.2): typed read, level canonical
     const gold = gm.get_currency() || 0;
     if (phase > 1) return;
     const canAfford = gold >= 100;
@@ -893,7 +893,7 @@ class TownContent {
         this.audioManager.playMenuSound('select');
         gm.spend_currency(100, 'camp_upgrade');
         gm.set_flag('town_camp_upgraded', true);
-        gm.set('persistent.town.phase', 2);
+        gm.setTownLevel(2, 'campUpgrade'); // §5.6 (v2.19.2): typed write
         const _npcsUpgrade = this.locationManager?._getNPCsData() || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
         if (_npcsUpgrade.cute_girl) _npcsUpgrade.cute_girl.unlocked = true;
         this.updateDisplay();

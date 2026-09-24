@@ -26,6 +26,9 @@ class Game {
     this.audioManager = new AudioManager(this.eventBus);
     this.telegraphSystem = new TelegraphSystem(this.entityManager, this.eventBus);
     this.companionSystem = new CompanionSystem(this.entityManager, this.eventBus, this.dataManager);
+    // §5.5 cleanup (v2.19.2): the renderer's floating-text spawn API rides
+    // in post-construction (floatingTextSystem is built a few lines below).
+    this.companionSystem.floatingTextSystem = null; // real value assigned after _createSystems tail
     this.gameManager = new GameManager(this.eventBus, null, this.dataManager);
     this.gameManager.init();
     this.starSystem = new StarSystem(this.gameManager);
@@ -35,6 +38,9 @@ class Game {
     this.announcements = [];
     this._announcementTriggered = {};
     this.floatingTextSystem = new FloatingTextSystem(this.eventBus);
+    // §5.5 cleanup (v2.19.2): companion heal/shield feedback spawns text via
+    // the renderer API (the 'floatingText' bus event had no listener).
+    this.companionSystem.floatingTextSystem = this.floatingTextSystem;
 
     // Game loop
     this.gameLoop = new GameLoop(
@@ -887,7 +893,7 @@ class Game {
     this.audioManager.resume();
     if (this.gameManager) {
       this.gameManager.add_currency(100, 'debug');
-      this.gameManager.set('persistent.town.phase', 1);
+      this.gameManager.setTownLevel(1, 'debug'); // §5.6 (v2.19.2): typed API, phase path retired
       this.gameManager.set_flag('town_camp_upgraded', false);
       const _npcs = this.dataManager?.npcs || (typeof NPC_DATA !== 'undefined' ? NPC_DATA : {});
       if (_npcs.cute_girl) _npcs.cute_girl.unlocked = false;

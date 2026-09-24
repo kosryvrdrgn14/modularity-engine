@@ -205,7 +205,7 @@ backlog aging.
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
 | B6 | Task decomposition for content batches (file-at-a-time prompts, per Anthropic guidance) | Safer large content additions | S | P2 |
 | B7 | Widget Inspector (§6.4) + 9-slice skins | §6 remainder; hook point exists | M/L | P3 |
-| B8 | Write up POT-006; migrate shopData.js; close §5.5/§5.6/§5.7 map items | Undocumented pipeline + open decisions | M | P2 |
+| B8 | Consolidate §5.7 duplicate farming/sandbox renderers to shop.js; migrate shopData.js → content/shop.json (POT-006) | Open map items; §5.5/§5.6 CLOSED v2.19.2 (audit + typed setTownLevel/v9 migration); POT-006 was already documented v2.10.0 — the draft rationale here was stale | M | P2 |
 | B9 | Evaluate ESLint `no-undef` as a battery gate (it caught partyBtn; not yet automated in battery) | Cheap static win | S | P3 |
 | B10 | Perf budget/benchmark for the combat loop | Later; performance not yet a demonstrated pain | M | P3 |
 | B11 | WCAG-based accessibility audit of the widget system (extends §4.4/§11) | Later; after content/build phases settle | M | P3 |
@@ -219,5 +219,11 @@ backlog aging.
 - What happened:
 - Change made:
 
-(no entries yet — baseline v1 created 2026-09-24)
+- Date: 2026-09-24
+- Section affected: §10 backlog (B8 row)
+- What happened: executing B8 showed the row's rationale was stale — POT-006 had been
+  documented since v2.10.0, and the §5.5/§5.6 items closed same-day (v2.19.2). A backlog
+  item had outlived its written reason.
+- Change made: B8 row rescoped to the real remainder (§5.7 + shopData migration); first
+  entry in this log.
 ```

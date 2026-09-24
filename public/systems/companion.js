@@ -11,6 +11,9 @@ class CompanionSystem {
     this.entityManager = entityManager;
     this.eventBus = eventBus;
     this.dataManager = dataManager || null;
+    // §5.5 dead-event cleanup (v2.19.2): the floatingText bus emit had no
+    // listener anywhere. Healing/shield feedback now flows through the
+    // renderer's spawn API (same visual, no dead event) — game.js injects it.
     this._activeCount = 0;
     this.companions = [];
     this._projectiles = []; // For archer/spider arrows
@@ -224,7 +227,7 @@ class CompanionSystem {
     player.hp = Math.min(player.hp + amount, player.maxHp);
     const healed = player.hp - before;
     if (healed > 0) {
-      this.eventBus.emit('floatingText', {
+      this.floatingTextSystem?.spawn({
         x: player.x, y: player.y - 20, text: '+' + healed, color: '#4CAF50', duration: 1.0,
       });
     }
@@ -244,7 +247,7 @@ class CompanionSystem {
       c._shieldHP = stats.shieldHP || 15;
       c._shieldTimer = this._getCooldown(c);
       player._companionShield = c._shieldHP;
-      this.eventBus.emit('floatingText', {
+      this.floatingTextSystem?.spawn({
         x: player.x, y: player.y - 25, text: '🛡️ Shield!', color: '#2196F3', duration: 1.0,
       });
     }

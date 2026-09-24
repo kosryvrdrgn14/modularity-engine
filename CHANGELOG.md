@@ -2,6 +2,57 @@
 
 ---
 
+## v2.19.2 — B8 items 1–2: dead-event cleanup (§5.5) + town store canonicalization (§5.6)
+**Date:** September 24, 2026
+**Status:** ✅ Complete (battery green incl. strict across 11 suites; trace 115/115; verify green)
+
+### §5.5 resolved — dead-event audit executed, emitters deleted
+- **Audit method (recorded):** literal-name listener sweep, dynamic-name `.on(` first-args probe,
+  harness/test dependency scan — all 19 candidates clean on all three. No silent dead code
+  carried live semantics.
+- **Deleted emitters:** `playSound`, `telegraphSpawn`/`telegraphResolve` (pickup.js),
+  `floatingText` ×2 (companion.js). Companion heal/shield feedback now calls the new
+  **`FloatingTextSystem.spawn(cfg)`** API directly (same text shape, same visuals — the listener
+  path never existed); game.js injects the renderer into CompanionSystem post-construction.
+  Bus-registry rule noted at each deletion site: if a listener is ever wanted, add it WITH the emit.
+- **Kept as reserved API surface** (marked in PROJECT_MAP §3.2): `save:*`, `unlock:*`,
+  `quest:available/started/flag_set`, `player:levelUp`, `counter:changed`, `farmingComplete`,
+  `startCombat`, `shopEffect`, `bossIntroComplete`.
+
+### §5.6 resolved — town store canonicalized + a live split-brain fixed
+- **The real find:** post-v2 saves re-auto-vivified `persistent.town.phase` through the then-
+  registered writable path while the v1→v2 migration had already renamed `phase` → `level` —
+  both fields live, the UI reading `phase`, `level` canonical. The Sep 10 BUGS_AND_ISSUES entry
+  predicted exactly this auto-vivification vector.
+- `persistent.town.phase` RETIRED from `WRITABLE_PATHS` (now session-only paths); new typed
+  **`getTownLevel()` / `setTownLevel(n, source)`** (validated 1–3, fail-closed loud, dirty-marked);
+  both writers routed through it; **`_migrate` v9** canonicalizes older saves (drops `phase`,
+  promotes it ONLY when `level` is absent — stale level wins); store default stamped v9.
+- **Pinned in the trace:** v9 handles both the both-fields and phase-only save shapes, and the
+  typed API's rejection path is probed live (no mutation).
+
+### Incidents (recorded per house rules)
+- **The error net went red on my own deliberate probe** (`setTownLevel(99)` fail-closed console
+  error) on the first trace run — whitelisted with a comment, same discipline as the calendar and
+  game-log suites. KNOWLEDGE §16 re-proven: the net is a bug detector, not a nuisance, and it
+  does not distinguish friend from foe.
+- One `str_replace` misfired harmlessly (oldString composed from a stale mental buffer → no
+  match, no change). Re-read the region, re-anchored, landed clean. READ the region rule holds.
+
+### Documentation rides-along (same change)
+- PROJECT_MAP: pickup/companion/progression/townContent/game contract blocks updated; §3.2
+  deleted-event row added; §3.3 town branch → NONE direct writers; §5.5 and §5.6 marked
+  RESOLVED with the audit method recorded. Defines symbols 86→88 (`setTownLevel`/`getTownLevel`).
+- TESTING_PLAN trace count 112→115; TOOLING_MAP Playwright row synced.
+- WORKFLOW §10: B8 row corrected (POT-006 was already documented in v2.10.0 — the B8 draft
+  rationale was stale) and rescoped to the remaining work.
+
+### Scope note
+- B8 executed as scoped: **items 1–2 only.** Still open: §5.7 duplicate farming/sandbox
+  renderers consolidation and the shopData → content pipeline migration.
+
+---
+
 ## v2.19.1 — Docs: WORKFLOW.md — the standing development workflow (baseline v1)
 **Date:** September 24, 2026
 **Status:** ✅ Complete (docs only; verify green)

@@ -504,6 +504,37 @@ function report(name, pass, detail) {
   // a v3 save boots migrated, not stuck — is unchanged.
   report('POT-007: v3 save migrated to v4', pot7.saveVersion >= 4, `v=${pot7.saveVersion}`);
   report('POT-007: slot select flow migrated the loaded slot', pot7.activeSlot === 2, `slot=${pot7.activeSlot}`);
+  // §5.6 (v2.19.2): town canonicalization — post-v2 saves re-auto-vivified
+  // the retired town.phase writable path alongside the canonical level field.
+  // _migrate v9 must drop `phase`, promote it ONLY when level is absent, and
+  // bump the version. Direct _migrate calls (pure) — the serial narrative's
+  // slots stay untouched. The typed API's validation is probed on the live
+  // store via its REJECTION path only (no mutation).
+  const v9 = await page.evaluate(() => {
+    const gm = window.game.gameManager;
+    const both = gm._createDefault();
+    both.save_version = 8;
+    both.persistent.town.phase = 2; // retired field, as the old writable path wrote it
+    both.persistent.town.level = 1; // stale canonical — phase must NOT win
+    const mBoth = gm._migrate(both);
+    const phaseOnly = gm._createDefault();
+    phaseOnly.save_version = 8;
+    phaseOnly.persistent.town.phase = 2;
+    delete phaseOnly.persistent.town.level;
+    const mPhaseOnly = gm._migrate(phaseOnly);
+    return {
+      vBoth: mBoth.save_version,
+      bothHasPhase: 'phase' in mBoth.persistent.town,
+      bothLevel: mBoth.persistent.town.level,
+      poHasPhase: 'phase' in mPhaseOnly.persistent.town,
+      poLevel: mPhaseOnly.persistent.town.level,
+      rejects: gm.setTownLevel(99, 'trace') === false,
+      liveLevel: gm.getTownLevel(),
+    };
+  });
+  report('§5.6: v9 drops retired phase, keeps canonical level', v9.vBoth >= 9 && !v9.bothHasPhase && v9.bothLevel === 1, JSON.stringify(v9));
+  report('§5.6: v9 promotes phase only when level absent', v9.vBoth >= 9 && !v9.poHasPhase && v9.poLevel === 2, JSON.stringify(v9));
+  report('§5.6: typed setTownLevel validates + getTownLevel reads', v9.rejects && v9.liveLevel >= 1, JSON.stringify(v9));
   // NOTE: pre-POT-006, quests.json was never mirrored into embeddedData.js,
   // so under file:// allQuests was empty and reconcile correctly left
   // unknown-quest entries untouched; we re-inited with injected content to
@@ -977,8 +1008,11 @@ function report(name, pass, detail) {
   report('§23: end-screen Retry button restarts the fight', s23.endRetry === 'playing');
 
   // ── Global error net ──
-  report('No page/console errors during the whole trace', errors.length === 0,
-    errors.slice(0, 5).join(' | '));
+  // Excluded: the §5.6 setTownLevel(99) probe's deliberate fail-closed console
+  // error (same whitelist discipline as the suites' deliberate rejections).
+  const errNet = errors.filter((e) => !e.includes('setTownLevel rejected: 99'));
+  report('No page/console errors during the whole trace', errNet.length === 0,
+    errNet.slice(0, 5).join(' | '));
 
   console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
   await browser.close();

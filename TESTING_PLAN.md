@@ -28,7 +28,7 @@
 
 | Exists today | Gap |
 |---|---|
-| `tests/regression_trace.cjs` — 112 checks, Playwright headless Chromium, `file://` boot of `game2.html` (relocated from `isolate/` 2026-09-14) | Single file, regression-oriented; not a full game-loop driver |
+| `tests/regression_trace.cjs` — 115 checks, Playwright headless Chromium, `file://` boot of `game2.html` (relocated from `isolate/` 2026-09-14) | Single file, regression-oriented; not a full game-loop driver |
 | `tests/run_all.cjs` — autonomous aggregator over the trace + step-gated suites (`tests/suites/`) with artifacts under `tests/artifacts/` | L1 of this plan is operational now; step suites skip until each plan step lands |
 | DOM/localStorage/canvas-pixel probing via `page.evaluate` | No scripted *play* (movement, kills, level-ups are simulated at the API/event level) |
 | Screenshots taken ad hoc (`screenshots/*.png`, older scripts) | No visual comparison, no failure-artifact bundling |

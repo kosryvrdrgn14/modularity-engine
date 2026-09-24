@@ -196,9 +196,9 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `PickupSystem`, `LevelingSystem`, `TelegraphSystem`
 - Calls: `DataManager.leveling`
-- Emits: `pickup`, `levelUp`, `damage`, `playSound`, `telegraphSpawn`, `telegraphResolve`
+- Emits: `pickup`, `levelUp`, `damage`
 - Listens: `pickup`, `magnetActivate`, `death`
-- Note: `playSound`/`telegraph*` emits currently have **no bus listener** — see §5.5
+- Note: listener-less `playSound`/`telegraph*` emitters deleted v2.19.2 (§5.5 resolved)
 - GuardedBy: trace (pickups/leveling)
 
 ### engine/rendering.js
@@ -213,8 +213,8 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `CompanionSystem`
 - Calls: `DataManager.companions`
-- Emits: `companionSpawn`, `companionDamage`, `companionGrowl`, `companionLootCollect`, `floatingText`
-- Note: `floatingText` emit has no bus listener — see §5.5
+- Emits: `companionSpawn`, `companionDamage`, `companionGrowl`, `companionLootCollect`
+- Note: `floatingText` emit deleted v2.19.2 (§5.5 resolved) — heal/shield feedback calls `FloatingTextSystem.spawn` (injected by engine/game.js)
 - GuardedBy: trace (companion combat regression)
 
 ### systems/conditionEngine.js
@@ -238,9 +238,9 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 ### systems/progression.js
 - Purpose: persistence backbone — `GameManager` + storage backends, store schema + migrations, and the meta systems: Affection, Children, Estate, Farming, Disaster, Sandbox
 - Status: NORMATIVE
-- Defines: `GameManager`, `StorageBackend`, `LocalStorageBackend`, `AffectionSystem`, `ChildrenSystem`, `EstateSystem`, `FarmingSystem`, `DisasterSystem`, `SandboxSystem`, `CHILD_GROWTH_THRESHOLD`
+- Defines: `GameManager`, `StorageBackend`, `LocalStorageBackend`, `AffectionSystem`, `ChildrenSystem`, `EstateSystem`, `FarmingSystem`, `DisasterSystem`, `SandboxSystem`, `CHILD_GROWTH_THRESHOLD`, `setTownLevel`, `getTownLevel`
 - Emits: `resources:changed`, `player:levelUp`, `counter:changed`, `farmingComplete`, `combat:sessionEnd`, `save:reset`, `save:slotSwitched`, `save:slotWiped`, `unlock:weapon`, `unlock:stage`, `unlock:feature`
-- Store: **owns the default shape of ALL `persistent.*` branches** (combat, currency, factions, gameLog, inventory, npcs, player, quests, skills, time, town, unlocks) + migrations (current: v8)
+- Store: **owns the default shape of ALL `persistent.*` branches** (combat, currency, factions, gameLog, inventory, npcs, player, quests, skills, time, town, unlocks) + migrations (current: v9)
 - GuardedBy: trace (saves/slots), `tests/suites/step3_widget_inventory.cjs` (inventory)
 
 ### systems/loot.js
@@ -328,7 +328,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Calls: `WidgetRenderer` (HUD chips: one pooled repeat — §10 screen-3, v2.15.0, ids `town-log-toggle/town-date/town-run-stats`, log chip declares `widget:toggleGameLog`; dialogue + dog choices: pooled repeats — §10 screen-4, v2.16.0, defs `DIALOGUE_CHOICE_DEF`/`DOG_CHOICE_DEF` declare `widget:dialogueChoice`/`widget:dogChoice`, behavior in `_handleTopicChoice`/`_handleDogChoice`, verbatim from the pre-migration listeners)
 - Emits: `npc:talked`, `npc:dialogueChoice`, `npc:dialogueFlag`, `npc:dialogueAffection`, `farmingLootCollected`
 - Listens: `quest:completed`, `quest:time_event`
-- Store: reads/writes `persistent.town` (HUD + town state) — **shared branch with engine/game.js, see §5.6**
+- Store: town level read/written via typed `GameManager.getTownLevel`/`setTownLevel` (§5.6 closed v2.19.2 — no direct branch writes)
 - DOM: `dialogue-overlay`, `dialogue-name`, `dialogue-text`, `dialogue-choices`, `dialogue-continue`, `dialogue-portrait`, `dog-dialogue*`, `companion-slot-*`, `companion-notification`
 - GuardedBy: `tests/suites/step2_npc_system.cjs` (dialogue selection)
 
@@ -354,7 +354,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `Game`, `game` (window), `this.timeService` (public instance surface: game.timeService), `__QUEST_DEBUG__` (debug flag, read by quest/npcSystem)
 - Listens (hub — most connections end here): `damage`, `death`, `pickup`, `levelUp`, `weaponLevelUp`, `bossSpawn`, `bossDeath`, `bossIntro`, `bossCharge`, `arcaneShot`, `chainLightning`, `coneAttack`, `companionSpawn`, `companionGrowl`, `companionLootCollect`, `contactDamage`, `areaPulse`, `pause`, `restart`, `selectUpgrade`, `pauseMenuAction`, `endScreenDismiss`, `skipToBoss`, `quest:objective_progress`, `save:runInterrupted` (self)
 - Emits: `bossIntro`, `bossIntroComplete`, `bossCharge`, `magnetActivate`, `pause`, `pickup`, `weaponUnlock`, `save:runInterrupted`
-- Store: writes `persistent.combat` (run state/autosave) + `persistent.town` (shared — see §5.6)
+- Store: writes `persistent.combat` (run state/autosave); town level via typed `setTownLevel` (§5.6 closed v2.19.2)
 - DOM: `game-canvas`, `loading-screen`, `loading-fill`, `loading-status`, `settings-screen`, `settings-back`, `music-slider`, `music-val`, `sfx-slider`, `sfx-val`, `resume-banner`, `resume-accept`, `resume-discard`, `reset-progress`
 - GuardedBy: trace (full boot→combat→end cycle)
 
@@ -420,9 +420,7 @@ All 16 are registered in `engine/core.js` fetch list + generator registry (POT-0
 | `bossCharge` | game | audio |
 | `bossIntro` | game | game (self) |
 | `bossIntroComplete` | game | NONE |
-| `playSound` | pickup | NONE (§5.5) |
-| `telegraphSpawn` / `telegraphResolve` | pickup | NONE (§5.5) |
-| `floatingText` | companion | NONE (§5.5) |
+| (v2.19.2) `playSound`, `telegraphSpawn`/`telegraphResolve`, `floatingText` — emitters DELETED (§5.5 resolved): no listeners existed; companion feedback now calls `FloatingTextSystem.spawn` directly | — | — |
 | `companionSpawn` | companion | game |
 | `companionDamage` | companion | combat |
 | `companionGrowl` | companion | game |
@@ -453,7 +451,7 @@ All 16 are registered in `engine/core.js` fetch list + generator registry (POT-0
 |---|---|---|
 | `player`, `currency`, `skills`, `factions`, `unlocks`, `inventory` | progression.js | NONE direct (shop/quests write via progression APIs) |
 | `combat` | progression.js | game.js (run state/autosave), loot.js (session counters) |
-| `town` | progression.js | townContent.js, game.js (§5.6 — shared, needs split decision) |
+| `town` | progression.js | NONE direct (level via typed setTownLevel — §5.6 closed v2.19.2) |
 | `quests` | progression.js | quest.js |
 | `npcs` | progression.js | npcSystem.js (log), npcExport.js (favorites only) |
 | `time` | progression.js | calendarTime.js (**sole writer per POT-012**), npcSystem reads for stamps |
@@ -495,14 +493,15 @@ UI files MUST list their DOM ids. New archetypes get a row here before the first
   attribution wrong (probe's per-file `window.` regex can't tell setters from readers); fixed at birth.
 - **5.4 (open)** — `data/shopData.js` (and other T0 blobs) are candidates for the content/ pipeline;
   marked IN-FLUX until migrated. This map must be updated the same change that migrates them.
-- **5.5 (open — dead-event candidates)** — emitted with no listener: `playSound`, `telegraphSpawn`,
-  `telegraphResolve`, `floatingText`, `bossIntroComplete`, `shopEffect`, `startCombat`, `player:levelUp`,
-  `quest:available`, `quest:started`, `quest:flag_set`, `counter:changed`, `farmingComplete`, `save:reset`,
-  `save:slotSwitched`, `save:slotWiped`, `unlock:weapon/stage/feature`. Some may be listened via dynamic
-  names or direct calls (static probe can't see those). **Action:** audit before deleting any emitter;
-  this index makes the audit one lookup instead of a session.
-- **5.6 (open)** — `persistent.town` has two registered writers (townContent.js, game.js). POT-012
-  spirit says one owner. Decide owner and route the other through APIs; update §3.3 + both blocks same change.
+- **5.5 (RESOLVED v2.19.2)** — dead-event audit executed: no listeners, no dynamic-name subscribers,
+  no harness deps for any candidate. `playSound`, `telegraphSpawn/Resolve`, `floatingText` emitters
+  DELETED (companion feedback → `FloatingTextSystem.spawn`); the rest KEPT as reserved API surface
+  (`save:*`, `unlock:*`, `quest:available/started/flag_set`, `player:levelUp`, `counter:changed`,
+  `farmingComplete`, `startCombat`, `shopEffect`, `bossIntroComplete`). §3.2 updated.
+- **5.6 (RESOLVED v2.19.2)** — progression.js is the sole writer via typed `setTownLevel`/`getTownLevel`;
+  the `persistent.town.phase` writable path was RETIRED (WRITABLE_PATHS now session-only) and _migrate
+  v9 canonicalizes saves carrying the retired `phase` field (level stays canonical; phase never wins).
+  The old path's auto-vivification was a live split-brain — §5.6's original concern, now closed.
 - **5.7 (open, v2.18.0)** — townContent.js contains DUPLICATE farming/sandbox renderers
   (openFarmingMenu + a sandbox config block) alongside shop.js's renderFarmingSlots/
   renderSandboxConfig — two code paths for the same features, reachable from different entry

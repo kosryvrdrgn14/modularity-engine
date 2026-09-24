@@ -285,7 +285,6 @@ class TelegraphSystem {
       onResolve: config.onResolve || null,
     };
     this.telegraphs.push(t);
-    this.eventBus.emit('telegraphSpawn', { telegraph: t });
     return t;
   }
 
@@ -313,8 +312,11 @@ class TelegraphSystem {
       if (t.elapsed >= t.windupDuration) {
         if (t.resolveDamage && t.damage > 0) this._resolveDamage(t);
         if (t.onResolve) t.onResolve(t, this.entityManager);
-        if (t.resolveSound) this.eventBus.emit('playSound', { sound: t.resolveSound });
-        this.eventBus.emit('telegraphResolve', { telegraph: t });
+        // §5.5 dead-event cleanup (v2.19.2): playSound/telegraphSpawn/
+        // telegraphResolve had no listeners anywhere (TOOL_AUDIT sweep, no
+        // dynamic-name subscribers, no harness deps) — emissions deleted, not
+        // routed. If a listener is ever wanted, add it at the same time as the
+        // emit (bus registry rule).
         this.telegraphs.splice(i, 1);
       }
     }

@@ -124,7 +124,7 @@ class GameManager {
 
   _createDefault() {
     return {
-      save_version: 8,
+      save_version: 9,
       session: {
         current_stage_id: null,
         run_in_progress: false,
@@ -286,6 +286,20 @@ class GameManager {
       }
       data.save_version = 8;
     }
+    // Town canonicalization (v9): the v1→v2 migration renamed town.phase →
+    // town.level, but post-migration saves re-auto-vivified `phase` through
+    // the then-registered writable path — leaving BOTH fields live while the
+    // UI read phase and `level` was canonical. The retired field is dropped
+    // here and the write path moved to typed setTownLevel() (§5.6, v2.19.2).
+    if (v < 9) {
+      if (data.persistent && data.persistent.town && data.persistent.town.phase !== undefined) {
+        if (data.persistent.town.level === undefined) {
+          data.persistent.town.level = data.persistent.town.phase;
+        }
+        delete data.persistent.town.phase;
+      }
+      data.save_version = 9;
+    }
     // §21 chunk 3 (additive, safe for all v3 saves): run journal fields.
     // No version bump — missing fields only mean "no journal", which is the
     // correct default for every pre-journal save.
@@ -305,17 +319,16 @@ class GameManager {
   // set() used to auto-vivify ANY path: a typo'd or early write silently grew
   // a new persisted branch outside _createDefault() invariants (the BUG-026
   // ghost-run family; the v1.9.5 'session.gold' ghost was exactly this). Every
-  // writable path is now registered here — new store fields join this list
-  // deliberately (or get a typed method). Reads (get()) remain path-free.
-  // NOTE: these five paths are the complete live call-site map (12 sites);
-  // none exist in _createDefault(), they come into being only via these
-  // registered writes — that is expected, not drift.
+  // Writable-path registry: the session.* paths are the last generic set()
+  // users. Persistent-branch mutations go through typed methods (POT-012).
+  // The town phase path was REMOVED in v2.19.2: persistent.town.level is
+  // canonical, written only via setTownLevel (§5.6 closed; _migrate v9
+  // canonicalizes saves that still carry the retired `phase` field).
   static WRITABLE_PATHS = [
     'session.selected_stage_id',
     'session.current_stage_tier',
     'session.loadout_weapons',
     'session.loadout_companions',
-    'persistent.town.phase',
   ];
 
   set(path, value) {
@@ -356,6 +369,28 @@ class GameManager {
   }
 
   get_currency() { return this.store.persistent.currency || 0; }
+
+  // ── Town (POT-012 sole writer; §5.6 closed v2.19.2) ──
+  /** Canonical town level. Saves that still carry the retired `phase`
+   *  field are canonicalized by _migrate (v9); callers never see it. */
+  getTownLevel() {
+    return this.store.persistent?.town?.level || 1;
+  }
+
+  /** Typed town-level write (camp upgrade path). Rejects out-of-range
+   *  values loudly; sets dirty so the heartbeat persists it. */
+  setTownLevel(level, source = 'townUpgrade') {
+    const n = Number(level);
+    if (!Number.isFinite(n) || n < 1 || n > 3) {
+      console.error(`[STORE] setTownLevel rejected: ${level} (expected 1-3, source: ${source})`);
+      return false;
+    }
+    const town = this.store.persistent?.town;
+    if (!town) return false;
+    town.level = n;
+    this._dirty = true;
+    return true;
+  }
 
   // ── Resources ──────────────────────────────────
   // POT-011: gold IS the wallet — redirect 'gold' resource ops to the

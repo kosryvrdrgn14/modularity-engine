@@ -602,6 +602,23 @@ class FloatingTextSystem {
     }
   }
 
+  /** §5.5 dead-event cleanup (v2.19.2): direct spawn API — feedback that
+   *  used to emit the listener-less 'floatingText' bus event calls this
+   *  instead. Same text shape the listeners push. */
+  spawn(cfg) {
+    if (!cfg) return;
+    this.texts.push({
+      x: cfg.x || 0,
+      y: cfg.y || 0,
+      text: cfg.text || '',
+      color: cfg.color || '#FFF',
+      fontSize: cfg.fontSize || 12,
+      age: 0,
+      maxAge: cfg.duration || 1.0,
+      vy: cfg.vy != null ? cfg.vy : -40,
+    });
+  }
+
   update(dt) {
     for (let i = this.texts.length - 1; i >= 0; i--) {
       const t = this.texts[i];
