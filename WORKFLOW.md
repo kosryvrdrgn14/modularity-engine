@@ -373,4 +373,25 @@ backlog aging.
   LESSON: a widget-vocabulary migration silently drops retired per-screen geometry; the fix
   lives in the screen's scoped theme section, and the permanent probe now watches the actual
   failure (scrollWidth−clientWidth), not a guess.
+
+- Date: 2026-09-25
+- Section affected: ui/npcExportUi.js (favorites browser) + step4 suite + PROJECT_MAP §4.1
+- What happened: the planned shrink-regression sweep (post-v2.19.10 bug class) swept ALL nine
+  pooled-widget hosts at 2 viewports — every screen clean, loadout fix holding. But sweeping
+  means opening every screen, and the export browser had never been opened WITH favorites:
+  openBrowser() threw `WIDGET DEF invalid: unknown slot "onClick"` — the def carried onClick
+  INSIDE `slots` (it is a top-level key per §2.2; every other screen has it outside). The
+  empty-state path (zero favorites) never renders the list, so the throw was invisible to
+  every suite: step4 tests the export SYSTEM, not the browser UI with favorites present.
+  Player impact: clicking Favorite Memories on the title screen with any favorited memory =
+  broken overlay.
+- Change made: one move — onClick hoisted out of `slots` to top level (comment in place).
+  step4 8→11: seeded-slot browser flow (favorites → pooled widget cards → card click fires
+  exportFavoriteOpened → regenerateFromSlot view → back re-renders the list), slot removed
+  after. Negative control: def re-broken → exactly the browser pins RED (original validator
+  error reproduced) → restored byte-identically. Sweep one-shots deleted after reporting.
+  LESSON: sweeps pay double — the audit found zero overflow but caught a live throw on the
+  one screen whose happy path no suite had ever executed. "A gate is done when its negative
+  control proved it can go red" now also applies to SCREENS: a screen whose error path is the
+  only path a suite exercises is unpinned.
 ```

@@ -140,7 +140,7 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step1_gate_engine.cjs` — ConditionEngine: typed conditions, combinators, fail-closed, quest routing (30)
 - 🟩 `step2_npc_system.cjs` — NPC system + canonical memory log incl. save/reload round-trip (30)
 - 🟩 `step3_widget_inventory.cjs` — widget pilot + inventory canonical home + POT-015 + gold chip (22)
-- 🟩 `step4_export.cjs` — roleplay export: spoiler cutoff, favorites, purity (8)
+- 🟩 `step4_export.cjs` — roleplay export: spoiler cutoff, favorites, purity + favorites-browser UI flow (v2.19.11: seeded slot → widget cards → click → back) (11)
 - 🟩 `calendar_time.cjs` — event-driven days, biomes, locked modifier rule, log day-stamps (27)
 - 🟩 `game_log.cjs` — session console capture, ring buffer, UI, two-logs purity (18)
 - 🟩 `widget_occlusion.cjs` — §7 occlusion audit + negative control + §11 promoted gates (game-log panel, pause cards, town chips, dialogue choices, loadout cards, shop tabs, title menu at all 3 viewports) (37)

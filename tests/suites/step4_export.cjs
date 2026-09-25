@@ -79,6 +79,47 @@ const { bootGame, STEP_DETECTORS, createRunner } = require('../lib/harness.cjs')
     r.check('favorites API present (addFavorite)', false, 'not implemented');
   }
 
+  // ── Browser UI with favorites present (v2.19.11 regression pin) ──
+  // openBrowser() renders the list through the widget system — but its def
+  // carried onClick INSIDE `slots`, so validate() threw and ANY save with
+  // favorites crashed the browser. The empty state never renders the list,
+  // which is why the battery never saw it. Seed a slot directly (deterministic;
+  // no dependence on when the store last saved) and drive the real UI path.
+  const browserUi = await page.evaluate(() => {
+    const gm = window.game.gameManager;
+    gm.backend.save(gm._slotKey(1), {
+      persistent: { npcs: { favorites: [{
+        favoriteId: 'step4_fav_1',
+        customLabel: 'step4 browser probe',
+        memoryCheckpoints: [{ npcId: 'old_man' }],
+        dateFavorited: new Date().toISOString(),
+      }] } },
+    });
+    let threw = null;
+    try { window.game.npcExportUI.openBrowser(); } catch (e) { threw = String(e && e.message || e); }
+    return { threw, cards: document.querySelectorAll('#export-list .widget-card').length };
+  });
+  r.check('browser renders favorites as pooled widget cards (onClick def top-level; v2.19.11)',
+    browserUi.threw === null && browserUi.cards >= 1, JSON.stringify(browserUi));
+  const openFav = await page.evaluate(() => {
+    document.querySelector('#export-list .widget-card')?.click();
+    return { blocks: document.querySelectorAll('.export-card-block').length,
+             back: !!document.getElementById('export-back') };
+  });
+  r.check('favorite card click regenerates the memory view (payload → regenerateFromSlot)',
+    openFav.blocks > 0 && openFav.back, JSON.stringify(openFav));
+  const backList = await page.evaluate(() => {
+    document.getElementById('export-back')?.click();
+    return { cards: document.querySelectorAll('#export-list .widget-card').length };
+  });
+  r.check('back returns to the browser list (pooled re-render)', backList.cards >= 1,
+    JSON.stringify(backList));
+  await page.evaluate(() => {
+    // Discard the seeded slot; close the overlay.
+    window.game.gameManager.backend.remove(window.game.gameManager._slotKey(1));
+    document.getElementById('export-close')?.click();
+  });
+
   // ── Structural: the export layer added NO second evaluator/log ──
   const purity = await page.evaluate(() => {
     const g = window.game;

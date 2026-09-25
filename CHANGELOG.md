@@ -2,6 +2,36 @@
 
 ---
 
+## v2.19.11 — Shrink-regression sweep: all widget hosts clean; export browser throw found + fixed
+**Date:** September 25, 2026
+**Status:** ✅ Complete (battery green: step4 11/11, visual_probe 25/25; verify green)
+
+### The audit (optional hardening after v2.19.10's min-width bug class)
+Swept all nine pooled-widget hosts (title menu, town HUD chips ×4, game-log list, dialogue
+choices, shop tabs/items, loadout slots/grid, export list) at 1280×800 and 390×844 with a
+one-off diagnostic (deleted after use): **zero horizontal overflow anywhere** — the loadout
+fix is holding and no other screen carries the shrink regression.
+
+### The find (sweeps pay double)
+Opening every screen means executing every happy path — and the export browser's
+favorites path had never run under test. `openBrowser()` **threw**
+`WIDGET DEF invalid: unknown slot "onClick"` on any save containing favorites: the card def
+carried `onClick` inside `slots` (it is a top-level key per §2.2 — every other screen does
+this correctly). The empty state (zero favorites) never renders the list, so the battery's
+step4 suite — which exercises the export system but never the populated browser UI — was
+blind to it. Player impact: the title-screen Favorite Memories overlay was broken for anyone
+who had favorited a memory.
+
+**Fix** — one move: `onClick` hoisted out of `slots` to def top level. Dotted-path binds
+(`fav.label`) and payload templates (`{{fav.slot}}`) already worked via the renderer's path
+resolver; with the def valid, the full flow renders + fires as designed.
+
+**Regression pins** — step4 8→11: seeded save slot (deterministic) → favorites render as
+pooled widget cards → card click emits `exportFavoriteOpened` → `regenerateFromSlot` memory
+view → back re-renders the pooled list → seeded slot removed. Negative control: def re-broken
+→ exactly the browser pins RED (the original validator error reproduced verbatim) → restored
+byte-identically.
+
 ## v2.19.10 — Loadout fix: horizontal overflow scrollbars + visual probe slice 3
 **Date:** September 25, 2026
 **Status:** ✅ Complete (visual_probe 25/25; battery green; verify green)

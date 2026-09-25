@@ -74,8 +74,12 @@ class NPCExportUI {
           icon: { bind: 'fav.icon' },
           primaryText: { bind: 'fav.label' },
           secondaryText: { bind: 'fav.meta' },
-          onClick: { emit: 'exportFavoriteOpened', payload: { slot: '{{fav.slot}}', favoriteId: '{{fav.favoriteId}}' } },
         },
+        // v2.19.11 fix: onClick is a TOP-LEVEL def key (§2.2) — it sat inside
+        // `slots`, the validator rejected the whole def, and openBrowser()
+        // threw on any save with favorites (the empty state never renders the
+        // list, which is why the battery never saw it).
+        onClick: { emit: 'exportFavoriteOpened', payload: { slot: '{{fav.slot}}', favoriteId: '{{fav.favoriteId}}' } },
       };
       const data = summaries.map((s) => ({
         fav: {

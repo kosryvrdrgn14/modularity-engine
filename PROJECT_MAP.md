@@ -157,10 +157,10 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Purpose: export UI — title-screen Favorite Memories browser + in-game memory topic rendering
 - Status: NORMATIVE
 - Defines: `NPCExportUI`
-- Calls: `NPCExportSystem`, `WidgetRenderer` (pooled path)
+- Calls: `NPCExportSystem` (getFavoriteSummaries reads raw slots; regenerateFromSlot per favorite), `WidgetRenderer` (favorites list = pooled widget cards; def `onClick` is TOP-LEVEL emitting `exportFavoriteOpened` — v2.19.11: it sat inside `slots`, validate() rejected the def, and openBrowser() threw on any save with favorites; the empty state never renders the list, so only the battery pin caught it)
 - DOM: `export-overlay`, `export-list`, `export-copy-current`, `export-close`, `export-back`
 - Dynamic-create: [export-overlay, export-list, export-copy-current, export-close, export-back] (overlay built on demand — F2 gate)
-- GuardedBy: `tests/suites/step4_export.cjs` (UI purity checks)
+- GuardedBy: `tests/suites/step4_export.cjs` (UI purity checks + v2.19.11 browser flow: seeded-slot favorites → widget cards → card click regenerates → back re-renders)
 
 ### T2 — core
 
