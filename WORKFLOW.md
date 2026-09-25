@@ -496,4 +496,21 @@ backlog aging.
   30-sample MEDIAN; green twice after. LESSON: a statistic chosen for one window (120-sample
   stress) is not automatically right for a shorter one (20-sample restore) — match the
   robustness of the statistic to the blip budget of the window.
+
+- Date: 2026-09-25 (from Claude's review of the gate-audit handoff)
+- Section affected: §6 plan-first/approval discipline — the resume-after-pending seam
+- What happened: a stop-and-report turn left a built-but-unapproved package pending; the next
+  message ("proceed to next task") meant the wider roadmap but read, reasonably, as approval of
+  the freshest pending item — and got built. Neither side was undisciplined: the ambiguity is
+  structural to the handoff (a pending state meets a new instruction), not a lapse in
+  plan-before-acting. Agreed protocol, both directions: (1) SENDER — when a turn ends in
+  "awaiting go-ahead," close with an explicit named ask ("approve X? or name another target")
+  so the fork has exactly two labeled branches; (2) RECEIVER — a bare "proceed" right after a
+  stop-and-report is a fork requiring a one-line confirmation of which branch is meant, EXCEPT
+  when the pending state was framed as a single binary ask with nothing else open (then it is
+  approval). Naming the target explicitly ("proceed to B7; leave the audit pending") is always
+  unambiguous on either side.
+- Change made: protocol recorded here as the norm for future sessions; this session already
+  ran on it (every plan turn closed with a binary "OK to proceed?", and the one genuine fork —
+  bounds-check vs B11 — was disambiguated by name: "do B11 first… after"). No code, no gates.
 ```
