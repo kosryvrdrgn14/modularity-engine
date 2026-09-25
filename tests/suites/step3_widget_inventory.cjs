@@ -11,6 +11,7 @@
 //   probe is write-through in memory and NEVER saved.
 // Run: node tests/suites/step3_widget_inventory.cjs
 // ============================================================
+const path = require('path');
 const { bootGame, STEP_DETECTORS, createRunner } = require('../lib/harness.cjs');
 
 (async () => {
@@ -178,6 +179,102 @@ const { bootGame, STEP_DETECTORS, createRunner } = require('../lib/harness.cjs')
     JSON.stringify({ border: v2skin.computedBorder, orn: v2skin.computedOrnament }));
   r.check('pool swap skinned→plain leaves zero stale skin props (v2.19.13 hygiene)',
     v2skin.leftover.length === 0, JSON.stringify(v2skin.leftover));
+
+  // ── B11 (v2.19.15): keyboard operability + accessible state (WCAG 2.1.1/4.1.2) ──
+  // Every pin has a failing direction on BOTH sides: the interactive checks go
+  // red if the renderer under-applies, the plain-card/swap checks go red if it
+  // over-applies (a focusable button with no event would be an a11y lie).
+  const a11y = await page.evaluate(() => {
+    const R = new WidgetRenderer({});
+    const mkHost = () => { const h = document.createElement('div'); document.body.appendChild(h); return h; };
+    const interDef = { template: 'card', slots: { primaryText: { bind: 'a.id' } },
+      onClick: { emit: 'a11yPing', payload: { id: '{{a.id}}' } } };
+    const plainDef = { template: 'card', slots: { primaryText: { bind: 'a.id' } } };
+    const disabledDef = { template: 'card', slots: { primaryText: { bind: 'a.id' } },
+      onClick: { emit: 'a11yPing', payload: {} }, disabled: { bind: 'd' } };
+    let kbPayload = null;
+    // Scenario A: interactive card — attrs + keyboard activation.
+    const hostA = mkHost();
+    R.repeatInto(hostA, interDef, [{ a: { id: 'x1' } }]);
+    const card = hostA.children[0];
+    card.addEventListener('a11yPing', (e) => { kbPayload = e.detail; });
+    const role = card.getAttribute('role');
+    const tabindex = card.getAttribute('tabindex');
+    card.focus();
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const enterFired = !!kbPayload && kbPayload.id === 'x1';
+    kbPayload = null;
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    const spaceFired = !!kbPayload && kbPayload.id === 'x1';
+    // Scenario B: plain card — no attrs (over-application guard). Own host:
+    // repeatInto pools per CONTAINER, so a shared host would rebind, not add.
+    const hostB = mkHost();
+    R.repeatInto(hostB, plainDef, [{ a: { id: 'p1' } }]);
+    const plain = hostB.children[0];
+    const plainRole = plain.getAttribute('role');
+    const plainTab = plain.getAttribute('tabindex');
+    // Scenario C: pool def-swap — the SAME node rebound interactive→plain.
+    const hostC = mkHost();
+    R.repeatInto(hostC, interDef, [{ a: { id: 'sw0' } }]);
+    const swapNode = hostC.children[0];
+    R.repeatInto(hostC, plainDef, [{ a: { id: 'sw1' } }]);
+    const afterSwapRole = swapNode.getAttribute('role');
+    const afterSwapTab = swapNode.getAttribute('tabindex');
+    // Scenario D: disabled card — keyboard suppressed (v1.3 discipline).
+    const hostD = mkHost();
+    R.repeatInto(hostD, disabledDef, [{ a: { id: 'x3' }, d: true }]);
+    kbPayload = null;
+    hostD.children[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const disabledSuppressed = kbPayload === null;
+    for (const h of [hostA, hostB, hostC, hostD]) h.remove();
+    return { role, tabindex, enterFired, spaceFired, plainRole, plainTab, afterSwapRole, afterSwapTab, disabledSuppressed };
+  });
+  r.check('interactive cards expose role=button + tabindex=0 (WCAG 4.1.2)',
+    a11y.role === 'button' && a11y.tabindex === '0', JSON.stringify({ role: a11y.role, tabindex: a11y.tabindex }));
+  r.check('Enter and Space activate the declared event with resolved payload (WCAG 2.1.1)',
+    a11y.enterFired && a11y.spaceFired);
+  r.check('plain cards stay inert — no role, no focusability (over-application guard)',
+    a11y.plainRole === null && a11y.plainTab === null, JSON.stringify({ role: a11y.plainRole, tab: a11y.plainTab }));
+  r.check('pool def-swap syncs a11y attrs (interactive→plain drops them)',
+    a11y.afterSwapRole === null && a11y.afterSwapTab === null,
+    JSON.stringify({ role: a11y.afterSwapRole, tab: a11y.afterSwapTab }));
+  r.check('disabled card: keyboard activation suppressed (v1.3 click-time discipline on the keyboard path)',
+    a11y.disabledSuppressed);
+
+  // ── B11 (v2.19.15): visible keyboard focus (WCAG 2.4.7) ──
+  // Two honest halves: (1) the rule exists in the stylesheet — checked from
+  // disk Node-side, because file:// stylesheets are CSSOM-opaque here
+  // (cssRules throws cross-origin). (2) it PAINTS live: a fresh interactive
+  // card is staged as the body's FIRST tabbable, one real Tab keystroke focuses
+  // it (keyboard-originated → :focus-visible matches), computed outline must
+  // be solid. (A random Tab walk proved fragile: hidden-overlay cards are
+  // unfocusable and earlier suites leave arbitrary tabbable DOM around.)
+  const fs = require('fs');
+  const cssText = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'styles.css'), 'utf8');
+  const ruleFound = cssText.includes('.widget-card:focus-visible') &&
+    cssText.includes('outline: 2px solid var(--widget-accent)');
+  await page.evaluate(() => {
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+    const host = document.createElement('div');
+    host.id = 'a11y-focus-stage';
+    const R = new WidgetRenderer({});
+    R.repeatInto(host, { template: 'card', slots: { primaryText: { bind: 'a' } },
+      onClick: { emit: 'focusProbe', payload: {} } }, [{ a: 'kb' }]);
+    document.body.insertBefore(host, document.body.firstChild);
+  });
+  await page.keyboard.press('Tab');
+  const focusLive = await page.evaluate(() => {
+    const el = document.activeElement;
+    const stage = document.getElementById('a11y-focus-stage');
+    const card = stage && stage.querySelector('.widget-card');
+    if (!card || el !== card) return { hit: false, outline: null, width: null, matches: false };
+    const cs = getComputedStyle(card);
+    return { hit: true, outline: cs.outlineStyle, width: cs.outlineWidth, matches: card.matches(':focus-visible') };
+  });
+  await page.evaluate(() => document.getElementById('a11y-focus-stage')?.remove());
+  r.check('focus-visible rule exists and paints on a keyboard-focused widget card (WCAG 2.4.7)',
+    ruleFound && focusLive.hit && focusLive.matches && focusLive.outline === 'solid' && focusLive.width !== '0px',
+    JSON.stringify({ ruleFound, focusLive }));
 
   // ── Pilot screen reachable: Inventory tab renders through the widget system ──
   const pilot = await page.evaluate(() => {

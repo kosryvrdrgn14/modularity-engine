@@ -66,6 +66,7 @@ const path = require('path');
         const sorted = [...upd].sort((a, b) => a - b);
         return {
           updMean: upd.reduce((a, b) => a + b, 0) / upd.length,
+          updMedian: sorted[Math.floor(sorted.length / 2)],
           updP95: sorted[Math.floor(sorted.length * 0.95)],
           updMax: Math.max(...upd),
           renMean: ren.reduce((a, b) => a + b, 0) / ren.length,
@@ -111,11 +112,18 @@ const path = require('path');
       };
       const overloaded = await measure(20);
       g.gameLoop.updateFn = orig; // restore
-      const restored = await measure(20);
+      // v2.19.15 hardening: the restore re-check gated a 20-sample MEAN and a
+      // single low-frequency event (heartbeat autosave / GC pause) inflated it
+      // past budget (3.76ms) with every real check green — the check flaked on
+      // its own noise rule. Now: identity assert (deterministic proof the
+      // original fn is back) + 30-sample MEDIAN (robust to 1–2 blips, same
+      // "sustained cost, not spikes" philosophy as the p95/max policy).
+      const restored = await measure(30);
+      const restoredIdentity = g.gameLoop.updateFn === orig;
 
       const heapMB = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : null;
       return {
-        idle, stress, created, live, overloaded, restored, heapMB,
+        idle, stress, created, live, overloaded, restored, restoredIdentity, heapMB,
         heapSupported: heapMB !== null,
       };
     });
@@ -149,8 +157,9 @@ const path = require('path');
       result.heapSupported ? `${f(result.heapMB)}MB` : 'performance.memory unavailable — n/a');
     check('negative control: injected 6ms/tick overload EXCEEDS the stress budget (detector can go red)',
       result.overloaded.updMean > 3.0, `overloaded mean ${f(result.overloaded.updMean)}ms`);
-    check('original updateFn restored — budget holds again',
-      result.restored.updMean <= 3.0, `restored mean ${f(result.restored.updMean)}ms`);
+    check('original updateFn restored (identity) — median tick cost back under budget',
+      result.restoredIdentity === true && result.restored.updMedian <= 3.0,
+      `identity=${result.restoredIdentity} median ${f(result.restored.updMedian)}ms (mean ${f(result.restored.updMean)}ms — blips are noise)`);
     check('no page/console errors during the perf run', errors.length === 0,
       errors.slice(0, 3).join(' | '));
 

@@ -198,7 +198,13 @@ class WidgetRenderer {
     // Interaction (§2.2): emit the DECLARED event — nothing hard-coded.
     if (def.onClick) {
       el.classList.add('interactive');
-      el.addEventListener('click', () => {
+      // B11 (v2.19.15): interactive cards are keyboard-operable buttons —
+      // role + focusability + Enter/Space activation (WCAG 2.1.1/4.1.2).
+      // The disabled gate is honored on the keyboard path too: emitClick
+      // reads _instanceDisabled at call time, same click-time discipline.
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      const emitClick = () => {
         // v1.3: disabled cards emit nothing (state is click-time, so a pool
         // node disabled by the latest rebind cannot fire a stale purchase).
         if (this._instanceDisabled.get(el)) return;
@@ -211,6 +217,12 @@ class WidgetRenderer {
           payload[k] = typeof tpl === 'string' ? this._resolveTemplate(tpl, current) : tpl;
         }
         el.dispatchEvent(new CustomEvent(d.onClick.emit, { detail: payload, bubbles: true }));
+      };
+      el.addEventListener('click', emitClick);
+      el.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault(); // Space scrolls the page otherwise
+        emitClick();
       });
       this._instanceData.set(el, data);
       this._instanceDef.set(el, def);
@@ -399,6 +411,19 @@ class WidgetRenderer {
         el.style.removeProperty(p);
       }
       this._applySkin(el, def.skinId);
+    }
+    // B11 (v2.19.15): interaction a11y re-syncs on rebind too — a created-
+    // interactive pool node swapped to a plain def must lose role/focusability
+    // exactly like it keeps its stale-suppressed listener. (A node created
+    // plain never gains a listener — pre-existing renderer semantics — so it
+    // must never GAIN the attrs either: a focusable button with no event
+    // would be an a11y lie.)
+    if (def.onClick && el.classList.contains('interactive')) {
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+    } else if (!def.onClick) {
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
     }
     // v1.2/v1.3 flag classes ALWAYS re-resolve — an absent flag means OFF.
     // (A conditional toggle would leave a stale widget-disabled on a pool node

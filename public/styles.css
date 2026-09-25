@@ -1864,6 +1864,12 @@
   background: linear-gradient(180deg, rgba(255,215,0,0.06), rgba(0,0,0,0.12)), var(--widget-skin-bg);
 }
 .widget-card.interactive:active { transform: scale(0.985); }
+/* B11 (v2.19.15): visible keyboard focus (WCAG 2.4.7) — :focus-visible only,
+   so pointer clicks never paint the ring. Gold = the system accent. */
+.widget-card:focus-visible {
+  outline: 2px solid var(--widget-accent);
+  outline-offset: 2px;
+}
 /* Layout presets (§2.3) — the ONLY arrangement axes. */
 .widget-card.layout-icon-top { flex-direction: column; align-items: flex-start; }
 .widget-card.layout-icon-only .widget-slot:not(.slot-icon) { display: none; }
@@ -1964,7 +1970,7 @@
 /* Screen-scoped theming of slots is allowed (structure from the system, theme from the screen). */
 #gamelog-list .widget-card { background: transparent; box-shadow: none; border: none; padding: 2px 0; min-height: 0; gap: 6px; }
 #gamelog-list .slot-primaryText { font-size: 0.75rem; line-height: 1.45; }
-#gamelog-list .slot-secondaryText { font-family: Consolas, monospace; font-size: 0.68rem; color: #666; }
+#gamelog-list .slot-secondaryText { font-family: Consolas, monospace; font-size: 0.68rem; color: #8a8a94; }
 /* ── §10 screen-2 (v2.14.0): pause/end action buttons as widget cards ── */
 /* Structure from the widget system; this screen's theme is scoped here. */
 #pause-actions .widget-card, #end-actions .widget-card {
@@ -2070,20 +2076,24 @@
 /* Cards: base typography + the retired per-line look */
 #loadout-overlay .widget-card .slot-icon { font-size: 22px; }
 #loadout-overlay .widget-card .slot-primaryText { color: #ddd; font-size: 11px; margin-top: 3px; }
-#loadout-overlay .widget-card .slot-secondaryText { color: #666; font-size: 9px; margin-top: 2px; }
+#loadout-overlay .widget-card .slot-secondaryText { color: #8a8a94; font-size: 9px; margin-top: 2px; }
 /* Slot chips: the retired .loadout-slot metrics (filled bg 0.08, value 12px) */
 /* v2.19.10: flex:1 1 0 + min-width:0 restore the retired .loadout-slot { flex: 1 }
    geometry - without them the chip min-width:auto pins the row to its nowrap
    min-content (~463px) and .loadout-panel implied overflow-x:auto grows a
    horizontal scrollbar (v2.17.0 migration regression, probed at 2 viewports). */
 #loadout-overlay #loadout-slots .widget-card { padding: 10px 6px; flex: 1 1 0; min-width: 0; }
+/* B11 (v2.19.15): widget-scoped meta/hint text lifted to >=4.5:1 on #0a0a18
+   (WCAG 1.4.3). Was #555/#666 (3.0:1/2.9:1); screen-local tokens elsewhere
+   in this file are a deferred screen-by-screen sweep. */
+.loadout-confirm { color: #6b6b76; }
 #loadout-overlay #loadout-slots .widget-card.widget-selected { background: rgba(76, 175, 80, 0.08); }
 #loadout-overlay #loadout-slots .widget-card .slot-primaryText {
   color: #ccc; font-size: 12px; margin-top: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 #loadout-overlay #loadout-slots .widget-card.widget-selected .slot-primaryText { color: #4CAF50; }
-#loadout-overlay #loadout-slots .widget-card .slot-secondaryText { color: #666; font-size: 9px; margin-top: 3px; }
+#loadout-overlay #loadout-slots .widget-card .slot-secondaryText { color: #8a8a94; font-size: 9px; margin-top: 3px; }
 /* ── §10 screen-6 (v2.18.0): shop tabs + stocked items as widget cards ── */
 /* Structure from the widget system; this screen's theme is scoped here.
    Mirrors the retired .shop-tab / .shop-item look exactly. */

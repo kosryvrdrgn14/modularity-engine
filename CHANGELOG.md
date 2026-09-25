@@ -2,6 +2,49 @@
 
 ---
 
+## v2.19.15 — B11 closed: widget-system accessibility (keyboard, focus, contrast)
+**Date:** September 25, 2026
+**Status:** ✅ Complete (step3 35/35 incl. the in-source negative control; battery 432 checks / 14 suites strict green after perf_budget restore-check hardening; verify green)
+
+### The audit (widget-system scope, §4.4/§11 extension)
+Findings verified against source, WCAG-cited:
+- **Keyboard operability (2.1.1/4.1.2)** — interactive widget cards were click-only: no role,
+  no focusability, no keyboard activation. Highest severity; the renderer is the one fix
+  point every screen inherits.
+- **Focus visibility (2.4.7)** — no `:focus-visible` rule anywhere in the stylesheet.
+- **Contrast (1.4.3)** — widget-scoped meta/hint text at `#666`/`#555` on the `#0a0a18`-family
+  card backgrounds = 2.9–3.9:1 (needs 4.5:1). Includes the game-log lines — a widget-rendered
+  offender found mid-fix.
+- **Already strong:** `lang="en"` ✓; the weapon-triangle never-sole-channel rule ✓; disabled
+  denial uses a text tooltip, not hover-sole ✓; §11 viewport presence gates run in the battery ✓.
+
+### Fixes (all at the shared fix point)
+- **Renderer:** interactive cards render as proper buttons — `role="button"`, `tabindex="0"`,
+  Enter/Space activation through the same `emitClick` path as mouse (disabled cards are
+  silent on the keyboard path too — v1.3 click-time discipline preserved). A11y attrs
+  re-sync on pooled rebinds: interactive→plain swaps drop them; created-plain nodes never
+  gain them (a focusable button with no event would be an a11y lie).
+- **CSS:** `:focus-visible` gold outline (pointer clicks paint nothing); contrast lifts
+  scoped to widget-rendered text only (`#666`→`#8a8a94` ≈5.0:1, `#555`→`#6b6b76` ≈4.5:1).
+  The 12 screen-local sub-4.5 tokens elsewhere in styles.css are a deferred screen-by-screen
+  sweep (next-step P3, documented in WORKFLOW §10).
+
+### Battery incident during release (perf_budget hardening)
+The first `release:check` run went RED on **perf_budget's restore re-check** (3.76ms vs the
+3.0 budget) with every other check green — a 20-sample *mean* gated over a window wide enough
+for exactly one low-frequency event (heartbeat autosave / GC pause) to contaminate it. The
+suite violated its own stated noise policy ("max reported, not gated — GC blips are noise").
+Hardened: **identity assert** (`updateFn === orig`, deterministic proof of restore) + **30-sample
+median** as the gate statistic (robust to 1–2 blips). Green twice consecutively after.
+
+### Pins (step3 29→35)
+role/tabindex presence; Enter AND Space fire the declared event with resolved payloads; plain
+cards stay inert (over-application guard); pool def-swap syncs attrs; disabled keyboard
+suppression; `:focus-visible` rule exists + paints live (disk-read for the rule — `file://`
+stylesheets are CSSOM-opaque in the harness — plus a staged first-tabbable card focused by a
+real Tab keystroke). Negative control: keyboard path neutered in-source → exactly the
+Enter/Space pin RED → restored byte-identically.
+
 ## v2.19.14 — B10 closed: perf budget gate for the combat loop
 **Date:** September 25, 2026
 **Status:** ✅ Complete (perf_budget 10/10; battery 14 suites / 426 checks strict green; verify green)

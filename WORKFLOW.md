@@ -217,7 +217,7 @@ backlog aging.
 | B8 | ~~Consolidate §5.7 + shopData → content/shop.json~~ **DONE v2.19.7** (shop.json via POT-006, 17th content file; §5.7 renderers single-homed in shop.js; audit found the town panel Sandbox button was a dead no-op — now wired through `onSandbox` → `ShopSystem.openSandbox`) | Open map items; §5.5/§5.6 CLOSED v2.19.2 | — | — |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
-| B11 | WCAG-based accessibility audit of the widget system (extends §4.4/§11) | Later; after content/build phases settle | M | P3 |
+| B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
 ## 11. Improvement log (append; format from TOOLING_MAP §5)
 
@@ -464,4 +464,36 @@ backlog aging.
   (TESTING_PLAN §4.9, TOOLING_MAP suite row 13→14). CHANGELOG v2.19.14. LESSON: a negative
   control that mutates the system under test invalidates its own restore assertion — freeze
   the state, or account for the mutation.
+
+- Date: 2026-09-25
+- Section affected: widgetRenderer.js + styles.css (B11 widget-system a11y) + step3 suite
+- What happened: B11 landed as an audit-then-fix at the ONE fix point every screen inherits:
+  the renderer. Findings (verified against source, WCAG-cited): (1) interactive widget cards
+  were click-only — no role/tabindex/keyboard activation (2.1.1/4.1.2); (2) no visible focus
+  indicator anywhere (2.4.7); (3) widget-scoped meta text at #666/#555 on #0a018-family
+  backgrounds = 2.9–3.9:1 (1.4.3) — incl. the game-log lines, a widget-rendered offender
+  found mid-fix. Strengths already present: lang=en, weapon-triangle never-sole-channel,
+  disabled denial tooltip (not hover-sole), §11 viewport matrix gates. Fixes: interactive
+  cards get role=button + tabindex=0 + Enter/Space via a shared emitClick (disabled honored
+  on the keyboard path, click-time discipline); attrs re-sync on _rebind — created-plain
+  nodes never GAIN attrs (a focusable button with no event is an a11y lie) and created-
+  interactive nodes lose them on plain-swap; :focus-visible gold outline (pointer clicks
+  paint nothing); contrast lifts scoped to widget-rendered text only (#666→#8a8a94,
+  #555→#6b6b76) — the 12 screen-local sub-4.5 tokens are a DEFERRED screen-by-screen sweep.
+  Probe lessons: repeatInto pools per CONTAINER (one host per scenario — a shared host
+  rebinds, it never appends); file:// stylesheets are CSSOM-opaque (cssRules throws) so the
+  focus-rule pin reads the stylesheet from disk + proves the paint live on a staged first-
+  tabbable card (random Tab walks die on hidden-overlay unfocusable cards).
+- Change made: renderer a11y branch + _rebind sync + styles.css focus/contrast + step3
+  29→35 (incl. over-application guards + in-source negative control: keyboard path neutered
+  → exactly the Enter/Space pin RED → restored byte-identically). Docs: PROJECT_MAP
+  widgetRenderer block, TESTING_PLAN §4.9. CHANGELOG v2.19.15. LESSON: audit fixes belong at
+  the shared fix point first — one renderer edit beats 9 screen patches, and the over-
+  application guard (plain cards must stay inert) is as important as the feature itself.
+  POST-SCRIPT: the first release:check after B11 went RED on perf_budget's restore re-check
+  (3.76ms vs 3.0) with all 9 real checks green — a 20-sample MEAN over a window that fit one
+  autosave/GC blip, violating the suite's own noise policy. Hardened to identity assert +
+  30-sample MEDIAN; green twice after. LESSON: a statistic chosen for one window (120-sample
+  stress) is not automatically right for a shorter one (20-sample restore) — match the
+  robustness of the statistic to the blip budget of the window.
 ```
