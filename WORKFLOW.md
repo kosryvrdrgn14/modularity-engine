@@ -555,4 +555,28 @@ backlog aging.
   = pre-sweep #555-on-#0a0a18 must FAIL). Docs: TESTING_PLAN §4.9. CHANGELOG v2.19.17.
   LESSON: contrast is a pair property (fg × actual bg), never a token property — and a pin
   written alongside a fix must be allowed to fail the fix, or it is decoration.
+
+- Date: 2026-09-25
+- Section affected: widget_ui_system_spec.md §12 + styles.css tokens + ui_layout_audit.cjs (new suite) — the UI-sorts-itself-out machine
+- What happened: user's goal — UI lands correct ~80-90% by process, human pass is minor
+  adjustment. Landed: (1) spec §12 UI polish standards (4-pt spacing rhythm, one alignment
+  frame per panel, budgeted negative space, one-primary-action rule, contrast & color balance
+  — pair property + effective-bg computation + 3 text tiers + size-aware bars + accent
+  scarcity + transparency floors, required-state checklist, human M-list); (2) CSS tokens
+  --space-1..6 + --text-primary/secondary/tertiary + --surface-* (values = the verified
+  pairs, no re-derivation); (3) ui_layout_audit.cjs — gaps/dead-bands/alignment/contrast
+  probes with 4 in-suite negative controls. Report-first across 4 structural screens × 3
+  viewports found and fixed 2 real off-scale gaps (shop-items 10px, loadout-slots 14px —
+  both now tokens) and drove 3 probe-model corrections: emoji pictograms are non-text UI
+  (symbol-only exempt), pointer-events:none subtrees are inactive components (WCAG-exempt),
+  transformed blocks are transient states. The dead-band probe took 3 iterations — the
+  coverage-interval model is the keeper: a vertical run is a dead band IFF NOTHING paints it
+  (text, non-transparent bg, bg-image, or media child). Exclusion-based models failed twice:
+  excluding a painted middle block merges neighbors' gaps across it (invented a 667px band);
+  content-rect-only missed full-bleed art (the town map is not empty space).
+- Change made: §12 + tokens + suite (22 checks: 4 negative controls, 16 desktop gates — all
+  4 screens × 4 probes promoted after clean reports, 2 hygiene); run_all 14→15 suites, 458
+  checks strict green. Docs: TESTING_PLAN, TOOLING_MAP. CHANGELOG v2.19.18. LESSON: "detect
+  negative space" decomposes into "detect unpainted vertical runs" — geometry problems get
+  exact once stated as set coverage, not as similarity between boxes.
 ```

@@ -1303,7 +1303,7 @@
     .shop-tab:hover { color: #ccc; }
     #shop-items {
       flex: 1; overflow-y: auto; padding: 16px 20px;
-      display: flex; flex-direction: column; gap: 10px;
+      display: flex; flex-direction: column; gap: var(--space-2);
     }
     .shop-item {
       display: flex; align-items: center; gap: 12px;
@@ -1535,8 +1535,8 @@
     /* Slot indicators */
     .loadout-slots {
       display: flex;
-      gap: 8px;
-      margin-bottom: 14px;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
     }
     .loadout-slot {
       flex: 1;
@@ -1818,6 +1818,23 @@
    skin is never the sole information channel). :empty slots collapse —
    text reflows (§2.7), never assumes fixed width.
    ============================================================ */
+/* ── §12.1/§12.5 design tokens (v2.19.18): spacing rhythm + text tiers ──
+   The scale screens inherit; new code consumes these instead of inventing px.
+   Tier values are the already-verified pairs (§12.5) — do not re-derive. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --text-primary: #ddd;
+  --text-secondary: #8a8a94;
+  --text-tertiary: #7d7d87;
+  --surface-page: #0a0a1a;
+  --surface-panel: #111122;
+  --surface-card: #0a0a18;
+}
 .widget-card {
   --widget-accent: rgba(255, 215, 0, 0.5);
   --widget-skin-bg: transparent;

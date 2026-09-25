@@ -321,3 +321,46 @@ sequencing = spec now, fold into §10 migrations. Never two UIs.
   check at authoring time) or needs to stay a manual authoring discipline for v1.
 - Whether the specialized-template registry (§3.3) needs its own doc or lives inside
   `MASTER_DESIGN.md` — a scope/location decision, not a design one.
+
+## 12. UI Polish Standards (v2.19.18 — the machine that keeps UI sorted)
+
+These standards exist so a new screen lands correct ~80–90% by process; the human pass is
+minor adjustment, not layout archaeology. Geometry is machine-checkable (ui_layout_audit.cjs);
+aesthetic quality stays a human M-list judgment (TESTING_PLAN §5).
+
+### 12.1 Spacing rhythm (4-pt grid)
+- Gaps and paddings use the token scale --space-1..6 = 4/8/12/16/20/24px. No arbitrary values
+  (13px-style one-offs are the smell). Pooled/widget screens consume tokens; bespoke screens
+  adopt them when touched — no big-bang refactor.
+### 12.2 One alignment frame per panel
+- All section blocks in a panel share left/right edges (±2px); outer padding uniform on all
+  four sides.
+### 12.3 Negative space is budgeted, not residual
+- Per screen type: HUD/combat = dense (whitespace ratio low, dead bands <48px),
+  panels/menus = airy (dead bands <96px, ratio target per §12.5). A dead band inside a
+  presented panel is either intentional breathing room (documented here) or a defect.
+- Required states (§12.6) kill the two dead-band classics: missing empty-states and missing
+  denied-states.
+### 12.4 One primary action per screen, one home
+- Full-width bottom bar (the loadout pattern) or a single right-aligned primary. A screen
+  never grows two competing primaries.
+### 12.5 Contrast & color balance
+- Contrast is a PAIR property: foreground × the EFFECTIVE background (walk the alpha stack:
+  rgba panels over the page bg compute to a solid; audit that). Never audit vs a global theme.
+- Three text tiers, pre-cleared per surface class: primary (#ddd+ ≈10:1), secondary (#8a8a94
+  ≥4.5:1), tertiary/dim (#7d7d87 ≥4.5:1, reserved for interactive-but-inactive). Floors:
+  body text 4.5:1, large text (≥24px or ≥18.66px bold) 3:1, non-text UI (borders/focus/icons)
+  3:1 vs adjacent.
+- 60-30-10: dark surfaces ≈60%, panel chrome ≈30%, accent ≈10%. Accent scarcity is what makes
+  gold readable — bounded semantic set (green/red/amber) never drifts toward decoration.
+- Transparency floors: modal scrims ≥0.5 alpha; hover washes 0.05–0.12; texture/ornament
+  layers stay under the §4.4 contrast floor.
+- Never color-alone (§4.4). Skinned surfaces re-check with the same probe (§9 open item, now
+  automated).
+### 12.6 Required-state checklist (per screen, before “done”)
+- PRESENT (normal data), EMPTY (no data — the export 🕯️ pattern), DENIED (locked/unsatisfied —
+  the tooltip+sound pattern), and the between-states that bit twice (v2.19.9/.10): loading if
+  async, overflow if content can exceed the panel.
+### 12.7 Human M-list (never automated)
+- Hierarchy/focal point, breathing room, accent discipline, palette harmony, feedback on
+  every action, between-states present. 6-line skim over the visual_probe artifacts.

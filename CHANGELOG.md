@@ -2,6 +2,43 @@
 
 ---
 
+## v2.19.18 — UI polish machine: §12 standards + design tokens + layout audit suite
+**Date:** September 25, 2026
+**Status:** ✅ Complete (ui_layout_audit 22/22; battery 15 suites / 458 checks strict green; verify green)
+
+### The goal
+UI lands correct **~80–90% by process** — the human pass becomes minor adjustment instead of
+layout archaeology. Three artifacts, all wired into the battery:
+
+1. **Spec §12 "UI polish standards"** (`widget_ui_system_spec.md`) — the process doc:
+   4-pt spacing rhythm (§12.1), one alignment frame per panel (§12.2), budgeted negative
+   space (§12.3), one primary action per screen (§12.4), **contrast & color balance**
+   (§12.5: pair property, effective-background computation for rgba stacks, three pre-cleared
+   text tiers, size-aware WCAG bars, 60-30-10 accent scarcity, transparency floors), the
+   required-state checklist (§12.6: PRESENT/EMPTY/DENIED/between-states), and the human M-list
+   (§12.7).
+2. **CSS design tokens** — `--space-1..6` (4→24px), `--text-primary/secondary/tertiary`,
+   `--surface-*`. Values are the already-verified contrast pairs — nothing re-derives them.
+3. **`tests/suites/ui_layout_audit.cjs`** (in the battery, 14→15 suites) — DOM-geometry probes:
+   **gaps** on the §12.1 scale, **dead bands** via the coverage-interval model (a vertical run
+   is dead iff *nothing paints it* — text, opaque bg, bg-image, or media child), **alignment**
+   ±2px, **contrast** size-aware against the alpha-composited effective background. Four
+   in-suite negative controls (off-scale gap, dead band, misaligned block, low-contrast text).
+
+### Report-first findings (the sweep paid for itself)
+- **2 real defects fixed**: `#shop-items` grid gap 10px → `var(--space-2)`; `.loadout-slots`
+  margin-bottom 14px → `var(--space-4)` (the exact arbitrary-value smell §12.1 bans).
+- **3 probe-model corrections** forced by reality: emoji pictograms are non-text UI (exempt),
+  `pointer-events:none` subtrees are inactive components (WCAG-exempt), transformed blocks are
+  transient states (a selected card's `scale(1.02)` is not misalignment). The dead-band probe
+  iterated to coverage-intervals after exclusion-based models misfired twice — see WORKFLOW
+  §11.
+
+### Rollout
+Report-first across 4 structural screens (title/town/shop/loadout) × 3 §11 viewports → all
+clean → **desktop gates promoted for all four probes**; mobile stays report-only. Whitespace
+ratios are reported per screen for the §12.3 human targets.
+
 ## v2.19.17 — B11 sweep: screen-local text contrast lifted + pinned
 **Date:** September 25, 2026
 **Status:** ✅ Complete (step3 37/37 incl. the ratio-math negative control; battery green; verify green)

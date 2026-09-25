@@ -29,6 +29,7 @@ const SUITES = [
   'tests/suites/widget_occlusion.cjs',
   'tests/suites/visual_probe.cjs',
   'tests/suites/perf_budget.cjs',
+  'tests/suites/ui_layout_audit.cjs',
 ];
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
