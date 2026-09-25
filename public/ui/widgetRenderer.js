@@ -337,14 +337,42 @@ class WidgetRenderer {
       this._logger(`skin "${skinId}" not found in dataManager.uiSkins — rendering unskinned (visual only, structure intact)`);
       return;
     }
-    if (skin.version !== undefined && skin.version !== 1) {
-      this._logger(`skin "${skinId}" version ${skin.version} — renderer vocabulary is v1 (spec §6.2)`);
+    // §6.2 version vocabulary: v1 = color-token only; v2 (B7 part 2,
+    // v2.19.13) adds 9-slice border art + texture background + corner
+    // ornament as IMAGE fields. Unknown future versions warn but render the
+    // known fields — a mod's newer skin must not break the game silently.
+    const v = skin.version === undefined ? 1 : skin.version;
+    if (v !== 1 && v !== 2) {
+      this._logger(`skin "${skinId}" version ${skin.version} — renderer vocabulary is v1/v2 (spec §6.2)`);
     }
-    // §4.4: skin properties are CSS-only. Image paths (border/background/
-    // cornerOrnament) would be url() assignments — none exist yet; when they
-    // do, the asset-exists rule from the skin spec applies BEFORE rendering.
-    if (typeof skin.background === 'string' && !skin.background.includes('/')) {
+    // §4.1 image fields (v2): border art is CSS-native 9-slice (border-image:
+    // one asset stretches cleanly to any card size); the texture backgrounds
+    // the card under the slots; the ornament sits in the top-right corner.
+    // Every field is a CSS custom prop consumed by styles.css — the renderer
+    // never touches structure, bindings, or events (§4.4). The asset-exists
+    // rule is enforced at authoring time by the verify skin-asset gate.
+    if (typeof skin.border === 'string' && skin.border.includes('/')) {
+      el.style.setProperty('--widget-skin-border-image', `url(${skin.border})`);
+      const slice = Number.isFinite(+skin.borderSlice) ? +skin.borderSlice : 16;
+      el.style.setProperty('--widget-skin-border-slice', String(slice));
+      el.style.setProperty('--widget-skin-border-width',
+        typeof skin.borderWidth === 'string' ? skin.borderWidth : '16px');
+    } else if (typeof skin.border === 'string') {
+      this._logger(`skin "${skinId}": border without an image path — ignored (color tokens go in accentColorToken/background)`);
+    }
+    if (typeof skin.background === 'string' && skin.background.includes('/')) {
+      el.style.setProperty('--widget-skin-bg-image', `url(${skin.background})`);
+      // v2 layering: backgroundColor sits UNDER the texture (the §4.4 contrast
+      // floor — a weave must never be the only thing between slots and bg).
+      if (typeof skin.backgroundColor === 'string') {
+        el.style.setProperty('--widget-skin-bg', skin.backgroundColor);
+      }
+    } else if (typeof skin.background === 'string') {
+      // v1 form: a plain CSS color token — unchanged behavior.
       el.style.setProperty('--widget-skin-bg', skin.background);
+    }
+    if (typeof skin.cornerOrnament === 'string' && skin.cornerOrnament.includes('/')) {
+      el.style.setProperty('--widget-skin-ornament', `url(${skin.cornerOrnament})`);
     }
     if (typeof skin.accentColorToken === 'string') {
       el.style.setProperty('--widget-accent', skin.accentColorToken);
@@ -363,8 +391,13 @@ class WidgetRenderer {
     const curSkin = [...el.classList].find((c) => c.startsWith('skin-'));
     if ((def.skinId || '') !== (curSkin ? curSkin.slice(5) : '')) {
       if (curSkin) el.classList.remove(curSkin);
-      el.style.removeProperty('--widget-skin-bg');
-      el.style.removeProperty('--widget-accent');
+      // v2.19.13: image-skin props clean up too — a skinned→plain pool swap
+      // must leave no stale border art/texture/ornament on the card.
+      for (const p of ['--widget-skin-bg', '--widget-accent', '--widget-skin-border-image',
+        '--widget-skin-border-slice', '--widget-skin-border-width',
+        '--widget-skin-bg-image', '--widget-skin-ornament']) {
+        el.style.removeProperty(p);
+      }
       this._applySkin(el, def.skinId);
     }
     // v1.2/v1.3 flag classes ALWAYS re-resolve — an absent flag means OFF.

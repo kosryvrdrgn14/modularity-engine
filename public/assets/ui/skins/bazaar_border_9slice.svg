@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- §4.1 9-slice border source (v2.19.13): slice 16 — corners are cloth
+       squares with a gold rivet, edges are dashed gold stitches, center empty
+       (border-image without `fill` keeps the card's own background visible). -->
+  <g fill="#322a1f" stroke="#c9a25a" stroke-width="2">
+    <rect x="1" y="1" width="15" height="15" rx="3"/>
+    <rect x="32" y="1" width="15" height="15" rx="3"/>
+    <rect x="1" y="32" width="15" height="15" rx="3"/>
+    <rect x="32" y="32" width="15" height="15" rx="3"/>
+  </g>
+  <g fill="#ffcd64" opacity="0.9">
+    <circle cx="8.5" cy="8.5" r="2"/>
+    <circle cx="39.5" cy="8.5" r="2"/>
+    <circle cx="8.5" cy="39.5" r="2"/>
+    <circle cx="39.5" cy="39.5" r="2"/>
+  </g>
+  <g stroke="#c9a25a" stroke-width="2" stroke-dasharray="4 4" opacity="0.65">
+    <line x1="18" y1="2" x2="30" y2="2"/>
+    <line x1="18" y1="46" x2="30" y2="46"/>
+    <line x1="2" y1="18" x2="2" y2="30"/>
+    <line x1="46" y1="18" x2="46" y2="30"/>
+  </g>
+</svg>

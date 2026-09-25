@@ -2,6 +2,41 @@
 
 ---
 
+## v2.19.13 — B7 (part 2, closed): 9-slice skins — skin vocabulary v2
+**Date:** September 25, 2026
+**Status:** ✅ Complete (step3 29/29; battery green; verify green incl. the new skin-asset gate)
+
+### What shipped (spec §4.1, WORKFLOW B7 part 2 — B7 now fully closed)
+The widget skin system grows from color-tokens-only (v1) to **vocabulary v2**: real border art
+via CSS-native 9-slice (`border-image` — one asset stretches cleanly to any card size, exactly
+as §4.1 promises), a texture background, and a corner ornament — layered under and around slot
+content, never structural.
+
+- **Renderer:** image fields land ONLY as CSS custom props (`--widget-skin-border-image/
+  -slice/-width`, `--widget-skin-bg-image`, `--widget-skin-ornament`); §4.4 discipline is
+  untouched (no structure, no bindings, no events). v1 color-only skins keep byte-identical
+  behavior; unknown future versions warn but render known fields (§6.2). v2 adds an explicit
+  `backgroundColor` underlay so a texture can never become the sole contrast channel.
+- **Content:** `bazaar_cloth` upgraded (v1→v2) with three hand-authored SVGs under
+  `public/assets/ui/skins/` — 48×48 border source (slice 16: riveted cloth corners + stitched
+  edges), seamless weave tile, gold sigil ornament. Text-authorable, no binary art; mirror
+  re-synced via `content:sync`.
+- **CSS:** `.widget-card` consumes the props with total fallbacks (`none`/neutral) — unskinned
+  and v1 cards render pixel-identical to pre-v2.19.13. The ornament is a non-interactive
+  `::after`. Documented trade: `border-image` ignores `border-radius` while active — skinned
+  cards get square ornamental corners; the loadout theme's 8px radius override is restored for
+  skinned cards so the art can't clip.
+- **Hygiene:** `_rebind`'s skin-prop cleanup grew 2→7 — a skinned→plain pool swap leaves zero
+  stale art (the v1.3 stale-class lesson, applied to the new surface).
+
+### Gates + tests
+- **verify gate 3d (skin assets):** every image path declared in `ui_skins.json` must resolve
+  under `public/` — the §4.1 asset-exists rule, enforced at authoring time so a typo'd path
+  cannot ship as silently-unskinned cards. Proven non-vacuous: bogus path → VERIFY RED →
+  reverted byte-identically.
+- **step3 26→29:** v2 prop application; computed-style consumption (border-image + `::after`
+  ornament actually resolve from styles.css); pool-swap hygiene (zero leftover props).
+
 ## v2.19.12 — B7 (part 1): §6.4 widget inspector — `window.__WIDGET_DEBUG__`
 **Date:** September 25, 2026
 **Status:** ✅ Complete (step3 26/26 incl. the veiled negative control; battery green; verify green)

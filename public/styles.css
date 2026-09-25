@@ -1831,6 +1831,33 @@
   min-height: 56px;
   box-sizing: border-box;
 }
+/* ── §4.1 v2 skins (v2.19.13): 9-slice border art + texture bg + ornament ──
+   All props are set ONLY by _applySkin when the skin declares image fields;
+   absent props fall back to the defaults below — unskinned/v1 cards render
+   pixel-identical to pre-v2.19.13. border-image replaces the 1px border and
+   (per CSS) ignores border-radius while active — square ornamental corners
+   are the accepted trade for real border art. The ornament is decorative
+   (aria-hidden in spirit: no text, no interaction — §4.4). */
+.widget-card {
+  border-image-source: var(--widget-skin-border-image, none);
+  border-image-slice: var(--widget-skin-border-slice, 16);
+  border-image-width: var(--widget-skin-border-width, 16px);
+  position: relative;
+}
+.widget-card[style*="--widget-skin-border-image"] {
+  border-style: solid;
+  border-color: transparent;
+}
+.widget-card::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  background: var(--widget-skin-ornament, none) center / contain no-repeat;
+  pointer-events: none;
+}
 .widget-card.interactive { cursor: pointer; transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease; }
 .widget-card.interactive:hover {
   border-color: var(--widget-accent);
@@ -2025,6 +2052,12 @@
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   text-align: center;
+}
+/* v2.19.13: the loadout theme overrides border-radius to 8px - harmless with
+   1px borders, but it would CLIP the 9-slice art if a skin is ever applied
+   there; restore the vocabulary default for skinned cards (art assumes it). */
+#loadout-overlay .widget-card[style*="--widget-skin-border-image"] {
+  border-radius: 10px;
 }
 #loadout-overlay .widget-card.interactive:hover {
   border-color: #FFD700;

@@ -130,6 +130,55 @@ const { bootGame, STEP_DETECTORS, createRunner } = require('../lib/harness.cjs')
   r.check('skin applies color tokens as CSS custom props (visual only)', skins.bgApplied && skins.accentApplied, JSON.stringify(skins));
   r.check('missing skin degrades to unskinned (structure intact)', skins.missingRendered && skins.missingClass);
 
+  // ── §4.1 v2 skins: 9-slice border art + texture bg + ornament (v2.19.13) ──
+  // bazaar_cloth upgraded to vocabulary v2: image fields land as CSS custom
+  // props only (renderer never touches structure — §4.4); styles.css consumes
+  // them. Pins: props set, CSS actually resolves them (computed
+  // border-image-source + ::after ornament), and pool hygiene (skinned→plain
+  // swap leaves ZERO stale art props).
+  const v2skin = await page.evaluate(() => {
+    const skinsData = window.game?.dataManager?.uiSkins || {};
+    const R = new WidgetRenderer({ skins: skinsData });
+    const def = { template: 'card', skinId: 'bazaar_cloth', slots: { primaryText: { bind: 'a' } } };
+    const el = R.render(def, { a: 'x' });
+    document.body.appendChild(el);
+    const st = el.style;
+    const props = {
+      borderImage: st.getPropertyValue('--widget-skin-border-image'),
+      slice: st.getPropertyValue('--widget-skin-border-slice'),
+      width: st.getPropertyValue('--widget-skin-border-width'),
+      bgImage: st.getPropertyValue('--widget-skin-bg-image'),
+      bg: st.getPropertyValue('--widget-skin-bg'),
+      ornament: st.getPropertyValue('--widget-skin-ornament'),
+    };
+    const computedBorder = getComputedStyle(el).borderImageSource;
+    const computedOrnament = getComputedStyle(el, '::after').backgroundImage;
+    el.remove();
+    // Pool hygiene: one host, skinned then plain — no stale art may survive.
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    R.repeatInto(host, def, [{ a: '1' }]);
+    R.repeatInto(host, { template: 'card', slots: { primaryText: { bind: 'a' } } }, [{ a: '2' }]);
+    const pooled = host.children[0];
+    const leftover = ['--widget-skin-border-image', '--widget-skin-border-slice', '--widget-skin-border-width',
+      '--widget-skin-bg-image', '--widget-skin-bg', '--widget-skin-ornament', '--widget-accent']
+      .filter((p) => pooled.style.getPropertyValue(p) !== '');
+    host.remove();
+    return { props, computedBorder, computedOrnament, leftover };
+  });
+  r.check('v2 skin sets 9-slice border + texture + ornament as CSS props (§4.1, visual only)',
+    v2skin.props.borderImage.includes('bazaar_border_9slice.svg') &&
+    v2skin.props.slice === '16' && v2skin.props.width === '16px' &&
+    v2skin.props.bgImage.includes('bazaar_weave.svg') &&
+    v2skin.props.bg.includes('30, 26, 20') &&
+    v2skin.props.ornament.includes('bazaar_sigil.svg'), JSON.stringify(v2skin.props));
+  r.check('styles.css consumes the skin props (computed border-image + ::after ornament)',
+    v2skin.computedBorder.includes('bazaar_border_9slice') &&
+    v2skin.computedOrnament.includes('bazaar_sigil'),
+    JSON.stringify({ border: v2skin.computedBorder, orn: v2skin.computedOrnament }));
+  r.check('pool swap skinned→plain leaves zero stale skin props (v2.19.13 hygiene)',
+    v2skin.leftover.length === 0, JSON.stringify(v2skin.leftover));
+
   // ── Pilot screen reachable: Inventory tab renders through the widget system ──
   const pilot = await page.evaluate(() => {
     const gm = window.game.gameManager;

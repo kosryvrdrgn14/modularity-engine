@@ -4976,11 +4976,16 @@ const EMBEDDED_DATA = {
 
   // uiSkins — from content/ui_skins.json
   uiSkins: {
-    "_note": "UI skin registry (widget_ui_system_spec.md §4). Maps skinId → { border, background, cornerOrnament, accentColorToken }. Rules: purely visual, never structural; a skin must never be the sole channel for information (§4.4); all referenced asset paths must exist. Registered in DataManager.loadAll() (core.js) and the embeddedData generator registry so the fallback mirror stays in sync — an unregistered content file is the town-blank-screen bug class.",
+    "_note": "UI skin registry (widget_ui_system_spec.md §4). Maps skinId → { version, border, borderSlice, borderWidth, background, backgroundColor, cornerOrnament, accentColorToken }. Rules: purely visual, never structural; a skin must never be the sole channel for information (§4.4); all referenced asset paths must exist (enforced by the verify skin-asset gate, v2.19.13). Version vocabulary: v1 = color-token only (background is a CSS color, no '/'), v2 = image fields + optional backgroundColor layer under the texture. Registered in DataManager.loadAll() (core.js) and the embeddedData generator registry so the fallback mirror stays in sync — an unregistered content file is the town-blank-screen bug class.",
     "bazaar_cloth": {
-      "_note": "§24 Step 3 pilot skin for the Inventory tab's widget cards (bazaar tier). Color-token only — no image assets exist yet; when 9-slice border/texture art lands, add border/background/cornerOrnament here with verified asset paths. background must be a color token (no '/' → renderer treats image paths as unimplemented and refuses them safely).",
-      "version": 1,
-      "background": "rgba(30, 26, 20, 0.85)",
+      "_note": "§24 Step 3 pilot skin (bazaar tier), upgraded to v2 in v2.19.13 (B7 part 2): 9-slice border art + weave texture + corner sigil under public/assets/ui/skins/ (hand-authored SVG, asset-exists gate enforced). backgroundColor stays under the texture to hold §4.4 contrast.",
+      "version": 2,
+      "border": "assets/ui/skins/bazaar_border_9slice.svg",
+      "borderSlice": 16,
+      "borderWidth": "16px",
+      "background": "assets/ui/skins/bazaar_weave.svg",
+      "backgroundColor": "rgba(30, 26, 20, 0.85)",
+      "cornerOrnament": "assets/ui/skins/bazaar_sigil.svg",
       "accentColorToken": "rgba(255, 205, 100, 0.6)"
     }
   },

@@ -213,7 +213,7 @@ backlog aging.
 | B4 | ~~Plan-first forcing function: commit the plan~~ **RE-SCOPED v2.19.4 (docs-only):** multi-file plans get restated in the session summary; commit-based gate retired — its premise is dead here (git CLI blocked, platform auto-syncs, no local commit step to hook) | The rule can't be mechanical on this platform; shrink it rather than re-log a skippable reminder | S | P3 |
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
 | B6 | ~~Task decomposition for content batches~~ **DONE v2.19.6** (file-at-a-time rule landed as §5.6 of the content sub-workflow) | Safer large content additions | — | — |
-| B7 | Widget Inspector (§6.4) ~~done v2.19.12~~ + 9-slice skins (remaining) | §6.4 shipped as `WidgetRenderer.installInspector()` → `window.__WIDGET_DEBUG__` (list/inspect/occlusion, static over `_all`; step3 pins incl. veiled negative control). 9-slice skins still open | S (remaining: M) | P3 |
+| B7 | ~~Widget Inspector (§6.4) + 9-slice skins~~ **DONE v2.19.12 + v2.19.13** | §6.4 shipped as `WidgetRenderer.installInspector()` → `window.__WIDGET_DEBUG__`. 9-slice skins shipped as skin vocabulary v2 (border-image + texture + ornament as CSS custom props; `bazaar_cloth` upgraded w/ 3 authored SVGs; verify skin-asset gate; step3 pins) | — | — |
 | B8 | ~~Consolidate §5.7 + shopData → content/shop.json~~ **DONE v2.19.7** (shop.json via POT-006, 17th content file; §5.7 renderers single-homed in shop.js; audit found the town panel Sandbox button was a dead no-op — now wired through `onSandbox` → `ShopSystem.openSandbox`) | Open map items; §5.5/§5.6 CLOSED v2.19.2 | — | — |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
 | B10 | Perf budget/benchmark for the combat loop | Later; performance not yet a demonstrated pain | M | P3 |
@@ -413,9 +413,35 @@ backlog aging.
   called the method as a static before making it static (boot TypeError, 4 checks red); the
   first inspect assertion was written against the wrong contract (slots is the spec object,
   not list()'s names array).
-- Change made: installInspector + game.js wiring + step3 pins; docs rides-along (PROJECT_MAP
+-  Change made: installInspector + game.js wiring + step3 pins; docs rides-along (PROJECT_MAP
   widgetRenderer/game.js blocks, TOOLING_MAP inspector row Planned→Built, TESTING_PLAN §4.9
   row 26). CHANGELOG v2.19.12. LESSON: registry-shaped inspectors belong on the class, not the
   instance — and stage the screen for what the probe actually gates on (liveness), not what
   the earlier suite steps happened to leave behind.
+
+- Date: 2026-09-25
+- Section affected: widgetRenderer.js (§4.1 skin vocabulary v2) + ui_skins.json + styles.css + verify (skin-asset gate) — B7 part 2, B7 CLOSED
+- What happened: the second half of B7 — 9-slice skins. Renderer gains skin vocabulary v2:
+  image fields (`border` + `borderSlice`/`borderWidth`, texture `background`,
+  `cornerOrnament`) land ONLY as CSS custom props — §4.4 discipline unchanged (never
+  structural, never a bindings/events touch); v1 color-only skins keep their exact behavior;
+  v2 adds a `backgroundColor` underlay so a texture never becomes the sole contrast channel.
+  `bazaar_cloth` upgraded with three hand-authored SVGs under public/assets/ui/skins/
+  (border 48×48 slice-16, weave tile, sigil ornament — text-authorable, no binary art).
+  styles.css consumes the props with `none`/neutral fallbacks (unskinned/v1 cards are
+  pixel-identical), and the loadout radius override is restored for skinned cards (9-slice
+  ignores border-radius — the art would clip under the 8px theme). Known trade documented:
+  skinned cards get square ornamental corners while border-image is active. verify gains the
+  §4.1 asset-exists rule as gate 3d (fs.existsSync per image ref + version-vocabulary check),
+  proven non-vacuous (bogus path → RED → reverted byte-identically). step3 26→29 (v2 props,
+  computed CSS consumption incl. ::after ornament, skinned→plain pool swap leaves zero stale
+  props — the `_rebind` cleanup list grew 2→7). styles.css file-tool flakiness recurred; the
+  node-anchored edit pattern (assert count==1 → write → rg-verify) is now the established
+  fallback.
+- Change made: v2 vocabulary in _applySkin + _rebind hygiene + ui_skins.json upgrade +
+  content:sync mirror + 3 SVG assets + styles.css consumption + verify gate 3d + step3 pins;
+  docs rides-along (PROJECT_MAP widgetRenderer Content line, TOOLING_MAP verify row,
+  TESTING_PLAN §4.9 row 29). CHANGELOG v2.19.13. LESSON: "purely visual" is only free if the
+  fallbacks are total — every new prop needs a no-skin default AND a pool-swap cleanup, or the
+  art leaks across rebinds the way stale classes did in v1.3.
 ```

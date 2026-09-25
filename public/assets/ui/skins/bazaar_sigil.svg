@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+  <!-- §4.1 corner ornament (v2.19.13): gold ring + tick marks, low opacity,
+       sized to sit inside a card's top-right corner without covering slots. -->
+  <g fill="none" stroke="#ffcd64" opacity="0.55">
+    <circle cx="14" cy="14" r="11" stroke-width="2"/>
+    <circle cx="14" cy="14" r="4" stroke-width="1.5"/>
+    <path d="M14 3v6M14 19v6M3 14h6M19 14h6" stroke-width="1.5"/>
+  </g>
+</svg>

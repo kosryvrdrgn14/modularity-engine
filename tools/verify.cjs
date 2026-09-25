@@ -165,6 +165,33 @@ if (!fs.existsSync(MAP)) {
     }
     if (rows > 0) ok(`§3.1 content index consistent (${rows} rows)`);
   }
+
+  // 3d. §4.1 skin assets exist (v2.19.13, B7 part 2): every image path a skin
+  // declares (border/background/cornerOrnament — anything containing '/') must
+  // resolve under public/. The skin spec's asset-exists rule, enforced at
+  // authoring time so a typo'd path cannot ship as silently-unskinned cards.
+  try {
+    const skinPath = path.join(ROOT, 'public', 'content', 'ui_skins.json');
+    const skins = JSON.parse(fs.readFileSync(skinPath, 'utf8'));
+    let imgRefs = 0;
+    for (const [id, skin] of Object.entries(skins)) {
+      if (id === '_note' || !skin || typeof skin !== 'object') continue;
+      for (const field of ['border', 'background', 'cornerOrnament']) {
+        const val = skin[field];
+        if (typeof val !== 'string' || !val.includes('/')) continue;
+        imgRefs++;
+        if (!fs.existsSync(path.join(ROOT, 'public', val))) {
+          fail(`skin "${id}": ${field} asset missing — ${val} (§4.1 asset-exists rule)`);
+        }
+      }
+      if (skin.version !== undefined && skin.version !== 1 && skin.version !== 2) {
+        fail(`skin "${id}": unknown version ${skin.version} (renderer vocabulary is v1/v2, spec §6.2)`);
+      }
+    }
+    if (imgRefs > 0) ok(`skin assets exist (${imgRefs} image refs across ui_skins.json)`);
+  } catch (e) {
+    fail(`skin asset check crashed: ${e.message.split('\n')[0]}`);
+  }
 }
 
 // ── 4. Optional regression trace ──

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- §4.1 texture background (v2.19.13): seamless 48×48 weave tile —
+       diagonal light/dark threads at low opacity, tiles invisibly. -->
+  <g fill="none" stroke-width="1">
+    <g stroke="#ffffff" stroke-opacity="0.05">
+      <path d="M0 48L48 0M-12 36L36 -12M12 60L60 12"/>
+    </g>
+    <g stroke="#000000" stroke-opacity="0.28">
+      <path d="M0 0L48 48M-12 12L12 -12M36 60L60 36"/>
+    </g>
+  </g>
+</svg>
