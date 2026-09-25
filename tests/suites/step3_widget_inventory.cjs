@@ -276,6 +276,46 @@ const { bootGame, STEP_DETECTORS, createRunner } = require('../lib/harness.cjs')
     ruleFound && focusLive.hit && focusLive.matches && focusLive.outline === 'solid' && focusLive.width !== '0px',
     JSON.stringify({ ruleFound, focusLive }));
 
+  // ── B11 sweep (v2.19.17): screen-local text ≥4.5:1 on its real background ──
+  // The deferred half of B11: every screen-local token lifted/audited against
+  // its ACTUAL panel background (not a guess). Pin = WCAG ratio math over
+  // representative live pairs; the negative control feeds the auditor a known-
+  // bad pair (#555 on #0a0a18 = 3.0) and requires it to FAIL — the detector
+  // can go red without any revert dance.
+  const contrast = await page.evaluate(() => {
+    const lum = (hex) => {
+      const v = hex.replace('#', '');
+      const c = [0, 2, 4].map((i) => {
+        const x = parseInt(v.slice(i, i + 2), 16) / 255;
+        return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const ratio = (a, b) => {
+      const l1 = lum(a), l2 = lum(b);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    };
+    const auditor = (pairs) => pairs.map(([name, fg, bg, min]) => {
+      const r = ratio(fg, bg);
+      return { name, ok: r >= min, ratio: Math.round(r * 100) / 100 };
+    });
+    // Real pairs post-sweep: (element, lifted token, effective panel bg, min).
+    const real = [
+      ['title locked entry', '#7d7d87', '#0a0a1a', 4.5],
+      ['loadout subtitle', '#8a8a94', '#111122', 4.5],
+      ['game-log timestamp', '#8a8a94', '#0a0a1a', 4.5],
+      ['loadout confirm inactive', '#7d7d87', '#0a0a18', 4.5],
+    ];
+    const results = auditor(real);
+    // Negative control: a pre-sweep regression pair MUST fail the audit.
+    const bad = auditor([['regression probe', '#555555', '#0a0a18', 4.5]]);
+    return { real: results, badMustFail: bad[0].ok === false, badRatio: bad[0].ratio };
+  });
+  r.check('screen-local text pairs all ≥4.5:1 on their real backgrounds (v2.19.17 sweep)',
+    contrast.real.every((x) => x.ok), JSON.stringify(contrast.real));
+  r.check('contrast auditor negative control: pre-sweep #555-on-#0a0a18 FAILS (can go red)',
+    contrast.badMustFail, `ratio=${contrast.badRatio}`);
+
   // ── Pilot screen reachable: Inventory tab renders through the widget system ──
   const pilot = await page.evaluate(() => {
     const gm = window.game.gameManager;

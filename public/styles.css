@@ -47,7 +47,7 @@
     #loading-status {
       margin-top: 10px;
       font-size: 12px;
-      color: #666;
+      color: #8a8a94;
     }
     #start-overlay {
       position: fixed;
@@ -169,7 +169,7 @@
       font-size: 0.9rem;
     }
     .menu-item.locked {
-      color: #555;
+      color: #7d7d87;
       cursor: default;
       font-style: italic;
     }
@@ -182,7 +182,7 @@
       display: flex;
       gap: 8px;
       font-size: 0.75rem;
-      color: #666;
+      color: #8a8a94;
       flex-wrap: wrap;
       justify-content: center;
     }
@@ -279,7 +279,7 @@
       border: none;
     }
     .setting-section-title {
-      color: #666;
+      color: #8a8a94;
       font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 2px;
@@ -453,7 +453,7 @@
     }
     .panel-card-desc {
       font-size: 0.72rem;
-      color: #777;
+      color: #8a8a94;
       margin-top: 2px;
     }
     .panel-card-badge {
@@ -694,7 +694,7 @@
     }
     .companion-slot:active { border-color: rgba(255, 215, 0, 0.4); }
     .companion-slot .empty-icon {
-      color: #555;
+      color: #7d7d87;
       font-size: 1.2rem;
     }
     .companion-slot img {
@@ -767,7 +767,7 @@
       padding: 4px 12px;
       background: none;
       border: none;
-      color: #666;
+      color: #7d7d87;
       cursor: pointer;
       position: relative;
       transition: color 0.2s;
@@ -882,7 +882,7 @@
     }
     .npc-lock-text {
       font-size: 0.8rem;
-      color: #666;
+      color: #8a8a94;
       font-style: italic;
     }
     /* Upgrade card */
@@ -1253,13 +1253,13 @@
     }
     .battle-tier-btn:hover { color: #ccc; border-color: rgba(255,255,255,0.25); }
     .battle-tier-btn.active { color: #ff6b6b; border-color: rgba(255,60,60,0.4); background: rgba(255,60,60,0.1); }
-    .battle-card-weapons { color: #666; font-size: 0.7rem; margin-top: 6px; }
+    .battle-card-weapons { color: #8a8a94; font-size: 0.7rem; margin-top: 6px; }
 
     /* D2: Swipe indicator */
     #town-swipe-indicator {
       position: relative; z-index: 2;
       display: flex; justify-content: center; align-items: center; gap: 8px;
-      padding: 6px 0; font-size: 0.75rem; color: #666;
+      padding: 6px 0; font-size: 0.75rem; color: #8a8a94;
     }
     #town-swipe-indicator .swipe-dot {
       width: 8px; height: 8px; border-radius: 50%;
@@ -1403,7 +1403,7 @@
     }
     .pause-btn.primary:hover { background: rgba(76, 175, 80, 0.4); }
     #pause-hint {
-      color: #777;
+      color: #8a8a94;
       font-size: 12px;
     }
     /* §23.6: end-screen actions — bottom-centered bar over the canvas end screen */
@@ -1469,7 +1469,7 @@
       text-align: center;
     }
     #levelup-hint {
-      color: #666;
+      color: #8a8a94;
       font-size: 12px;
     }
 
@@ -1526,7 +1526,7 @@
       display: block;
     }
     .loadout-subtitle {
-      color: #666;
+      color: #8a8a94;
       font-size: 12px;
       display: block;
       margin-top: 2px;
@@ -1612,7 +1612,7 @@
       border-radius: 8px;
       border: 1px solid #333;
       background: #0a0a18;
-      color: #555;
+      color: #7d7d87;
       font-size: 15px;
       font-weight: 600;
       cursor: default;
@@ -1940,7 +1940,7 @@
   padding: 8px 12px; border-bottom: 1px solid rgba(255, 215, 0, 0.15);
 }
 .gamelog-title { color: #FFD700; font-family: Georgia, serif; font-size: 0.9rem; }
-.gamelog-count { color: #777; font-size: 0.75rem; margin-left: auto; }
+.gamelog-count { color: #8a8a94; font-size: 0.75rem; margin-left: auto; }
 .gamelog-btn {
   background: rgba(255, 255, 255, 0.06); color: #bbb; border: none;
   border-radius: 6px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;
@@ -1948,14 +1948,14 @@
 .gamelog-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
 .gamelog-list { overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
 .gamelog-entry { font-size: 0.75rem; line-height: 1.45; color: #bbb; }
-.gamelog-ts { color: #666; font-family: Consolas, monospace; font-size: 0.68rem; }
+.gamelog-ts { color: #8a8a94; font-family: Consolas, monospace; font-size: 0.68rem; }
 .gamelog-entry.kind-event { color: #7EE8A2; }
 .gamelog-entry.kind-reward { color: #FFD54F; }
 .gamelog-entry.kind-warn { color: #FFB74D; }
 .gamelog-entry.kind-error { color: #FF6B6B; }
-.gamelog-empty { color: #666; font-size: 0.78rem; text-align: center; padding: 18px 0; }
+.gamelog-empty { color: #8a8a94; font-size: 0.78rem; text-align: center; padding: 18px 0; }
 .gamelog-entry.gamelog-prev { opacity: 0.55; }
-.gamelog-divider { color: #555; font-size: 0.68rem; text-align: center; padding: 4px 0 2px 0;
+.gamelog-divider { color: #7d7d87; font-size: 0.68rem; text-align: center; padding: 4px 0 2px 0;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.08); margin-bottom: 4px; }
 /* ── Widget context-accent palette (§2.6, renderer v1.1) + muted variation ── */
 /* Bounded tokens only — data selects the token name, never a raw color. */
@@ -1971,6 +1971,11 @@
 #gamelog-list .widget-card { background: transparent; box-shadow: none; border: none; padding: 2px 0; min-height: 0; gap: 6px; }
 #gamelog-list .slot-primaryText { font-size: 0.75rem; line-height: 1.45; }
 #gamelog-list .slot-secondaryText { font-family: Consolas, monospace; font-size: 0.68rem; color: #8a8a94; }
+/* B11 sweep (v2.19.17): screen-local text tokens lifted to >=4.5:1 on their real
+   panel backgrounds (#555/#666/#777 -> #8a8a94 real text / #7d7d87 dim-but-interactive).
+   Judged-exempt (decorative or inactive): .menu-lock pictogram, #town-breadcrumb .bc-sep,
+   .loc-arrow, .location-card.locked (opacity .4 + pointer-events none),
+   retired .loadout-slot-* rules. */
 /* ── §10 screen-2 (v2.14.0): pause/end action buttons as widget cards ── */
 /* Structure from the widget system; this screen's theme is scoped here. */
 #pause-actions .widget-card, #end-actions .widget-card {
@@ -2084,9 +2089,7 @@
    horizontal scrollbar (v2.17.0 migration regression, probed at 2 viewports). */
 #loadout-overlay #loadout-slots .widget-card { padding: 10px 6px; flex: 1 1 0; min-width: 0; }
 /* B11 (v2.19.15): widget-scoped meta/hint text lifted to >=4.5:1 on #0a0a18
-   (WCAG 1.4.3). Was #555/#666 (3.0:1/2.9:1); screen-local tokens elsewhere
-   in this file are a deferred screen-by-screen sweep. */
-.loadout-confirm { color: #6b6b76; }
+   (WCAG 1.4.3). Was #555/#666 (3.0:1/2.9:1). */
 #loadout-overlay #loadout-slots .widget-card.widget-selected { background: rgba(76, 175, 80, 0.08); }
 #loadout-overlay #loadout-slots .widget-card .slot-primaryText {
   color: #ccc; font-size: 12px; margin-top: 0;
@@ -2187,14 +2190,14 @@
 /* Locked entries: the retired .menu-item.locked look — dim, italic, flat hover.
    (Base .widget-disabled opacity/pointer-events is intentionally overridden:
    the denial sound + tooltip ARE the locked interaction.) */
-#title-menu .widget-card.widget-disabled { color: #555; cursor: default; font-style: italic; }
+#title-menu .widget-card.widget-disabled { color: #7d7d87; cursor: default; font-style: italic; }
 #title-menu .widget-card.widget-disabled:hover { background: transparent; }
 /* Meta badges (+100g / DEV): the retired muted small-text look, not pill badges. */
 #title-menu .widget-card .slot-badge {
   margin-left: auto;
   font-size: 0.7rem;
   font-weight: 400;
-  color: #666;
+  color: #8a8a94;
   background: transparent;
   border: none;
   padding: 0;

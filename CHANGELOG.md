@@ -2,6 +2,32 @@
 
 ---
 
+## v2.19.17 — B11 sweep: screen-local text contrast lifted + pinned
+**Date:** September 25, 2026
+**Status:** ✅ Complete (step3 37/37 incl. the ratio-math negative control; battery green; verify green)
+
+### The sweep (the deferred half of v2.19.15)
+Every screen-local sub-4.5:1 token judged against its **real** background, not batch-fixed:
+- **19 tokens lifted** — `#555`/`#666`/`#777` → **`#8a8a94`** for real text on dark panels
+  (loading status, settings titles, panel-card descriptions, NPC lock text, battle-card weapon
+  lines, pause hint, loadout subtitle, title-info, game-log count/timestamp/empty, town swipe
+  indicator, level-up hint, title-menu badges) and → **`#7d7d87`** for dim-but-interactive
+  (locked title entries, dock tabs, companion empty-icon, game-log divider, inactive confirm
+  button). One rule consolidated (the v2.19.15 `.loadout-confirm` one-off folded back into the
+  original rule).
+- **8 declarations judged-exempt, documented in-place**: `.menu-lock` 🔒 pictogram, breadcrumb
+  separator, `.loc-arrow` (decorative), `.location-card.locked` (opacity .4 +
+  `pointer-events:none` = WCAG inactive-component exemption), and the retired
+  `.loadout-slot-*` dead rules (a new dead-CSS class surfaced — left for a future pass, not
+  silently "fixed").
+
+### Caught by the new pin before it shipped
+step3's contrast pin (WCAG ratio math over representative live pairs) **failed my own first
+pass**: `#6b6b76` on the `#0a0a18` family is 3.72:1, not ≥4.5 — the dim tier was miscalculated.
+Correct dim value `#7d7d87` (≈4.55:1) re-lifted; the auditor's negative control (pre-sweep
+`#555`-on-`#0a0a18` must FAIL) proved the detector direction. Contrast is a pair property
+(fg × actual bg), never a token property.
+
 ## v2.19.16 — Occlusion audit: clipped category (full-rect vs viewport edges)
 **Date:** September 25, 2026
 **Status:** ✅ Complete (widget_occlusion 39/39; battery green; verify green)

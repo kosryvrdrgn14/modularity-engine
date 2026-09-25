@@ -533,4 +533,26 @@ backlog aging.
   inspector parity; 37→39 checks, all green. Docs: TESTING_PLAN, TOOLING_MAP. CHANGELOG
   v2.19.16. LESSON: a center-point presence check is a sampling heuristic, not a bounds check —
   and a detector that files real defects into a benign bucket is worse than no detector.
+
+- Date: 2026-09-25
+- Section affected: styles.css screen-local tokens (B11 sweep, the deferred half of v2.19.15) + step3 pins
+- What happened: the screen-by-screen contrast sweep ran with per-token judgment against each
+  rule's REAL background, not a blind find-replace: 19 tokens lifted (#555/#666/#777 → #8a8a94
+  for real text on dark panels; #7d7d87 for dim-but-interactive — locked menu entries, dock
+  tabs, inactive confirm button), 1 rule consolidated (the v2.19.15 .loadout-confirm one-off
+  folded back into the original rule), and 8 remaining sub-4.5 declarations judged-exempt and
+  documented in-place: .menu-lock pictogram, breadcrumb separator, loc-arrow (decorative),
+  .location-card.locked (opacity .4 + pointer-events:none = WCAG inactive exemption), and the
+  retired .loadout-slot-* dead rules. A new dead-rule class surfaced mid-sweep: the retired
+  .loadout-slot-label/-hint/.loadout-card-meta rules still style nothing (widget slots own
+  those nodes since v2.17.0) — left for a future dead-CSS pass, not silently "fixed".
+  CATCH-OF-THE-DAY: the new step3 contrast pin FAILED my own first pass — #6b6b76 on
+  #0a0a18-family panels is 3.72:1, not ≥4.5 (my dim tier was miscalculated); the correct
+  dim value is #7d7d87 (≈4.55). The auditor + negative control caught the sweep's own math
+  error before it shipped.
+- Change made: 19 token lifts + 1 consolidation + in-place exemption documentation; step3
+  35→37 (WCAG ratio math over representative live pairs incl. the dim tier, negative control
+  = pre-sweep #555-on-#0a0a18 must FAIL). Docs: TESTING_PLAN §4.9. CHANGELOG v2.19.17.
+  LESSON: contrast is a pair property (fg × actual bg), never a token property — and a pin
+  written alongside a fix must be allowed to fail the fix, or it is decoration.
 ```
