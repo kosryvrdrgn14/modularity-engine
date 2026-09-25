@@ -128,6 +128,9 @@ class Game {
     this.gameLog.init();
     this.gameLog.installPanel();
     this.gameLog.installInspector();
+    // §6.4 (v2.19.12): widget inspector — static on the CLASS so it sweeps
+    // WidgetRenderer._all (every screen constructs its own renderer instance).
+    if (typeof WidgetRenderer !== 'undefined') WidgetRenderer.installInspector();
     this.npcExportSystem = new NPCExportSystem({
       gameManager: this.gameManager,
       dataManager: this.dataManager,

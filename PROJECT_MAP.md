@@ -298,10 +298,10 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 ### ui/widgetRenderer.js
 - Purpose: WidgetRenderer — data-driven card rendering (pooled), skins from content; v1.1: data-bound context accent (`accent.bind` → bounded `--widget-accent-<token>` palette) + `muted` flag; v1.1.1: click-time binding data (`_instanceData`) — pooled rebind updates onClick payloads too; v1.2: data-bound `selected.bind` (`.widget-selected` on render+rebind) + click-time DEF (`_instanceDef`) — a warm pool rebound with a different def emits the NEW event, and layout/size classes refresh on rebind
 - Status: NORMATIVE
-- Defines: `WidgetRenderer` (+ static `WidgetRenderer._all`: registry of every renderer instance — consumed by the occlusion audit / future inspector)
+- Defines: `WidgetRenderer` (+ static `WidgetRenderer._all`: registry of every renderer instance — consumed by the §7.2 occlusion audit and the §6.4 inspector), static `installInspector()` (v2.19.12 — installed once at boot by engine/game.js; idempotent `window.__WIDGET_DEBUG__` console bridge: `list()` live cards across all renderer instances, `inspect(el)` producing def + resolved data + payload preview + clickable check, `occlusion()` §7.2 audit over every live interactive instance; "live" = connected + laid out, so parked pool surplus and hidden-overlay cards are excluded)
 - Calls: `DataManager.uiSkins`, `game` (registry access)
 - Content: `ui_skins.json`
-- GuardedBy: `tests/suites/step3_widget_inventory.cjs` (render contract), `tools/widget_preview.cjs` (v1.1.1/v1.2 pool regressions), `tests/suites/step5_loadout_widgets.cjs` (def-swap + selected-bind live)
+- GuardedBy: `tests/suites/step3_widget_inventory.cjs` (render contract + §6.4 inspector: list/inspect/occlusion incl. the veiled negative control), `tools/widget_preview.cjs` (v1.1.1/v1.2 pool regressions), `tests/suites/step5_loadout_widgets.cjs` (def-swap + selected-bind live)
 
 ### ui/shop.js
 - Purpose: shop screen — buy consumables/upgrades, sandbox launcher, farming loot handoff

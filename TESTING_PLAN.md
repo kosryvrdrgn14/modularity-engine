@@ -139,7 +139,7 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 > allowlist. New/renamed file without a block = red, per KNOWLEDGE §19.
 - 🟩 `step1_gate_engine.cjs` — ConditionEngine: typed conditions, combinators, fail-closed, quest routing (30)
 - 🟩 `step2_npc_system.cjs` — NPC system + canonical memory log incl. save/reload round-trip (30)
-- 🟩 `step3_widget_inventory.cjs` — widget pilot + inventory canonical home + POT-015 + gold chip (22)
+- 🟩 `step3_widget_inventory.cjs` — widget pilot + inventory canonical home + POT-015 + gold chip + §6.4 inspector (list/inspect/occlusion + veiled negative control) (26)
 - 🟩 `step4_export.cjs` — roleplay export: spoiler cutoff, favorites, purity + favorites-browser UI flow (v2.19.11: seeded slot → widget cards → click → back) (11)
 - 🟩 `calendar_time.cjs` — event-driven days, biomes, locked modifier rule, log day-stamps (27)
 - 🟩 `game_log.cjs` — session console capture, ring buffer, UI, two-logs purity (18)

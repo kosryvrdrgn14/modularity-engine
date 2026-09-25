@@ -213,7 +213,7 @@ backlog aging.
 | B4 | ~~Plan-first forcing function: commit the plan~~ **RE-SCOPED v2.19.4 (docs-only):** multi-file plans get restated in the session summary; commit-based gate retired — its premise is dead here (git CLI blocked, platform auto-syncs, no local commit step to hook) | The rule can't be mechanical on this platform; shrink it rather than re-log a skippable reminder | S | P3 |
 | B5 | Fix run_all check-count reporting for suites 5–7 | Small trust/cosmetic fix | S | P3 |
 | B6 | ~~Task decomposition for content batches~~ **DONE v2.19.6** (file-at-a-time rule landed as §5.6 of the content sub-workflow) | Safer large content additions | — | — |
-| B7 | Widget Inspector (§6.4) + 9-slice skins | §6 remainder; hook point exists | M/L | P3 |
+| B7 | Widget Inspector (§6.4) ~~done v2.19.12~~ + 9-slice skins (remaining) | §6.4 shipped as `WidgetRenderer.installInspector()` → `window.__WIDGET_DEBUG__` (list/inspect/occlusion, static over `_all`; step3 pins incl. veiled negative control). 9-slice skins still open | S (remaining: M) | P3 |
 | B8 | ~~Consolidate §5.7 + shopData → content/shop.json~~ **DONE v2.19.7** (shop.json via POT-006, 17th content file; §5.7 renderers single-homed in shop.js; audit found the town panel Sandbox button was a dead no-op — now wired through `onSandbox` → `ShopSystem.openSandbox`) | Open map items; §5.5/§5.6 CLOSED v2.19.2 | — | — |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
 | B10 | Perf budget/benchmark for the combat loop | Later; performance not yet a demonstrated pain | M | P3 |
@@ -394,4 +394,28 @@ backlog aging.
   one screen whose happy path no suite had ever executed. "A gate is done when its negative
   control proved it can go red" now also applies to SCREENS: a screen whose error path is the
   only path a suite exercises is unpinned.
+
+- Date: 2026-09-25
+- Section affected: ui/widgetRenderer.js + engine/game.js (B7 §6.4 inspector) + step3 suite
+- What happened: B7 split — the §6.4 widget inspector shipped, 9-slice skins stay open in the
+  row. Built per the gameLog inspector precedent: `WidgetRenderer.installInspector()` (static,
+  idempotent) installs `window.__WIDGET_DEBUG__` at boot and sweeps the CLASS-level `_all`
+  registry, because every screen constructs its own renderer instance. `list()` enumerates live
+  pooled cards + producing def summaries + data across ALL instances; `inspect(el)` returns the
+  full def JSON, resolved data, payload preview (templates resolved), selected/disabled,
+  geometry and a live elementFromPoint clickable check; `occlusion()` runs the §7.2 audit
+  across every live interactive instance — §7's mechanism is now callable in any game state.
+  "Live" = connected + laid out, so parked pool surplus and hidden-overlay cards are excluded
+  (the step3 stage initially rendered into the hidden shop host and list() correctly reported
+  zero — the gate works; the stage was wrong). step3 22→26 incl. the built-in negative control
+  (a fixed veil over the stage MUST be flagged naming the veil — the detector can go red
+  without any revert dance). Two self-inflicted stumbles, both caught by the gates: first run
+  called the method as a static before making it static (boot TypeError, 4 checks red); the
+  first inspect assertion was written against the wrong contract (slots is the spec object,
+  not list()'s names array).
+- Change made: installInspector + game.js wiring + step3 pins; docs rides-along (PROJECT_MAP
+  widgetRenderer/game.js blocks, TOOLING_MAP inspector row Planned→Built, TESTING_PLAN §4.9
+  row 26). CHANGELOG v2.19.12. LESSON: registry-shaped inspectors belong on the class, not the
+  instance — and stage the screen for what the probe actually gates on (liveness), not what
+  the earlier suite steps happened to leave behind.
 ```

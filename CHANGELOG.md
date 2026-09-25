@@ -2,6 +2,39 @@
 
 ---
 
+## v2.19.12 — B7 (part 1): §6.4 widget inspector — `window.__WIDGET_DEBUG__`
+**Date:** September 25, 2026
+**Status:** ✅ Complete (step3 26/26 incl. the veiled negative control; battery green; verify green)
+
+### What shipped (spec §6.4, WORKFLOW B7 part 1)
+The devtools-style introspection layer for the widget system: **which layout, which skin, and
+which data bindings produced any card on screen**. `WidgetRenderer.installInspector()` —
+static, idempotent, called once at boot next to the gameLog inspector — installs the
+`window.__WIDGET_DEBUG__` console bridge. No DOM, no ids, dev-only (F2 untouched).
+
+Because every screen constructs its own renderer instance, the bridge sweeps the class-level
+`WidgetRenderer._all` registry (v2.14.0's groundwork paying off exactly as designed):
+- **`list()`** — every live pooled card across all instances: def summary
+  (template/layout/size/skinId/_v/slot names), declared event, resolved data.
+- **`inspect(el)`** — the full picture for one card: def JSON, data, selected/disabled,
+  onClick payload *preview with templates resolved*, geometry, and a live
+  `elementFromPoint` clickable check.
+- **`occlusion()`** — the §7.2 audit across every live interactive instance (covered-by
+  reports per card). §7's detector is now callable live in any game state.
+
+"Live" = connected + laid out (`getClientRects`) — parked pool surplus and cards inside
+hidden overlays are excluded automatically.
+
+### Tests (step3 22→26)
+Inspector installed at boot; `list()` sees the shop pilot's cards through the real renderer
+instance; `inspect()` returns the producing def + data; `occlusion()` reports zero flags on a
+clean stage over the persistent town chips; **built-in negative control**: a fixed veil over
+the stage MUST be flagged by name — the detector proves it can go red inside the suite itself,
+no revert dance needed.
+
+### Remaining from B7
+9-slice skins (§5/§6 remainder) stay open in the row — re-scoped S→M, later.
+
 ## v2.19.11 — Shrink-regression sweep: all widget hosts clean; export browser throw found + fixed
 **Date:** September 25, 2026
 **Status:** ✅ Complete (battery green: step4 11/11, visual_probe 25/25; verify green)

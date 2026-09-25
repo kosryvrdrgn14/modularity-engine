@@ -161,6 +161,62 @@ const { bootGame, STEP_DETECTORS, createRunner } = require('../lib/harness.cjs')
     r.check('pilot grid uses the pooled path', pilot.pooledHost);
   }
 
+  // ── §6.4 Widget inspector (v2.19.12): console bridge over WidgetRenderer._all ──
+  // Stage A: shop overlay really OPEN (the pilot above only rendered into the
+  // hidden host — the inspector's liveness gate must not see parked cards).
+  // Stage B: overlay closed, town shown → clean occlusion baseline over the
+  // persistent chips, then the built-in negative control: a covering element
+  // MUST be flagged — the detector can go red.
+  const inspector = await page.evaluate(() => {
+    const dbg = window.__WIDGET_DEBUG__;
+    if (!dbg) return { fail: '__WIDGET_DEBUG__ not installed at boot' };
+    const g = window.game;
+    g.titleMenu.hide();
+    g.gameState.setState('town');
+    g.townScreen.show({});
+    const shop = g.townScreen.shopSystem;
+    shop.openShop();
+    shop.currentTab = 'inventory';
+    shop.renderItems();
+    const shopCard = document.querySelector('#shop-items .widget-card');
+    const listed = dbg.list();
+    const one = shopCard ? dbg.inspect(shopCard) : null;
+    shop.close();
+    const clean = dbg.occlusion();
+    const veil = document.createElement('div');
+    veil.className = 'occlusion-veil';
+    veil.style.cssText = 'position:fixed;inset:0;z-index:99999;';
+    document.body.appendChild(veil);
+    const veiled = dbg.occlusion();
+    veil.remove();
+    return {
+      fail: null,
+      listedCount: listed.length,
+      hasShopCard: !!shopCard && listed.some((it) => it.el === shopCard),
+      inspectOk: !!one && one.def.template === 'card' && !!(one.def.slots && typeof one.def.slots === 'object'),
+      inspectData: one ? one.data : null,
+      cleanChecked: clean.checked, cleanFlagged: clean.flagged,
+      veiledChecked: veiled.checked, veiledFlagged: veiled.flagged.length,
+      veilSeen: veiled.flagged.some((f) => String(f.coveredBy).includes('occlusion-veil')),
+    };
+  });
+  if (inspector.fail) {
+    r.check('§6.4 inspector installed (window.__WIDGET_DEBUG__)', false, inspector.fail);
+  } else {
+    r.check('§6.4 inspector lists live cards across renderer instances (incl. shop pilot)',
+      inspector.listedCount > 0 && inspector.hasShopCard, `listed=${inspector.listedCount}`);
+    r.check('§6.4 inspect() returns the producing def + resolved data',
+      inspector.inspectOk && !!inspector.inspectData, JSON.stringify(inspector.inspectData || {}));
+    // inspectOk = def.template==='card' + slots is the spec OBJECT (bind map),
+    // not list()'s names array — assert the data too (checked above).
+    r.check('§7.2 occlusion audit: interactive cards reachable on a clean stage',
+      inspector.cleanChecked > 0 && inspector.cleanFlagged.length === 0,
+      JSON.stringify({ checked: inspector.cleanChecked, flagged: inspector.cleanFlagged }));
+    r.check('§7.2 occlusion negative control: a covering element IS flagged (detector can go red)',
+      inspector.veiledChecked === inspector.cleanChecked && inspector.veiledFlagged > 0 && inspector.veilSeen,
+      JSON.stringify({ flagged: inspector.veiledFlagged, veilSeen: inspector.veilSeen }));
+  }
+
   // ── Gold chip: header wallet is live via the ONE ledger (POT-011) ──
   const goldChip = await page.evaluate(() => {
     const gm = window.game.gameManager;

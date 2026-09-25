@@ -402,6 +402,100 @@ class WidgetRenderer {
     }
   }
 
+  // ── §6.4 Widget inspector (v2.19.12, dev tool) — console bridge, no DOM ──
+  // Spec: for any card currently on screen, show which layout, which skin, and
+  // which data bindings produced it ("the UI equivalent of browser devtools'
+  // element inspector"). Installs window.__WIDGET_DEBUG__ ONCE (idempotent, same
+  // pattern as GameLogSystem.installInspector) and sweeps the CLASS-level
+  // registry: screens construct their own renderers, so only WidgetRenderer
+  // _all can enumerate every live card without knowing who owns which one.
+  // "Live" = connected + laid out (getClientRects) — hides parked surplus pool
+  // nodes and cards inside hidden overlays automatically.
+  static installInspector() {
+    if (typeof window === 'undefined' || window.__WIDGET_DEBUG__) return;
+    const live = (el) => el.isConnected && el.getClientRects().length > 0;
+    window.__WIDGET_DEBUG__ = {
+      /** Every live pooled card across every renderer instance. */
+      list() {
+        const out = [];
+        for (const R of WidgetRenderer._all) {
+          for (const [el, def] of R._instanceDef) {
+            if (!live(el)) continue;
+            out.push({
+              el,
+              def: {
+                template: def.template, layout: def.layout, size: def.size,
+                skinId: def.skinId || null, _v: def._v || null,
+                slots: Object.keys(def.slots || {}),
+              },
+              onClick: def.onClick ? { emit: def.onClick.emit } : null,
+              data: R._instanceData.get(el),
+            });
+          }
+        }
+        return out;
+      },
+      /** Full introspection for one card element (the devtools-style view). */
+      inspect(el) {
+        let owner = null;
+        let def = null;
+        let data = null;
+        for (const R of WidgetRenderer._all) {
+          if (R._instanceDef.has(el)) {
+            owner = R; def = R._instanceDef.get(el); data = R._instanceData.get(el);
+            break;
+          }
+        }
+        if (!def) return null;
+        const rect = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return {
+          def: JSON.parse(JSON.stringify(def)),
+          data,
+          selected: el.classList.contains('widget-selected'),
+          disabled: owner._instanceDisabled.get(el) === true,
+          onClick: def.onClick
+            ? {
+                emit: def.onClick.emit,
+                payload: Object.fromEntries(Object.entries(def.onClick.payload || {}).map(([k, tpl]) => {
+                  if (typeof tpl !== 'string') return [k, tpl];
+                  const resolved = tpl.replace(/\{\{([^}]+)\}\}/g, (_, p) => {
+                    const v = String(p).trim().split('.').reduce((o, k2) => (o == null ? undefined : o[k2]), data);
+                    return v === undefined || v === null ? '' : String(v);
+                  });
+                  return [k, resolved];
+                })),
+              }
+            : null,
+          geometry: { rects: el.getClientRects().length, rect: live(el) ? rect.toJSON() : null },
+          clickable: def.onClick ? (hit === el || (!!hit && el.contains(hit))) : undefined,
+        };
+      },
+      /** §7.2 occlusion audit across every live interactive instance. */
+      occlusion() {
+        const flagged = [];
+        let checked = 0;
+        for (const R of WidgetRenderer._all) {
+          for (const inst of R._instances) {
+            const el = inst.el;
+            if (!live(el)) continue;
+            checked++;
+            const r = el.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            if (hit !== el && !(hit && el.contains(hit))) {
+              flagged.push({
+                emit: inst.def.onClick?.emit || '(unnamed)',
+                coveredBy: hit ? (hit.id ? '#' + hit.id : hit.className || hit.tagName) : '(nothing — off-viewport?)',
+                rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+              });
+            }
+          }
+        }
+        return { checked, flagged };
+      },
+    };
+  }
+
   _forget(el) {
     this._instanceData.delete(el); // v1.1.1
     this._instanceDef.delete(el);  // v1.2
