@@ -143,7 +143,7 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step4_export.cjs` — roleplay export: spoiler cutoff, favorites, purity + favorites-browser UI flow (v2.19.11: seeded slot → widget cards → click → back) (11)
 - 🟩 `calendar_time.cjs` — event-driven days, biomes, locked modifier rule, log day-stamps (27)
 - 🟩 `game_log.cjs` — session console capture, ring buffer, UI, two-logs purity (18)
-- 🟩 `widget_occlusion.cjs` — §7 occlusion audit + negative control + §11 promoted gates (game-log panel, pause cards, town chips, dialogue choices, loadout cards, shop tabs, title menu at all 3 viewports) (37)
+- 🟩 `widget_occlusion.cjs` — §7 occlusion audit + negative controls (burying overlay AND partially off-screen card) + §11 promoted gates (game-log panel, pause cards, town chips, dialogue choices, loadout cards, shop tabs, title menu at all 3 viewports) + v2.19.16 clipped category: full-rect vs viewport edges (desktop gated, mobile report-only) (39)
 - 🟩 `step5_loadout_widgets.cjs` — loadout pooled cards + chrome identity + v1.2 selected-bind/def-swap + confirm payload + Next-button label pin (12)
 - 🟩 `step6_shop_tabs.cjs` — shop chips/selected-bind, v1.3 disabled suppression, purchase flow, tab round-trip (former pilot pool bug), def-swap skin evidence (10)
 - 🟩 `step7_title_menu.cjs` — title menu pooled strip + locked-as-DATA (no emission, denial kept) + declared-event funnel + keyboard parity + pool identity + selection-reset (15)

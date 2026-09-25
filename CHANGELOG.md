@@ -2,6 +2,35 @@
 
 ---
 
+## v2.19.16 — Occlusion audit: clipped category (full-rect vs viewport edges)
+**Date:** September 25, 2026
+**Status:** ✅ Complete (widget_occlusion 39/39; battery green; verify green)
+
+### The gap (user question that found it)
+"Do we check if widgets fall off screen — not just the center point, but the element's full
+width/height against the screen edge?" Answer: **no**. The §7.2 scan tested only each card's
+center point, which meant (a) a card hanging 80px past the viewport edge passed as fully fine,
+and (b) worse, a partially-visible card with its center outside was classified `unpresented` —
+**the benign bucket** — silently absorbing the exact bug class a bounds check exists for. (The
+v2.19.10 loadout overflow also evaded this scan, via a different mechanism: clipped inside a
+scroll container, still within the viewport.)
+
+### The fix — four-state taxonomy
+`scanFn` now buckets every live interactive instance as exactly one of: `unpresented` (fully
+outside / 0×0 / disconnected — legitimately hidden screens), **`clipped` (NEW: presented but
+not fully contained in the viewport — reported per-edge with px overflow, ±1px tolerance)**,
+`occluded` (fully inside but buried), or clean. Clickability is not probed for clipped cards —
+an off-viewport center point is meaningless; the clip IS the finding. The partially-outside
+case is reclassified OUT of `unpresented`, so the benign bucket can no longer hide it.
+`window.__WIDGET_DEBUG__.occlusion()` mirrors the same taxonomy for live inspection.
+
+### Rollout (report-first, per §11)
+Ran report-only across all three viewports before gating anything: **all clean** (the §11
+element-specific gates — loadout scroll-reachability, game-log fits-viewport — already gate
+their screens' geometry). Desktop 1280×800 now additionally gates on zero clipped instances;
+mobile stays report-only until promoted. Negative controls now prove BOTH failure directions:
+a burying overlay AND an interactive card parked 60px past the right edge are both detected.
+
 ## v2.19.15 — B11 closed: widget-system accessibility (keyboard, focus, contrast)
 **Date:** September 25, 2026
 **Status:** ✅ Complete (step3 35/35 incl. the in-source negative control; battery 432 checks / 14 suites strict green after perf_budget restore-check hardening; verify green)

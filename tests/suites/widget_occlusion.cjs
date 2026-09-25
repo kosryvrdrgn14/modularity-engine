@@ -69,13 +69,18 @@ const check = (name, pass, extra) => {
       typeof seed === 'object' && seed.instances > 0,
       typeof seed === 'string' ? seed : JSON.stringify(seed));
 
-    // §7.2 mechanism — reusable scan. Three states, never conflated:
-    //   unpresented: not rendered / 0×0 / outside viewport bounds (screen
+    // §7.2 mechanism — reusable scan. Four states, never conflated:
+    //   unpresented: not rendered / 0×0 / FULLY outside the viewport (screen
     //     closed — a presentation state, NOT an occlusion bug; hidden screens'
     //     cards legitimately sit at 0×0 until their overlay opens)
-    //   occluded: presented but buried under another element (the §7 bug class)
+    //   clipped (v2.19.16): presented but not fully contained in the viewport
+    //     — the old scan only tested the CENTER point, so a card hanging 80px
+    //     past the edge passed as fine, and a center-outside partially-visible
+    //     card was even misfiled as 'unpresented' (absorbing a real bug into
+    //     the benign bucket). Full-rect vs edges now, with per-edge px.
+    //   occluded: presented and fully contained but buried (the §7 bug class)
     const scanFn = () => {
-      const out = { checked: 0, occluded: [], unpresented: [], contextBuried: [] };
+      const out = { checked: 0, occluded: [], unpresented: [], contextBuried: [], clipped: [] };
       const label = (inst) => {
         const d = inst.def || {};
         const name = (inst.data && inst.data.item && inst.data.item.name) ||
@@ -94,9 +99,23 @@ const check = (name, pass, extra) => {
           if (!el.isConnected) { out.unpresented.push(label(inst)); continue; }
           const rect = el.getBoundingClientRect();
           if (rect.width === 0 || rect.height === 0) { out.unpresented.push(label(inst)); continue; }
+          // Fully outside = unpresented (unchanged semantics). PARTIALLY
+          // outside = clipped (the new category — edges vs viewport, ±1px tol).
+          const fullyOutside = rect.left >= window.innerWidth || rect.top >= window.innerHeight ||
+            rect.right <= 0 || rect.bottom <= 0;
+          if (fullyOutside) { out.unpresented.push(label(inst)); continue; }
+          const over = {
+            left: rect.left < -1 ? Math.round(-rect.left) : 0,
+            top: rect.top < -1 ? Math.round(-rect.top) : 0,
+            right: rect.right > window.innerWidth + 1 ? Math.round(rect.right - window.innerWidth) : 0,
+            bottom: rect.bottom > window.innerHeight + 1 ? Math.round(rect.bottom - window.innerHeight) : 0,
+          };
+          if (over.left || over.top || over.right || over.bottom) {
+            out.clipped.push(`${label(inst)} [${Object.entries(over).filter(([, v]) => v).map(([k, v]) => k + '+' + v + 'px').join(' ')}]`);
+            continue; // clickability at an off-viewport center is meaningless — the clip IS the finding
+          }
           const cx = rect.left + rect.width / 2;
           const cy = rect.top + rect.height / 2;
-          if (cy < 0 || cx < 0 || cy > window.innerHeight || cx > window.innerWidth) { out.unpresented.push(label(inst)); continue; }
           const hit = document.elementFromPoint(cx, cy);
           out.checked++;
           if (!hit || !(hit === el || el.contains(hit))) {
@@ -175,11 +194,15 @@ const check = (name, pass, extra) => {
         check(`[desktop gate] scan ran non-vacuously`, res.checked > 0, JSON.stringify(res));
         check(`[desktop gate] every interactive instance clickable at its position`,
           res.occluded.length === 0, `occluded: ${res.occluded.join(' ; ')}`);
+        // v2.19.16: full-rect vs viewport (report-first showed desktop clean).
+        check(`[desktop gate] every interactive instance fully within the viewport (no clipping)`,
+          res.clipped.length === 0, `clipped: ${res.clipped.join(' ; ')}`);
       } else {
         // §11 report-only: becomes a gate per screen at migration time.
         check(`[${res.name}] scan ran non-vacuously (report-only viewport)`, res.checked > 0);
-        const usable = res.occluded.length === 0;
-        console.log(`  ◦ [${res.name}] REPORT-ONLY: checked=${res.checked}, occluded=${res.occluded.length}, unpresented=${res.unpresented.length} → ${usable ? 'USABLE' : 'HAS ISSUES (promote to gate at this screen\'s migration)'}`);
+        const usable = res.occluded.length === 0 && res.clipped.length === 0;
+        console.log(`  ◦ [${res.name}] REPORT-ONLY: checked=${res.checked}, occluded=${res.occluded.length}, clipped=${res.clipped.length}, unpresented=${res.unpresented.length} → ${usable ? 'USABLE' : 'HAS ISSUES (promote to gate at this screen\'s migration)'}`);
+        if (res.clipped.length) console.log(`      clipped: ${res.clipped.join(' ; ')}`);
         if (res.occluded.length) console.log(`      occluded: ${res.occluded.join(' ; ')}`);
       }
     }
@@ -364,6 +387,33 @@ const check = (name, pass, extra) => {
       covered.occluded.length === covered.checked,
       `baseline: ${JSON.stringify(baseline)} | covered: ${JSON.stringify(covered)}`);
     await page.evaluate(() => window.game.uiManager.hidePauseMenu());
+
+    // Negative control for the clipped category (v2.19.16): a live interactive
+    // card parked 60px past the right edge MUST be reported clipped (the
+    // detector can fail in exactly the direction this category exists for —
+    // partial off-screen, which the old center-point scan absorbed silently).
+    // Three bridge-safe steps: create → scan → remove (no DOM across the wire).
+    await page.evaluate(() => {
+      const R = new WidgetRenderer({});
+      const stage = document.createElement('div');
+      stage.id = '__clip_ctl__';
+      stage.style.cssText = 'position:fixed;top:0;left:0;z-index:99998;';
+      const inner = document.createElement('div');
+      inner.style.cssText = `position:fixed;top:40px;left:${window.innerWidth - 20}px;`; // 20px visible, rest clipped
+      stage.appendChild(inner);
+      document.body.appendChild(stage);
+      // render() (not repeatInto) so the registry entry carries the real data
+      // and the audit's label names the card instead of its bind path.
+      inner.appendChild(R.render({ template: 'card', layout: 'icon-left',
+        slots: { primaryText: { bind: 'item.name' } },
+        onClick: { emit: 'clipCtl', payload: {} } }, { item: { name: 'clipctl-card' } }));
+    });
+    const clipScan = await page.evaluate(scanFn);
+    await page.evaluate(() => document.getElementById('__clip_ctl__')?.remove());
+    check('negative control: audit detects a partially off-screen card (clipped, can fail)',
+      clipScan.clipped.length === 1 && clipScan.clipped[0].includes('clipctl-card') &&
+      clipScan.clipped[0].includes('right+'),
+      JSON.stringify(clipScan.clipped));
 
     check('no page errors across all viewports', errors.length === 0, errors.slice(0, 3).join(' | '));
 

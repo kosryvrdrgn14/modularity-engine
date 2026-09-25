@@ -529,16 +529,35 @@ class WidgetRenderer {
           clickable: def.onClick ? (hit === el || (!!hit && el.contains(hit))) : undefined,
         };
       },
-      /** §7.2 occlusion audit across every live interactive instance. */
+      /** §7.2 occlusion audit across every live interactive instance.
+       *  v2.19.16: adds the `clipped` category — full-rect vs viewport edges
+       *  (±1px), reporting per-edge overflow px. Center-only checks missed
+       *  partial clipping, and a center-outside partially-visible card was
+       *  misread as simply absent. Taxonomy now matches the occlusion suite. */
       occlusion() {
         const flagged = [];
+        const clipped = [];
         let checked = 0;
         for (const R of WidgetRenderer._all) {
           for (const inst of R._instances) {
             const el = inst.el;
             if (!live(el)) continue;
-            checked++;
             const r = el.getBoundingClientRect();
+            if (r.width === 0 || r.height === 0) continue;
+            if (r.left >= window.innerWidth || r.top >= window.innerHeight ||
+                r.right <= 0 || r.bottom <= 0) continue; // fully outside = not on screen
+            const over = {
+              left: r.left < -1 ? Math.round(-r.left) : 0,
+              top: r.top < -1 ? Math.round(-r.top) : 0,
+              right: r.right > window.innerWidth + 1 ? Math.round(r.right - window.innerWidth) : 0,
+              bottom: r.bottom > window.innerHeight + 1 ? Math.round(r.bottom - window.innerHeight) : 0,
+            };
+            if (over.left || over.top || over.right || over.bottom) {
+              clipped.push({ el, emit: inst.def.onClick?.emit || null,
+                overflow: Object.fromEntries(Object.entries(over).filter(([, v]) => v)) });
+              continue; // clickability at an off-viewport center is meaningless
+            }
+            checked++;
             const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
             if (hit !== el && !(hit && el.contains(hit))) {
               flagged.push({
@@ -549,7 +568,7 @@ class WidgetRenderer {
             }
           }
         }
-        return { checked, flagged };
+        return { checked, flagged, clipped };
       },
     };
   }

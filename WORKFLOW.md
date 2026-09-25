@@ -513,4 +513,24 @@ backlog aging.
 - Change made: protocol recorded here as the norm for future sessions; this session already
   ran on it (every plan turn closed with a binary "OK to proceed?", and the one genuine fork —
   bounds-check vs B11 — was disambiguated by name: "do B11 first… after"). No code, no gates.
+
+- Date: 2026-09-25
+- Section affected: widget_occlusion.cjs scanFn + widgetRenderer.js inspector — clipped category
+- What happened: user asked whether any check compares a widget's FULL rect against the viewport
+  edges, not just its center point. Answer was no — and worse, the center-only test misfiled a
+  partially-off-screen card as 'unpresented' (the benign bucket), silently absorbing the exact
+  bug class in question. The v2.19.10 loadout bug also evaded it (clip lived inside a scroll
+  container, still within the viewport). scanFn gained the fourth state 'clipped' (full-rect vs
+  edges ±1px, per-edge px in the report; partially-outside reclassified OUT of unpresented;
+  clickability skipped for clipped cards — the clip IS the finding). __WIDGET_DEBUG__.occlusion()
+  mirrors it. Report-first across all 3 viewports before gating: all clean (matrix + the
+  element-specific gates already cover their screens), so desktop got gated per §11, mobile
+  stays report-only. Negative controls now cover both failure directions (burying overlay AND
+  a card parked 60px off the right edge). Registry detail found on the way: _instances keeps
+  CREATION-time data for repeatInto cards (Maps rebind, the Set doesn't) — audit labels fall
+  back to bind paths for pooled cards; the clip control uses render() to carry real data.
+- Change made: scanFn clipped taxonomy + desktop gate + off-screen negative control +
+  inspector parity; 37→39 checks, all green. Docs: TESTING_PLAN, TOOLING_MAP. CHANGELOG
+  v2.19.16. LESSON: a center-point presence check is a sampling heuristic, not a bounds check —
+  and a detector that files real defects into a benign bucket is worse than no detector.
 ```
