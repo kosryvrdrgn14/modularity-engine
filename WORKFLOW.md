@@ -336,4 +336,20 @@ backlog aging.
   added; B9 closed, B4 re-scoped; PROJECT_MAP dynamic-create lines adopted as the F2 allowlist;
   TOOLING_MAP §2 verify row + npm block updated; full audit retained for Claude in
   TEMP_GATE_AUDIT_FOR_CLAUDE.md until his review, then delete.
+
+- Date: 2026-09-25
+- Section affected: ui/loadout.js (weapons-phase Next button) + step5 suite
+- What happened: user-reported bug — the weapons-phase action button rendered as an empty green
+  bar (screenshot). Root cause: the v2.17.0 chrome migration moved both action buttons into the
+  skeleton EMPTY; `_renderCompanions()` stamps its confirm label per render, but
+  `_renderWeapons()` never set the Next button's `textContent` — the old inline label was
+  silently dropped. A migration gap, not a data/render issue; visible only with ≥1 weapon
+  selected (green `.active` bar, no text).
+- Change made: one line in `_renderWeapons()` — `nextBtn.textContent = canProceed ?
+  '▶ Companions' : 'Select a weapon'` (mirrors the companions phase; inactive state now shows
+  an honest hint). step5 suite 11→12: Next label must be non-empty in both states, proven
+  non-vacuous (label commented → RED → restored byte-identically). Docs: CHANGELOG v2.19.9,
+  TESTING_PLAN §4.9 row (12). LESSON: when chrome moves into a persistent skeleton, per-render
+  label stamps that lived in the old markup must be re-homed — a suite that checks one button's
+  label is not a screen-wide label gate.
 ```

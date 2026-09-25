@@ -249,6 +249,11 @@ class LoadoutScreen {
     };
     // BUG-015 follow-up preserved: require AT LEAST 1 weapon, not exactly 3.
     const canProceed = this.selectedWeapons.filter(Boolean).length > 0;
+    // The chrome skeleton builds this button EMPTY — the label lives here, per
+    // render, exactly like #loadout-confirm in _renderCompanions (v2.19.9: the
+    // label was dropped in the v2.17.0 chrome migration and the button rendered
+    // as a bare green bar).
+    nextBtn.textContent = canProceed ? '▶ Companions' : 'Select a weapon';
     nextBtn.classList.toggle('active', canProceed);
     nextBtn.onclick = canProceed ? () => {
       this.phase = 'companions';

@@ -53,6 +53,11 @@ const check = (name, pass, extra) => {
       const foreignCards = () => document.querySelectorAll('#loadout-grid .loadout-card').length;
       const selectedChips = () => document.querySelectorAll('#loadout-slots .widget-selected').length;
 
+      // v2.19.9 regression pin: the chrome skeleton builds #loadout-next EMPTY —
+      // the label must be stamped by the phase render (it was lost in the
+      // v2.17.0 chrome migration and the button rendered as a bare green bar).
+      const nextLabelEmpty = document.getElementById('loadout-next')?.textContent || '';
+
       const wCount = gridCards();
       const chipCount = slotCards();
       // Pick two weapons via widget events (click = declared event, bubbles)
@@ -64,6 +69,7 @@ const check = (name, pass, extra) => {
       // Clear slot 0 via its chip
       document.querySelector('#loadout-slots .widget-card')?.click();
       const afterClear = selectedChips();
+      const nextLabelActive = document.getElementById('loadout-next')?.textContent || '';
 
       // ── COMPANIONS PHASE (warm pool) ──
       document.getElementById('loadout-next')?.click();
@@ -79,6 +85,7 @@ const check = (name, pass, extra) => {
       const overlayHidden = document.getElementById('loadout-overlay').classList.contains('hidden');
       return {
         wCount, chipCount, afterTwoPicks, sameTitleNode, noForeignCards, afterClear,
+        nextLabelEmpty, nextLabelActive,
         compTitle, chromeSurvived, cCount, compInSlots, confirmLabel,
         confirmed, overlayHidden,
         stateOk: ls.phase === 'companions',
@@ -98,6 +105,9 @@ const check = (name, pass, extra) => {
     check('chrome node identity survives a pick — hosts re-populate, panel never rebuilds (§5.1)',
       probe.sameTitleNode);
     check('clearing slot 0 via chip unselects it', probe.afterClear === 1, `got ${probe.afterClear}`);
+    check('weapons Next button always has a visible label — skeleton builds it empty, phase render stamps it (v2.19.9)',
+      probe.nextLabelEmpty.length > 0 && probe.nextLabelActive.length > 0,
+      `inactive:"${probe.nextLabelEmpty}" active:"${probe.nextLabelActive}"`);
     check('Next switches to companions phase on the same chrome',
       probe.compTitle.includes('Companions') && probe.chromeSurvived && probe.stateOk);
     check('companion grid renders as widget cards', probe.cCount > 0);

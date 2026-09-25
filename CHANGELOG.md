@@ -2,6 +2,31 @@
 
 ---
 
+## v2.19.9 — Loadout fix: weapons-phase Next button rendered with no label
+**Date:** September 25, 2026
+**Status:** ✅ Complete (step5 12/12 incl. the new label pin; battery green; verify green)
+
+### The bug (user-reported, screenshots)
+On the loadout screen's weapons phase, the bottom action button rendered as an **empty green
+bar** — no text. The companions phase was fine ("⚔️ Start Combat") because `_renderCompanions()`
+stamps its label every render.
+
+**Root cause** — the v2.17.0 chrome migration moved both action buttons into the
+`_ensureChrome()` skeleton **empty** (the pre-migration labels were inline in the old markup,
+and the weapons-phase label was silently dropped). `_renderWeapons()` toggled `.active` +
+onclick but never set `textContent` — so the skeleton's empty `<button>` shipped as a bare bar
+the moment ≥1 weapon was selected (green `.active`; with 0 weapons it was an empty dark bar,
+just less noticeable). The step5 suite never caught it: it asserted the confirm button's label
+but not the Next button's.
+
+**Fix** — one line in `_renderWeapons()`: `nextBtn.textContent = canProceed ? '▶ Companions' :
+'Select a weapon'` — mirroring the companions phase's per-render stamp; the inactive state also
+gains an honest hint instead of an unlabeled button.
+
+**Regression pin** — `step5_loadout_widgets` 11→12 checks: the Next button must carry a
+non-empty label in BOTH states (0 weapons inactive, 1 weapon active). Proven non-vacuous:
+label assignment commented out → suite RED → restored byte-identically.
+
 ## v2.19.8 — B2 closed: visual probe slice 2 (boss/level-up/end/shop + HUD regions)
 **Date:** September 24, 2026
 **Status:** ✅ Complete (visual_probe 22/22; battery 13 suites green incl. strict)
