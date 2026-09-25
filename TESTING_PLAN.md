@@ -149,6 +149,7 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step7_title_menu.cjs` — title menu pooled strip + locked-as-DATA (no emission, denial kept) + declared-event funnel + keyboard parity + pool identity + selection-reset (15)
 - 🟩 `save_fuzz.cjs` — B1 save-integrity fuzz: 50 seeded mutants + 5 corrupt-JSON roots → boot survives, v9 lands, phase stays dead; double-boot race preserves totals (57)
 - 🟩 `visual_probe.cjs` — B2 COMPLETE (slice 1 v2.19.6 + slice 2 v2.19.8 + slice 3 v2.19.10): screenshot QA in the battery — structural screenshots (title/town/combat/paused/levelup/boss/end/shop/loadout) into `artifacts/visual_*/` + pixel probes: DOM-layer render checks for the DOM screens, canvas variance + timer/gold/XP text pixels for combat, paused frame-stillness, real-path flows (XP-grant level-up incl. drain, skipToBoss boss spawn, end-screen show, shop catalog on content/shop.json, loadout widget picks), negative control proving the blank detector fires on solid buffers (25)
+- 🟩 `perf_budget.cjs` — B10 (v2.19.14): per-tick CPU cost budgets for the real combat loop (GameLoop's own updateFn/renderFn, wall-timed — vsync-independent, headless-honest), idle + 120-enemy stress through SpawnSystem's entity shape with real defs; budgets ~5–15× baseline but ≤ a frame; heap cap; injected-overload negative control + frozen-state restore re-check (10)
 - Run everything: `npm test` (skip-safe) / `npm run test:strict` (skips fail).
 
 ### 4.8 Save integrity fuzz — 🟩 DONE v2.19.3 (`tests/suites/save_fuzz.cjs`, 57 checks)

@@ -216,7 +216,7 @@ backlog aging.
 | B7 | ~~Widget Inspector (§6.4) + 9-slice skins~~ **DONE v2.19.12 + v2.19.13** | §6.4 shipped as `WidgetRenderer.installInspector()` → `window.__WIDGET_DEBUG__`. 9-slice skins shipped as skin vocabulary v2 (border-image + texture + ornament as CSS custom props; `bazaar_cloth` upgraded w/ 3 authored SVGs; verify skin-asset gate; step3 pins) | — | — |
 | B8 | ~~Consolidate §5.7 + shopData → content/shop.json~~ **DONE v2.19.7** (shop.json via POT-006, 17th content file; §5.7 renderers single-homed in shop.js; audit found the town panel Sandbox button was a dead no-op — now wired through `onSandbox` → `ShopSystem.openSandbox`) | Open map items; §5.5/§5.6 CLOSED v2.19.2 | — | — |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
-| B10 | Perf budget/benchmark for the combat loop | Later; performance not yet a demonstrated pain | M | P3 |
+| B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | WCAG-based accessibility audit of the widget system (extends §4.4/§11) | Later; after content/build phases settle | M | P3 |
 
 ## 11. Improvement log (append; format from TOOLING_MAP §5)
@@ -438,10 +438,30 @@ backlog aging.
   props — the `_rebind` cleanup list grew 2→7). styles.css file-tool flakiness recurred; the
   node-anchored edit pattern (assert count==1 → write → rg-verify) is now the established
   fallback.
-- Change made: v2 vocabulary in _applySkin + _rebind hygiene + ui_skins.json upgrade +
+-  Change made: v2 vocabulary in _applySkin + _rebind hygiene + ui_skins.json upgrade +
   content:sync mirror + 3 SVG assets + styles.css consumption + verify gate 3d + step3 pins;
   docs rides-along (PROJECT_MAP widgetRenderer Content line, TOOLING_MAP verify row,
   TESTING_PLAN §4.9 row 29). CHANGELOG v2.19.13. LESSON: "purely visual" is only free if the
   fallbacks are total — every new prop needs a no-skin default AND a pool-swap cleanup, or the
   art leaks across rebinds the way stale classes did in v1.3.
+
+- Date: 2026-09-25
+- Section affected: tests/suites/perf_budget.cjs (B10) + run_all SUITES — battery 13→14
+- What happened: B10 landed as a budget gate, not a benchmark: headless rAF cadence is
+  vsync-throttled and untrustworthy, so the honest CI metric is per-tick CPU cost — GameLoop's
+  own updateFn(dt)/renderFn(alpha) wall-timed directly with rAF yields between samples.
+  Budgets set from a one-shot baseline (idle update mean 0.02ms; stress-120 update mean 0.58ms,
+  p95 1.30, max 5.90; render 0.25; ~10MB heap) with ~5–15× headroom, still ≤ a frame at p95.
+  Stress = 120 enemies through SpawnSystem's own entity shape with real defs on a real
+  battlefield — deterministic load, no spawn-timer waiting. Max is REPORTED not gated (single
+  GC pauses are noise; sustained p95 is the signal). First draft's negative control wrapped
+  updateFn with busy-loop + orig-call — the sim advanced 20 ticks under overload, enemies died
+  and dropped pickups, and the "restored" re-measure measured a DIFFERENT, organically heavier
+  state (4.26ms vs its own baseline). Fix: pure busy-loop, original NOT called — frozen state
+  makes the restore re-check same-conditions.
+- Change made: perf_budget.cjs (10 checks incl. the in-suite negative control + restore
+  re-check) joined run_all SUITES (14 suites, 426 checks strict green); docs rides-along
+  (TESTING_PLAN §4.9, TOOLING_MAP suite row 13→14). CHANGELOG v2.19.14. LESSON: a negative
+  control that mutates the system under test invalidates its own restore assertion — freeze
+  the state, or account for the mutation.
 ```

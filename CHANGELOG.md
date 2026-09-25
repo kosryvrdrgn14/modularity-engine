@@ -2,6 +2,36 @@
 
 ---
 
+## v2.19.14 — B10 closed: perf budget gate for the combat loop
+**Date:** September 25, 2026
+**Status:** ✅ Complete (perf_budget 10/10; battery 14 suites / 426 checks strict green; verify green)
+
+### The metric (honest for headless CI)
+Headless rAF cadence is vsync-throttled and machine-dependent — an FPS assertion would flake.
+The honest budget for this layer is **per-tick CPU cost**: `GameLoop`'s own
+`updateFn(dt)`/`renderFn(alpha)` wall-timed directly (rAF yields between samples). A breach
+here is precisely "update/render work no longer fits its slice" — what becomes dropped frames
+on real hardware.
+
+### The gate (`tests/suites/perf_budget.cjs`, in the battery — 14 suites)
+Budgets from a one-shot baseline on the harness (script deleted per the one-shot pattern):
+observed idle update mean 0.02ms; stress-120-enemy update mean 0.58ms (p95 1.30, max 5.90);
+render mean 0.25ms; ~10MB heap. Gates sit **~5–15× above observed means but ≤ a frame**:
+idle update ≤1ms, idle render ≤2ms, stress update ≤3ms / p95 ≤8ms / render ≤3ms, heap ≤64MB
+(n/a-tolerant if a browser lacks `performance.memory`). Update **max is reported, not gated**
+— a single GC pause is noise, sustained p95 degradation is the signal.
+
+**Stress load:** 120 enemies spawned through SpawnSystem's own entity shape with real enemy
+defs on a real battlefield (`startGame` → stage_graveyard) — deterministic, no spawn-timer
+waiting. Engagement check requires >60 live enemies so a degenerate kill-off can't fake a pass.
+
+**Negative control (in-suite):** `updateFn` replaced with a pure 6ms busy-loop → the measured
+mean MUST exceed the stress budget (detector proven red-able, no revert dance), then the
+original is restored and the budget must hold again **on the frozen state**. First draft
+wrapped-and-called-through: the sim advanced 20 ticks under overload, enemies died/dropped
+loot, and the "restored" re-measure measured a different, heavier state (4.26ms) — fixed by
+freezing (lesson logged in WORKFLOW §11).
+
 ## v2.19.13 — B7 (part 2, closed): 9-slice skins — skin vocabulary v2
 **Date:** September 25, 2026
 **Status:** ✅ Complete (step3 29/29; battery green; verify green incl. the new skin-asset gate)
