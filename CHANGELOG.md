@@ -2,6 +2,35 @@
 
 ---
 
+## v2.19.10 — Loadout fix: horizontal overflow scrollbars + visual probe slice 3
+**Date:** September 25, 2026
+**Status:** ✅ Complete (visual_probe 25/25; battery green; verify green)
+
+### The bug (second issue from the same user screenshots)
+Horizontal scrollbars at the loadout panel's bottom edge — on desktop too, not just mobile.
+
+**Diagnosis (probe the layer that renders)** — one-off DOM diagnostic (deleted after use) at
+1280×800 and 390×844: `#loadout-slots` scrollWidth **463** vs client 378 (desktop) / 309
+(mobile); panel scrollWidth 483 vs 418. `.loadout-panel` sets only `overflow-y: auto` — which
+per CSS computes `overflow-x` to **auto** — so the panel itself rendered the scrollbar.
+
+**Root cause** — the v2.17.0 widget migration dropped the retired `.loadout-slot { flex: 1 }`
+geometry. The pooled widget chips (themselves flex containers with `min-width: auto`) refuse
+to shrink below their nowrap min-content, so the 3-chip row can never fit its host. The
+`layout-text-only-row` column rule is a no-op inside the flex slot row — the side-by-side look
+comes from flex itself.
+
+**Fix** — one scoped line in the screen's theme section:
+`#loadout-overlay #loadout-slots .widget-card { flex: 1 1 0; min-width: 0; }` — equal thirds,
+shrinkable, and the chip labels' `text-overflow: ellipsis` is active again (it never had room
+to fire pre-fix).
+
+**visual_probe slice 3 (22→25)** — the loadout screen joins the battery (it regressed twice,
+now it's watched): real-path widget-pick scenario + `09_loadout.png`, the v2.19.9 Next-label
+pin re-asserted at the visual layer, and a no-horizontal-overflow pin (slots + panel
+scrollWidth−clientWidth ≤ 1). Negative control: CSS reverted → exactly the overflow pin RED
+(85/65 px) → restored byte-identically.
+
 ## v2.19.9 — Loadout fix: weapons-phase Next button rendered with no label
 **Date:** September 25, 2026
 **Status:** ✅ Complete (step5 12/12 incl. the new label pin; battery green; verify green)

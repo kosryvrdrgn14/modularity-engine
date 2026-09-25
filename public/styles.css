@@ -2039,7 +2039,11 @@
 #loadout-overlay .widget-card .slot-primaryText { color: #ddd; font-size: 11px; margin-top: 3px; }
 #loadout-overlay .widget-card .slot-secondaryText { color: #666; font-size: 9px; margin-top: 2px; }
 /* Slot chips: the retired .loadout-slot metrics (filled bg 0.08, value 12px) */
-#loadout-overlay #loadout-slots .widget-card { padding: 10px 6px; }
+/* v2.19.10: flex:1 1 0 + min-width:0 restore the retired .loadout-slot { flex: 1 }
+   geometry - without them the chip min-width:auto pins the row to its nowrap
+   min-content (~463px) and .loadout-panel implied overflow-x:auto grows a
+   horizontal scrollbar (v2.17.0 migration regression, probed at 2 viewports). */
+#loadout-overlay #loadout-slots .widget-card { padding: 10px 6px; flex: 1 1 0; min-width: 0; }
 #loadout-overlay #loadout-slots .widget-card.widget-selected { background: rgba(76, 175, 80, 0.08); }
 #loadout-overlay #loadout-slots .widget-card .slot-primaryText {
   color: #ccc; font-size: 12px; margin-top: 0;

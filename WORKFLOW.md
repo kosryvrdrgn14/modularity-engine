@@ -352,4 +352,25 @@ backlog aging.
   TESTING_PLAN §4.9 row (12). LESSON: when chrome moves into a persistent skeleton, per-render
   label stamps that lived in the old markup must be re-homed — a suite that checks one button's
   label is not a screen-wide label gate.
+
+- Date: 2026-09-25
+- Section affected: public/styles.css (loadout slot chips) + visual_probe (slice 3)
+- What happened: second loadout regression from the same user screenshots — horizontal
+  scrollbars at the panel's bottom edge. Probed the layer that renders (one-off DOM diagnostic,
+  deleted after use): #loadout-slots scrollWidth 463 vs client 378 at desktop, and the panel
+  scrollWidth 483 vs 418 — .loadout-panel has only overflow-y:auto, which per CSS computes
+  overflow-x to auto, so the panel showed the scrollbar. Root cause: the v2.17.0 migration's
+  widget chips lost the retired .loadout-slot { flex: 1 } geometry — flex children with
+  min-width:auto refuse to shrink below their nowrap min-content, so the row can never fit.
+  (The layout-text-only-row column rule is a no-op inside the flex slot row — the side-by-side
+  look comes from flex itself.)
+- Change made: one scoped line — `#loadout-overlay #loadout-slots .widget-card {
+  flex: 1 1 0; min-width: 0; }` — restoring the retired geometry (equal thirds, shrinkable,
+  ellipsis active again). visual_probe grew 22→25 (slice 3): real-path loadout scenario with
+  `09_loadout.png`, the v2.19.9 Next-label pin re-asserted at the visual layer, and a
+  no-horizontal-overflow pin (slots + panel scrollWidth−clientWidth ≤ 1). Negative control:
+  CSS line reverted → exactly the overflow pin RED (85/65 px) → restored byte-identically.
+  LESSON: a widget-vocabulary migration silently drops retired per-screen geometry; the fix
+  lives in the screen's scoped theme section, and the permanent probe now watches the actual
+  failure (scrollWidth−clientWidth), not a guess.
 ```

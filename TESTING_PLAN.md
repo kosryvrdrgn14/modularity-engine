@@ -148,7 +148,7 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 - 🟩 `step6_shop_tabs.cjs` — shop chips/selected-bind, v1.3 disabled suppression, purchase flow, tab round-trip (former pilot pool bug), def-swap skin evidence (10)
 - 🟩 `step7_title_menu.cjs` — title menu pooled strip + locked-as-DATA (no emission, denial kept) + declared-event funnel + keyboard parity + pool identity + selection-reset (15)
 - 🟩 `save_fuzz.cjs` — B1 save-integrity fuzz: 50 seeded mutants + 5 corrupt-JSON roots → boot survives, v9 lands, phase stays dead; double-boot race preserves totals (57)
-- 🟩 `visual_probe.cjs` — B2 COMPLETE (slice 1 v2.19.6 + slice 2 v2.19.8): screenshot QA in the battery — structural screenshots (title/town/combat/paused/levelup/boss/end/shop) into `artifacts/visual_*/` + pixel probes: DOM-layer render checks for the DOM screens, canvas variance + timer/gold/XP text pixels for combat, paused frame-stillness, real-path flows (XP-grant level-up incl. drain, skipToBoss boss spawn, end-screen show, shop catalog on content/shop.json), negative control proving the blank detector fires on solid buffers (22)
+- 🟩 `visual_probe.cjs` — B2 COMPLETE (slice 1 v2.19.6 + slice 2 v2.19.8 + slice 3 v2.19.10): screenshot QA in the battery — structural screenshots (title/town/combat/paused/levelup/boss/end/shop/loadout) into `artifacts/visual_*/` + pixel probes: DOM-layer render checks for the DOM screens, canvas variance + timer/gold/XP text pixels for combat, paused frame-stillness, real-path flows (XP-grant level-up incl. drain, skipToBoss boss spawn, end-screen show, shop catalog on content/shop.json, loadout widget picks), negative control proving the blank detector fires on solid buffers (25)
 - Run everything: `npm test` (skip-safe) / `npm run test:strict` (skips fail).
 
 ### 4.8 Save integrity fuzz — 🟩 DONE v2.19.3 (`tests/suites/save_fuzz.cjs`, 57 checks)
@@ -161,9 +161,9 @@ Legend: 🟩 exists in the trace · 🟨 partially covered · 🟥 new. "Drive" 
 
 No golden-image gating yet. Instead, cheap deterministic heuristics per screenshot:
 
-> **Status (v2.19.8):** B2 is COMPLETE — `tests/suites/visual_probe.cjs` (in the battery, 22
-> checks) automates items 1–3 across all eight §5.2 structural scenarios (title, town, combat,
-> paused, level-up, boss, end screen, shop) with layer-correct render probes and the blank-
+> **Status (v2.19.10):** B2 is COMPLETE — `tests/suites/visual_probe.cjs` (in the battery, 25
+> checks) automates items 1–3 across all nine §5.2 structural scenarios (title, town, combat,
+> paused, level-up, boss, end screen, shop, loadout) with layer-correct render probes and the blank-
 > detector negative control. What remains open is item 4 only (golden-image diffing), which
 > stays a later-phase decision. The M-list (§9) is untouched — probes verify presence, never
 > aesthetic quality.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ============================================================
 // visual_probe.cjs — B2: screenshot + pixel-probe QA (slice 1 v2.19.6,
-// slice 2 v2.19.8)
+// slice 2 v2.19.8, slice 3 v2.19.10 loadout screen)
 //
 // What automation could not see before this suite (TESTING_PLAN §5):
 //   - whether a screen RENDERS content at all (the blank-preview class)
@@ -287,6 +287,41 @@ const check = (name, pass, extra) => {
       shop.overlay && shop.cards > 0 && shop.gold > 0, JSON.stringify(shop));
     await page.screenshot({ path: path.join(outDir, '08_shop.png') });
     await page.evaluate(() => window.game.townScreen.shopSystem.close());
+
+    // ── 4f. Loadout (v2.19.10, slice 3): the screen that regressed twice —
+    // v2.19.9 empty Next-button label, v2.19.10 horizontal overflow. DOM screen:
+    // probe the DOM layer, through the real widget-pick path (like step5). ──
+    await page.evaluate(() => {
+      const ls = window.game.townScreen.loadoutScreen;
+      ls.show({ stageId: null, onConfirm: () => {}, onBack: () => {} });
+      // Real path: pick two weapons via the declared events on the grid cards.
+      const cards = document.querySelectorAll('#loadout-grid .widget-card');
+      if (cards[0]) cards[0].click();
+      if (cards[1]) cards[1].click();
+    });
+    await page.waitForTimeout(250);
+    const loadout = await page.evaluate(() => {
+      const panel = document.querySelector('#loadout-overlay .loadout-panel');
+      const slots = document.getElementById('loadout-slots');
+      const next = document.getElementById('loadout-next');
+      return {
+        filled: window.game.townScreen.loadoutScreen.selectedWeapons.filter(Boolean).length,
+        nextLabel: (next?.textContent || '').trim(),
+        nextActive: next?.classList.contains('active') === true,
+        // v2.19.10 overflow pin: pre-fix the slot row scrolled (463px min-content
+        // in a 378px host) and the panel grew a horizontal scrollbar.
+        slotsOverflow: slots ? slots.scrollWidth - slots.clientWidth : -1,
+        panelOverflow: panel ? panel.scrollWidth - panel.clientWidth : -1,
+      };
+    });
+    const loadoutShot = path.join(outDir, '09_loadout.png');
+    await page.screenshot({ path: loadoutShot });
+    check('loadout screenshot captured', fs.existsSync(loadoutShot) && fs.statSync(loadoutShot).size > 5000, '');
+    check('loadout Next button carries a visible label when armed (v2.19.9 pin at the visual layer)',
+      loadout.filled > 0 && loadout.nextActive && loadout.nextLabel.length > 0, JSON.stringify(loadout));
+    check('loadout slot row + panel do not horizontally scroll (v2.19.10 pin)',
+      loadout.slotsOverflow <= 1 && loadout.panelOverflow <= 1, JSON.stringify(loadout));
+    await page.evaluate(() => window.game.townScreen.loadoutScreen.hide());
 
     // ── 5. Negative control: the blank-detector must be able to fire ──
     const solidSd = await page.evaluate(() => window.__stdevOf(320, 180, () => [40, 40, 40]));
