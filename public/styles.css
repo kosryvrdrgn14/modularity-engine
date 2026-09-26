@@ -150,36 +150,6 @@
       border: 1px solid rgba(255, 215, 0, 0.12);
       border-radius: 12px;
     }
-    .menu-item {
-      padding: 12px 16px;
-      font-size: 1.1rem;
-      color: #ccc;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      user-select: none;
-    }
-    .menu-item:hover { background: rgba(255, 215, 0, 0.06); }
-    .menu-item.selected {
-      color: #FFD700;
-      background: rgba(255, 215, 0, 0.08);
-      transform: scale(1.02);
-    }
-    .menu-item.selected .menu-arrow { opacity: 1; }
-    .menu-arrow {
-      opacity: 0;
-      transition: opacity 0.15s;
-      font-size: 0.9rem;
-    }
-    .menu-item.locked {
-      color: #7d7d87;
-      cursor: default;
-      font-style: italic;
-    }
-    .menu-item.locked:hover { background: transparent; }
     .menu-lock {
       font-size: 0.85rem;
       margin-left: auto;
@@ -376,23 +346,6 @@
     .town-hdr-meta {
       margin-left: 4px;
     }
-
-    /* ============================================================
-       ZONE 2 & 4: SLIDE-IN PANELS
-       ============================================================ */
-    .town-panel {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 280px;
-      z-index: 8;
-      background: rgba(12, 12, 24, 0.97);
-      backdrop-filter: blur(12px);
-      overflow-y: auto;
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      padding: 12px;
-      padding-bottom: 80px;
-    }
     #town-left-panel {
       position: absolute;
       top: 48px; /* clear the header (z-index 10) — was 0, which let the header cover the top of the panel */
@@ -547,10 +500,42 @@
     .town-toast.toast-quest { border-color: rgba(255, 215, 0, 0.55); }
     .town-toast.toast-unlock { border-color: rgba(102, 187, 106, 0.55); color: #9fe0a4; }
     .town-toast.toast-time { border-color: rgba(79, 195, 247, 0.55); color: #a8d8f0; }
-    .town-toast.toast-leaving {
+    .town-toast.leaving {
       opacity: 0;
       transform: translateY(-8px);
     }
+
+    /* B14 restore (v2.19.26): the cut script's substring bug deleted this LIVE
+       host rule alongside the retired .loadout-slot family. Body verbatim
+       (incl. the v2.19.19 flex-wrap fix). */
+    .loadout-slots {
+      display: flex;
+      flex-wrap: wrap; /* v2.19.19: chips wrap instead of ever pinning the row wide */
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+    /* B14 restore (v2.19.26): RECONSTRUCTED minimal flex hosts — the original
+       bodies were lost to the same cut bug (never re-read post-v2.19.23).
+       Evidence: the v2.19.23 spacing sweep proves #dialogue-choices carried
+       margin-top (now var(--space-4)); neither host had off-scale spacing.
+       Consumer rules survived (chips/cards carry their own padding). */
+    #shop-tabs {
+      display: flex;
+      gap: var(--space-2);
+      padding: 0 var(--space-4);
+    }
+    #dialogue-choices {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+    #dog-dialogue .dog-choices {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
 
     .panel-combat-btn {
       width: 100%;
@@ -938,14 +923,6 @@
       width: 100%;
       margin: 0 auto;
     }
-    #town-companions .section-label {
-      width: 100%;
-      font-size: 0.75rem;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 2px;
-    }
     .companion-slot {
       width: 64px;
       height: 64px;
@@ -1031,36 +1008,6 @@
       font-size: 0.85rem;
       color: #ccc;
       line-height: 1.4;
-    }
-    #dog-dialogue .dog-choices {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    #dog-dialogue .dog-choice {
-      padding: 8px 16px;
-      font-size: 0.85rem;
-      color: #E8A44A;
-      background: rgba(139, 90, 43, 0.12);
-      border: 1px solid rgba(139, 90, 43, 0.3);
-      border-radius: 8px;
-      cursor: pointer;
-      font-family: Georgia, serif;
-      transition: all 0.15s;
-    }
-    #dog-dialogue .dog-choice:hover {
-      background: rgba(139, 90, 43, 0.25);
-      border-color: rgba(139, 90, 43, 0.5);
-      transform: scale(1.02);
-    }
-    #dog-dialogue .dog-choice.ignore {
-      color: #888;
-      border-color: rgba(100, 100, 100, 0.3);
-      background: rgba(60, 60, 60, 0.12);
-    }
-    #dog-dialogue .dog-choice.ignore:hover {
-      background: rgba(60, 60, 60, 0.25);
-      border-color: rgba(100, 100, 100, 0.5);
     }
 
     /* Companion notification */
@@ -1149,29 +1096,6 @@
       line-height: 1.5;
       min-height: 40px;
       font-family: Georgia, serif;
-    }
-    #dialogue-choices {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 16px;
-    }
-    .dialogue-choice {
-      padding: 12px 16px;
-      font-size: 0.88rem;
-      color: #CCC;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: left;
-      font-family: Georgia, serif;
-      transition: all 0.15s;
-    }
-    .dialogue-choice:hover {
-      background: rgba(255, 215, 0, 0.06);
-      border-color: rgba(255, 215, 0, 0.2);
-      color: #FFD700;
     }
     #dialogue-continue {
       display: none;
@@ -1297,16 +1221,6 @@
       background: rgba(255, 215, 0, 0.10);
       border: 1px solid rgba(255, 215, 0, 0.25);
     }
-    #shop-tabs {
-      display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-    .shop-tab {
-      flex: 1; padding: 12px; text-align: center; font-size: 0.8rem;
-      color: #888; cursor: pointer; border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-    }
-    .shop-tab.active { color: #FFD700; border-bottom-color: #FFD700; }
-    .shop-tab:hover { color: #ccc; }
     #shop-items {
       flex: 1; overflow-y: auto; padding: 16px 20px;
       display: flex; flex-direction: column; gap: var(--space-2);
@@ -1325,19 +1239,6 @@
     .shop-item .item-name { color: #eee; font-size: 0.9rem; }
     .shop-item .item-desc { color: #888; font-size: 0.75rem; margin-top: 2px; }
     .shop-item .item-cost { color: #FFD700; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
-
-
-
-
-    /* E1: Farming section */
-    .farming-section {
-      width: 100%;
-      max-width: 600px;
-      margin-top: 12px;
-    }
-    .farming-section .section-label {
-      padding: 0 4px;
-    }
 
 
     /* F1: Sandbox DPS overlay */
@@ -1390,24 +1291,6 @@
       gap: 12px;
       margin-bottom: 16px;
     }
-    .pause-btn {
-      min-width: 300px;
-      text-align: center;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #ddd;
-      border-radius: 6px;
-      padding: 12px 20px;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .pause-btn:hover { background: rgba(255, 255, 255, 0.15); }
-    .pause-btn.primary {
-      background: rgba(76, 175, 80, 0.25);
-      border-color: rgba(76, 175, 80, 0.5);
-      color: #a5d6a7;
-    }
-    .pause-btn.primary:hover { background: rgba(76, 175, 80, 0.4); }
     #pause-hint {
       color: #8a8a94;
       font-size: 12px;
@@ -1425,7 +1308,6 @@
       pointer-events: auto;
     }
     #end-actions.active { display: flex; }
-    #end-actions .pause-btn { min-width: 220px; }
     #levelup-title {
       color: #3B82F6;
       font-size: 28px;
@@ -1540,78 +1422,12 @@
       margin-top: 2px;
     }
 
-    /* Slot indicators */
-    .loadout-slots {
-      display: flex;
-      flex-wrap: wrap; /* v2.19.19: chips wrap instead of ever pinning the row wide */
-      gap: var(--space-2);
-      margin-bottom: var(--space-4);
-    }
-    .loadout-slot {
-      flex: 1;
-      background: #0a0a18;
-      border: 1px solid #2a2a3a;
-      border-radius: 8px;
-      padding: 8px 6px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .loadout-slot:hover { border-color: #FFD700; }
-    .loadout-slot.filled {
-      border-color: #4CAF50;
-      background: rgba(76, 175, 80, 0.08);
-    }
-    .loadout-slot-label {
-      color: #555;
-      font-size: 10px;
-      margin-bottom: 4px;
-    }
-    .loadout-slot-value {
-      color: #ccc;
-      font-size: 12px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .loadout-slot.filled .loadout-slot-value { color: #4CAF50; }
-    .loadout-slot-hint {
-      color: #666;
-      font-size: 9px;
-      margin-top: 3px;
-    }
-
     /* Card grid */
     .loadout-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       margin-bottom: 16px;
-    }
-    .loadout-card {
-      background: #0a0a18;
-      border: 1px solid #2a2a3a;
-      border-radius: 8px;
-      padding: 8px 4px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .loadout-card:hover { border-color: #FFD700; background: rgba(255, 215, 0, 0.05); }
-    .loadout-card.selected {
-      border-color: #4CAF50;
-      background: rgba(76, 175, 80, 0.12);
-    }
-    .loadout-card-icon { font-size: 22px; }
-    .loadout-card-name {
-      color: #ddd;
-      font-size: 11px;
-      margin-top: 3px;
-    }
-    .loadout-card-meta {
-      color: #666;
-      font-size: 9px;
-      margin-top: 2px;
     }
 
     /* Confirm / Next button */
@@ -1973,14 +1789,7 @@
 }
 .gamelog-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
 .gamelog-list { overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
-.gamelog-entry { font-size: 0.75rem; line-height: 1.45; color: #bbb; }
-.gamelog-ts { color: #8a8a94; font-family: Consolas, monospace; font-size: 0.68rem; }
-.gamelog-entry.kind-event { color: #7EE8A2; }
-.gamelog-entry.kind-reward { color: #FFD54F; }
-.gamelog-entry.kind-warn { color: #FFB74D; }
-.gamelog-entry.kind-error { color: #FF6B6B; }
 .gamelog-empty { color: #8a8a94; font-size: 0.78rem; text-align: center; padding: 16px 0; }
-.gamelog-entry.gamelog-prev { opacity: 0.55; }
 .gamelog-divider { color: #7d7d87; font-size: 0.68rem; text-align: center; padding: 4px 0 2px 0;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.08); margin-bottom: 4px; }
 /* ── Widget context-accent palette (§2.6, renderer v1.1) + muted variation ── */
@@ -1997,17 +1806,6 @@
 #gamelog-list .widget-card { background: transparent; box-shadow: none; border: none; padding: 2px 0; min-height: 0; gap: 6px; }
 #gamelog-list .slot-primaryText { font-size: 0.75rem; line-height: 1.45; }
 #gamelog-list .slot-secondaryText { font-family: Consolas, monospace; font-size: 0.68rem; color: #8a8a94; }
-/* B11 sweep (v2.19.17): screen-local text tokens lifted to >=4.5:1 on their real
-   panel backgrounds (#555/#666/#777 -> #8a8a94 real text / #7d7d87 dim-but-interactive).
-   Judged-exempt (decorative or inactive): .menu-lock pictogram, #town-breadcrumb .bc-sep,
-   .loc-arrow, .location-card.locked (opacity .4 + pointer-events none),
-   retired .loadout-slot-* rules. */
-/* ── §10 screen-2 (v2.14.0): pause/end action buttons as widget cards ── */
-/* Structure from the widget system; this screen's theme is scoped here. */
-#pause-actions .widget-card, #end-actions .widget-card {
-  border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04); cursor: pointer; padding: 12px 16px;
-}
 #pause-actions .widget-card.interactive:hover, #end-actions .widget-card.interactive:hover {
   background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 215, 0, 0.55);
 }
@@ -2037,17 +1835,6 @@
 #town-chips .widget-card.gamelog-chip { cursor: pointer; transition: color 0.15s, background 0.15s; }
 #town-chips .widget-card.gamelog-chip:hover { color: #FFD700; background: rgba(255, 215, 0, 0.12); }
 #town-chips .slot-primaryText:empty { display: none; }
-/* ── §10 screen-4 (v2.16.0): dialogue choices as widget cards ── */
-/* Structure from the widget system; this screen's theme is scoped here.
-   Mirrors the retired .dialogue-choice / .dog-choice look exactly. */
-#dialogue-overlay .widget-card,
-#dog-dialogue .widget-card {
-  font-family: Georgia, serif;
-  text-align: left;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.15s;
-}
 #dialogue-overlay .widget-card {
   padding: 8px 16px;
   font-size: 0.88rem;
@@ -2079,17 +1866,6 @@
   font-size: inherit;
   color: inherit;
 }
-/* ── §10 screen-5 (v2.17.0): loadout cards + slot chips as widget cards ── */
-/* Structure from the widget system; this screen's theme is scoped here.
-   Mirrors the retired .loadout-card / .loadout-slot look exactly. */
-#loadout-overlay .widget-card {
-  background: #0a0a18;
-  border: 1px solid #2a2a3a;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-  text-align: center;
-}
 /* v2.19.13: the loadout theme overrides border-radius to 8px - harmless with
    1px borders, but it would CLIP the 9-slice art if a skin is ever applied
    there; restore the vocabulary default for skinned cards (art assumes it). */
@@ -2108,27 +1884,6 @@
 #loadout-overlay .widget-card .slot-icon { font-size: 22px; }
 #loadout-overlay .widget-card .slot-primaryText { color: #ddd; font-size: 11px; margin-top: 3px; }
 #loadout-overlay .widget-card .slot-secondaryText { color: #8a8a94; font-size: 9px; margin-top: 2px; }
-/* Slot chips: the retired .loadout-slot metrics (filled bg 0.08, value 12px) */
-/* v2.19.10: flex:1 1 0 + min-width:0 restore the retired .loadout-slot { flex: 1 }
-   geometry - without them the chip min-width:auto pins the row to its nowrap
-   min-content (~463px) and .loadout-panel implied overflow-x:auto grows a
-   horizontal scrollbar (v2.17.0 migration regression, probed at 2 viewports). */
-#loadout-overlay #loadout-slots .widget-card { padding: 8px 6px; flex: 1 1 0; min-width: 0; }
-/* B11 (v2.19.15): widget-scoped meta/hint text lifted to >=4.5:1 on #0a0a18
-   (WCAG 1.4.3). Was #555/#666 (3.0:1/2.9:1). */
-#loadout-overlay #loadout-slots .widget-card.widget-selected { background: rgba(76, 175, 80, 0.08); }
-#loadout-overlay #loadout-slots .widget-card .slot-primaryText {
-  color: #ccc; font-size: 12px; margin-top: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-#loadout-overlay #loadout-slots .widget-card.widget-selected .slot-primaryText { color: #4CAF50; }
-#loadout-overlay #loadout-slots .widget-card .slot-secondaryText {
-  color: #8a8a94; font-size: 9px; margin-top: 3px;
-  /* v2.19.19: complete the ellipsis spec - nowrap was missing, so the hint
-     WRAPPED to 2 lines ("Tap to / remove") instead of truncating, exactly as
-     seen in the mobile screenshot. */
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 /* ── B12 (v2.19.24): purchase confirmation panel ──
    Full-description reveal surface + qty stepper clamped [1, affordable].
    §12 tokens; stepper/Buy/Cancel ≥44px (§11 coarse-pointer from birth).
@@ -2211,26 +1966,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* ── §10 screen-6 (v2.18.0): shop tabs + stocked items as widget cards ── */
-/* Structure from the widget system; this screen's theme is scoped here.
-   Mirrors the retired .shop-tab / .shop-item look exactly. */
-#shop-tabs .widget-card {
-  flex: 1;
-  text-align: center;
-  font-size: 0.9rem;
-  color: #999;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  padding: 8px 4px;
-  min-height: 0;
-}
-#shop-tabs .widget-card.widget-selected {
-  color: #FFD700;
-  border-bottom-color: #FFD700;
-}
-#shop-tabs .widget-card.interactive:hover { color: #ccc; background: transparent; }
 /* Stocked item cards: the retired .shop-item look (hover gold; cost badge). */
 #shop-items .widget-card {
   background: rgba(255, 255, 255, 0.03);
@@ -2264,32 +1999,12 @@
   --widget-accent-town: #FF9100;
   --widget-accent-dev: #4FC3F7;
 }
-/* ── §10 screen-7 (v2.19.0): title menu entries as widget cards ── */
-/* Structure from the widget system; this screen's theme is scoped here.
-   Mirrors the retired .menu-item / .menu-item.selected look exactly. */
-#title-menu .widget-card {
-  padding: 12px 16px;
-  font-size: 1.1rem;
-  color: #ccc;
-  cursor: pointer;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  box-shadow: none;
-  min-height: 0;
-  gap: 12px;
-  transition: all 0.15s ease;
-  user-select: none;
-  pointer-events: auto; /* locked entries keep their denial sound + tooltip */
-}
 #title-menu .widget-card:hover { background: rgba(255, 215, 0, 0.06); }
 #title-menu .widget-card.widget-selected {
   color: #FFD700;
   background: rgba(255, 215, 0, 0.08);
   transform: scale(1.02);
 }
-/* The ▶ arrow: hidden until its entry is selected (.menu-arrow parity). */
-#title-menu .widget-card .slot-icon { font-size: 0.9rem; opacity: 0; transition: opacity 0.15s; }
 #title-menu .widget-card.widget-selected .slot-icon { opacity: 1; }
 /* Label inherits the card color via the `plain` accent token; entries with a
    colorToken get their bounded token instead (wins over selected gold, like
@@ -2301,10 +2016,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Locked entries: the retired .menu-item.locked look — dim, italic, flat hover.
-   (Base .widget-disabled opacity/pointer-events is intentionally overridden:
-   the denial sound + tooltip ARE the locked interaction.) */
-#title-menu .widget-card.widget-disabled { color: #7d7d87; cursor: default; font-style: italic; }
 #title-menu .widget-card.widget-disabled:hover { background: transparent; }
 /* Meta badges (+100g / DEV): the retired muted small-text look, not pill badges. */
 #title-menu .widget-card .slot-badge {
