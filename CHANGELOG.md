@@ -2,6 +2,37 @@
 
 ---
 
+## v2.19.23 — §12.1 spacing sweep: 57 declarations migrated to the 4-pt scale
+**Date:** September 26, 2026
+**Status:** ✅ Complete (battery 15 suites / 489 checks strict green post-migration; release:check green)
+
+### The pass (public/styles.css)
+Guardrail-approved migration executed as ONE atomic node-script pass (57 declarations),
+with the battery serving screen-level isolation instead of per-cluster commits: 53 layout
+checks across 4 screens × viewports + emulated device, occlusion, visual probe — all green
+first run. Post-pass scan: exactly 1 off-scale declaration remains (the documented 80px
+keep); hairline micro-values (≤6px) reclassified as the §12.1 exception (39 declarations).
+
+### The mapping (now codified in spec §12.1 amendment)
+- Fixed value map: **7→8, 14→16, 18→16, 22→20, 28→24, 32→24**.
+- **10px resolved by ROLE:** dense chips / inner insets / stacked small rows → **8px**
+  (slot chips, slot-btn, gamelog-btn, dialogue widget-card, dock-combat); surfaces /
+  buttons / containers → **12px** (menu items, settings, headers, toasts, cards,
+  pause/dialogue actions, export, title-menu widget cards).
+- Hairline exception: 1/2/3/5/6px are legal — structural rhythm ≠ optical micro-details.
+- Documented keep: `.town-panel { padding-bottom: 80px }` (dock clearance, §12.3).
+
+### Notes
+- The scanner processes multi-declaration lines fully (right-to-left value edits preserve
+  offsets); the only negative margin in the file (−16px) is on-scale and untouched.
+- NaNpx report from §11: **resolved by verification** — no NaNpx/NaN% exists anywhere in
+  `public/` or artifacts as of v2.19.23 (likely fixed incidentally by an earlier release).
+- Truncation design decision (user): cut-off item text will be revealed via tap/hover or
+  deferred to a help button / item glossary — recorded in spec §12.8; the shop-description
+  mobile wrap stays a report line until that lands.
+
+---
+
 ## v2.19.22 — orientation-flip stability gates on the emulated page
 **Date:** September 26, 2026
 **Status:** ✅ Complete (ui_layout_audit 49→53 checks, green; release:check green)

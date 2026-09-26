@@ -629,3 +629,21 @@ backlog aging.
   orientation; profile viewport restored after. All 4 screens pass first run. The
   "fits portrait, scrolls landscape" auto-adjust failure mode is now mechanized.
 ```
+
+### v2.19.23 (Sept 26, 2026) — §12.1 spacing sweep (the approved pass)
+```
+- 57 declarations migrated to the 4-pt scale via one atomic node-script pass (fixed map:
+  7→8, 14→16, 18→16, 22→20, 28→24, 32→24; 10px by ROLE: dense chips/insets→8, surfaces/
+  buttons/containers→12). Battery green first run (489 checks) — screen-level localization
+  came from the gates, not per-cluster commits. Post-pass: exactly 1 off-scale declaration
+  remains (documented 80px town dock clearance); 39 hairline micro-values (≤6px) exempted
+  by the new §12.1 amendment (mapping + hairline exception codified in the spec).
+- NaNpx (§11 pending): RESOLVED BY VERIFICATION — no NaNpx/NaN% anywhere in public/ or
+  artifacts as of v2.19.23. Ghost from a pre-v2.19.18 build state; noted, not chased.
+- User decision recorded (spec §12.8): cut-off item text → tap/hover-to-reveal, or
+  name-priority + help button/glossary. Shop mobile wrap stays a report line until then.
+- LESSON: the mapping-table guardrail made the sweep mechanical — the ONE judgment call
+  (10px by role) was made from the inventory dump BEFORE touching the file, and the
+  post-pass scan + the layout audit's own §12.1 detector verified the destination from
+  two independent directions.
+```

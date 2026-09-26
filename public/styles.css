@@ -51,7 +51,7 @@
       transition: width 0.3s;
     }
     #loading-status {
-      margin-top: 10px;
+      margin-top: 12px;
       font-size: 12px;
       color: #8a8a94;
     }
@@ -159,7 +159,7 @@
       transition: all 0.15s ease;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       user-select: none;
     }
     .menu-item:hover { background: rgba(255, 215, 0, 0.06); }
@@ -301,7 +301,7 @@
     .controls-row span:last-child { color: #bbb; }
     .settings-back {
       margin-top: 12px;
-      padding: 10px;
+      padding: 12px;
       color: #888;
       font-size: 0.9rem;
       text-align: center;
@@ -312,7 +312,7 @@
     .settings-back:hover { color: #FFD700; }
     .settings-danger {
       margin-top: 8px;
-      padding: 10px;
+      padding: 12px;
       color: #c44;
       font-size: 0.85rem;
       text-align: center;
@@ -334,7 +334,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 16px;
+      padding: 12px 16px;
       background: rgba(10, 10, 26, 0.92);
       backdrop-filter: blur(8px);
       border-bottom: 1px solid rgba(255, 215, 0, 0.12);
@@ -434,8 +434,8 @@
     .panel-card {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
+      gap: 12px;
+      padding: 12px 12px;
       background: rgba(20, 18, 30, 0.8);
       border: 1px solid rgba(255, 215, 0, 0.08);
       border-radius: 8px;
@@ -528,8 +528,8 @@
     .town-toast {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
+      gap: 12px;
+      padding: 12px 16px;
       background: rgba(12, 12, 26, 0.95);
       border: 1px solid rgba(255, 215, 0, 0.4);
       border-radius: 10px;
@@ -567,7 +567,7 @@
     .panel-combat-btn:active { opacity: 0.8; transform: scale(0.98); }
     .panel-sandbox-btn {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       background: rgba(30, 30, 50, 0.8);
       color: #aaa;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -671,7 +671,7 @@
       z-index: 2;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
       overflow-y: auto;
       max-width: 500px;
       margin: 0 auto;
@@ -803,7 +803,7 @@
       background: linear-gradient(135deg, rgba(139,0,0,0.3), rgba(204,0,0,0.3));
       border: 1px solid rgba(255, 215, 0, 0.2);
       border-radius: 10px;
-      padding: 4px 14px;
+      padding: 4px 16px;
     }
 
     /* ============================================================
@@ -835,8 +835,8 @@
     /* NPC cards in center area */
     .npc-card {
       display: flex;
-      gap: 14px;
-      padding: 14px;
+      gap: 16px;
+      padding: 16px;
       background: rgba(20, 18, 30, 0.85);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 215, 0, 0.1);
@@ -932,8 +932,8 @@
       position: relative;
       z-index: 2;
       display: flex;
-      gap: 10px;
-      padding: 0 20px 10px;
+      gap: 12px;
+      padding: 0 20px 12px;
       max-width: 600px;
       width: 100%;
       margin: 0 auto;
@@ -1070,7 +1070,7 @@
       left: 50%;
       transform: translate(-50%, -50%) scale(0.9);
       z-index: 200;
-      padding: 20px 32px;
+      padding: 20px 24px;
       background: rgba(20, 18, 30, 0.95);
       backdrop-filter: blur(12px);
       border: 2px solid rgba(255, 215, 0, 0.4);
@@ -1125,8 +1125,8 @@
     }
     #dialogue-header {
       display: flex;
-      gap: 14px;
-      margin-bottom: 14px;
+      gap: 16px;
+      margin-bottom: 16px;
     }
     #dialogue-portrait {
       width: 80px;
@@ -1154,10 +1154,10 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-top: 14px;
+      margin-top: 16px;
     }
     .dialogue-choice {
-      padding: 10px 14px;
+      padding: 12px 16px;
       font-size: 0.88rem;
       color: #CCC;
       background: rgba(255, 255, 255, 0.04);
@@ -1213,8 +1213,8 @@
 
     /* D1: Location cards */
     .location-card {
-      display: flex; align-items: center; gap: 14px;
-      padding: 14px 16px; border-radius: 10px;
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 16px; border-radius: 10px;
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,215,0,0.1);
       cursor: pointer; transition: all 0.2s;
@@ -1241,7 +1241,7 @@
       transition: border-color 0.2s, background 0.2s;
     }
     .battle-card:hover { border-color: rgba(255, 60, 60, 0.6); background: rgba(255, 60, 60, 0.18); }
-    .battle-card-header { display: flex; align-items: center; gap: 10px; }
+    .battle-card-header { display: flex; align-items: center; gap: 12px; }
     .battle-card-icon { font-size: 1.5rem; flex-shrink: 0; }
     .battle-card-info { flex: 1; }
     .battle-card-name { color: #ff6b6b; font-size: 0.95rem; font-weight: 600; }
@@ -1286,7 +1286,7 @@
     #shop-overlay.active { display: flex; }
     #shop-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 20px; border-bottom: 1px solid rgba(255,215,0,0.12);
+      padding: 16px 20px; border-bottom: 1px solid rgba(255,215,0,0.12);
     }
     #shop-header .shop-title { color: #FFD700; font-size: 1.1rem; font-family: Georgia, serif; }
     #shop-header .shop-close { color: #888; cursor: pointer; font-size: 1.5rem; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
@@ -1301,7 +1301,7 @@
       display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.08);
     }
     .shop-tab {
-      flex: 1; padding: 10px; text-align: center; font-size: 0.8rem;
+      flex: 1; padding: 12px; text-align: center; font-size: 0.8rem;
       color: #888; cursor: pointer; border-bottom: 2px solid transparent;
       transition: all 0.2s;
     }
@@ -1313,7 +1313,7 @@
     }
     .shop-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 12px 14px; border-radius: 8px;
+      padding: 12px 16px; border-radius: 8px;
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.06);
       cursor: pointer; transition: all 0.2s;
@@ -1382,13 +1382,13 @@
     #pause-snapshot {
       color: #9a9a9a;
       font-size: 13px;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
     #pause-actions {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-bottom: 14px;
+      gap: 12px;
+      margin-bottom: 16px;
     }
     .pause-btn {
       min-width: 300px;
@@ -1397,7 +1397,7 @@
       border: 1px solid rgba(255, 255, 255, 0.25);
       color: #ddd;
       border-radius: 6px;
-      padding: 10px 20px;
+      padding: 12px 20px;
       cursor: pointer;
       font-size: 0.9rem;
     }
@@ -1552,7 +1552,7 @@
       background: #0a0a18;
       border: 1px solid #2a2a3a;
       border-radius: 8px;
-      padding: 10px 6px;
+      padding: 8px 6px;
       text-align: center;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
@@ -1592,7 +1592,7 @@
       background: #0a0a18;
       border: 1px solid #2a2a3a;
       border-radius: 8px;
-      padding: 10px 4px;
+      padding: 8px 4px;
       text-align: center;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
@@ -1663,7 +1663,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 16px;
 }
 #slot-picker-overlay.active {
   display: flex;
@@ -1680,13 +1680,13 @@
 }
 .slot-card {
   width: 190px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid rgba(255, 215, 0, 0.25);
   border-radius: 12px;
   background: rgba(20, 20, 35, 0.95);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 .slot-card.active {
   border-color: rgba(76, 175, 80, 0.6);
@@ -1712,7 +1712,7 @@
 }
 .slot-stats {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   font-size: 0.78rem;
   color: #bbb;
 }
@@ -1728,7 +1728,7 @@
   flex: 1;
   border: none;
   border-radius: 6px;
-  padding: 7px 8px;
+  padding: 8px 8px;
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 600;
@@ -1755,7 +1755,7 @@
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ccc;
   border-radius: 6px;
-  padding: 8px 22px;
+  padding: 8px 20px;
   cursor: pointer;
   font-size: 0.85rem;
 }
@@ -1773,8 +1773,8 @@
   transform: translateX(-50%);
   z-index: 6000;
   align-items: center;
-  gap: 18px;
-  padding: 12px 18px;
+  gap: 16px;
+  padding: 12px 16px;
   background: rgba(20, 24, 34, 0.95);
   border: 1px solid rgba(255, 213, 79, 0.4);
   border-radius: 10px;
@@ -1803,7 +1803,7 @@
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ddd;
   border-radius: 6px;
-  padding: 7px 16px;
+  padding: 8px 16px;
   cursor: pointer;
   font-size: 0.85rem;
 }
@@ -1850,7 +1850,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border: 1px solid rgba(255, 215, 0, 0.18);
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.12)), var(--widget-skin-bg);
@@ -1901,8 +1901,8 @@
 .widget-card.layout-icon-only .widget-slot:not(.slot-icon) { display: none; }
 .widget-card.layout-text-only-row { grid-auto-flow: column; }
 /* Size tokens (§2.4) — bounded, never arbitrary pixels. */
-.widget-card.size-small { min-height: 40px; padding: 8px 10px; gap: 8px; }
-.widget-card.size-large { min-height: 72px; padding: 16px 18px; }
+.widget-card.size-small { min-height: 40px; padding: 8px 12px; gap: 8px; }
+.widget-card.size-large { min-height: 72px; padding: 16px 16px; }
 /* Slots (§2.1) — optional; :empty collapses (text reflow, §2.7). */
 .widget-slot { min-width: 0; }
 .widget-slot:empty { display: none; }
@@ -1937,18 +1937,18 @@
   background: rgba(10, 10, 26, 0.96); border: 1px solid rgba(255, 215, 0, 0.2);
   border-radius: 10px; padding: 20px;
 }
-.export-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
-.export-empty { text-align: center; padding: 28px 16px; margin: 14px 0;
+.export-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.export-empty { text-align: center; padding: 24px 16px; margin: 16px 0;
   border: 1px dashed rgba(255, 215, 0, 0.25); border-radius: 8px; }
 .export-empty-icon { font-size: 2rem; margin-bottom: 8px; }
 .export-empty-title { color: #FFD700; font-family: Georgia, serif; margin-bottom: 6px; }
 .export-empty-desc { color: #999; font-size: 0.85rem; line-height: 1.5; }
-.export-cards { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
+.export-cards { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
 .export-card-block { border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px; }
 .export-card-head { color: #FFD700; font-size: 0.9rem; margin-bottom: 8px; }
 .export-card-text { white-space: pre-wrap; word-break: break-word; color: #ccc;
   font-size: 0.78rem; line-height: 1.5; background: rgba(0, 0, 0, 0.35);
-  border-radius: 6px; padding: 10px; max-height: 40vh; overflow-y: auto; margin: 0 0 8px 0;
+  border-radius: 6px; padding: 12px; max-height: 40vh; overflow-y: auto; margin: 0 0 8px 0;
   font-family: Consolas, monospace; }
 /* ===== Game log / session console (game_log_system_spec.md 3) ===== */
 .gamelog-chip { cursor: pointer; transition: color 0.15s, background 0.15s; }
@@ -1969,7 +1969,7 @@
 .gamelog-count { color: #8a8a94; font-size: 0.75rem; margin-left: auto; }
 .gamelog-btn {
   background: rgba(255, 255, 255, 0.06); color: #bbb; border: none;
-  border-radius: 6px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;
+  border-radius: 6px; padding: 3px 8px; font-size: 0.75rem; cursor: pointer;
 }
 .gamelog-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
 .gamelog-list { overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -1979,7 +1979,7 @@
 .gamelog-entry.kind-reward { color: #FFD54F; }
 .gamelog-entry.kind-warn { color: #FFB74D; }
 .gamelog-entry.kind-error { color: #FF6B6B; }
-.gamelog-empty { color: #8a8a94; font-size: 0.78rem; text-align: center; padding: 18px 0; }
+.gamelog-empty { color: #8a8a94; font-size: 0.78rem; text-align: center; padding: 16px 0; }
 .gamelog-entry.gamelog-prev { opacity: 0.55; }
 .gamelog-divider { color: #7d7d87; font-size: 0.68rem; text-align: center; padding: 4px 0 2px 0;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.08); margin-bottom: 4px; }
@@ -2006,7 +2006,7 @@
 /* Structure from the widget system; this screen's theme is scoped here. */
 #pause-actions .widget-card, #end-actions .widget-card {
   border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04); cursor: pointer; padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.04); cursor: pointer; padding: 12px 16px;
 }
 #pause-actions .widget-card.interactive:hover, #end-actions .widget-card.interactive:hover {
   background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 215, 0, 0.55);
@@ -2020,7 +2020,7 @@
 /* Layout: #pause-actions is a NEW container (flex column). #end-actions has its own
    original display/visibility rules — never re-declare display here (the audit caught
    exactly that cascade bug: force-shown buried cards). */
-#pause-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+#pause-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }
 #end-actions .widget-card { min-width: 220px; text-align: center; }
 /* ── §10 screen-3 (v2.15.0): town HUD chips as widget cards ── */
 /* The chips ARE .widget-cards now; #town-chips replaces .town-hdr-meta's
@@ -2049,7 +2049,7 @@
   transition: all 0.15s;
 }
 #dialogue-overlay .widget-card {
-  padding: 10px 14px;
+  padding: 8px 16px;
   font-size: 0.88rem;
   color: #CCC;
   background: rgba(255, 255, 255, 0.04);
@@ -2113,7 +2113,7 @@
    geometry - without them the chip min-width:auto pins the row to its nowrap
    min-content (~463px) and .loadout-panel implied overflow-x:auto grows a
    horizontal scrollbar (v2.17.0 migration regression, probed at 2 viewports). */
-#loadout-overlay #loadout-slots .widget-card { padding: 10px 6px; flex: 1 1 0; min-width: 0; }
+#loadout-overlay #loadout-slots .widget-card { padding: 8px 6px; flex: 1 1 0; min-width: 0; }
 /* B11 (v2.19.15): widget-scoped meta/hint text lifted to >=4.5:1 on #0a0a18
    (WCAG 1.4.3). Was #555/#666 (3.0:1/2.9:1). */
 #loadout-overlay #loadout-slots .widget-card.widget-selected { background: rgba(76, 175, 80, 0.08); }
@@ -2195,7 +2195,7 @@
   background: transparent;
   box-shadow: none;
   min-height: 0;
-  gap: 10px;
+  gap: 12px;
   transition: all 0.15s ease;
   user-select: none;
   pointer-events: auto; /* locked entries keep their denial sound + tooltip */

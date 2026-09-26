@@ -364,6 +364,16 @@ aesthetic quality stays a human M-list judgment (TESTING_PLAN §5).
 ### 12.7 Human M-list (never automated)
 - Hierarchy/focal point, breathing room, accent discipline, palette harmony, feedback on
   every action, between-states present. 6-line skim over the visual_probe artifacts.
+### 12.1 amendment (v2.19.23): migration map + hairline exception
+- **Scale migration is a fixed value map** — no per-case taste: 7→8, 14→16, 18→16, 22→20,
+  28→24, 32→24. The ambiguous value is 10px, resolved by ROLE: dense chips / inner insets /
+  stacked small rows → 8px; surfaces / buttons / containers / touch-feel padding → 12px.
+- **HAIRLINE EXCEPTION:** micro-values (1/2/3/5/6px) are LEGAL and exempt from the scale —
+  §12.1 governs structural rhythm; forcing 2px→4px wrecks optical details (borders,
+  badge nudges, chip inner insets). ~39 declarations remain legitimately off-scale under
+  this exception.
+- **Documented keeps:** sub-scale values carrying meaning beyond rhythm stay, with the
+  reason in a CSS comment (the 80px town dock clearance, §12.3 budgeted negative space).
 ### 12.8 Responsive standards (v2.19.19 — the "auto adjust" layer)
 - **Root font pin:** `text-size-adjust: 100%` (+ `-webkit-`) on html/body — mobile
   font-boosting must never re-metric any layout. The §12 probes only mean something if the
@@ -378,3 +388,7 @@ aesthetic quality stays a human M-list judgment (TESTING_PLAN §5).
   pinned row; a row that can never wrap is one long string away from a scrollbar.
 - **Between-state rule, extended:** overflow if content can exceed the panel (§12.6) now
   includes text-metric inflation — the panel must survive longer strings AND larger glyphs.
+- **Truncation disposition (v2.19.23 decision):** where descriptive text wraps on mobile
+  (shop item buff lines), the accepted resolutions are (a) tap/hover-to-reveal the full
+  text, or (b) prioritize the item name and expose details via a help button / item
+  glossary. Wrapping-in-place is acceptable interim state; silent truncation is not.
