@@ -217,7 +217,7 @@ backlog aging.
 | B8 | ~~Consolidate §5.7 + shopData → content/shop.json~~ **DONE v2.19.7** (shop.json via POT-006, 17th content file; §5.7 renderers single-homed in shop.js; audit found the town panel Sandbox button was a dead no-op — now wired through `onSandbox` → `ShopSystem.openSandbox`) | Open map items; §5.5/§5.6 CLOSED v2.19.2 | — | — |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
 | B12 | ~~Truncation-reveal UX~~ **DONE v2.19.24** (user redesign: purchase-CONFIRM dialog with full description + qty stepper [1, affordable], live total, Buy-only commit; cards name-priority + ellipsis; wraps probe PROMOTED to gate; gameLog qty-aware; §12.6 confirm-before-commit pattern codified) | Merged the two user decisions (detail surface + accident protection) into one interaction | — | — |
-| B13 | Touch-target pass: town (9) + shop (5) sub-44px interactive elements to the §11 coarse-pointer minimum | Real-device usability; the v2.19.21 report-only inventory already measures the fix — promote it to a gate after | S–M | P2 |
+| B13 | ~~Touch-target pass~~ **DONE v2.19.25** (`@media (pointer: coarse)` block — 22 enumerated sub-44px targets fixed (town chips/arrows/sandbox/dock-tabs, shop tab cards, loadout chips/back/confirm); touch gate PROMOTED on emulated cells with 20×20 negative control; desktop report-only by design) | S–M | — |
 | B14 | Dead-CSS sweep: retired `.loadout-slot-*` / `.loadout-card-meta` and other orphaned rules | Hygiene; removes "retired but referenced" comment debt; zero user risk | S | P3 |
 | B15 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
@@ -680,4 +680,23 @@ backlog aging.
 - PROCESS NOTE: the 502 mid-append actually landed server-side and the retry
   double-appended this block — 502 retries need a verify-the-prior-write step, not a
   blind re-run.
+```
+
+### v2.19.25 (Sept 26, 2026) — B13: touch targets + gate promotion
+```
+- 22 sub-44px interactive targets fixed via the project's FIRST @media block:
+  @media (pointer: coarse) — min-height 44px per element (town chips 18px→44, arrows
+  33×38→44×44, sandbox 41, dock tabs 43, shop tab cards 36, loadout chips 40, back 23,
+  confirm 43). Chose pointer:coarse over global inflation: 44px is a touch-input
+  requirement (§11), desktop pointer:fine renders byte-identical, and Playwright hasTouch
+  maps to pointer:coarse so the emulated cells enforce exactly the right environment.
+- Gate promoted: touch inventory (report-only since v2.19.21) now gates the 4
+  mobile-emulated cells; desktop stays report-only (precision pointers legitimately allow
+  dense targets). Negative control: synthetic 20×20 button flags, 44×44 sibling doesn't.
+- Methodology catch: the one-off enumerator scanned document-wide and "caught" town
+  elements through open overlays; the battery probe is panel-scoped — the correct model,
+  since elements behind a scrim are untappable. Gate scope matches tappability.
+- LESSON: probes find; environments enforce. A gate only means what its activation
+  environment means — pointer:coarse CSS + hasTouch emulation must match, or the gate
+  enforces the wrong world. Battery 510 checks strict green (layout audit 61→66).
 ```

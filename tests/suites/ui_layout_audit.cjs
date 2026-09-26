@@ -289,11 +289,11 @@ const fs = require('fs');
             const lines = [...new Set(tops)].length;
             if (lines > 1) out.wraps.push({ text: (el.textContent || '').trim().slice(0, 24), lines });
           }
-          // v2.19.21 REPORT-ONLY: §11 coarse-pointer minimum (≥44px) for
-          // interactive elements. Feeds the per-screen promotion/fix decision;
-          // NOT gated — plenty of dense-desktop UI legitimately measures
-          // smaller (chips, back arrows) and whether that is a defect per
-          // screen is a design decision, not a mechanical one.
+          // v2.19.21 (promoted v2.19.25): §11 coarse-pointer minimum (≥44px)
+          // for interactive elements. GATED on the mobile-emulated cells —
+          // pointer:coarse is active there and the v2.19.25 CSS block fixed
+          // every violation. Desktop cells (pointer:fine) stay REPORT-ONLY:
+          // precision pointers legitimately allow dense targets.
           out.touchTargets = [];
           for (const el of panel.querySelectorAll('button, [role="button"], [tabindex]')) {
             const cs = getComputedStyle(el);
@@ -369,6 +369,21 @@ const fs = require('fs');
       negctlWrap.some((w) => (w.text || '').startsWith('WRAPS-')), JSON.stringify(negctlWrap));
     check('negative control: proper ellipsis NOT flagged (nowrap truncates on one line)',
       !negctlWrap.some((w) => (w.text || '').startsWith('ONE-LINE-')), JSON.stringify(negctlWrap));
+
+    // v2.19.25 negative control: touch-target probe must flag a sub-44px control
+    const negctlTouch = await page.evaluate(() => {
+      const host = document.createElement('div');
+      host.id = '__layout_negctl_touch__';
+      host.style.cssText = 'position:fixed;top:0;left:0;width:200px;height:80px;background:#111122;z-index:99997;';
+      host.innerHTML = '<button id="nc-tiny" style="width:20px;height:20px;background:#333;color:#ddd;">✕</button>' +
+        '<button id="nc-big" style="width:44px;height:44px;background:#333;color:#ddd;">OK</button>';
+      document.body.appendChild(host);
+      const res = window.__layoutProbe.analyze(host, { hud: false });
+      host.remove();
+      return res.touchTargets;
+    });
+    check('negative control: sub-44px touch target IS flagged (20×20 button)',
+      negctlTouch.some((t) => (t.el || '').includes('nc-tiny') || (t.w === 20 && t.h === 20)), JSON.stringify(negctlTouch));
 
     // ── Report-first sweep: structural screens × §11 viewports ──
     const SCREENS = [
@@ -455,6 +470,8 @@ const fs = require('fs');
             !mres.overflow.docX && !mres.overflow.panelX, JSON.stringify(mres.overflow));
           check(`[mobile-emulated: ${sc.name}] no half-spec ellipsis wraps (§12.8)`,
             mres.wraps.length === 0, JSON.stringify(mres.wraps));
+          check(`[mobile-emulated: ${sc.name}] touch targets ≥44px (§11 coarse pointer)`,
+            mres.touchTargets.length === 0, JSON.stringify(mres.touchTargets.slice(0, 5)));
           report.screens[`${sc.name}@mobile-emulated`] = mres;
           console.log(`  ◦ [${sc.name} @ mobile-emulated] GATED: gaps=${mres.gaps.length} deadBands=${mres.deadBands.length} contrast=${mres.contrast.length} overflowX=${(mres.overflow.docX || mres.overflow.panelX) ? 'YES!' : 'no'} wraps=${mres.wraps.length} touch<44px=${mres.touchTargets.length} wsRatio=${mres.whitespace ? mres.whitespace.ratio : 'n/a'}`);
           if (mres.touchTargets.length) console.log(`      touch(REPORT): ${JSON.stringify(mres.touchTargets.slice(0, 3))}${mres.touchTargets.length > 3 ? ` …+${mres.touchTargets.length - 3} more` : ''}`);

@@ -2323,3 +2323,22 @@
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   margin-top: 4px;
 }
+
+/* ── §11 coarse-pointer touch targets (v2.19.25, B13) ──
+   44px minimum for interactive elements under (pointer: coarse). Desktop
+   (pointer: fine) is untouched — 44px is a touch-input requirement, not a
+   desktop aesthetic change. Playwright hasTouch profiles map to
+   pointer:coarse, so the battery's emulated cells enforce this block.
+   Enumerated fixes: town chips 18px, town arrows 33x38, sandbox btn 41px,
+   dock tabs 43px, shop tab cards 36px, loadout chips 40px, loadout-back
+   23px, loadout-confirm 43px. */
+@media (pointer: coarse) {
+  #town-chips .widget-card { padding: 12px 16px; min-height: 44px; }
+  .town-arrow { width: 44px; height: 44px; }
+  .panel-sandbox-btn { min-height: 44px; }
+  .dock-tab { min-height: 44px; }
+  #shop-tabs .widget-card { min-height: 44px; }
+  #loadout-overlay #loadout-slots .widget-card { min-height: 44px; }
+  .loadout-back { min-height: 44px; padding: 12px 8px; }
+  .loadout-confirm { min-height: 44px; }
+}

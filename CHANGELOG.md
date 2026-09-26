@@ -2,6 +2,36 @@
 
 ---
 
+## v2.19.25 — B13: coarse-pointer touch targets + gate promotion
+**Date:** September 26, 2026
+**Status:** ✅ Complete (layout audit 61→66; battery 510 strict green; release:check green)
+
+### What landed (public/styles.css — the project's FIRST @media block)
+`@media (pointer: coarse)` with min-height 44px (or explicit width/height for the arrows)
+for every enumerated interactive element: town chips (18→44), town carousel arrows
+(33×38→44×44), sandbox button (41→44), dock tabs (43→44), shop tab cards (36→44), loadout
+slot chips (40→44), loadout-back (23→44), loadout-confirm (43→44). 22 sub-44px targets
+fixed; post-fix enumeration across town/shop/loadout: ZERO rows.
+
+### Why pointer:coarse (not global)
+44px is a touch-input requirement (§11 data-input coarse/fine), not a desktop aesthetic
+class — inflating globally would re-layout every dense desktop screen for no benefit.
+Playwright `hasTouch` profiles map to pointer:coarse, so the battery's emulated cells
+enforce exactly the right environment; desktop (pointer:fine) renders byte-identical.
+
+### Gate promotion + negative control
+The v2.19.21 report-only touch inventory is now a GATE on the 4 mobile-emulated cells
+(desktop cells stay report-only — precision pointers legitimately allow dense targets).
+Negative control: a synthetic 20×20 button must flag (proven red-able in-suite); a 44×44
+sibling must not. Layout audit 61→66; battery 510 checks.
+
+### Methodology note
+The one-off enumeration scanned document-wide and caught town elements through the open
+overlays — the battery probe is panel-scoped (correct model: leaked elements behind an
+overlay scrim are untappable anyway). Gate scope matches tappability.
+
+---
+
 ## v2.19.24 — B12: purchase-confirmation dialog + quantity stepper
 **Date:** September 26, 2026
 **Status:** ✅ Complete (step6 10→18 checks; layout audit 53→61; battery 505 strict green; release:check green)
