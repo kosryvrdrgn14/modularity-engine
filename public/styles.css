@@ -6,6 +6,12 @@
       touch-action: none;
       -webkit-user-select: none;
       user-select: none;
+      /* v2.19.19: kill mobile font-boosting at the root - Chromium inflates
+         text up to ~1.6x on text-heavy pages unless pinned to 100%, the prime
+         suspect for the mobile loadout horizontal scrollbar (screenshot-1
+         report; not reproducible headless even with full emulation). */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
     #game-canvas {
       display: block;
@@ -1494,8 +1500,10 @@
       border: 1px solid rgba(255, 215, 0, 0.25);
       border-radius: 14px;
       padding: 20px;
-      width: 90%;
-      max-width: 420px;
+      /* v2.19.19: fluid - fixed 12px gutters at any width (was width:90% +
+         max-width:420px; identical rendered size on desktop, clamps on small
+         screens). */
+      width: min(420px, calc(100% - 24px));
       max-height: 88vh;
       overflow-y: auto;
       box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
@@ -1535,6 +1543,7 @@
     /* Slot indicators */
     .loadout-slots {
       display: flex;
+      flex-wrap: wrap; /* v2.19.19: chips wrap instead of ever pinning the row wide */
       gap: var(--space-2);
       margin-bottom: var(--space-4);
     }
@@ -2113,7 +2122,13 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 #loadout-overlay #loadout-slots .widget-card.widget-selected .slot-primaryText { color: #4CAF50; }
-#loadout-overlay #loadout-slots .widget-card .slot-secondaryText { color: #8a8a94; font-size: 9px; margin-top: 3px; }
+#loadout-overlay #loadout-slots .widget-card .slot-secondaryText {
+  color: #8a8a94; font-size: 9px; margin-top: 3px;
+  /* v2.19.19: complete the ellipsis spec - nowrap was missing, so the hint
+     WRAPPED to 2 lines ("Tap to / remove") instead of truncating, exactly as
+     seen in the mobile screenshot. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 /* ── §10 screen-6 (v2.18.0): shop tabs + stocked items as widget cards ── */
 /* Structure from the widget system; this screen's theme is scoped here.
    Mirrors the retired .shop-tab / .shop-item look exactly. */

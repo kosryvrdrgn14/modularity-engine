@@ -2,6 +2,129 @@
 
 ---
 
+## v2.19.22 — orientation-flip stability gates on the emulated page
+**Date:** September 26, 2026
+**Status:** ✅ Complete (ui_layout_audit 49→53 checks, green; release:check green)
+
+### What landed
+Per screen, on the emulated mobile page: flip the device portrait (390×844) ↔ landscape
+(844×390) and gate that NO user-experienced horizontal overflow appears in EITHER
+orientation (profile viewport restored after). The classic auto-adjust failure mode — a
+layout that survives one aspect ratio and scrolls in the other — is now mechanized and
+desktop-independent.
+
+All 4 screens pass both orientations first run.
+
+---
+
+## v2.19.21 — real device emulation in the battery + mobile-emulation gates
+**Date:** September 26, 2026
+**Status:** ✅ Complete (ui_layout_audit 29→49 checks, green; release:check green)
+
+### The gap this closes
+The battery's "mobile" viewports were desktop-shaped windows: `bootGame()` built its context
+with no device emulation — no touch, no DPR, no mobile UA. Mobile report lines therefore
+never saw mobile text metrics (font boosting, touch sizing), which is why the screenshot-1
+defect lived only on real devices.
+
+### What landed
+1. **Harness** (`tests/lib/harness.cjs`): `MOBILE_PROFILES` (iphone13: 390×664 logical,
+   isMobile, hasTouch, DPR 3, iOS UA) + `newMobilePage(browser)` (second emulated page on an
+   existing browser, same console/pageerror net) + `bootGame({ mobile: 'iphone13' })` for
+   whole-boot emulation. Default boot path unchanged — all other 14 suites untouched.
+2. **Layout audit**: injects the probe runtime into the emulated page and runs THE SAME 5
+   gates per screen (gaps/dead-bands/alignment/contrast/overflow) on it — 4 screens × 5 = 20
+   new gated checks. Mobile metrics are now audited with the same rigor as desktop; a
+   regression like the screenshot-1 scrollbar can never again hide in a report line.
+3. **Report-only §11 touch-target inventory**: interactive elements under the 44px
+   coarse-pointer minimum, per screen. First data: title 0, town 9, shop 5, loadout 0 —
+   promotion/fix decisions are design calls (chips, back arrows), queued for unit 4+.
+
+### Notes
+- One real-emulation cell per screen (runs on the desktop viewport iteration; the report's
+  `@mobile-portrait/landscape` rows remain the desktop-shaped sensitivity sweep).
+- The emulated loadout cell passing proves the v2.19.19 ellipsis fix under real mobile text
+  metrics.
+
+---
+
+## v2.19.20 — overflow + half-spec-ellipsis detectors in the layout audit
+**Date:** September 26, 2026
+**Status:** ✅ Complete (ui_layout_audit 22→29 checks, green; release:check green)
+
+### What landed (tests/suites/ui_layout_audit.cjs)
+Two new probes in `__layoutProbe.analyze()`, closing the screenshot-1 defect class:
+1. **overflow** — `scrollWidth > clientWidth` on document AND panel. scrollWidth reports
+   overflowing content even under `overflow:hidden` page clipping, so nothing hides.
+   Desktop-gated (4 new gates, one per screen).
+2. **wraps** (REPORT-ONLY) — text leaves that DECLARE truncation (`text-overflow:ellipsis`
+   + `overflow:hidden`) but actually render >1 line — the half-spec ellipsis class. Report-
+   only because the one live instance (gamelog secondary detail line) wrapping is a design
+   decision, not a defect.
+Three new negative controls: 2000px-child overflow flags; half-spec ellipsis flags; proper
+nowrap ellipsis does NOT flag.
+
+### The defect model (learned via two caught-and-fixed probe bugs)
+- **Overflow ≠ defect when clipped by design.** The first desktop run flagged the town
+  panel (scrollWidth 1560/1280): the location carousel parks `.panel-card`s off-panel under
+  `#town-screen { overflow:hidden }`. That is BY DESIGN — unreachable-content is the
+  occlusion suite's job. Final model: overflow is a defect when the USER can experience it
+  — `overflow-x: auto/scroll` (a real scrollbar, exactly the screenshot-1 class) or
+  `visible` (layout leak); `hidden` skips the panel check. Document-level overflow always
+  flags.
+- **One line can be multiple range rects.** Chrome splits a single line into several client
+  rects at the truncation boundary (95px + 73px, same `top`) — counting rects flagged an
+  ellipsized-on-one-line loadout chip. Line count = DISTINCT rect tops.
+- **Negctl texts must be distinguishable** — both controls' first 24 chars were identical
+  after the report's `slice(0,24)`, so one check passed vacuously. Texts now carry
+  distinguishable `WRAPS-` / `ONE-LINE-` prefixes.
+
+### Report-only state (candidates for future promotion/fixes)
+- shop item descriptions (`.slot-secondaryText` base rule) wrap 2 lines at mobile-portrait —
+  deliberate leave-alone this pass (truncating would hide buff detail); design decision open.
+- All 12 screen×viewport cells clean on overflow; desktop gates green.
+
+---
+
+## v2.19.19 — responsive hardening: text-size-adjust, chip ellipsis, fluid panels
+**Date:** September 26, 2026
+**Status:** ✅ Complete (verified via dedicated repro: chip wrap eliminated at 360×640 AND iPhone-13 emulation; battery re-run pending release:check)
+
+### The trigger
+User-reported mobile loadout (screenshot: weapons phase, narrow viewport): slot chips cramped
+with "Tap to remove" wrapping to two lines, plus a horizontal scrollbar at the panel bottom.
+Investigation findings:
+- **Zero `@media` rules project-wide** — the entire responsive layer was ad-hoc sizing.
+- **Battery mobile viewports were desktop-shaped** — `bootGame()` used `newContext()` with no
+  device emulation (no touch, no DPR, no mobile UA), so mobile report lines never saw mobile
+  text metrics.
+- **Chip hint had half an ellipsis spec** — `.slot-secondaryText` had `overflow:hidden` +
+  `text-overflow` but NO `white-space:nowrap`, so it WRAPPED instead of truncating. The wrap
+  reproduced headless in every config (the one hard repro of the report).
+- **Horizontal scrollbar did NOT reproduce** headless even under full iPhone emulation —
+  v2.19.10's `flex:1 1 0` fix genuinely holds. Prime suspect for the live-device scrollbar:
+  mobile font-boosting (no `text-size-adjust` anywhere in the stylesheet), which inflates
+  chip text and re-pins the row — not observable in desktop-Chromium screenshots.
+
+### Changes (public/styles.css)
+1. Root pin `text-size-adjust: 100%` (+ `-webkit-`) on html/body — kills font-boosting.
+2. `.slot-secondaryText` (loadout chips): completed ellipsis spec — hint truncates on one line.
+3. `.loadout-slots`: `flex-wrap: wrap` — chips can never pin the row wide again.
+4. `.loadout-panel`: fluid width `min(420px, calc(100% - 24px))` — identical desktop render,
+   fixed 12px gutters at any viewport (was `width:90% + max-width:420px`).
+
+### Verification
+Dedicated throwaway repro (filled slots, longest weapon names): `hintWraps` false + chip
+height 55→40px + zero doc/panel overflow in BOTH configs (360×640 desktop-shaped, 390×664
+isMobile+hasTouch+DPR3). Standard battery via release:check.
+
+### Spec
+`widget_ui_system_spec.md` §12.8 "Responsive standards" appended — the mechanizable rules
+this unit establishes (root font pin, fluid panel caps, full-ellipsis-spec rule, row-safety
+rule, extended between-state rule).
+
+---
+
 ## v2.19.18 — UI polish machine: §12 standards + design tokens + layout audit suite
 **Date:** September 25, 2026
 **Status:** ✅ Complete (ui_layout_audit 22/22; battery 15 suites / 458 checks strict green; verify green)

@@ -13,6 +13,36 @@ const path = require('path');
 
 const PUBLIC_DIR = path.resolve(__dirname, '..', '..', 'public');
 
+// v2.19.21: REAL mobile emulation profiles. The battery's "mobile" viewports
+// were desktop-shaped windows (setViewportSize on a plain context — no touch,
+// no DPR, no mobile UA), so mobile report lines never saw mobile text metrics
+// (font boosting, touch targeting). bootGame({ mobile: 'iphone13' }) boots
+// under a true mobile context; the default path is unchanged for all suites.
+const MOBILE_PROFILES = {
+  iphone13: {
+    viewport: { width: 390, height: 664 }, // logical size minus browser chrome
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 3,
+  },
+};
+
+/** Additional page in a REAL mobile context on an existing browser — for
+ *  suites that need emulated-device cells alongside the desktop page. Wires
+ *  the same console/pageerror capture contract as bootGame. */
+async function newMobilePage(browser, { profile = 'iphone13', errors = [] } = {}) {
+  const context = await browser.newContext(MOBILE_PROFILES[profile]);
+  const page = await context.newPage();
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !m.text().includes('Fetch API')) errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('file://' + path.join(PUBLIC_DIR, 'game2.html'));
+  await page.waitForFunction(() => window.game && window.game.gameManager, null, { timeout: 15000 });
+  return { context, page };
+}
+
 /** Boot the real game headless under file:// (pure fallback path) with a
  *  clean storage context. Resolves { page, browser } — caller closes.
  *
@@ -22,7 +52,9 @@ const PUBLIC_DIR = path.resolve(__dirname, '..', '..', 'public');
  *  a save→new-boot assertion against it is always vacuously empty. */
 async function bootGame(opts = {}) {
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
+  const context = await browser.newContext(
+    (opts.mobile && MOBILE_PROFILES[opts.mobile]) || {}
+  );
   // B1 (v2.19.3): pre-boot storage seeding via context init scripts — runs
   // BEFORE any game script on every navigation in this context. The old
   // boot→setItem→reload dance was clobbered by the game's lifecycle saves
@@ -94,4 +126,4 @@ function createRunner({ suiteName }) {
   };
 }
 
-module.exports = { bootGame, STEP_DETECTORS, createRunner, PUBLIC_DIR };
+module.exports = { bootGame, newMobilePage, MOBILE_PROFILES, STEP_DETECTORS, createRunner, PUBLIC_DIR };

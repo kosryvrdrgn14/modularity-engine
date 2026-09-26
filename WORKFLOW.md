@@ -580,3 +580,52 @@ backlog aging.
   negative space" decomposes into "detect unpainted vertical runs" — geometry problems get
   exact once stated as set coverage, not as similarity between boxes.
 ```
+
+### v2.19.19–v2.19.21 (Sept 26, 2026) — responsive analysis layer: probes, emulation, gates
+```
+- Trigger: user asked what's missing from UI analysis ("auto adjust + auto resize to fit
+  onto any screen within reason") + 2 mobile-portrait loadout screenshots (chip hint
+  wrapping, horizontal scrollbar). Investigation findings: ZERO @media rules project-wide;
+  battery "mobile" viewports were desktop-shaped (no device emulation in bootGame);
+  .slot-secondaryText carried HALF an ellipsis spec (overflow+ellipsis, no nowrap → the
+  hint wrapped); the scrollbar did NOT reproduce headless even under full emulation (prime
+  suspect: mobile font-boosting — no text-size-adjust anywhere).
+- v2.19.19 (fix): text-size-adjust:100% root pin; full ellipsis spec on the chip hint;
+  flex-wrap:wrap on .loadout-slots; .loadout-panel width min(420px, calc(100% - 24px)).
+  Proven with a throwaway repro in 2 configs (360×640 + full iPhone emulation): wrap gone
+  (chip 55→40px), zero overflow. Spec §12.8 appended (responsive standards).
+- v2.19.20 (detectors): overflow (doc/panel scrollWidth) + half-spec-ellipsis wrap probes
+  in ui_layout_audit; 3 negative controls. The first gated run caught TWO probe bugs —
+  (1) town overflow 1560/1280 was the location carousel parking cards under
+  overflow:hidden = BY DESIGN → defect model: overflow is a defect iff the user can
+  EXPERIENCE it (overflow-x auto/scroll/visible; hidden skips); (2) Chrome splits one line
+  into multiple range rects at the truncation boundary (95px+73px, same top) → line count
+  is DISTINCT rect TOPS, not rect count; (3) my negctl texts collided in the 24-char
+  report slice → one check passed vacuously until texts got distinct prefixes.
+- v2.19.21 (emulation): harness MOBILE_PROFILES + newMobilePage() + bootGame({mobile});
+  layout audit runs THE SAME 5 gates per screen on a true iPhone-13-class context (20 new
+  gated checks) — mobile metrics audited with desktop rigor. Report-only §11 touch-target
+  inventory: title 0 / town 9 / shop 5 / loadout 0 sub-44px interactive elements.
+- LESSON: "mobile gates" built on a desktop context audit nothing — a gate is only as
+  real as the environment it runs in; device emulation is not an option for UI gates.
+  Second lesson: two of three "failures" in the new detectors were bugs in the DETECTOR,
+  not the UI — the negative-control rule ("suspect the check first") paid for itself
+  twice in one unit. Battery 15 suites / 485 checks strict green (ui_layout_audit
+  22→49). Docs: TESTING_PLAN, TOOLING_MAP, spec §12.8. CHANGELOG v2.19.19/.20/.21.
+```
+
+### v2.19.22 (Sept 26, 2026) — orientation-flip stability gates
+```
+- ui_layout_audit 49→53: per screen, the emulated page flips portrait (390×844) ↔
+  landscape (844×390) and gates no user-experienced horizontal overflow in EITHER
+  orientation; profile viewport restored after. All 4 screens pass first run. The
+  "fits portrait, scrolls landscape" auto-adjust failure mode is now mechanized.
+```
+
+### v2.19.22 (Sept 26, 2026) — orientation-flip stability gates
+```
+- ui_layout_audit 49→53: per screen, the emulated page flips portrait (390×844) ↔
+  landscape (844×390) and gates no user-experienced horizontal overflow in EITHER
+  orientation; profile viewport restored after. All 4 screens pass first run. The
+  "fits portrait, scrolls landscape" auto-adjust failure mode is now mechanized.
+```

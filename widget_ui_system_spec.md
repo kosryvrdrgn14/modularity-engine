@@ -364,3 +364,17 @@ aesthetic quality stays a human M-list judgment (TESTING_PLAN §5).
 ### 12.7 Human M-list (never automated)
 - Hierarchy/focal point, breathing room, accent discipline, palette harmony, feedback on
   every action, between-states present. 6-line skim over the visual_probe artifacts.
+### 12.8 Responsive standards (v2.19.19 — the "auto adjust" layer)
+- **Root font pin:** `text-size-adjust: 100%` (+ `-webkit-`) on html/body — mobile
+  font-boosting must never re-metric any layout. The §12 probes only mean something if the
+  text metrics they measured are the ones users see.
+- **Panel sizing:** overlay panels use fluid caps — `width: min(CAP, 100% - gutters)` —
+  never `width: %` + `max-width` pairs; the cap IS the max, gutters are fixed.
+- **One-line UI declares it:** any text styled as a single line (chip hints, badges, labels)
+  must carry the FULL ellipsis spec — `white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;` — all three or none. Half a spec wraps instead of truncating
+  (the mobile loadout "Tap to remove" defect).
+- **Row safety:** horizontal widget rows get `flex-wrap: wrap` unless the design NEEDS a
+  pinned row; a row that can never wrap is one long string away from a scrollbar.
+- **Between-state rule, extended:** overflow if content can exceed the panel (§12.6) now
+  includes text-metric inflation — the panel must survive longer strings AND larger glyphs.

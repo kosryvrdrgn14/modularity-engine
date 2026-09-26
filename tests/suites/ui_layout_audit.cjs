@@ -21,6 +21,14 @@
 //   whitespace  — content bbox ÷ panel area, REPORTED vs §12.3 targets.
 //   contrast    — §12.5 size-aware WCAG ratio (4.5 body / 3.0 large) against
 //                 the EFFECTIVE background (alpha-stack composite).
+//   overflow    — v2.19.20: horizontal overflow (scrollWidth > clientWidth) on
+//                 document AND panel; scrollWidth reports overflowing content
+//                 even under overflow:hidden clipping. Desktop-gated.
+//   wraps       — v2.19.20 REPORT-ONLY: text leaves that DECLARE truncation
+//                 (text-overflow:ellipsis + overflow:hidden) but actually wrap
+//                 — the mobile "Tap to remove" defect class. Report-only
+//                 because one known live instance (gamelog secondary detail
+//                 line) wrapping is a design decision, not a defect.
 //
 // ROLLOUT: report-first across structural screens × §11 viewports (this
 // version gates nothing on real screens except the negative controls);
@@ -36,8 +44,9 @@ const path = require('path');
 const fs = require('fs');
 
 (async () => {
-  const { bootGame } = require(path.join(__dirname, '..', 'lib', 'harness.cjs'));
+  const { bootGame, newMobilePage, MOBILE_PROFILES } = require(path.join(__dirname, '..', 'lib', 'harness.cjs'));
   const { browser, page, errors } = await bootGame();
+  const { page: mobilePage } = await newMobilePage(browser, { errors });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const outDir = path.join(__dirname, '..', 'artifacts', `ui_layout_${stamp}`);
   fs.mkdirSync(outDir, { recursive: true });
@@ -245,6 +254,56 @@ const fs = require('fs');
               out.contrast.push({ text: (el.textContent || '').trim().slice(0, 24), ratio: Math.round(rr * 100) / 100, min });
             }
           }
+          // v2.19.20: overflow probes — scrollWidth > clientWidth on document
+          // and panel. scrollWidth reports overflowing content even under
+          // overflow:hidden clipping, so the global page clip hides nothing.
+          // Defect model (learned from the town false positive): overflow is a
+          // defect when the USER can experience it — overflow-x auto/scroll
+          // renders a real scrollbar (the screenshot-1 class), visible leaks
+          // layout. overflow-x hidden is a BY-DESIGN clip (the town location
+          // carousel parks cards off-panel under overflow:hidden) — not this
+          // probe's defect; unreachable content is the occlusion suite's job.
+          const de = document.documentElement;
+          const panelOvX = getComputedStyle(panel).overflowX;
+          const panelExperienced = panelOvX === 'auto' || panelOvX === 'scroll' || panelOvX === 'visible';
+          out.overflow = {
+            docX: de.scrollWidth > de.clientWidth + 1,
+            panelX: panelExperienced && panel.scrollWidth > panel.clientWidth + 1,
+            doc: de.scrollWidth + '/' + de.clientWidth,
+            panel: panel.scrollWidth + '/' + panel.clientWidth + ' ovX:' + panelOvX,
+          };
+          // v2.19.20: half-spec ellipsis probe (REPORT-ONLY). A text leaf that
+          // DECLARES truncation (text-overflow:ellipsis + overflow hidden) but
+          // actually renders >1 line is the screenshot-1 defect class — the
+          // spec (§12.8) requires the full three-property ellipsis or none.
+          // Line count = DISTINCT rect tops: Chrome splits one line into
+          // multiple range rects at the truncation boundary (95px + 73px on the
+          // SAME line — counting rects flagged an ellipsized-on-one-line label).
+          out.wraps = [];
+          for (const el of textLeaves(panel)) {
+            const cs = getComputedStyle(el);
+            if (cs.textOverflow !== 'ellipsis' || cs.overflowX !== 'hidden') continue;
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const tops = [...range.getClientRects()].map((r) => Math.round(r.top));
+            const lines = [...new Set(tops)].length;
+            if (lines > 1) out.wraps.push({ text: (el.textContent || '').trim().slice(0, 24), lines });
+          }
+          // v2.19.21 REPORT-ONLY: §11 coarse-pointer minimum (≥44px) for
+          // interactive elements. Feeds the per-screen promotion/fix decision;
+          // NOT gated — plenty of dense-desktop UI legitimately measures
+          // smaller (chips, back arrows) and whether that is a defect per
+          // screen is a design decision, not a mechanical one.
+          out.touchTargets = [];
+          for (const el of panel.querySelectorAll('button, [role="button"], [tabindex]')) {
+            const cs = getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+            const r = el.getBoundingClientRect();
+            if (r.width === 0 || r.height === 0) continue;
+            if (r.width < 44 || r.height < 44) {
+              out.touchTargets.push({ el: ((el.className || el.tagName) + '').slice(0, 34), w: Math.round(r.width), h: Math.round(r.height), text: (el.textContent || '').trim().slice(0, 18) });
+            }
+          }
           return out;
         },
       };
@@ -253,6 +312,7 @@ const fs = require('fs');
 
   try {
     await page.evaluate(probeFns);
+    await mobilePage.evaluate(probeFns); // same probe runtime on the emulated page
 
     // ── Negative controls FIRST: synthetic panel must flag on all four ──
     const negctl = await page.evaluate(() => {
@@ -277,6 +337,38 @@ const fs = require('fs');
       negctl.alignment.leftSpread > 2 || negctl.alignment.rightSpread > 2, JSON.stringify(negctl.alignment));
     check('negative control: low-contrast text IS flagged (#555 on #0a0a18)',
       negctl.contrast.some((c) => c.ratio < 4.5), JSON.stringify(negctl.contrast));
+
+          // v2.19.20 negative control: overflow — the child is 2000px wide in a
+          // 300px host whose overflow-x computes to 'visible' (layout leak).
+          // The town carousel case (overflow:hidden clip) must NOT flag.
+    const negctlOv = await page.evaluate(() => {
+      const host = document.createElement('div');
+      host.id = '__layout_negctl_ov__';
+      host.style.cssText = 'position:fixed;top:0;left:0;width:300px;height:80px;background:#111122;z-index:99997;';
+      host.innerHTML = '<div style="width:2000px;height:20px;background:#0a0a18;color:#ddd;font-size:12px;">oversized child</div>';
+      document.body.appendChild(host);
+      const res = window.__layoutProbe.analyze(host, { hud: false });
+      host.remove();
+      return res.overflow;
+    });
+    check('negative control: horizontal overflow IS flagged (2000px child in 300px host)',
+      negctlOv.panelX === true, JSON.stringify(negctlOv));
+    const negctlWrap = await page.evaluate(() => {
+      const host = document.createElement('div');
+      host.id = '__layout_negctl_wrap__';
+      host.style.cssText = 'position:fixed;top:0;left:0;width:300px;background:#111122;z-index:99997;padding:8px;';
+      host.innerHTML =
+        '<div id="nc-halfspec" style="width:110px;overflow:hidden;text-overflow:ellipsis;color:#ddd;font-size:12px;background:#0a0a18;">WRAPS- this long text overflows its tiny box and wraps</div>' +
+        '<div id="nc-fullspec" style="width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#ddd;font-size:12px;background:#0a0a18;">ONE-LINE- this long text overflows and truncates</div>';
+      document.body.appendChild(host);
+      const res = window.__layoutProbe.analyze(host, { hud: false });
+      host.remove();
+      return res.wraps;
+    });
+    check('negative control: half-spec ellipsis IS flagged (declares truncation, actually wraps)',
+      negctlWrap.some((w) => (w.text || '').startsWith('WRAPS-')), JSON.stringify(negctlWrap));
+    check('negative control: proper ellipsis NOT flagged (nowrap truncates on one line)',
+      !negctlWrap.some((w) => (w.text || '').startsWith('ONE-LINE-')), JSON.stringify(negctlWrap));
 
     // ── Report-first sweep: structural screens × §11 viewports ──
     const SCREENS = [
@@ -307,8 +399,9 @@ const fs = require('fs');
         if (res === null) continue;
         probed++;
         report.screens[`${sc.name}@${vp.name}`] = res;
-        const issues = res.gaps.length + res.deadBands.length + res.contrast.length +
-          ((res.alignment.leftSpread > 2 || res.alignment.rightSpread > 2) ? 1 : 0);
+        const issues = res.gaps.length + res.deadBands.length + res.contrast.length + res.wraps.length +
+          ((res.alignment.leftSpread > 2 || res.alignment.rightSpread > 2) ? 1 : 0) +
+          ((res.overflow.docX || res.overflow.panelX) ? 1 : 0);
         if (vp.name === 'desktop') {
           // §11 promotion: every probe gated on desktop — report-first showed
           // all 4 structural screens clean on all probes (v2.19.18).
@@ -320,13 +413,74 @@ const fs = require('fs');
             res.alignment.leftSpread <= 2 && res.alignment.rightSpread <= 2, JSON.stringify(res.alignment));
           check(`[desktop gate: ${sc.name}] text contrast ≥ WCAG (§12.5)`, res.contrast.length === 0,
             JSON.stringify(res.contrast));
+          check(`[desktop gate: ${sc.name}] no horizontal overflow (doc/panel scrollWidth)`,
+            !res.overflow.docX && !res.overflow.panelX, JSON.stringify(res.overflow));
         }
-        console.log(`  ◦ [${sc.name} @ ${vp.name}] ${vp.name === 'desktop' ? 'GATED' : 'REPORT-ONLY'}: gaps=${res.gaps.length} deadBands=${res.deadBands.length} alignSpread=${res.alignment.leftSpread}/${res.alignment.rightSpread} contrast=${res.contrast.length} wsRatio=${res.whitespace ? res.whitespace.ratio : 'n/a'} → ${issues === 0 ? 'CLEAN' : 'ISSUES'}`);
+        console.log(`  ◦ [${sc.name} @ ${vp.name}] ${vp.name === 'desktop' ? 'GATED' : 'REPORT-ONLY'}: gaps=${res.gaps.length} deadBands=${res.deadBands.length} alignSpread=${res.alignment.leftSpread}/${res.alignment.rightSpread} contrast=${res.contrast.length} overflowX=${res.overflow.docX || res.overflow.panelX ? 'YES!' : 'no'} wraps=${res.wraps.length} wsRatio=${res.whitespace ? res.whitespace.ratio : 'n/a'} → ${issues === 0 ? 'CLEAN' : 'ISSUES'}`);
+        if (res.wraps.length) console.log(`      wraps(REPORT): ${JSON.stringify(res.wraps.slice(0, 4))}`);
         if (res.gaps.length) console.log(`      gaps: ${JSON.stringify(res.gaps.slice(0, 4))}`);
         if (res.deadBands.length) console.log(`      deadBands: ${JSON.stringify(res.deadBands.slice(0, 4))}`);
         if (res.contrast.length) console.log(`      contrast: ${JSON.stringify(res.contrast.slice(0, 4))}`);
+
+        // v2.19.21: real-emulation cell (iPhone 13 profile: isMobile+hasTouch+
+        // DPR3+mobile UA) — the same screen, the same 5 gates, on a TRUE
+        // mobile context, so mobile text metrics (font boosting, touch
+        // sizing) are audited with the same rigor as desktop. One cell per
+        // screen; failure here is exactly the screenshot-1 class. Runs once
+        // (on the desktop iteration of the viewport loop).
+        if (vp.name === 'desktop') {
+        await mobilePage.evaluate(`(() => { const g = window.game; ${sc.setup} })()`);
+        await mobilePage.waitForTimeout(250);
+        const mres = await mobilePage.evaluate(({ panelSel, hud }) => {
+          const panel = document.querySelector(panelSel);
+          if (!panel) return null;
+          const r = panel.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) return null;
+          return window.__layoutProbe.analyze(panel, { hud });
+        }, { panelSel: sc.panel, hud: sc.hud });
+        if (mres === null) {
+          check(`[mobile-emulated: ${sc.name}] panel present under device emulation`, false, `selector ${sc.panel} absent or zero-size`);
+        } else {
+          check(`[mobile-emulated: ${sc.name}] gaps on the §12.1 scale`, mres.gaps.length === 0, JSON.stringify(mres.gaps));
+          check(`[mobile-emulated: ${sc.name}] no dead bands (§12.3)`, mres.deadBands.length === 0, JSON.stringify(mres.deadBands));
+          check(`[mobile-emulated: ${sc.name}] sections aligned (§12.2)`, mres.alignment.leftSpread <= 2 && mres.alignment.rightSpread <= 2, JSON.stringify(mres.alignment));
+          check(`[mobile-emulated: ${sc.name}] text contrast ≥ WCAG (§12.5)`, mres.contrast.length === 0, JSON.stringify(mres.contrast));
+          check(`[mobile-emulated: ${sc.name}] no user-experienced horizontal overflow`,
+            !mres.overflow.docX && !mres.overflow.panelX, JSON.stringify(mres.overflow));
+          report.screens[`${sc.name}@mobile-emulated`] = mres;
+          console.log(`  ◦ [${sc.name} @ mobile-emulated] GATED: gaps=${mres.gaps.length} deadBands=${mres.deadBands.length} contrast=${mres.contrast.length} overflowX=${(mres.overflow.docX || mres.overflow.panelX) ? 'YES!' : 'no'} wraps=${mres.wraps.length} touch<44px=${mres.touchTargets.length} wsRatio=${mres.whitespace ? mres.whitespace.ratio : 'n/a'}`);
+          if (mres.touchTargets.length) console.log(`      touch(REPORT): ${JSON.stringify(mres.touchTargets.slice(0, 3))}${mres.touchTargets.length > 3 ? ` …+${mres.touchTargets.length - 3} more` : ''}`);
+
+          // v2.19.22: orientation-flip stability — the same screen on the
+          // emulated page flipped portrait ↔ landscape; user-experienced
+          // horizontal overflow must not appear in EITHER orientation (the
+          // classic auto-adjust failure mode: a layout that survives one
+          // aspect ratio and scrolls in the other).
+          await mobilePage.setViewportSize({ width: 390, height: 844 });
+          await mobilePage.waitForTimeout(200);
+          const flipP = await mobilePage.evaluate(({ panelSel, hud }) => {
+            const p = document.querySelector(panelSel);
+            return p && p.getBoundingClientRect().width > 0 ? window.__layoutProbe.analyze(p, { hud }).overflow : null;
+          }, { panelSel: sc.panel, hud: sc.hud });
+          await mobilePage.setViewportSize({ width: 844, height: 390 });
+          await mobilePage.waitForTimeout(200);
+          const flipL = await mobilePage.evaluate(({ panelSel, hud }) => {
+            const p = document.querySelector(panelSel);
+            return p && p.getBoundingClientRect().width > 0 ? window.__layoutProbe.analyze(p, { hud }).overflow : null;
+          }, { panelSel: sc.panel, hud: sc.hud });
+          await mobilePage.setViewportSize(MOBILE_PROFILES.iphone13.viewport); // restore profile
+          await mobilePage.waitForTimeout(200);
+          check(`[mobile-emulated: ${sc.name}] orientation flip: no user-experienced overflow in portrait or landscape`,
+            !!flipP && !!flipL && !flipP.panelX && !flipL.panelX,
+            JSON.stringify({ portrait: flipP, landscape: flipL }));
+        }
+        }
       }
       await page.evaluate(() => {
+        window.game.townScreen.loadoutScreen.hide?.();
+        window.game.townScreen.shopSystem.close?.();
+      });
+      await mobilePage.evaluate(() => {
         window.game.townScreen.loadoutScreen.hide?.();
         window.game.townScreen.shopSystem.close?.();
       });
