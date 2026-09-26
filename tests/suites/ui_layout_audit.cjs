@@ -233,12 +233,21 @@ const fs = require('fs');
             const band = merged[i].top - merged[i - 1].bottom;
             if (band > deadMax) out.deadBands.push({ band: Math.round(band), at: Math.round(merged[i - 1].bottom) });
           }
-          // alignment (§12.2) — structural blocks share edges within 2px
+          // alignment (§12.2) — structural blocks share edges within 2px.
+          // v2.19.27: CENTER-FRAME exception — a centered overlay (the
+          // slot-picker etc.) legitimately centers blocks of differing
+          // widths; its alignment frame is the shared CENTER AXIS, not the
+          // edges. centerShift = spread of horizontal centers; a panel passes
+          // §12.2 if edges align OR the center axis does (a misaligned panel
+          // fails both). The slotpicker false positive taught this: probing a
+          // horizontal card ROW with edge-spread read 412px of "misalignment"
+          // that was just centering doing its job.
           if (secs.length >= 2) {
             const spread = (arr) => Math.max(...arr) - Math.min(...arr);
             out.alignment = {
               leftSpread: spread(secs.map((x) => Math.round(x.left))),
               rightSpread: spread(secs.map((x) => Math.round(x.right))),
+              centerShift: spread(secs.map((x) => Math.round((x.left + x.right) / 2))),
             };
           }
           // contrast (§12.5) — text leaves, symbol-only + inactive exempt
@@ -385,12 +394,33 @@ const fs = require('fs');
     check('negative control: sub-44px touch target IS flagged (20×20 button)',
       negctlTouch.some((t) => (t.el || '').includes('nc-tiny') || (t.w === 20 && t.h === 20)), JSON.stringify(negctlTouch));
 
+    // v2.19.27 negative control: center-frame alignment — one card knocked off
+    // the shared center axis inside a centered overlay must flag on BOTH models.
+    const negctlCenter = await page.evaluate(() => {
+      const host = document.createElement('div');
+      host.id = '__layout_negctl_center__';
+      host.style.cssText = 'position:fixed;top:0;left:0;width:300px;background:#111122;z-index:99997;display:flex;flex-direction:column;align-items:center;padding:8px;';
+      host.innerHTML =
+        '<div style="width:120px;height:30px;background:#0a0a18;color:#ddd;font-size:12px;line-height:30px;">center a</div>' +
+        '<div style="width:120px;height:30px;margin-left:40px;background:#0a0a18;color:#ddd;font-size:12px;line-height:30px;">center b offset</div>';
+      document.body.appendChild(host);
+      const res = window.__layoutProbe.analyze(host, { hud: false });
+      host.remove();
+      return res.alignment;
+    });
+    check('negative control: center-frame misalignment IS flagged (off-axis card in a centered overlay)',
+      negctlCenter.centerShift > 2 && negctlCenter.leftSpread > 2, JSON.stringify(negctlCenter));
+
     // ── Report-first sweep: structural screens × §11 viewports ──
     const SCREENS = [
       { name: 'title', setup: `g.titleMenu.show();`, panel: '#title-menu', hud: false },
       { name: 'town', setup: `g.titleMenu.hide(); g.gameState.setState('town'); g.townScreen.show();`, panel: '#town-screen', hud: false },
       { name: 'shop', setup: `g.townScreen.shopSystem.openShop();`, panel: '#shop-overlay', hud: false },
       { name: 'loadout', setup: `g.townScreen.shopSystem.close(); g.townScreen.loadoutScreen.show({stageId:null,onConfirm:()=>{},onBack:()=>{}});`, panel: '.loadout-panel', hud: false },
+      // B15 (v2.19.27): the save-slot picker — user-reported mobile clipping
+      // (both edges cut under the centered overlay). Real path: titleMenu →
+      // Play → _showSlotPicker(). Panel = the grid itself.
+      { name: 'slotpicker', setup: `g.titleMenu.show(); if (g.titleMenu._showSlotPicker) g.titleMenu._showSlotPicker();`, panel: '#slot-picker-overlay', hud: false }, // overlay: centered frame — column of title/grid/close
     ];
     const VIEWPORTS = [
       { name: 'desktop', width: 1280, height: 800 },
@@ -414,8 +444,9 @@ const fs = require('fs');
         if (res === null) continue;
         probed++;
         report.screens[`${sc.name}@${vp.name}`] = res;
+        const aligned = (res.alignment.leftSpread <= 2 && res.alignment.rightSpread <= 2) || res.alignment.centerShift <= 2;
         const issues = res.gaps.length + res.deadBands.length + res.contrast.length + res.wraps.length +
-          ((res.alignment.leftSpread > 2 || res.alignment.rightSpread > 2) ? 1 : 0) +
+          (!aligned ? 1 : 0) +
           ((res.overflow.docX || res.overflow.panelX) ? 1 : 0);
         if (vp.name === 'desktop') {
           // §11 promotion: every probe gated on desktop — report-first showed
@@ -424,8 +455,9 @@ const fs = require('fs');
             JSON.stringify(res.gaps));
           check(`[desktop gate: ${sc.name}] no dead bands (§12.3)`, res.deadBands.length === 0,
             JSON.stringify(res.deadBands));
-          check(`[desktop gate: ${sc.name}] sections aligned (§12.2)`,
-            res.alignment.leftSpread <= 2 && res.alignment.rightSpread <= 2, JSON.stringify(res.alignment));
+          check(`[desktop gate: ${sc.name}] sections aligned (§12.2 — edges or center axis)`,
+            (res.alignment.leftSpread <= 2 && res.alignment.rightSpread <= 2) || res.alignment.centerShift <= 2,
+            JSON.stringify(res.alignment));
           check(`[desktop gate: ${sc.name}] text contrast ≥ WCAG (§12.5)`, res.contrast.length === 0,
             JSON.stringify(res.contrast));
           check(`[desktop gate: ${sc.name}] no horizontal overflow (doc/panel scrollWidth)`,
@@ -464,7 +496,9 @@ const fs = require('fs');
         } else {
           check(`[mobile-emulated: ${sc.name}] gaps on the §12.1 scale`, mres.gaps.length === 0, JSON.stringify(mres.gaps));
           check(`[mobile-emulated: ${sc.name}] no dead bands (§12.3)`, mres.deadBands.length === 0, JSON.stringify(mres.deadBands));
-          check(`[mobile-emulated: ${sc.name}] sections aligned (§12.2)`, mres.alignment.leftSpread <= 2 && mres.alignment.rightSpread <= 2, JSON.stringify(mres.alignment));
+          check(`[mobile-emulated: ${sc.name}] sections aligned (§12.2 — edges or center axis)`,
+            (mres.alignment.leftSpread <= 2 && mres.alignment.rightSpread <= 2) || mres.alignment.centerShift <= 2,
+            JSON.stringify(mres.alignment));
           check(`[mobile-emulated: ${sc.name}] text contrast ≥ WCAG (§12.5)`, mres.contrast.length === 0, JSON.stringify(mres.contrast));
           check(`[mobile-emulated: ${sc.name}] no user-experienced horizontal overflow`,
             !mres.overflow.docX && !mres.overflow.panelX, JSON.stringify(mres.overflow));
@@ -504,10 +538,14 @@ const fs = require('fs');
       await page.evaluate(() => {
         window.game.townScreen.loadoutScreen.hide?.();
         window.game.townScreen.shopSystem.close?.();
+        const sp = document.getElementById('slot-picker-overlay');
+        if (sp) sp.classList.remove('active');
       });
       await mobilePage.evaluate(() => {
         window.game.townScreen.loadoutScreen.hide?.();
         window.game.townScreen.shopSystem.close?.();
+        const sp = document.getElementById('slot-picker-overlay');
+        if (sp) sp.classList.remove('active');
       });
     }
     check('layout audit ran non-vacuously across screens/viewports', probed >= 8, `probed=${probed}`);

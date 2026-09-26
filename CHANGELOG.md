@@ -2,6 +2,42 @@
 
 ---
 
+## v2.19.27 — B15: save-slot picker mobile clipping (user-reported) + picker gated
+**Date:** September 26, 2026
+**Status:** ✅ Complete (layout audit 66→81; battery 525 strict green; release:check green)
+
+### The report (user manual-testing session, with screenshot)
+On a real phone (vertical browser), the save-slot picker clipped BOTH edges: the
+`.slot-picker-grid` was a nowrap flex row of three fixed 190px cards (602px min-content)
+inside a `justify-content:center` fixed overlay — centered overflow cannot scroll, so
+Slot 1's CURRENT badge and actions were partially unreachable. The dialog had never been
+in the battery's screen matrix, and the B13 touch enumeration had missed its controls.
+
+### Fixes
+1. **`.slot-picker-grid`** → the §12.8 auto-fit pattern, deployed for real:
+   `repeat(auto-fit, minmax(min(170px, 100%), 190px))` + `justify-content:center` —
+   3-across on desktop, ONE centered column on phones; cards `width:100%; max-width:190px`.
+2. **Touch targets**: `.slot-btn` / `.slot-close` added to the pointer:coarse 44px block.
+3. **Gated**: `slotpicker` added to the layout-audit screen matrix (real path:
+   `titleMenu.show() → _showSlotPicker()`) — 6 desktop gates + emulated cell incl. touch
+   and orientation-flip. Battery 510→525.
+
+### Probe model addition: center-frame alignment (§12.2)
+Gating the picker exposed a probe-model gap: a centered overlay legitimately centers
+blocks of DIFFERING widths — its alignment frame is the shared CENTER AXIS, not the
+edges (edge-spread read 412px of "misalignment" that was centering doing its job).
+`analyze()` now reports `centerShift` (spread of horizontal centers) and §12.2 passes if
+edges align OR the center axis does; negative control: an off-axis card in a centered
+overlay fails BOTH models. No existing screen changed verdicts.
+
+### Process notes
+- User's manual test caught in minutes what the battery couldn't see — the screen wasn't
+  in the matrix. Manual testing and gates are complements, not substitutes.
+- The slot-picker overlay is runtime-built (titleMenu_refactored.js) — PROJECT_MAP
+  dynamic-create entries for slot-picker-overlay/slot-picker-close verified present.
+
+---
+
 ## v2.19.26 — B14: dead-CSS sweep + toast fade-out bug fix (with an incident, honestly logged)
 **Date:** September 26, 2026
 **Status:** ✅ Complete (battery 510 strict green post-recovery; release:check green)

@@ -219,7 +219,8 @@ backlog aging.
 | B12 | ~~Truncation-reveal UX~~ **DONE v2.19.24** (user redesign: purchase-CONFIRM dialog with full description + qty stepper [1, affordable], live total, Buy-only commit; cards name-priority + ellipsis; wraps probe PROMOTED to gate; gameLog qty-aware; §12.6 confirm-before-commit pattern codified) | Merged the two user decisions (detail surface + accident protection) into one interaction | — | — |
 | B13 | ~~Touch-target pass~~ **DONE v2.19.25** (`@media (pointer: coarse)` block — 22 enumerated sub-44px targets fixed (town chips/arrows/sandbox/dock-tabs, shop tab cards, loadout chips/back/confirm); touch gate PROMOTED on emulated cells with 20×20 negative control; desktop report-only by design) | S–M | — |
 | B14 | ~~Dead-CSS sweep~~ **DONE v2.19.26** (`tools/css_sweep.cjs` permanent read-only tool; 64 retired blocks removed; +1 REAL bug found and fixed — toast fade-out was dead, `.toast-leaving` renamed to the runtime's plain `leaving`; incident: first cut script's substring+comment matching deleted 12 live comment-adjacent rules — battery caught it in one run, recovered from widget_preview artifacts, full lessons §11) | S | — |
-| B15 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
+| B15 | ~~Save-slot picker mobile clipping~~ **DONE v2.19.27** (user-reported with screenshot: centered nowrap grid clipped both edges on phones → auto-fit grid stacks to one centered column; slot-btn/slot-close added to pointer:coarse 44px block; picker GATED in the layout-audit matrix, 510→525 checks; probe model gained center-frame §12.2 — centered overlays align on the CENTER AXIS, edges-or-center pass, negative control added) | Real-device finding the matrix couldn't see — the dialog was never a battery screen | S | — |
+| B16 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -729,4 +730,26 @@ backlog aging.
   discipline of "a gate is done when its negative control proved it can go red" applies
   to maintenance tools too: without the gates, this incident ships silently and some
   future session debugs invisible title-menu text.
+```
+
+### v2.19.27 (Sept 26, 2026) — B15: slot-picker mobile clipping (user-reported)
+```
+- User's manual test (real phone, vertical) caught in minutes what the battery could
+  never see: the save-slot picker was NOT in the screen matrix, so every gate since
+  v2.19.18 had silently skipped it. Screenshot showed both edges clipped under the
+  centered overlay (nowrap flex row, 3×190px fixed cards, justify-content:center —
+  centered overflow can't scroll, Slot 1 partially untappable).
+- Fix: the §12.8 auto-fit pattern deployed for real (repeat(auto-fit,
+  minmax(min(170px,100%),190px)) + justify-content:center — stacks to ONE centered
+  column on phones); slot-btn/slot-close into the pointer:coarse 44px block; picker
+  GATED in the layout audit (real path titleMenu→_showSlotPicker), 510→525 checks.
+- Probe model addition: center-frame §12.2 — a centered overlay's alignment frame is
+  the shared CENTER AXIS, not edges (edge-spread read 412px of "misalignment" that was
+  centering working). analyze() reports centerShift; §12.2 passes edges OR center;
+  negative control: off-axis card in a centered overlay fails both models. No existing
+  screen changed verdicts.
+- LESSON: "a screen that isn't in the matrix is ungoverned" — the battery's coverage is
+  enumerated, not global; every new screen/dialog must join the matrix at birth or it
+  lives outside all gates. Manual testing fills exactly this gap until it's filed.
+  Complement, not substitute.
 ```

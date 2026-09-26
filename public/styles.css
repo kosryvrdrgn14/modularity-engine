@@ -1492,11 +1492,21 @@
   letter-spacing: 0.5px;
 }
 .slot-picker-grid {
-  display: flex;
+  /* B15 (v2.19.27): auto-fit grid — 3 cards across when they fit, stacking to
+     ONE centered column on narrow viewports. Was a nowrap flex row whose
+     3×190px min-content clipped BOTH edges under a centered fixed overlay
+     (unscrollable — Slot 1 was partially untappable on phones). */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 190px));
+  justify-content: center;
   gap: 16px;
+  padding: 0 16px;
+  width: 100%;
+  max-width: 100%;
 }
 .slot-card {
-  width: 190px;
+  width: 100%; /* B15: fill the auto-fit track; capped by max-width */
+  max-width: 190px;
   padding: 16px;
   border: 1px solid rgba(255, 215, 0, 0.25);
   border-radius: 12px;
@@ -2053,6 +2063,10 @@
   #loadout-overlay #loadout-slots .widget-card { min-height: 44px; }
   .loadout-back { min-height: 44px; padding: 12px 8px; }
   .loadout-confirm { min-height: 44px; }
+  /* B15 (v2.19.27): save-slot picker controls — missed in the v2.19.25
+     enumeration because this dialog was not in the battery screen matrix. */
+  .slot-btn { min-height: 44px; }
+  .slot-close { min-height: 44px; }
 }
 
 /* ── B14 restore: comment-adjacent live rules (v2.19.26 recovery) ──

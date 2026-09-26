@@ -1,16 +1,35 @@
 # PROGRESS REPORT — TEMP (Claude handoff + manual-test session)
 
 **Created:** September 26, 2026, immediately after v2.19.26 shipped green.
+**UPDATED mid-test:** v2.19.27 shipped — see "MID-TEST FIX" below.
 **Delete after the manual test** (or keep as session notes — owner's call).
+
+---
+
+## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
+
+**Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap
+flex row of three fixed 190px cards inside a CENTERED overlay — on your phone's ~363px
+visible width it clipped BOTH edges, and centered overflow can't scroll, so Slot 1 was
+partially untappable. The dialog had never been in the battery's screen matrix (that's
+why every gate since v2.19.18 skipped it).
+- **Fix:** auto-fit grid — 3-across on desktop, ONE centered column on phones; cards
+  capped at 190px; `+ slot-btn/slot-close` added to the 44px touch block.
+- **Gated:** `slotpicker` is now a battery screen (desktop gates + emulated iPhone cell
+  + orientation flip). Probe model gained "center-frame alignment" (centered overlays
+  align on the center axis, not edges) with its own negative control.
+- **Battery:** 510 → **525 checks**, release:check green.
+- **Re-test on your phone:** reload, Play → slot picker — all 3 slots should stack in
+  one centered column, nothing clipped, all buttons tappable.
 
 ---
 
 ## TL;DR state
 
-- **Version:** v2.19.26 · `release:check` GREEN · battery **510 checks / 15 suites, strict green**
-- **Backlog:** B1–B14 **all closed** — zero open items (§10 of WORKFLOW.md)
-- **This session shipped:** v2.19.19 → v2.19.26 (responsive hardening → overflow/ellipsis detectors → device emulation gates → orientation gates → §12.1 spacing sweep → purchase-confirm dialog + qty stepper → touch targets → dead-CSS sweep)
-- Battery growth this session: 458 → 510 checks (layout audit 22 → 66; step6 10 → 18)
+- **Version:** v2.19.27 · `release:check` GREEN · battery **525 checks / 15 suites, strict green**
+- **Backlog:** B1–B15 **all closed** — zero open items (§10 of WORKFLOW.md)
+- **This session shipped:** v2.19.19 → v2.19.27 (responsive hardening → overflow/ellipsis detectors → device emulation gates → orientation gates → §12.1 spacing sweep → purchase-confirm dialog + qty stepper → touch targets → dead-CSS sweep → slot-picker fix)
+- Battery growth this session: 458 → 525 checks (layout audit 22 → 81; step6 10 → 18)
 
 ## Manual-test menu (highest value first)
 
@@ -77,7 +96,8 @@ the desc line entirely (name-priority purity)? The confirm panel always has the 
 
 ## If you find a defect in manual testing
 
-House rules apply: file it in WORKFLOW §10 (ID B15+) with "why/effort/priority", don't
-hot-fix mid-test; screenshot both desktop and phone if it's visual. Mobile findings are
-especially valuable now — the emulated gates cover iPhone-13-class; real-device variance
-(font boosting quirks, safe areas, viewport quirks) is the one thing the battery can't see.
+House rules apply: file it in WORKFLOW §10 (ID B17+ — B15 slot-picker and B16
+golden-image-declined are taken) with "why/effort/priority". The slot-picker catch proves
+the value: any dialog/screen not yet in the battery matrix is ungoverned — report it and
+it gets fixed AND gated in the same unit. Real-device findings (font boosting quirks,
+safe areas, viewport chrome) are the one class emulation can't fully cover.
