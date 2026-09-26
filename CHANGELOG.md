@@ -2,6 +2,45 @@
 
 ---
 
+## v2.19.26 — B14: dead-CSS sweep + toast fade-out bug fix (with an incident, honestly logged)
+**Date:** September 26, 2026
+**Status:** ✅ Complete (battery 510 strict green post-recovery; release:check green)
+
+### The find that justified the sweep
+Enumerating orphans surfaced a REAL pre-existing bug: toasts fade out via a plain
+`leaving` class (`toast.classList.add('leaving')` in townContent.js), but CSS styled
+`.town-toast.toast-leaving` — the leave animation has been silently dead since the class
+was renamed at some point. Fixed by renaming the rule to `.town-toast.leaving`
+(v2.19.26) — fade-out restored.
+
+### The sweep (tools/css_sweep.cjs, kept as a permanent manual tool)
+223 classes → 189 runtime-alive, 26 dead candidates, 7 prefix-constructed exempt
+(widgetRenderer string-concat families), 1 test-only (a step5 negative assertion — kept).
+Every candidate cross-checked against dynamic-class construction (`town-toast toast-${kind}`
+proved toast-quest/unlock/time ALIVE; kind-event/reward/warn/error dead — the widget system
+renders severity via `accent: { bind: 'kind' }`, not classes). 64 rule blocks removed.
+
+### The incident (caught by the battery, contained, root-caused, recovered)
+The first cut script had two compounding bugs: it matched dead names as raw SUBSTRINGS
+(`loadout-slots` ⊃ `loadout-slot`) and treated COMMENT text as selector text — 12 live
+rules following comments like "Mirrors the retired .menu-item look" (title-menu,
+shop-tab, loadout-chip, pause/end, dialogue widget themes) were deleted alongside 4 live
+container rules. The battery went red within one run and localized the damage (title
+contrast 1.07, shop-tabs 515/390 overflow, clickability gates). RECOVERY: the
+`widget_preview` artifacts inline the stylesheet — all 12 bodies recovered verbatim with
+session deltas re-applied (v2.19.23 spacing, B11 contrast lifts, v2.19.19 ellipsis);
+container rules restored (one verbatim, three reconstructed minimal flex hosts — and the
+layout gate's overflow failure PROVED the original #shop-tabs wrapped, so flex-wrap was
+added on evidence, not guesswork).
+
+### Net effect
+−64 retired rule blocks, +13 restorations/fixes. `node tools/css_sweep.cjs` stays as the
+read-only sweep tool with the incident rules baked into its header. §11 lessons: never
+delete by substring; strip comments before parsing; per-rule token check (every class in
+a prelude must be dead); artifacts are de-facto backups.
+
+---
+
 ## v2.19.25 — B13: coarse-pointer touch targets + gate promotion
 **Date:** September 26, 2026
 **Status:** ✅ Complete (layout audit 61→66; battery 510 strict green; release:check green)

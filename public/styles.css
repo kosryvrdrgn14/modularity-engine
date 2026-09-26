@@ -521,6 +521,7 @@
        Consumer rules survived (chips/cards carry their own padding). */
     #shop-tabs {
       display: flex;
+      flex-wrap: wrap; /* B14 recovery: original wrapped its flex:1 chips (515/390 overflow without it) */
       gap: var(--space-2);
       padding: 0 var(--space-4);
     }
@@ -2053,3 +2054,60 @@
   .loadout-back { min-height: 44px; padding: 12px 8px; }
   .loadout-confirm { min-height: 44px; }
 }
+
+/* ── B14 restore: comment-adjacent live rules (v2.19.26 recovery) ──
+   The dead-rule cut matched COMMENT text too; these live rules followed
+   comments naming retired classes ("Mirrors the retired X look") and were
+   removed with them. Bodies recovered from the widget_preview artifact
+   (pre-incident) with session deltas re-applied. */
+#pause-actions .widget-card, #end-actions .widget-card {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  padding: 12px 16px; /* v2.19.23 delta (was 10px 18px) */
+}
+#dialogue-overlay .widget-card, #dog-dialogue .widget-card {
+  font-family: Georgia, serif;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+#loadout-overlay .widget-card {
+  background: #0a0a18;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+#loadout-overlay #loadout-slots .widget-card.widget-selected { background: rgba(76, 175, 80, 0.08); }
+#loadout-overlay #loadout-slots .widget-card .slot-primaryText {
+  color: #ccc; font-size: 12px; margin-top: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#loadout-overlay #loadout-slots .widget-card.widget-selected .slot-primaryText { color: #4CAF50; }
+#loadout-overlay #loadout-slots .widget-card .slot-secondaryText {
+  color: #8a8a94; font-size: 9px; margin-top: 3px; /* B11 delta (was #666) */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* v2.19.19 delta */
+}
+#shop-tabs .widget-card.widget-selected { color: #FFD700; border-bottom-color: #FFD700; }
+#shop-tabs .widget-card.interactive:hover { color: #ccc; background: transparent; }
+#title-menu .widget-card {
+  padding: 12px 16px;
+  font-size: 1.1rem;
+  color: #ccc;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  min-height: 0;
+  gap: 12px; /* v2.19.23 delta (was 10px) */
+  transition: all 0.15s ease;
+  user-select: none;
+  pointer-events: auto;
+}
+#title-menu .widget-card .slot-icon { font-size: 0.9rem; opacity: 0; transition: opacity 0.15s; }
+#title-menu .widget-card.widget-disabled { color: #7d7d87; cursor: default; font-style: italic; } /* B11 delta (was #555) */

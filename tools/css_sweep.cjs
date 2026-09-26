@@ -8,6 +8,17 @@
 // them; review those by hand against the renderer before deleting.
 // Also reports classes referenced ONLY by tests (vacuous-assertion risk).
 //
+// B14 INCIDENT LESSON (see WORKFLOW §11): the FIRST cut script matched dead
+// names as raw SUBSTRINGS and treated comment text as selector text — it
+// deleted 12 LIVE rules that merely FOLLOWED comments like "Mirrors the
+// retired .menu-item look" (comment-adjacency), plus 4 live container rules
+// whose names contained dead names (loadout-slots ⊃ loadout-slot).
+// RECOVERY came from widget_preview artifacts, which inline the stylesheet.
+// RULES for any future deletion: (1) strip comments BEFORE matching;
+// (2) match WHOLE selector tokens, never substrings; (3) for each rule to
+// drop, require EVERY class token in its prelude to be on the dead list;
+// (4) run the full battery before calling it done.
+//
 // Usage: node tools/css_sweep.cjs   (read-only — deletes nothing)
 const fs = require('fs');
 const path = require('path');

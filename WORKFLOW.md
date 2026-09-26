@@ -218,7 +218,7 @@ backlog aging.
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
 | B12 | ~~Truncation-reveal UX~~ **DONE v2.19.24** (user redesign: purchase-CONFIRM dialog with full description + qty stepper [1, affordable], live total, Buy-only commit; cards name-priority + ellipsis; wraps probe PROMOTED to gate; gameLog qty-aware; §12.6 confirm-before-commit pattern codified) | Merged the two user decisions (detail surface + accident protection) into one interaction | — | — |
 | B13 | ~~Touch-target pass~~ **DONE v2.19.25** (`@media (pointer: coarse)` block — 22 enumerated sub-44px targets fixed (town chips/arrows/sandbox/dock-tabs, shop tab cards, loadout chips/back/confirm); touch gate PROMOTED on emulated cells with 20×20 negative control; desktop report-only by design) | S–M | — |
-| B14 | Dead-CSS sweep: retired `.loadout-slot-*` / `.loadout-card-meta` and other orphaned rules | Hygiene; removes "retired but referenced" comment debt; zero user risk | S | P3 |
+| B14 | ~~Dead-CSS sweep~~ **DONE v2.19.26** (`tools/css_sweep.cjs` permanent read-only tool; 64 retired blocks removed; +1 REAL bug found and fixed — toast fade-out was dead, `.toast-leaving` renamed to the runtime's plain `leaving`; incident: first cut script's substring+comment matching deleted 12 live comment-adjacent rules — battery caught it in one run, recovered from widget_preview artifacts, full lessons §11) | S | — |
 | B15 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
@@ -699,4 +699,34 @@ backlog aging.
 - LESSON: probes find; environments enforce. A gate only means what its activation
   environment means — pointer:coarse CSS + hasTouch emulation must match, or the gate
   enforces the wrong world. Battery 510 checks strict green (layout audit 61→66).
+```
+
+### v2.19.26 (Sept 26, 2026) — B14: dead-CSS sweep + incident (honestly logged)
+```
+- The sweep justified itself: found a REAL pre-existing bug — toasts add plain 'leaving'
+  but CSS styled .toast-leaving, so the fade-out had been silently dead. Renamed;
+  restored. 223 classes → 189 alive / 26 dead / 7 prefix-exempt / 1 test-only negative
+  assertion. Dynamic-construction check was load-bearing: toast-quest/unlock/time are
+  BUILT as `toast-${kind}` — a literal scan alone would have killed three live rules.
+- THE INCIDENT: the first cut script (a) matched dead names as raw substrings
+  (loadout-slots ⊃ loadout-slot) and (b) treated comment text as selector text, so any
+  live rule following a comment like "Mirrors the retired .menu-item look" was deleted
+  with the comment — 4 container rules + 12 themed widget rules (title-menu contrast
+  1.07, shop-tabs 515/390 overflow). THE BATTERY CAUGHT IT IN ONE RUN and localized
+  every missing rule. Recovery: widget_preview artifacts INLINE the stylesheet — all
+  12 bodies recovered verbatim; session deltas re-applied (v2.19.23 spacing, B11
+  contrast, v2.19.19 ellipsis); the layout gate's overflow failure PROVED the original
+  #shop-tabs had flex-wrap (added on evidence). Two recovery-script lessons: a mutate-
+  without-write bug (in-memory replace, appendFileSync-only) cost a whole cycle — verify
+  on-disk after EVERY mutation; a flaky perf_budget strict failure was green standalone
+  (known autosave-blip class, rerun discipline held).
+- RULES NOW IN tools/css_sweep.cjs HEADER: strip comments before matching; match whole
+  selector tokens, never substrings; a rule may drop only if EVERY class token in its
+  prelude is on the dead list; full battery before "done". Deletion stays a human-
+  reviewed, battery-verified step — the tool reports, it never cuts.
+- LESSON: the sweep's negative control was the battery itself, and it worked exactly
+  as designed — 510 checks red in one run, localized to the 12 missing rules. The
+  discipline of "a gate is done when its negative control proved it can go red" applies
+  to maintenance tools too: without the gates, this incident ships silently and some
+  future session debugs invisible title-menu text.
 ```
