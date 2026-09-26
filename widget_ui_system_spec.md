@@ -388,7 +388,15 @@ aesthetic quality stays a human M-list judgment (TESTING_PLAN §5).
   pinned row; a row that can never wrap is one long string away from a scrollbar.
 - **Between-state rule, extended:** overflow if content can exceed the panel (§12.6) now
   includes text-metric inflation — the panel must survive longer strings AND larger glyphs.
-- **Truncation disposition (v2.19.23 decision):** where descriptive text wraps on mobile
-  (shop item buff lines), the accepted resolutions are (a) tap/hover-to-reveal the full
-  text, or (b) prioritize the item name and expose details via a help button / item
-  glossary. Wrapping-in-place is acceptable interim state; silent truncation is not.
+- **Truncation disposition (v2.19.23 decision, IMPLEMENTED v2.19.24):** where descriptive
+  text would wrap on mobile, the canonical resolution is the **confirm/detail surface**:
+  cards go name-priority + full ellipsis spec, and a tap opens a confirmation panel that
+  carries the full text (shop: `_openPurchaseConfirm`). Wrapping-in-place is not shipped;
+  silent truncation never is.
+### 12.6 addition (v2.19.24): confirm-before-commit
+- The state between "user intends an irreversible/costly action" and "committed" must be
+  EXPLICIT: a confirmation surface that restates the object and the exact cost. Scrims and
+  Cancel are real exits (nothing spent); the commit button is the ONLY path that moves
+  resources. Quantities clamp to [min, what the player can afford] with the live total
+  reflected; disabled controls carry their reason (opacity + `disabled`, not color alone
+  — §12.5).

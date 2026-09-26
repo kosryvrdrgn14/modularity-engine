@@ -102,8 +102,12 @@ class ShopSystem {
         this._renderTabs(); // selection moves — pooled rebind, cheap
       });
       this._items?.addEventListener('widget:shopBuy', (e) => {
+        // B12 (v2.19.24): a card tap opens the purchase CONFIRM panel — full
+        // description space + quantity stepper + explicit commit. The most
+        // expensive action on the screen is no longer the easiest to trigger
+        // (mobile mis-tap protection). buy() only fires from the panel.
         const item = this._stockedItems().find((it) => it.id === e.detail?.itemId);
-        if (item) this.buy(item); // buy() re-renders — affordability refreshes everywhere
+        if (item) this._openPurchaseConfirm(item);
       });
     }
     return this.widgetRenderer;
@@ -174,6 +178,7 @@ class ShopSystem {
   }
 
   close() {
+    this._closePurchaseConfirm(); // B12: the confirm panel never outlives the shop
     if (this._overlay) this._overlay.classList.remove('active');
     this.currentMode = null;
     // Restore default state
@@ -290,16 +295,97 @@ class ShopSystem {
     }
   }
 
-  buy(item) {
-    if (!this.gameManager.spend_currency(item.cost, 'shop_' + item.id)) return;
-    this.eventBus.emit('shopPurchase', { item });
+  /** B12 (v2.19.24): purchase confirmation panel — opened by a card tap.
+   *  Full (unwrapped) description, qty stepper clamped [1, affordable], live
+   *  total. Commit goes through buy(item, qty); Cancel/scrim-tap spends
+   *  nothing. One confirm at a time; close() tears it down with the shop. */
+  _openPurchaseConfirm(item) {
+    const gold = this.gameManager.get_currency() || 0;
+    // The open path is only reachable for affordable cards (v1.3 suppression),
+    // so maxQty >= 1 here — the floor is defensive, not load-bearing.
+    this._confirmItem = item;
+    this._confirmQty = 1;
+    this._renderPurchaseConfirm();
+    this.audioManager?.playMenuSound('select');
+  }
 
-    // Apply effect
-    this._applyEffect(item);
+  _renderPurchaseConfirm() {
+    const item = this._confirmItem;
+    if (!item) return;
+    const gold = this.gameManager.get_currency() || 0;
+    const maxQty = Math.max(1, Math.floor(gold / item.cost));
+    const qty = Math.min(Math.max(1, this._confirmQty), maxQty);
+    this._confirmQty = qty;
+    const total = qty * item.cost;
+    const canBuy = qty >= 1 && total <= gold;
 
-    // Store in inventory
+    let host = document.getElementById('shop-purchase-confirm');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'shop-purchase-confirm';
+      this._overlay.appendChild(host); // inside the shop overlay's layer
+      host.addEventListener('click', (e) => {
+        if (e.target === host) this._closePurchaseConfirm(); // scrim tap = cancel
+      });
+    }
+    host.innerHTML =
+      '<div class="spc-card">' +
+      '<button class="spc-close" id="spc-close" aria-label="Close">✕</button>' +
+      '<div class="spc-icon">' + (item.icon || '🎒') + '</div>' +
+      '<div class="spc-name">' + (item.name || item.id) + '</div>' +
+      '<div class="spc-desc">' + (item.desc || '') + '</div>' + // FULL text — this panel is the reveal surface
+      '<div class="spc-stepper">' +
+      '<button class="spc-qty-btn" id="spc-minus" aria-label="Decrease quantity"' + (qty <= 1 ? ' disabled' : '') + '>−</button>' +
+      '<span class="spc-qty" id="spc-qty">' + qty + '</span>' +
+      '<button class="spc-qty-btn" id="spc-plus" aria-label="Increase quantity"' + (qty >= maxQty ? ' disabled' : '') + '>+</button>' +
+      '</div>' +
+      '<div class="spc-total" id="spc-total">💰 ' + total.toLocaleString() + (qty > 1 ? ' <span class=\"spc-unit\\">(' + item.cost + ' each)</span>' : '') + '</div>' +
+      '<div class="spc-actions">' +
+      '<button class="spc-cancel" id="spc-cancel">Cancel</button>' +
+      '<button class="spc-buy" id="spc-buy"' + (canBuy ? '' : ' disabled') + '>Buy</button>' +
+      '</div>' +
+      '</div>';
+
+    const minus = document.getElementById('spc-minus');
+    const plus = document.getElementById('spc-plus');
+    const buyBtn = document.getElementById('spc-buy');
+    document.getElementById('spc-close').onclick = () => this._closePurchaseConfirm();
+    document.getElementById('spc-cancel').onclick = () => this._closePurchaseConfirm();
+    if (minus) minus.onclick = () => { this._confirmQty = Math.max(1, this._confirmQty - 1); this._renderPurchaseConfirm(); };
+    if (plus) plus.onclick = () => {
+      const cap = Math.max(1, Math.floor((this.gameManager.get_currency() || 0) / item.cost));
+      this._confirmQty = Math.min(cap, this._confirmQty + 1);
+      this._renderPurchaseConfirm();
+    };
+    if (buyBtn) buyBtn.onclick = canBuy ? () => {
+      const q = this._confirmQty;
+      this._closePurchaseConfirm();
+      this.buy(item, q); // ONE commit path — the only way gold moves
+    } : null;
+  }
+
+  _closePurchaseConfirm() {
+    this._confirmItem = null;
+    this._confirmQty = 0;
+    document.getElementById('shop-purchase-confirm')?.remove();
+  }
+
+  buy(item, qty = 1) {
+    // B12: qty-aware single transaction. spend_currency is atomic — either the
+    // full qty×cost moves or nothing does. Buff semantics (user decision):
+    // duration extends, potency does not stack — each copy emits its effect
+    // event; the combat side owns staging.
+    qty = Math.max(1, Math.floor(qty) || 1);
+    const total = item.cost * qty;
+    if (!this.gameManager.spend_currency(total, 'shop_' + item.id)) return;
+    this.eventBus.emit('shopPurchase', { item, qty, total });
+
+    // Apply effect (×N — instant effects multiply, duration buffs extend)
+    for (let i = 0; i < qty; i++) this._applyEffect(item);
+
+    // Store in inventory — stack-merges via progression.js (count: qty)
     if (this.gameManager._addToInventory) {
-      this.gameManager._addToInventory({ id: item.id, count: 1 });
+      this.gameManager._addToInventory({ id: item.id, count: qty });
     }
 
     this.renderItems();

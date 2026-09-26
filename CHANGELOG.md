@@ -2,6 +2,45 @@
 
 ---
 
+## v2.19.24 — B12: purchase-confirmation dialog + quantity stepper
+**Date:** September 26, 2026
+**Status:** ✅ Complete (step6 10→18 checks; layout audit 53→61; battery 505 strict green; release:check green)
+
+### The design (user-driven, two decisions merged)
+A shop card tap no longer purchases instantly — it opens a **purchase confirmation panel**:
+the full (unwrapped) item description, a **quantity stepper clamped [1, affordable]**, a
+live total, and explicit Buy/Cancel. The most expensive action on the screen stopped being
+the easiest to trigger (mobile mis-tap protection), and the panel became the canonical
+full-text surface — grid cards go name-priority with single-line ellipsis. Quantity
+semantics locked with the user: minimum 1 (qty 0 serves no purpose), cap = what the player
+can afford; buff ×N = duration extends, potency never stacks.
+
+### What landed
+- **`public/ui/shop.js`**: `widget:shopBuy` routes to `_openPurchaseConfirm(item)`;
+  `_renderPurchaseConfirm()` (stepper re-render, − clamps at 1 and disables, + disables at
+  `floor(gold/cost)`, total never below 0 or above gold, Buy disabled at 0 afford);
+  `buy(item, qty = 1)` — ONE atomic transaction of qty×cost, stack `count: qty` (the
+  progression.js merge already supported it), effect events per copy; confirm torn down on
+  close()/scrim-tap. Unaffordable cards stay click-suppressed (v1.3).
+- **`public/styles.css`**: `#shop-purchase-confirm` scoped block — §12 tokens, fluid
+  `min(360px, 100%−32px)`, full ellipsis spec on grid-card descriptions (the wraps report
+  line goes 2→0), all stepper/Buy/Cancel targets ≥44px (§11 from birth).
+- **`public/systems/gameLog.js`**: purchase line is qty-aware — "Purchased 3× Health
+  Potion (−150 gold)" — the log states what actually moved, never the unit price at qty>1.
+- **Battery**: step6 contract updated (tap = panel, NO gold movement until Buy; stepper
+  clamp/cap; scrim-tap cancel spends NOTHING — negative control; qty commit = one
+  transaction of 3×cost, stack count 3). Layout audit: `wraps` probe PROMOTED from
+  report-only (since v2.19.20) to a gate on desktop + emulated cells, all 4 screens.
+
+### Notes
+- Attribution for the loadout touch-report shift (0→5 sub-44px): 3 chips lost height when
+  the hint stopped wrapping (v2.19.19 correctness trade), back button pre-existing, confirm
+  button misses 44px by 1px — all B13 inputs, report already measures the fix.
+- Shop touch-report: 5→... unchanged this pass (the confirm panel's own targets are ≥44px;
+  the grid-card residual is B13).
+
+---
+
 ## v2.19.23 — §12.1 spacing sweep: 57 declarations migrated to the 4-pt scale
 **Date:** September 26, 2026
 **Status:** ✅ Complete (battery 15 suites / 489 checks strict green post-migration; release:check green)

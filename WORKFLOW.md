@@ -216,7 +216,7 @@ backlog aging.
 | B7 | ~~Widget Inspector (§6.4) + 9-slice skins~~ **DONE v2.19.12 + v2.19.13** | §6.4 shipped as `WidgetRenderer.installInspector()` → `window.__WIDGET_DEBUG__`. 9-slice skins shipped as skin vocabulary v2 (border-image + texture + ornament as CSS custom props; `bazaar_cloth` upgraded w/ 3 authored SVGs; verify skin-asset gate; step3 pins) | — | — |
 | B8 | ~~Consolidate §5.7 + shopData → content/shop.json~~ **DONE v2.19.7** (shop.json via POT-006, 17th content file; §5.7 renderers single-homed in shop.js; audit found the town panel Sandbox button was a dead no-op — now wired through `onSandbox` → `ShopSystem.openSandbox`) | Open map items; §5.5/§5.6 CLOSED v2.19.2 | — | — |
 | B9 | ~~Evaluate ESLint `no-undef` as a battery gate~~ **DONE v2.19.4** (`npm run verify` F5 gate, eslint.game.cjs + game_globals.cjs rot-guard; partyBtn class caught statically) | The net moved into the unconditional gate — see F5 in §11 | — | — |
-| B12 | Truncation-reveal UX for shop item descriptions (tap/hover-to-reveal; alternative per user: name-priority + help button/item glossary) | The last player-facing finding from the mobile investigation; closes the shop `wraps` report line mechanically (nowrap+ellipsis ⇒ report goes 2→0) | M | P1 |
+| B12 | ~~Truncation-reveal UX~~ **DONE v2.19.24** (user redesign: purchase-CONFIRM dialog with full description + qty stepper [1, affordable], live total, Buy-only commit; cards name-priority + ellipsis; wraps probe PROMOTED to gate; gameLog qty-aware; §12.6 confirm-before-commit pattern codified) | Merged the two user decisions (detail surface + accident protection) into one interaction | — | — |
 | B13 | Touch-target pass: town (9) + shop (5) sub-44px interactive elements to the §11 coarse-pointer minimum | Real-device usability; the v2.19.21 report-only inventory already measures the fix — promote it to a gate after | S–M | P2 |
 | B14 | Dead-CSS sweep: retired `.loadout-slot-*` / `.loadout-card-meta` and other orphaned rules | Hygiene; removes "retired but referenced" comment debt; zero user risk | S | P3 |
 | B15 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
@@ -650,4 +650,34 @@ backlog aging.
   (10px by role) was made from the inventory dump BEFORE touching the file, and the
   post-pass scan + the layout audit's own §12.1 detector verified the destination from
   two independent directions.
+```
+
+### v2.19.24 (Sept 26, 2026) — B12: purchase-confirm dialog + qty stepper
+```
+- User drove the design across 3 messages: tap opens a confirmation (accident protection)
+  where the FULL description lives (kills the truncation problem at the root), then added
+  the qty stepper [1, affordable] with live total; locked min=1 (qty 0 serves no purpose)
+  and buff semantics duration-extends/potency-never-stacks. Feasibility was verified
+  BEFORE promising: inventory stack-merge already existed (progression.js count field),
+  gold is single-sourced (get_currency/spend_currency), scrim layering supports a nested
+  panel. A card tap already being a buy() was the fact that killed the earlier
+  tap-to-reveal idea — check the gesture collision before designing the gesture.
+- Implementation: shop.js _openPurchaseConfirm/_renderPurchaseConfirm/_closePurchaseConfirm;
+  buy(item, qty=1) one atomic transaction; confirm torn down on close()/scrim; gameLog
+  qty-aware ("Purchased 3× … (−150 gold)"). All new controls born ≥44px (§11 from birth).
+- Battery: step6 10→18 (B12 flow + scrim-tap negative control); layout audit 53→61 (wraps
+  probe PROMOTED to gate, desktop + emulated, 4 screens — the v2.19.20 report-only
+  debt retired by the fix). 505 checks strict green. Attribution discipline: the loadout
+  touch-report shift (0→5) was investigated to cause, not guessed — 3 chips (v2.19.19
+  wrap-fix height trade), pre-existing back button, confirm button 1px short. B13 inputs.
+- LESSON: "protected by design" beat "protected by caution" — the confirm surface is a
+  §12.6 between-state (intent → committed must be explicit), and the truncation decision
+  disappeared entirely instead of being managed.
+- LESSON (F2 validation): release:check ran AFTER docs and caught all 6 runtime-created
+  panel ids (shop-purchase-confirm + 5 spc-* controls) — the PROJECT_MAP
+  `dynamic-create: [...]` line is the contract for runtime-built UI; declaring took one
+  line, and the gate proved the shop-overlay bug class (KNOWLEDGE §5) stays dead.
+- PROCESS NOTE: the 502 mid-append actually landed server-side and the retry
+  double-appended this block — 502 retries need a verify-the-prior-write step, not a
+  blind re-run.
 ```

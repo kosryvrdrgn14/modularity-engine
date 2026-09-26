@@ -415,6 +415,12 @@ const fs = require('fs');
             JSON.stringify(res.contrast));
           check(`[desktop gate: ${sc.name}] no horizontal overflow (doc/panel scrollWidth)`,
             !res.overflow.docX && !res.overflow.panelX, JSON.stringify(res.overflow));
+          // v2.19.24 promotion: wraps report → gate (was report-only since
+          // v2.19.20 because the gamelog detail line wrapped; that surface is
+          // outside SCREENS, and the shop wraps are FIXED by the B12 confirm
+          // panel — the panel is now the reveal surface, §12.8).
+          check(`[desktop gate: ${sc.name}] no half-spec ellipsis wraps (§12.8)`,
+            res.wraps.length === 0, JSON.stringify(res.wraps));
         }
         console.log(`  ◦ [${sc.name} @ ${vp.name}] ${vp.name === 'desktop' ? 'GATED' : 'REPORT-ONLY'}: gaps=${res.gaps.length} deadBands=${res.deadBands.length} alignSpread=${res.alignment.leftSpread}/${res.alignment.rightSpread} contrast=${res.contrast.length} overflowX=${res.overflow.docX || res.overflow.panelX ? 'YES!' : 'no'} wraps=${res.wraps.length} wsRatio=${res.whitespace ? res.whitespace.ratio : 'n/a'} → ${issues === 0 ? 'CLEAN' : 'ISSUES'}`);
         if (res.wraps.length) console.log(`      wraps(REPORT): ${JSON.stringify(res.wraps.slice(0, 4))}`);
@@ -447,6 +453,8 @@ const fs = require('fs');
           check(`[mobile-emulated: ${sc.name}] text contrast ≥ WCAG (§12.5)`, mres.contrast.length === 0, JSON.stringify(mres.contrast));
           check(`[mobile-emulated: ${sc.name}] no user-experienced horizontal overflow`,
             !mres.overflow.docX && !mres.overflow.panelX, JSON.stringify(mres.overflow));
+          check(`[mobile-emulated: ${sc.name}] no half-spec ellipsis wraps (§12.8)`,
+            mres.wraps.length === 0, JSON.stringify(mres.wraps));
           report.screens[`${sc.name}@mobile-emulated`] = mres;
           console.log(`  ◦ [${sc.name} @ mobile-emulated] GATED: gaps=${mres.gaps.length} deadBands=${mres.deadBands.length} contrast=${mres.contrast.length} overflowX=${(mres.overflow.docX || mres.overflow.panelX) ? 'YES!' : 'no'} wraps=${mres.wraps.length} touch<44px=${mres.touchTargets.length} wsRatio=${mres.whitespace ? mres.whitespace.ratio : 'n/a'}`);
           if (mres.touchTargets.length) console.log(`      touch(REPORT): ${JSON.stringify(mres.touchTargets.slice(0, 3))}${mres.touchTargets.length > 3 ? ` …+${mres.touchTargets.length - 3} more` : ''}`);

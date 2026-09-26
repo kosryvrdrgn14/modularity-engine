@@ -74,8 +74,13 @@ class GameLogSystem {
       stamp(`${d?.weaponId || 'weapon'} → Lv ${d?.level ?? d?.newLevel ?? '?'}`, 'reward');
     });
     bus.on('shopPurchase', (d) => {
+      // B12 (v2.19.24): qty-aware — the line must state what ACTUALLY moved
+      // (qty × unit cost = total), never the unit price at qty > 1.
       const item = d?.item;
-      if (item) stamp(`Purchased ${item.name || item.id}${item.cost ? ` (−${item.cost} gold)` : ''}`, 'info');
+      if (!item) return;
+      const qty = d.qty || 1;
+      const total = d.total ?? (item.cost ? item.cost * qty : 0);
+      stamp(`Purchased${qty > 1 ? ` ${qty}×` : ''} ${item.name || item.id}${total ? ` (−${total} gold)` : ''}`, 'info');
     });
     bus.on('farmingLootCollected', (d) => {
       const loot = d?.loot;

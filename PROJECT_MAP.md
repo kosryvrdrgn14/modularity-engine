@@ -310,6 +310,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Calls: `WidgetRenderer` (tab chips + stocked items are pooled repeats — §10 screen-6, v2.18.0; defs `TAB_CHIP_DEF`/`SHOP_ITEM_DEF` declare `widget:shopTab`/`widget:shopBuy`; active tab and cant-afford are DATA via v1.2 `selected.bind` / v1.3 `disabled.bind`; the inventory pilot's cardDef now rebinds the same host pool — v1.3 rebind swaps skins with the def)
 - Emits: `shopPurchase`, `shopEffect`, `startCombat`, `farmingLootCollected`
 - Listens: `resources:changed`
+- Dynamic-create: [shop-purchase-confirm, spc-close, spc-minus, spc-plus, spc-cancel, spc-buy] (v2.19.24 B12 — the purchase-confirm panel is built at runtime inside #shop-overlay: scrim host + close/stepper/cancel/buy controls)
 - Content: `shop.json` (v2.19.7 — the stocked catalog via `DataManager.shop`; POT-006)
 - Store: writes inventory/gold **through progression APIs** (POT-012 clean — no direct branch writes)
 - DOM: `shop-overlay`, `shop-items` (widget pool host — no innerHTML wipes; farming/sandbox modes still wipe here, kept bespoke per §3.2), `shop-gold`, `shop-tabs` (pool host), `shop-close`, `sb-launch`, `sb-difficulty`, `sb-diff-val`, `sb-show-dps`

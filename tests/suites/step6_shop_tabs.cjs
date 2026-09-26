@@ -8,8 +8,12 @@
 //   2. Stocked tabs are pooled widget cards; unaffordable items carry
 //      widget-disabled (v1.3) AND their clicks are suppressed (gold never
 //      moves). Affordability re-resolves on re-render (buy → refresh).
-//   3. Purchase flows through the declared widget:shopBuy event: gold
-//      deducted, inventory grows.
+//   3. B12 (v2.19.24): purchase CONFIRM flow — a card tap opens the panel
+//      (affordable items only; unaffordable cards stay click-suppressed via
+//      v1.3), gold does NOT move until Buy. Qty stepper clamped [1,
+//      affordable], live total = qty×cost, commit via buy(item, qty): ONE
+//      transaction of qty×cost, inventory stack count = qty.
+//   3b. B12 negative control: cancel path (scrim tap) spends nothing.
 //   4. THE FORMER PILOT BUG: tab round-trips combat→inventory→combat→
 //      inventory render cards EVERY time. Pre-migration, _renderInventory
 //      wiped the pooled host so the first round-trip rebound DETACHED nodes
@@ -60,14 +64,48 @@ const check = (name, pass, extra) => {
       itemCards()[0]?.click();
       const clickSuppressed = gold() === goldBeforeClick;
 
-      // 3) fund + re-render: affordability re-resolves (v1.3 rebind), buy works
+      // 3) fund + re-render: affordability re-resolves (v1.3 rebind)
       gm.add_currency(5000);
       shop.renderItems();
       const fundedDisabled = disabledCount();
-      const goldBeforeBuy = gold();
-      const invBeforeBuy = gm.getInventoryItems().length;
+
+      // 3b) B12: card tap opens the confirm panel — gold intact, full desc shown
+      const goldBeforeTap = gold();
+      const invBeforeTap = gm.getInventoryItems().length;
       itemCards()[0]?.click();
-      const buyWorked = gold() < goldBeforeBuy && gm.getInventoryItems().length === invBeforeBuy + 1;
+      const confirmOpen = !!document.getElementById('shop-purchase-confirm');
+      const goldAfterTap = gold(); // must be UNCHANGED — no purchase without Buy
+      const descFull = document.getElementById('shop-purchase-confirm')?.querySelector('.spc-desc')?.textContent || '';
+      const qtyStart = parseInt(document.getElementById('spc-qty')?.textContent || '0', 10);
+      const buyBtnStart = document.getElementById('spc-buy');
+
+      // 3c) stepper: + raises qty and total; − clamps at 1 (never 0); cap at
+      // affordability. health_potion cost 50 → funded 5000+leftover → cap ≫ 5.
+      const totalAt1 = document.getElementById('spc-total')?.textContent || '';
+      document.getElementById('spc-plus')?.click();
+      const qtyAfterPlus = parseInt(document.getElementById('spc-qty')?.textContent || '0', 10);
+      const totalAfterPlus = document.getElementById('spc-total')?.textContent || '';
+      document.getElementById('spc-minus')?.click();
+      document.getElementById('spc-minus')?.click(); // second − must clamp at 1
+      const qtyAfterMinus = parseInt(document.getElementById('spc-qty')?.textContent || '0', 10);
+      const minusDisabledAt1 = document.getElementById('spc-minus')?.disabled === true;
+
+      // 3d) B12 negative control: cancel (scrim tap) — nothing spent
+      document.querySelector('#shop-purchase-confirm').click(); // e.target === host
+      const confirmClosedOnScrim = !document.getElementById('shop-purchase-confirm');
+      const cancelSpentNothing = gold() === goldBeforeTap && gm.getInventoryItems().length === invBeforeTap;
+
+      // 3e) commit path: reopen, qty 3, Buy — ONE transaction of 3×cost
+      itemCards()[0]?.click();
+      document.getElementById('spc-plus')?.click();
+      document.getElementById('spc-plus')?.click(); // qty 3
+      const goldBeforeBuy = gold();
+      document.getElementById('spc-buy')?.click();
+      const goldAfterBuy = gold();
+      const invAfterBuy = gm.getInventoryItems();
+      const boughtEntry = invAfterBuy.find((i) => i.id === 'health_potion');
+      const buyWorked = goldAfterBuy === goldBeforeBuy - 150 && !!boughtEntry && boughtEntry.count === 3;
+      const confirmClosedAfterBuy = !document.getElementById('shop-purchase-confirm');
 
       // 4) THE ROUND-TRIP (former pilot bug) + def-swap skin evidence
       const toInventory = () => chips()[4]?.click();
@@ -91,7 +129,12 @@ const check = (name, pass, extra) => {
 
       return {
         chipCount, combatSelected, brokeAllDisabled, clickSuppressed,
-        fundedDisabled, buyWorked, roundTrip,
+        fundedDisabled,
+        confirmOpen, goldAfterTap, goldBeforeTap, descFull, qtyStart,
+        buyBtnStartExists: !!buyBtnStart, totalAt1, qtyAfterPlus, totalAfterPlus,
+        qtyAfterMinus, minusDisabledAt1, confirmClosedOnScrim, cancelSpentNothing,
+        buyWorked, confirmClosedAfterBuy,
+        roundTrip,
         counts: { inv1, combat1, inv2, combat2 },
         skinInInventory, noSkinInCombat, resetSelected,
       };
@@ -107,7 +150,18 @@ const check = (name, pass, extra) => {
     check('broke state: every stocked card disabled (v1.3)', probe.brokeAllDisabled);
     check('disabled cards emit NOTHING (click suppressed, gold intact)', probe.clickSuppressed);
     check('affordability re-resolves on re-render after funding', probe.fundedDisabled === 0);
-    check('purchase flows through widget:shopBuy (gold down, inventory up)', probe.buyWorked);
+    check('B12: card tap opens confirm panel', probe.confirmOpen);
+    check('B12: card tap moves NO gold (accident protection)', probe.goldAfterTap === probe.goldBeforeTap,
+      `${probe.goldBeforeTap} → ${probe.goldAfterTap}`);
+    check('B12: confirm shows FULL description (reveal surface)', probe.descFull.length > 10, JSON.stringify(probe.descFull));
+    check('B12: qty starts at 1, Buy enabled', probe.qtyStart === 1 && probe.buyBtnStartExists);
+    check('B12: stepper + raises qty and total', probe.qtyAfterPlus === 2 && probe.totalAfterPlus !== probe.totalAt1,
+      `total ${probe.totalAt1} → ${probe.totalAfterPlus}`);
+    check('B12: stepper − clamps at 1 (never 0) and disables', probe.qtyAfterMinus === 1 && probe.minusDisabledAt1);
+    check('B12 negctl: scrim tap closes panel and spends NOTHING', probe.confirmClosedOnScrim && probe.cancelSpentNothing);
+    check('B12: Buy commits ONE transaction qty×cost, stack count=qty', probe.buyWorked,
+      `gold ${probe.goldBeforeTap}→${probe.goldAfterBuy}, inv count ${JSON.stringify(probe.buyWorked ? 3 : null)}`);
+    check('B12: confirm closes after commit', probe.confirmClosedAfterBuy);
     check('tab round-trip ×2 renders cards EVERY time (former pilot pool bug dead)',
       probe.roundTrip, JSON.stringify(probe.counts));
     check('def-swap: bazaar_cloth skin present in inventory, absent in combat',
