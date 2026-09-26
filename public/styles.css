@@ -1317,12 +1317,20 @@
       text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
     }
     #levelup-cards {
-      display: flex;
+      /* B17 (v2.19.28): same defect class the user caught on the slot picker —
+         nowrap 3×160px flex row clipped both edges under a centered overlay.
+         Auto-fit grid stacks to one column on narrow screens. */
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 180px));
+      justify-content: center;
       gap: 16px;
       margin-bottom: 16px;
+      padding: 0 16px;
+      width: 100%;
     }
     .levelup-card {
-      width: 160px;
+      width: 100%; /* B17: fill the track; capped by max-width */
+      max-width: 180px;
       min-height: 180px;
       background: #1a1a2e;
       border: 2px solid #3B82F6;
@@ -2125,3 +2133,27 @@
 }
 #title-menu .widget-card .slot-icon { font-size: 0.9rem; opacity: 0; transition: opacity 0.15s; }
 #title-menu .widget-card.widget-disabled { color: #7d7d87; cursor: default; font-style: italic; } /* B11 delta (was #555) */
+
+/* ── B17 (v2.19.28): portrait stacking for centered card pickers ──
+   User expectation from manual testing: on a phone in portrait, save-slot and
+   level-up cards stack FULLY vertical (the min(170px,100%) auto-fit tracks
+   still allow 2-up on ~430px viewports). Landscape is guarded separately —
+   stacked tall cards would overflow a short landscape screen. */
+@media (pointer: coarse) and (orientation: portrait) {
+  .slot-picker-grid,
+  #levelup-cards {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  /* landscape phones: cards stay in a row but may wrap instead of clipping */
+  .slot-picker-grid,
+  #levelup-cards {
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+    width: calc(100% - 32px);
+    max-width: 640px;
+  }
+}

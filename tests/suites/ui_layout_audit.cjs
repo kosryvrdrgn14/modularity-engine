@@ -421,6 +421,9 @@ const fs = require('fs');
       // (both edges cut under the centered overlay). Real path: titleMenu →
       // Play → _showSlotPicker(). Panel = the grid itself.
       { name: 'slotpicker', setup: `g.titleMenu.show(); if (g.titleMenu._showSlotPicker) g.titleMenu._showSlotPicker();`, panel: '#slot-picker-overlay', hud: false }, // overlay: centered frame — column of title/grid/close
+      // B17 (v2.19.28): level-up cards — same centered-row clip class the user
+      // caught on the slot picker (screenshots). Real path: uiManager.showLevelUp.
+      { name: 'levelup', setup: `if (g.uiManager && g.uiManager.showLevelUp) g.uiManager.showLevelUp([{name:'Damage Up',desc:'+5% base damage'},{name:'Speed Up',desc:'+10% move speed'},{name:'Projectile',desc:'Lv 1 → 2'}]);`, panel: '#levelup-overlay', hud: false },
     ];
     const VIEWPORTS = [
       { name: 'desktop', width: 1280, height: 800 },
@@ -540,12 +543,16 @@ const fs = require('fs');
         window.game.townScreen.shopSystem.close?.();
         const sp = document.getElementById('slot-picker-overlay');
         if (sp) sp.classList.remove('active');
+        const lu = document.getElementById('levelup-overlay');
+        if (lu) lu.classList.remove('active');
       });
       await mobilePage.evaluate(() => {
         window.game.townScreen.loadoutScreen.hide?.();
         window.game.townScreen.shopSystem.close?.();
         const sp = document.getElementById('slot-picker-overlay');
         if (sp) sp.classList.remove('active');
+        const lu = document.getElementById('levelup-overlay');
+        if (lu) lu.classList.remove('active');
       });
     }
     check('layout audit ran non-vacuously across screens/viewports', probed >= 8, `probed=${probed}`);

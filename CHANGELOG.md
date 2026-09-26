@@ -2,6 +2,43 @@
 
 ---
 
+## v2.19.28 — B17: level-up cards on mobile (same B15 class) + portrait stacking for pickers
+**Date:** September 26, 2026
+**Status:** ✅ Complete (layout audit 81→95; battery 539 strict green; release:check green)
+
+### User-reported (continuing the manual-test session)
+1. **Level-up upgrade cards clipped both edges on phone** — the SAME defect class as B15:
+   `#levelup-cards` was a nowrap flex row of three fixed 160px cards (512px) in a centered
+   overlay. Functionality was NOT lost (each card carries click + touchend →
+   `selectUpgrade`; the v1.9.5 deletion only removed a canvas hit-test), but edge cards
+   were unreliable targets on phones.
+2. **Slot picker showed 2×2, expected full vertical** — the B15 auto-fit tracks
+   (`min(170px, 100%)`) still allow two columns on ~430px viewports.
+3. **Elder Rowan "moved to the Cemetery"** — NOT a bug: npcs.json `locationRules`
+   (Step 2 condition system reference) deliberately relocates him to the graveyard
+   entrance while `mq_02_clearing` is active; talking to residents progressed that quest.
+
+### Fixes
+1. **`#levelup-cards`** → auto-fit grid (`minmax(min(160px,100%), 180px)`), cards fill
+   tracks (`width:100%; max-width:180px`); gated in the layout-audit matrix via the real
+   path (`uiManager.showLevelUp([...])`) — desktop + emulated cell + orientation flip
+   (layout audit 81→95; battery 539).
+2. **Portrait stacking for BOTH pickers** — new `@media (pointer: coarse) and
+   (orientation: portrait)` rule stacks `.slot-picker-grid` and `#levelup-cards` to ONE
+   centered column (max-width 320px), matching user expectation on phones. Landscape
+   phones get a guarded wrapping row (max-width 640px) — stacked tall cards would
+   overflow a short landscape screen.
+
+### Lessons
+- "Same bug, next screen": when a defect class is found, enumerate its SIBLINGS — the
+  level-up row was the same pattern one screen away; two user screenshots for the price
+  of one class-aware sweep.
+- Touch input changes expected layout semantics: coarse-pointer portrait users expect
+  vertical stacks (thumb-scroll), not compact grids — a layout decision gated to the
+  input modality, not the breakpoint alone.
+
+---
+
 ## v2.19.27 — B15: save-slot picker mobile clipping (user-reported) + picker gated
 **Date:** September 26, 2026
 **Status:** ✅ Complete (layout audit 66→81; battery 525 strict green; release:check green)

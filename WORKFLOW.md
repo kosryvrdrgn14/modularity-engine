@@ -221,6 +221,7 @@ backlog aging.
 | B14 | ~~Dead-CSS sweep~~ **DONE v2.19.26** (`tools/css_sweep.cjs` permanent read-only tool; 64 retired blocks removed; +1 REAL bug found and fixed — toast fade-out was dead, `.toast-leaving` renamed to the runtime's plain `leaving`; incident: first cut script's substring+comment matching deleted 12 live comment-adjacent rules — battery caught it in one run, recovered from widget_preview artifacts, full lessons §11) | S | — |
 | B15 | ~~Save-slot picker mobile clipping~~ **DONE v2.19.27** (user-reported with screenshot: centered nowrap grid clipped both edges on phones → auto-fit grid stacks to one centered column; slot-btn/slot-close added to pointer:coarse 44px block; picker GATED in the layout-audit matrix, 510→525 checks; probe model gained center-frame §12.2 — centered overlays align on the CENTER AXIS, edges-or-center pass, negative control added) | Real-device finding the matrix couldn't see — the dialog was never a battery screen | S | — |
 | B16 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
+| B17 | ~~Level-up cards on mobile~~ **DONE v2.19.28** (user-reported: same B15 centered-row clip class — auto-fit grid + gated in the matrix via uiManager.showLevelUp; PLUS coarse-pointer portrait stacking for both card pickers per user expectation — full vertical on phones, guarded wrapping row in landscape) | Class-aware sweep of B15's siblings; Elder Rowan zone move reported same session confirmed BY DESIGN (npcs.json locationRules, mq_02_clearing) | S | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -752,4 +753,25 @@ backlog aging.
   enumerated, not global; every new screen/dialog must join the matrix at birth or it
   lives outside all gates. Manual testing fills exactly this gap until it's filed.
   Complement, not substitute.
+```
+
+### v2.19.28 (Sept 26, 2026) — B17: level-up cards + portrait picker stacking
+```
+- User's continued manual testing caught the SAME B15 defect class one screen away:
+  #levelup-cards was a nowrap 3×160px flex row in a centered overlay. Functionality was
+  NOT lost (cards carry click+touchend → selectUpgrade; v1.9.5 only removed the canvas
+  hit-test) but edge cards were unreliable phone targets. Fixed (auto-fit grid) AND
+  gated (uiManager.showLevelUp real path; layout audit 81→95, battery 539).
+- User also flagged the B15 fix "showed 2×2, expected full vertical": auto-fit tracks of
+  min(170px,100%) still fit two columns on ~430px phones. Resolution: NEW media query
+  (pointer: coarse) AND (orientation: portrait) stacks BOTH pickers to one centered
+  column — layout semantics keyed to INPUT MODALITY + orientation, not breakpoint alone
+  (thumb users expect vertical scroll, not compact grids). Landscape guarded separately
+  (stacked tall cards would overflow a short screen).
+- Elder Rowan "moved to the Cemetery" — BY DESIGN: npcs.json locationRules relocate him
+  to graveyard_entrance while mq_02_clearing is active (Step 2 condition system
+  reference). Talking to residents progressed the quest. Not a bug.
+- LESSON: "same bug, next screen" — when a defect class is found, enumerate its
+  siblings in the same pass; the centered-fixed-overlay + fixed-width-row pattern had
+  exactly two instances and both are now gated.
 ```
