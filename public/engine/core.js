@@ -397,6 +397,11 @@ class InputManager {
     // Touch tracking
     this.touchId = null;
     
+    // B18 (v2.19.29): virtual joystick state (touch devices only). Event-driven:
+    // pointer handlers write the analog vector, getMovement() reads it each
+    // frame — zero per-frame cost while the stick is idle.
+    this.joystick = { dx: 0, dy: 0, active: false, pointerId: null };
+    
     // Pause state (prevents movement clicks during levelUp/pause)
     this._isPaused = false;
     this._upgradeKeyLock = false;
@@ -430,6 +435,13 @@ class InputManager {
       e.preventDefault();
       this.touchId = null;
     });
+    
+    // B18: virtual joystick — a DOM overlay (#touch-controls) above the
+    // canvas on coarse-pointer devices. Pointer Events + setPointerCapture:
+    // a drag that leaves the base keeps streaming, and only the captured
+    // pointerId drives the vector (multi-touch safe — a second finger never
+    // steers the stick; its canvas taps are ignored while the stick is live).
+    this._bindJoystick();
     
     // Keyboard
     window.addEventListener('keydown', (e) => {
@@ -539,7 +551,103 @@ class InputManager {
     return !!this.keys[code];
   }
 
+  // ── B18: virtual joystick (touch devices) ──────────────────────
+  // Floating origin: the base recenters wherever the thumb lands inside the
+  // zone. Combat-only — every entry point refuses while _isPaused or not
+  // 'playing' (same guard family as the movement-click suppression).
+  _bindJoystick() {
+    const zone = document.getElementById('touch-controls');
+    if (!zone) return;
+    this._joystickZone = zone;
+    this._joystickStick = zone.querySelector('.joystick-stick');
+    this._joystickBase = zone.querySelector('.joystick-base') || zone;
+    this._joystickOriginX = 0;
+    this._joystickOriginY = 0;
+    this._joystickMax = 1;
+
+    zone.addEventListener('pointerdown', (e) => {
+      if (this._isPaused || !this._game || !this._game.gameState.isPlaying()) return;
+      if (this.joystick.pointerId !== null) return; // one stick pointer at a time
+      const rect = zone.getBoundingClientRect();
+      // Usable radius ≈ 72% of the zone's half-width (the knob must stay
+      // visually inside the zone at full deflection).
+      this._joystickMax = Math.max(rect.width * 0.36, 24);
+      this._joystickOriginX = e.clientX;
+      this._joystickOriginY = e.clientY;
+      // Floating origin: recenter the base under the thumb.
+      const b = this._joystickBase;
+      b.style.left = `${e.clientX - rect.left - b.offsetWidth / 2}px`;
+      b.style.top = `${e.clientY - rect.top - b.offsetHeight / 2}px`;
+      this.joystick.pointerId = e.pointerId;
+      this.joystick.active = true;
+      this.joystick.dx = 0;
+      this.joystick.dy = 0;
+      zone.classList.add('joystick-live');
+      try { zone.setPointerCapture(e.pointerId); } catch (_) {}
+      this._setStickKnob(0, 0);
+      e.preventDefault(); // suppress compatibility mouse events → no stray click-to-move
+    });
+
+    zone.addEventListener('pointermove', (e) => {
+      if (!this.joystick.active || e.pointerId !== this.joystick.pointerId) return;
+      if (this._isPaused || !this._game || !this._game.gameState.isPlaying()) return; // freeze, don't accumulate
+      const max = this._joystickMax;
+      let vx = e.clientX - this._joystickOriginX;
+      let vy = e.clientY - this._joystickOriginY;
+      const dist = Math.sqrt(vx * vx + vy * vy);
+      // Dead zone at 12% of the radius: below it the stick reads zero (no
+      // thumb-jitter creep); above it, analog magnitude in [0,1].
+      const dead = max * 0.12;
+      if (dist > dead) {
+        const mag = Math.min((dist - dead) / (max - dead), 1);
+        vx = (vx / dist) * mag * max;
+        vy = (vy / dist) * mag * max;
+      } else {
+        vx = 0;
+        vy = 0;
+      }
+      this.joystick.dx = vx / max;
+      this.joystick.dy = vy / max;
+      this._setStickKnob(vx, vy);
+      e.preventDefault();
+    });
+
+    const release = (e) => {
+      if (this.joystick.active && e.pointerId !== this.joystick.pointerId) return;
+      this._resetJoystick();
+      try { zone.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    // pointercancel: the browser stole the gesture (notification, edge-swipe)
+    // — the stick MUST zero, or the player would drift with no thumb down.
+    zone.addEventListener('pointerup', release);
+    zone.addEventListener('pointercancel', release);
+  }
+
+  _setStickKnob(px, py) {
+    if (this._joystickStick) {
+      this._joystickStick.style.transform = `translate(${px}px, ${py}px)`;
+    }
+  }
+
+  /** B18: hard-zero the stick (run teardown funnel + release/cancel). */
+  _resetJoystick() {
+    this.joystick.active = false;
+    this.joystick.pointerId = null;
+    this.joystick.dx = 0;
+    this.joystick.dy = 0;
+    if (this._joystickZone) {
+      this._joystickZone.classList.remove('joystick-live');
+      this._setStickKnob(0, 0);
+    }
+  }
+
   getMovement() {
+    // B18: a live virtual stick is the highest-precedence source (same
+    // precedence the keyboard has over click-to-move). The vector is already
+    // analog + dead-zoned; the diagonal normalization below is keyboard-only.
+    if (this.joystick.active) {
+      return { dx: this.joystick.dx, dy: this.joystick.dy };
+    }
     let dx = 0, dy = 0;
     if (this.isKeyDown('KeyW') || this.isKeyDown('ArrowUp')) dy -= 1;
     if (this.isKeyDown('KeyS') || this.isKeyDown('ArrowDown')) dy += 1;

@@ -222,6 +222,7 @@ backlog aging.
 | B15 | ~~Save-slot picker mobile clipping~~ **DONE v2.19.27** (user-reported with screenshot: centered nowrap grid clipped both edges on phones → auto-fit grid stacks to one centered column; slot-btn/slot-close added to pointer:coarse 44px block; picker GATED in the layout-audit matrix, 510→525 checks; probe model gained center-frame §12.2 — centered overlays align on the CENTER AXIS, edges-or-center pass, negative control added) | Real-device finding the matrix couldn't see — the dialog was never a battery screen | S | — |
 | B16 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
 | B17 | ~~Level-up cards on mobile~~ **DONE v2.19.28** (user-reported: same B15 centered-row clip class — auto-fit grid + gated in the matrix via uiManager.showLevelUp; PLUS coarse-pointer portrait stacking for both card pickers per user expectation — full vertical on phones, guarded wrapping row in landscape) | Class-aware sweep of B15's siblings; Elder Rowan zone move reported same session confirmed BY DESIGN (npcs.json locationRules, mq_02_clearing) | S | — |
+| B18 | ~~Combat touch controls~~ **DONE v2.19.29** (user report "touch controls don't work too well" — root cause: there WERE none, only canvas tap-to-move; added the usual left-thumb virtual joystick: static `#touch-controls` overlay, Pointer Events + setPointerCapture, floating origin, 12% dead zone, analog vector into `InputManager.getMovement()` at highest precedence (`_movePlayer` unchanged); revealed ONLY on coarse pointers during combat (`body.combat-live`), refused while paused/overlays, zeroed on every teardown/town path via `_resetJoystick()`; gated in the layout audit's new combat-touch section — desktop negative control, emulated reveal, synthetic-drag movement proof, pause refusal, pointerup zeroing; 539→548 checks) | Combat is canvas-drawn — the stick is its only DOM surface, so it got a dedicated section instead of a SCREENS row | M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -774,4 +775,35 @@ backlog aging.
 - LESSON: "same bug, next screen" — when a defect class is found, enumerate its
   siblings in the same pass; the centered-fixed-overlay + fixed-width-row pattern had
   exactly two instances and both are now gated.
+```
+
+### v2.19.29 (Sept 27, 2026) — B18: combat virtual joystick (touch devices)
+```
+- User report: "touch controls for combat don't work too well." Root cause: they
+  didn't exist — touch combat was canvas tap-to-move (one walk per tap, hard stop at
+  5px, any WASD press cancels the target, single-touchId guard mishandles a second
+  finger). Plan-first per house rules; binary go-ahead received.
+- The stick: static #touch-controls overlay (base+knob, bottom-left) revealed ONLY by
+  (pointer: coarse) AND body.combat-live — desktop/town/overlays never see it. Pointer
+  Events + setPointerCapture (drag can't be stolen, one pointerId owns the stick),
+  floating origin (base recenters under the thumb), 12% dead zone, analog magnitude;
+  vector feeds InputManager.getMovement() at highest precedence — _movePlayer and the
+  keyboard path untouched.
+- Safety set: entries refuse while _isPaused/non-playing (paused & overlays),
+  pointercancel + pointerup hard-zero (no phantom drift), _resetJoystick() on every
+  teardown/town/dismiss funnel (startGame, boss-intro end, all three town entries,
+  end-screen show); e.preventDefault() kills compatibility mouse events so a stick
+  drag never fires a stray click-to-move.
+- Gated: layout audit gained a combat-touch section (combat is canvas-drawn — the
+  stick is its only DOM surface, so no SCREENS row): desktop negative control,
+  hidden-outside-combat on the emulated page, reveal during a real startGame run,
+  base+knob markup, ≥44px thumb zone, synthetic-drag MOVEMENT proof (player actually
+  translates), vector-live pin, paused-refusal pin, pointerup-zeroing pin. 539→548
+  checks; release:check green.
+- LESSON: probe hygiene — a synthetic pointer sequence that never releases poisons
+  every later probe reading the same InputManager state; dispatch pointerup inside
+  the probe and assert on the snapshot taken BEFORE the release.
+- LESSON: input-modality surfaces need their own gated section keyed to the device
+  (coarse pointer + combat state), not the screen matrix — the matrix governs layout
+  overlays; a persistent input overlay crosses all of them.
 ```

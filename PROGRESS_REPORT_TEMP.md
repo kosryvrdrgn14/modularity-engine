@@ -29,6 +29,33 @@ condition-system reference); he also has a post-graveyard dialogue set on the
 
 ---
 
+## SHIPPED (v2.19.29 — B18 combat joystick) — RE-TEST ON YOUR PHONE
+
+**Root cause:** there were no touch controls — combat was tap-to-move (one short walk
+per tap, hard stop at the tap point, WASD cancels the target). That's why it felt
+broken, not laggy: it was never a joystick.
+
+**What's new:** the usual left-thumb virtual stick, touch devices only:
+- Touch anywhere in the LOWER-LEFT of the screen during combat → the base appears
+  under your thumb (floating origin — no hunting for a fixed pad); drag to steer.
+  Small tilt = walk, full tilt = run. Right thumb keeps all the buttons
+  (level-up cards, pause, end screen) exactly as before.
+- Desktop/mouse play is untouched — the stick literally doesn't exist there.
+- Pause menu and level-up overlay freeze and ignore the stick; a phone call or
+  browser gesture stealing the touch drops the stick to zero (no phantom drifting).
+
+**Gated:** battery 539 → **548 checks** (15 suites, strict green), including a
+synthetic-drag proof that the player actually moves and a paused-refusal pin.
+**Version: v2.19.29, release:check green.**
+
+**Re-test asks (feel is the part emulation can't judge):**
+1. Does the dead-zone/tilt sensitivity feel right, or is it twitchy/sluggish?
+2. Stick SIZE and placement — comfortable for your thumb after a few minutes?
+3. Deliberate release: lift thumb mid-fight → player stops immediately?
+4. Any case where the stick fights with tapping level-up cards with the other thumb?
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap

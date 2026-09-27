@@ -8,6 +8,11 @@
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
+  <!-- B18 (v2.19.29): combat virtual joystick (touch devices only — revealed
+       by the pointer:coarse media query + .combat-live, driven by InputManager) -->
+  <div id="touch-controls">
+    <div class="joystick-base"><div class="joystick-stick"></div></div>
+  </div>
   <!-- Level-Up Overlay (HTML buttons for reliable click/touch) -->
   <div id="levelup-overlay">
     <div id="levelup-title">LEVEL UP!</div>

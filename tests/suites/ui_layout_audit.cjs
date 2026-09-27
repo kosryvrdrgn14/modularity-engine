@@ -555,6 +555,122 @@ const fs = require('fs');
         if (lu) lu.classList.remove('active');
       });
     }
+
+    // ── B18 (v2.19.29): combat virtual joystick — gated on the emulated device ──
+    // The combat screen is canvas-drawn (no DOM panel), so it cannot ride the
+    // SCREENS matrix; these probes govern its only DOM surface, the joystick.
+    // Desktop (pointer:fine) cells stay a NEGATIVE control: the stick must
+    // never appear there. Boot path = the suite's own combat entry (startGame).
+    {
+      const desktopVis = await page.evaluate(() => {
+        const z = document.getElementById('touch-controls');
+        return z ? getComputedStyle(z).display : 'absent';
+      });
+      check('[desktop negative] joystick hidden on fine pointers (display:none)',
+        desktopVis === 'none', `desktop display=${desktopVis}`);
+
+      const menuVis = await mobilePage.evaluate(() => {
+        const z = document.getElementById('touch-controls');
+        return z ? getComputedStyle(z).display : 'absent';
+      });
+      check('[combat-touch] joystick hidden outside combat, even on coarse pointer',
+        menuVis === 'none', `menu display=${menuVis}`);
+
+      // Boot a real run on the emulated page.
+      await mobilePage.evaluate(() => { window.game.startGame(); });
+      await mobilePage.waitForTimeout(250);
+      const vis = await mobilePage.evaluate(() => {
+        const z = document.getElementById('touch-controls');
+        if (!z) return { present: false };
+        const cs = getComputedStyle(z);
+        const r = z.getBoundingClientRect();
+        return { present: true, display: cs.display, pe: cs.pointerEvents,
+          w: Math.round(r.width), h: Math.round(r.height),
+          base: !!z.querySelector('.joystick-base'), stick: !!z.querySelector('.joystick-stick') };
+      });
+      check('[combat-touch] joystick revealed during combat on coarse pointer',
+        vis.present && vis.display !== 'none' && vis.pe !== 'none', JSON.stringify(vis));
+      check('[combat-touch] base + knob markup present', vis.base && vis.stick, JSON.stringify(vis));
+      // §11 coarse-pointer minimum: the live thumb zone IS the touch target.
+      check('[combat-touch] thumb zone ≥44px', vis.w >= 44 && vis.h >= 44, `w=${vis.w} h=${vis.h}`);
+
+      // Movement integration: a synthetic rightward drag must move the player.
+      const moved = await mobilePage.evaluate(() => new Promise((resolve) => {
+        const g = window.game;
+        g.player.hp = g.player.maxHp; // probe stability: don't let stray damage end the run mid-probe
+        const x0 = g.player.x, y0 = g.player.y;
+        const z = document.getElementById('touch-controls');
+        const r = z.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const opts = (x, y) => ({ bubbles: true, cancelable: true, pointerId: 7,
+          clientX: x, clientY: y, pointerType: 'touch', isPrimary: true });
+        z.dispatchEvent(new PointerEvent('pointerdown', opts(cx, cy)));
+        z.dispatchEvent(new PointerEvent('pointermove', opts(cx + 80, cy)));
+        setTimeout(() => {
+          const vec = { ...g.inputManager.joystick };
+          z.dispatchEvent(new PointerEvent('pointerup', opts(cx + 80, cy))); // release — later probes need a clean stick
+          setTimeout(() => resolve({ dx: g.player.x - x0, dy: g.player.y - y0, vec }), 120);
+        }, 400);
+      }));
+      check('[combat-touch] synthetic rightward drag moves the player right (analog integration)',
+        moved.dx > 10 && Math.abs(moved.dy) <= Math.abs(moved.dx), JSON.stringify(moved));
+      check('[combat-touch] joystick vector live during drag',
+        moved.vec && moved.vec.active === true, JSON.stringify(moved.vec));
+
+      // Pause safety: a paused run must refuse NEW stick captures.
+      await mobilePage.evaluate(() => {
+        window.game.gameState.setState('paused');
+        window.game.gameLoop.paused = true;
+        window.game.inputManager._isPaused = true;
+      });
+      await mobilePage.waitForTimeout(120);
+      const paused = await mobilePage.evaluate(() => new Promise((resolve) => {
+        const z = document.getElementById('touch-controls');
+        const r = z.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const opts = (x, y) => ({ bubbles: true, cancelable: true, pointerId: 9,
+          clientX: x, clientY: y, pointerType: 'touch', isPrimary: true });
+        z.dispatchEvent(new PointerEvent('pointerdown', opts(cx, cy)));
+        z.dispatchEvent(new PointerEvent('pointermove', opts(cx - 80, cy)));
+        setTimeout(() => resolve({ ...window.game.inputManager.joystick }), 300);
+      }));
+      check('[combat-touch] paused: new pointerdown refused (no stick capture, no drift)',
+        paused.pointerId === null && paused.active === false, JSON.stringify(paused));
+
+      // Resume + release: the stick zeroes on pointerup (no phantom drift).
+      await mobilePage.evaluate(() => {
+        window.game.gameState.setState('playing');
+        window.game.gameLoop.paused = false;
+        window.game.inputManager._isPaused = false;
+      });
+      await mobilePage.waitForTimeout(120);
+      const released = await mobilePage.evaluate(() => new Promise((resolve) => {
+        const z = document.getElementById('touch-controls');
+        const r = z.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const opts = (x, y) => ({ bubbles: true, cancelable: true, pointerId: 11,
+          clientX: x, clientY: y, pointerType: 'touch', isPrimary: true });
+        z.dispatchEvent(new PointerEvent('pointerdown', opts(cx, cy)));
+        z.dispatchEvent(new PointerEvent('pointermove', opts(cx, cy - 90)));
+        setTimeout(() => {
+          z.dispatchEvent(new PointerEvent('pointerup', opts(cx, cy - 90)));
+          setTimeout(() => resolve({ ...window.game.inputManager.joystick }), 120);
+        }, 200);
+      }));
+      check('[combat-touch] pointerup zeroes the stick',
+        !released.active && released.dx === 0 && released.dy === 0, JSON.stringify(released));
+
+      // Cleanup: leave combat on BOTH pages (run teardown, not just class strip).
+      await mobilePage.evaluate(() => {
+        window.game.gameLoop.paused = true;
+        try { window.game.gameManager.save?.(); } catch (_) {}
+        window.game.gameState.transition('town', { allowRestart: true }); // BUG-024 sanctioned escape hatch
+        window.game.townScreen.show({});
+        document.body.classList.remove('combat-live');
+      });
+      await page.evaluate(() => document.body.classList.remove('combat-live'));
+    }
+
     check('layout audit ran non-vacuously across screens/viewports', probed >= 8, `probed=${probed}`);
 
     fs.writeFileSync(path.join(outDir, 'ui_layout_report.json'), JSON.stringify(report, null, 2));

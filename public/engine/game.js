@@ -478,6 +478,7 @@ class Game {
     this._hideResumeBanner();
     this._isSelectingUpgrade = false;
     this.inputManager._isPaused = false;
+    this.inputManager._resetJoystick?.(); // B18: never inherit a stale stick vector across runs
     this.titleMenu.hide();
     // BUG-026 fix: startGame() is the single funnel for ALL combat starts
     // (title Play, restart, loadout confirm, interrupted-run resume). The
@@ -657,6 +658,7 @@ class Game {
     // GAP 4 FIX: Pass player reference to AudioManager for distance calculations
     this.audioManager.setPlayer(this.player);
     this.gameState.setState('playing');
+    document.body.classList.add('combat-live'); // B18: reveal the touch joystick (coarse pointers only, via CSS)
     this.gameLoop.paused = false;
     this.gameLoop.start();
   }
@@ -769,6 +771,7 @@ class Game {
     this.gameState.setState('playing');
     this.gameLoop.paused = false;
     this.inputManager._isPaused = false;
+    this.inputManager._resetJoystick?.(); // B18: intro froze the stick — zero it so no phantom drift
     if (this._introClickHandler) {
       this.canvas.removeEventListener('click', this._introClickHandler);
       this._introClickHandler = null;
@@ -902,6 +905,7 @@ class Game {
       if (_npcs.cute_girl) _npcs.cute_girl.unlocked = false;
     }
     this.gameState.setState('town');
+    this.inputManager._resetJoystick?.(); // B18: stick is combat-only — hidden in town
     this.townScreen.show({ time: '4:32', level: 8, kills: 20, gold: 100 });
   }
 
@@ -996,6 +1000,7 @@ class Game {
     console.log('[STORY] Story Mode started');
 
     this.gameState.setState('town');
+    this.inputManager._resetJoystick?.(); // B18: stick is combat-only — hidden in town
     this.townScreen.show({});
     // §23.4: a run journaled via Quit-to-Title surfaces its banner on the
     // next town entry (crash recovery is detected at boot; this covers the
@@ -1197,6 +1202,8 @@ class Game {
     }
     
     // Show end screen with result and stats
+    this.inputManager._resetJoystick?.(); // B18: run over — drop the stick immediately
+    document.body.classList.remove('combat-live'); // B18
     this.uiManager.showEndScreen(result, stats);
     // Move to endScreen state (gameOver → endScreen is valid; gameOver → town is not)
     this.gameState.setState('endScreen');
@@ -1215,6 +1222,7 @@ class Game {
     if (!this.gameState.isEndScreen()) return;
     const stats = this._getStats();
     this.gameState.setState('town');
+    this.inputManager._resetJoystick?.(); // B18: stick is combat-only — hidden in town
     this.uiManager.hideEndScreen();
     this.townScreen.show(stats);
   }

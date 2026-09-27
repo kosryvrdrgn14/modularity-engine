@@ -19,6 +19,49 @@
       height: 100%;
       image-rendering: pixelated;
     }
+    /* ── B18 (v2.19.29): combat virtual joystick — touch devices only ──
+       Hidden by default: #touch-controls activates ONLY on coarse pointers
+       while a combat run is live (body.combat-live, toggled by game.js).
+       Sits under every overlay scrim; knobs use the §12.1 spacing scale. */
+    #touch-controls {
+      display: none;
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 152px;   /* 120px base + 16px comfort margin each side */
+      height: 152px;
+      z-index: 5;
+      touch-action: none;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    @media (pointer: coarse) {
+      body.combat-live #touch-controls { display: block; pointer-events: auto; }
+    }
+    .joystick-base {
+      position: absolute;
+      left: 24px; bottom: 24px;   /* resting anchor; recenters under the thumb (floating origin) */
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    #touch-controls.joystick-live .joystick-base {
+      border-color: rgba(255, 215, 0, 0.45);
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .joystick-stick {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 48px; height: 48px;
+      margin: -24px 0 0 -24px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      will-change: transform;
+    }
     #loading-screen {
       position: fixed;
       inset: 0;
@@ -2156,4 +2199,13 @@
     width: calc(100% - 32px);
     max-width: 640px;
   }
+}
+
+/* ── B18 (v2.19.29): joystick sizing on small coarse-pointer screens ──
+   The 152px zone is comfortable on tablets/desktop-touch; phones in portrait
+   get a slightly smaller pad so the right thumb keeps more play space.
+   Landscape phones keep the default size (vertical space is scarce there). */
+@media (pointer: coarse) and (max-width: 480px) and (orientation: portrait) {
+  #touch-controls { width: 128px; height: 128px; }
+  .joystick-base { width: 104px; height: 104px; }
 }

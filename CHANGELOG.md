@@ -2,6 +2,51 @@
 
 ---
 
+## v2.19.29 — B18: combat virtual joystick (touch devices only)
+**Date:** September 27, 2026
+**Status:** ✅ Complete (layout audit 95→104; battery 548 strict green; release:check green)
+
+### User-reported
+- **"Touch controls for combat don't work too well."** Root cause: there were no touch
+  controls — combat movement was canvas tap-to-move (one walk per tap, hard stop within
+  5px of the tap, any WASD press cancels the target, single-touchId guard mishandles a
+  second finger). Plan presented per house rules (B18) and approved.
+
+### Added
+1. **Left-thumb virtual joystick** (the usual floating-thumb stick) for combat on touch
+   devices: static `#touch-controls` overlay (base + knob, bottom-left), revealed ONLY on
+   `(pointer: coarse)` while a run is live (`body.combat-live`, toggled by startGame/
+   end-screen). Touch anywhere in the lower-left zone → the base recenters under the
+   thumb (floating origin), drag to steer.
+2. **Analog movement:** Pointer Events + `setPointerCapture` (one pointerId owns the
+   stick — a second finger can't steer it; drags can't be stolen), 12% dead zone,
+   magnitude-normalized vector into `InputManager.getMovement()` at highest precedence
+   (same shape as the keyboard path — `_movePlayer` untouched; keyboard/WASD unchanged).
+3. **Safety:** stick entries refuse while paused/levelUp/bossIntro/endScreen;
+   `pointerup`/`pointercancel` hard-zero (no phantom drift after calls/gesture steals);
+   `_resetJoystick()` on every teardown/town funnel (startGame, boss-intro end, all town
+   entries, end-screen show); `preventDefault()` stops compatibility mouse events so a
+   stick drag never fires a stray click-to-move. Right thumb keeps level-up cards, pause
+   menu, end actions, and overlays exactly as they were.
+
+### Gated
+- Layout audit gained a **combat-touch section** (combat is canvas-drawn; the stick is
+  its only DOM surface, so it is a section keyed to modality + state, not a SCREENS row):
+  desktop negative control (stick never exists on fine pointers), hidden-outside-combat
+  on the emulated iPhone page, reveal during a real `startGame()` run, base+knob markup,
+  ≥44px thumb zone, **synthetic-drag movement proof** (a simulated rightward drag must
+  actually translate the player), vector-live pin, paused-refusal pin, pointerup-zeroing
+  pin. 539 → **548 checks**.
+
+### Docs
+- Spec §12.8 addition: touch input standard (modality gating, analog vector contract,
+  gesture safety, state lifecycle, sub-surface rule). WORKFLOW §10 B18 closed + §11
+  v2.19.29 lessons (probe hygiene for synthetic pointer sequences; input-modality
+  surfaces need their own gated section). PROJECT_MAP core.js block updated (joystick
+  API; `touch-controls` is static markup — F2-verified, no dynamic-create entry).
+
+---
+
 ## v2.19.28 — B17: level-up cards on mobile (same B15 class) + portrait stacking for pickers
 **Date:** September 26, 2026
 **Status:** ✅ Complete (layout audit 81→95; battery 539 strict green; release:check green)

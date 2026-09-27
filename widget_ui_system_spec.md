@@ -393,6 +393,27 @@ aesthetic quality stays a human M-list judgment (TESTING_PLAN §5).
   cards go name-priority + full ellipsis spec, and a tap opens a confirmation panel that
   carries the full text (shop: `_openPurchaseConfirm`). Wrapping-in-place is not shipped;
   silent truncation never is.
+### 12.8 addition (v2.19.29): touch input standard (B18 combat joystick)
+- **Modality gating:** a touch-ONLY control is revealed by the INPUT MODALITY, not a
+  breakpoint — `(pointer: coarse)` AND the screen-state class (`body.combat-live` for
+  the joystick). Desktop with a mouse must never see touch chrome, and touch chrome
+  must never appear on a screen it does not serve.
+- **Analog vector contract:** the stick produces a dead-zoned (12%), magnitude-
+  normalized {dx,dy} in [-1,1] and feeds the SAME movement pipeline as the keyboard
+  (`InputManager.getMovement()`, highest precedence). Movement consumers never learn
+  the input source — one `_movePlayer`, zero per-frame cost while the stick idles.
+- **Gesture safety:** Pointer Events + `setPointerCapture` (one pointerId owns the
+  stick; a second finger cannot steer it), `pointerup`/`pointercancel` hard-zero,
+  `e.preventDefault()` suppresses compatibility mouse events (no phantom click-to-
+  move), and entries refuse while paused or overlayed (same guard family as movement
+  clicks).
+- **State lifecycle:** every combat-teardown/town funnel calls
+  `InputManager._resetJoystick()` — a stick vector must never survive a run boundary
+  (startGame, boss-intro end, all town entries, end-screen show).
+- **Sub-surface rule:** a persistent input overlay crosses every screen, so it is
+  NOT a screen-matrix row — it gets its own gated section keyed to modality + state
+  (layout audit combat-touch probes: desktop negative control, emulated reveal,
+  synthetic-drag movement proof, pause refusal, release zeroing).
 ### 12.6 addition (v2.19.24): confirm-before-commit
 - The state between "user intends an irreversible/costly action" and "committed" must be
   EXPLICIT: a confirmation surface that restates the object and the exact cost. Scrims and

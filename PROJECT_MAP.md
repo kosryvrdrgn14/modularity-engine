@@ -165,10 +165,10 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 ### T2 — core
 
 ### engine/core.js
-- Purpose: substrate — `DataManager` (content load + registry), `EventBus`, `GameLoop`, `Camera`, `InputManager`, `GameState`
+- Purpose: substrate — `DataManager` (content load + registry), `EventBus`, `GameLoop`, `Camera`, `InputManager` (incl. the B18 virtual-joystick vector + `_resetJoystick()`), `GameState`
 - Status: NORMATIVE
 - Defines: `DataManager`, `EventBus`, `GameLoop`, `Camera`, `InputManager`, `GameState`
-- Calls: `EMBEDDED_DATA` (fallback), `COMPANION_DATA` (guarded)
+- Calls: `EMBEDDED_DATA` (fallback), `COMPANION_DATA` (guarded), DOM `#touch-controls` + `.joystick-base`/`.joystick-stick` (B18 joystick host — static game2.html markup, F2-verified)
 - Emits (via GameState/UI flow): `stateChange`, `pause`, `restart`, `selectUpgrade`, `skipToBoss`, `pauseMenuAction`, `endScreenDismiss`
 - Content: **registers the fetch list for all 16 content JSONs** (POT-006 — new content files must join here AND the generator)
 - GuardedBy: trace (boot), content:check
