@@ -60,11 +60,6 @@ class TownContent {
       dialogueContinue: document.getElementById('dialogue-continue'),
     };
 
-    this._companionSlots = [
-      document.getElementById('companion-slot-0'),
-      document.getElementById('companion-slot-1'),
-      document.getElementById('companion-slot-2'),
-    ];
     this._dogDialogue = document.getElementById('dog-dialogue');
     this._dogPortrait = document.getElementById('dog-dialogue-portrait');
     this._dogText = document.getElementById('dog-dialogue-text');
@@ -758,7 +753,6 @@ class TownContent {
       this._dogDialogue.classList.remove('active');
       this.gameManager.add_companion('dog');
       this.showCompanionNotification('Dog', 'Has joined your party!');
-      this.renderCompanionSlots();
     } else {
       this.audioManager.playMenuSound('back');
       this._dogDialogue.classList.remove('active');
@@ -807,32 +801,6 @@ class TownContent {
     this._notifEl.classList.add('active');
     this.audioManager.playMenuSound('powerup');
     setTimeout(() => this._notifEl.classList.remove('active'), 2500);
-  }
-
-  renderCompanionSlots() {
-    const gm = this.gameManager;
-    const companions = gm.get_companions();
-    const companionData = {
-      dog: { name: 'Dog', svg: SVG_PORTRAITS['dog'] || '' }
-    };
-
-    for (let i = 0; i < 3; i++) {
-      const slot = this._companionSlots[i];
-      if (!slot) continue;
-      if (i < companions.length) {
-        const data = companionData[companions[i]];
-        slot.className = 'companion-slot filled';
-        if (data && data.svg) {
-          slot.innerHTML = data.svg.replace('<svg ', '<svg style="width:48px;height:48px;" ') +
-            '<div class="companion-name">' + data.name + '</div>';
-        } else {
-          slot.innerHTML = '<span class="empty-icon">?</span><div class="companion-name">' + (data ? data.name : companions[i]) + '</div>';
-        }
-      } else {
-        slot.className = 'companion-slot';
-        slot.innerHTML = '<span class="empty-icon">+</span>';
-      }
-    }
   }
 
   // --- NPC Card Rendering ---

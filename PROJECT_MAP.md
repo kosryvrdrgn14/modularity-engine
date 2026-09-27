@@ -207,7 +207,8 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `Renderer`, `FloatingTextSystem`
 - Listens: `damage`, `pickup`
-- GuardedBy: trace
+- Note: B24 (v2.19.31) — screen-space UI (`_drawUI`, `_drawBossIntro`, `_drawAnnouncements`) draws in CSS-pixel units via the module `UI_DPR` scale (backing store is devicePixelRatio-scaled); world-space floating text scales its FONT by dpr (positions stay world-space). New screen-space canvas draws MUST follow the same contract (spec §12.8)
+- GuardedBy: trace, visual_probe (B24 emulated HUD-scale cell)
 
 ### systems/companion.js
 - Purpose: companion dog — spawn, combat assists, loot fetch
@@ -280,7 +281,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - GuardedBy: trace (audio smoke)
 
 ### ui/game.js
-- Purpose: `UIManager` — combat HUD DOM: level-up cards, pause menu, end screen
+- Purpose: `UIManager` — combat HUD DOM: level-up cards, pause menu, end screen (end screen's canvas stats draw in CSS-pixel units — B24 v2.19.31)
 - Status: NORMATIVE
 - Defines: `UIManager`
 - Calls: `WidgetRenderer` (pause/end action buttons are widget cards, v2.14.0 — declared `widget:*` document events bridged to the bus; ids `pause-resume/exit/quit`, `end-retry/town` preserved)

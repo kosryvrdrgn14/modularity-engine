@@ -66,7 +66,6 @@ class TownScreen {
     this.locationManager.onNavigate = (loc) => {
       this.engine._onLocationNavigate(loc);
       this.content.renderFarmingSlotsButton();
-      this.content.renderCompanionSlots();
       this.content.updateDisplay();
     };
   }
@@ -90,7 +89,6 @@ class TownScreen {
     this.content.renderLeftPanel();
     this.content.renderRightPanel();
     this.content.renderFarmingSlotsButton();
-    this.content.renderCompanionSlots();
   }
 
   hide() {

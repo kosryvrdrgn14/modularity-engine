@@ -35,7 +35,8 @@ const check = (name, pass, extra) => {
 };
 
 (async () => {
-  const { bootGame } = require(path.join(__dirname, '..', 'lib', 'harness.cjs'));
+  const harness = require(path.join(__dirname, '..', 'lib', 'harness.cjs'));
+  const { bootGame } = harness;
   const { browser, page, errors } = await bootGame();
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -174,6 +175,56 @@ const check = (name, pass, extra) => {
     check('combat canvas non-uniform (rendered content present; blank-cleared = 0.0)',
       combatSd > 3, `stdev=${combatSd.toFixed(1)}`);
     check('combat HUD timer draws text pixels (BUG-027 probe)', timerPx > 30, `whitePixels=${timerPx}`);
+
+    // ── 3b. B24 (v2.19.31): HUD scale on a REAL device-emulated page ──
+    // The canvas backing store is devicePixelRatio-scaled; before B24 the HUD
+    // drew in raw backing pixels, so on a DPR-3 phone the 200px HP bar measured
+    // ~67px. The probe boots a REAL run on the emulated iPhone-13 page (DPR 3)
+    // and measures the HP bar's red run-length IN DEVICE PIXELS at mid-screen:
+    // it must be ≈ 200 × dpr (± tolerance), i.e. the HUD is sized in CSS px.
+    // Also sweeps the SAME class: floating damage text must scale its font by
+    // dpr (world-space), and the emulated run must not error.
+    {
+      const { newMobilePage } = harness;
+      const mErrors = [];
+      const { context: mCtx, page: mPage } = await newMobilePage(browser, { errors: mErrors });
+      try {
+        const hud = await mPage.evaluate(async () => {
+          const g = window.game;
+          const dpr = window.devicePixelRatio || 1;
+          g.gameManager.set('session.selected_stage_id', 'stage_graveyard');
+          g.gameManager.set('session.current_stage_tier', 'standard');
+          g.startGame();
+          await new Promise((res) => setTimeout(res, 700)); // a few rendered frames (player may take damage — that's fine, see below)
+          const canvas = document.getElementById('game-canvas');
+          const ctx = canvas.getContext('2d');
+          // Ruler = the GOLD CHIP (10,34,96,22 css): fixed geometry, gold
+          // #FFD700 stroke border, nothing gold beside it on that row (the
+          // kill chip sits top-RIGHT). The HP bar was rejected as ruler: on a
+          // 390px screen the centered level badge overdraws its right end.
+          // Span of gold pixels on the chip row ≈ 96 CSS px × dpr proves the
+          // HUD is drawn in CSS-pixel units (raw-pixel drawing would measure
+          // ≈ 96/3 = 32 css on this DPR-3 page — the B24 defect).
+          const yDev = Math.round(45 * dpr); // chip row: y=34..56 css
+          const row = ctx.getImageData(0, yDev, canvas.width, 1).data;
+          let minX = -1, maxX = -1;
+          for (let x = 0; x < Math.round(150 * dpr); x++) {
+            const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
+            const goldish = r > 170 && gg > 130 && b < 110;
+            if (goldish) { if (minX < 0) minX = x; maxX = x; }
+          }
+          const spanCss = minX < 0 ? 0 : (maxX - minX + 1) / dpr;
+          return { dpr, spanCss };
+        });
+        check(`[B24/emulated DPR${hud.dpr}] HUD gold chip sized in CSS pixels (span ≈ 96 ± 8 css)`,
+          hud.spanCss >= 88 && hud.spanCss <= 104,
+          `goldSpan=${hud.spanCss.toFixed(1)}css (raw-pixel defect would read ≈32css)`);
+        check('[B24/emulated] no page errors during emulated combat render', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
+      } finally {
+        await mCtx.close();
+      }
+    }
+
     // Slice 2: the rest of the §5.1 HUD regions.
     const goldPx = await page.evaluate(() => window.__goldChipPixels());
     const xpPx = await page.evaluate(() => window.__xpBarPixels());

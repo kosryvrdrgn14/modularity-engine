@@ -133,8 +133,14 @@ class UIManager {
 
   _renderEndScreen() {
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    // B24 (v2.19.31): end screen is canvas-drawn — keep it in CSS-pixel units
+    // (the backing store is devicePixelRatio-scaled; raw pixels were 1/3 size
+    // on phones).
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    const w = this.canvas.width / dpr;
+    const h = this.canvas.height / dpr;
 
     // Overlay
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
@@ -216,6 +222,7 @@ class UIManager {
     ctx.fillStyle = '#666';
     ctx.font = '12px monospace';
     ctx.fillText('[R] fight again', w / 2, h / 2 + 208);
+    ctx.restore(); // B24
   }
 }
 

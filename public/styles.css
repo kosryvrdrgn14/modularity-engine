@@ -665,13 +665,11 @@
     }
     /* UI fade during transition */
     .town-transitioning #town-npc-area,
-    .town-transitioning #town-companions-center,
     .town-transitioning #town-breadcrumb {
       opacity: 0;
       transition: opacity 0.12s ease-out;
     }
     .town-transition-fadein #town-npc-area,
-    .town-transition-fadein #town-companions-center,
     .town-transition-fadein #town-breadcrumb {
       opacity: 1;
       transition: opacity 0.2s ease-in 0.08s;
@@ -704,39 +702,6 @@
       overflow-y: auto;
       max-width: 500px;
       margin: 0 auto;
-    }
-    #town-companions-center {
-      position: absolute;
-      bottom: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 3;
-      display: flex;
-      gap: 12px;
-    }
-    .companion-slot {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: rgba(20, 18, 30, 0.8);
-      border: 2px solid rgba(255, 215, 0, 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: border-color 0.2s;
-      overflow: hidden;
-    }
-    .companion-slot:active { border-color: rgba(255, 215, 0, 0.4); }
-    .companion-slot .empty-icon {
-      color: #7d7d87;
-      font-size: 1.2rem;
-    }
-    .companion-slot img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
     }
     #town-swipe-indicator {
       position: absolute;
@@ -955,56 +920,6 @@
       color: #FFD700;
     }
 
-
-    /* Companion slots */
-    #town-companions {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      gap: 12px;
-      padding: 0 20px 12px;
-      max-width: 600px;
-      width: 100%;
-      margin: 0 auto;
-    }
-    .companion-slot {
-      width: 64px;
-      height: 64px;
-      border-radius: 10px;
-      border: 2px dashed rgba(255, 215, 0, 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(20, 18, 30, 0.6);
-      position: relative;
-      overflow: hidden;
-    }
-    .companion-slot.filled {
-      border-style: solid;
-      border-color: rgba(255, 215, 0, 0.3);
-      background: rgba(30, 25, 45, 0.8);
-    }
-    .companion-slot.filled svg,
-    .companion-slot.filled img {
-      width: 48px;
-      height: 48px;
-    }
-    .companion-slot .empty-icon {
-      font-size: 1.4rem;
-      opacity: 0.25;
-    }
-    .companion-slot .companion-name {
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 0.55rem;
-      color: #ccc;
-      background: rgba(10,10,26,0.8);
-      padding: 1px 0;
-      border-radius: 0 0 8px 8px;
-    }
 
     /* Dog dialogue (special inline dialogue) */
     #dog-dialogue {

@@ -414,6 +414,21 @@ aesthetic quality stays a human M-list judgment (TESTING_PLAN §5).
   NOT a screen-matrix row — it gets its own gated section keyed to modality + state
   (layout audit combat-touch probes: desktop negative control, emulated reveal,
   synthetic-drag movement proof, pause refusal, release zeroing).
+### 12.8 addition (v2.19.31): canvas UI standard (B24)
+- **The backing store is devicePixelRatio-scaled; screen-space UI draws in CSS-pixel
+  units.** Every screen-space canvas drawer (combat HUD, boss intro, announcements,
+  end screen) divides the canvas dimensions by dpr and scales the context — its fixed
+  constants (bar widths, slot sizes, fonts) are CSS px claims. Raw backing-pixel
+  drawing renders dpr× too small on phones and is a defect, not a style choice.
+- **World-space text is the exception:** floating damage/pickup text lives in world
+  coordinates under the camera transform — it scales its FONT by dpr, never its
+  position. Full-canvas dim rects stay in backing pixels (they cover everything at
+  either unit).
+- **Pixel-ruler gating:** emulated-device probes measure a HUD element with an
+  ISOLATED color and NO overlapping neighbors (the gold chip), because overlapping
+  HUD elements (level badge over the HP bar on narrow screens) confound
+  single-element measurements. A measured span in CSS px ≈ the drawn constant proves
+  the contract; the B24 defect measured ≈ constant/dpr.
 ### 12.6 addition (v2.19.24): confirm-before-commit
 - The state between "user intends an irreversible/costly action" and "committed" must be
   EXPLICIT: a confirmation surface that restates the object and the exact cost. Scrims and

@@ -2,6 +2,45 @@
 
 ---
 
+## v2.19.31 — B23: town companion-slot removal + B24: DPR-correct canvas HUD
+**Date:** September 27, 2026
+**Status:** ✅ Complete (visual_probe 25→27; battery 556 strict green; release:check green)
+
+### User-reported (phone screenshots, continuing the manual-test session)
+1. **Town companion slots** — "maybe we don't need it shown outside the combat stage
+   selection": confirmed — the map slots were a dead status display (no click handlers;
+   the `:active` highlight was a false affordance) AND they overdraw the Auto-Clear
+   Farming card on mobile. **Removed** (B23): markup, render path, town CSS. Companion
+   status lives in the Systems panel; assignment happens in the loadout screen. The
+   long-dead `#town-companions` CSS block (orphaned by an old rename) swept in the same
+   unit per B14 rules.
+2. **"Combat menu items are tiny"** — a real DPR bug (B24): the canvas backing store is
+   `devicePixelRatio`-scaled, but all screen-space HUD draws used **raw backing pixels**,
+   so on a DPR-3 phone the 36px weapon/companion slots measured **12px** physical and
+   9–14px fonts rendered ≈3–5px. Desktop (DPR 1) never exposed it, and DOM touch-target
+   gates cannot see canvas pixels.
+
+### B24 fix
+- `_drawUI`, `_drawBossIntro`, `_drawAnnouncements` (rendering.js) and the end-screen
+  stats (ui/game.js) now draw in **CSS-pixel units** via a dpr scale — every existing
+  constant was already a good CSS size (they were designed on desktop), so the phone HUD
+  is now physically identical to desktop with zero tuning.
+- World-space floating damage/pickup text scales its **font** by dpr (positions stay
+  world-space); full-canvas dim rects stay in backing pixels.
+- Same-class sweep rule applied: every screen-space canvas drawer enumerated and fixed
+  in one unit; new standard codified in spec §12.8 ("canvas UI standard").
+
+### Gated
+- `visual_probe` gained an **emulated-iPhone cell**: a real `startGame()` run on the
+  DPR-3 page measures the HUD gold chip's pixel span (fixed 96css geometry, isolated
+  gold color) — ≈96css proves CSS-unit drawing; the defect measured ≈32css. An HP-bar
+  ruler was rejected after measurement contradicted the model: on a 390px screen the
+  centered level badge overdraws the bar's right end (overlapping HUD elements confound
+  single-element pixel rulers — lesson logged §11). visual_probe 25 → **27**; battery
+  **554 → 556**.
+
+---
+
 ## v2.19.30 — B19: Buy Again (Claude triage Q1) + triage decisions recorded
 **Date:** September 27, 2026
 **Status:** ✅ Complete (step6 18→24; battery 554 strict green; release:check green)

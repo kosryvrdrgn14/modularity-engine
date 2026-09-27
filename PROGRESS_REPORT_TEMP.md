@@ -86,6 +86,32 @@ down to nearly broke and confirm the button disables instead of letting you over
 
 ---
 
+## SHIPPED (v2.19.31 — B23 + B24, from your two findings)
+
+**1. Town companion slots — REMOVED.** You were right: they were a dead display (never
+clickable — the highlight was faking interactivity) and they sat on top of the Auto-Clear
+Farming card on your phone. Gone from the town map. Companion status is still in Systems;
+assignment stays in the fight-confirmation (loadout) screen.
+
+**2. Tiny combat HUD — root-caused and fixed.** Not a styling miss: the canvas was being
+drawn at 3× internal resolution but the HUD used raw pixels — so on your phone everything
+canvas-drawn (weapon/companion slots, HP bar, timer, gold, kill counter, XP text) rendered
+at ONE-THIRD physical size. 36px slots measured 12px on your screen; the "Lv2" text was
+~3px. Desktop was never affected (1× screen). Now all canvas UI draws in CSS pixels —
+your phone HUD should be the same physical size as on a laptop. The upgrade cards, pause
+menu, and joystick were DOM overlays, which is why only those felt right.
+
+**Gated:** battery 554 → **556 checks** — a new emulated-iPhone probe boots a real run at
+DPR 3 and measures a HUD chip's on-screen size so this class can't silently regress.
+**Version: v2.19.31, release:check green.**
+
+**Re-test asks:** reload → town (slots gone, farming card clean) → fight: are the weapon
+slots, HP bar, and timer now comfortably readable? If the HUD now feels TOO BIG on your
+phone (it's desktop-sized, which on a 5–6" screen may read chunky), say so — sizing is a
+dial now, not a bug.
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap

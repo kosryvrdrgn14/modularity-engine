@@ -227,6 +227,8 @@ backlog aging.
 | B20 | Toast duration scaling (Claude triage Q4): scale duration to message length so longer reward/warning toasts stay readable — keep 3.5s as the short-toast default; formula undecided, flag BEFORE more toast types land | P3, next time a toast type is added | S | — |
 | B21 | Inventory item detail sheet (Claude triage Q5 — NOT a fresh decision): a tracked GAP against the already-designed inventory spec (tap → detail sheet with use/route/gift/discard); stays backlogged until inventory work resumes | The spec already answers the design question | M | — |
 | B22 | Matrix-coverage periodic audit (Claude triage, from the progress report's closing line): treat "is every screen/dialog actually registered in the battery matrix" as its own periodic check, SEPARATE from gate strictness — the slot-picker was missed because it was invisible to the gates, not because the gates were weak | P3, run alongside the §9 orphan-and-doc-hygiene schedule | S | — |
+| B23 | ~~Town-screen companion slots~~ **DONE v2.19.31** (user screenshot: slots were a dead status display — no click handlers, the :active highlight was a false affordance — AND they collided with the Auto-Clear Farming card on mobile; removed the map slots entirely; status lives in the Systems panel, assignment in the loadout screen; the dead `#town-companions` CSS block swept in the same unit) | Same-unit dead-CSS sweep; town screen re-gated | S | — |
+| B24 | ~~Canvas HUD is physically tiny on phones~~ **DONE v2.19.31** (user report "combat menu items are tiny": canvas backing store is devicePixelRatio-scaled but screen-space draws used raw backing pixels — on DPR-3 the 36px weapon slots measured 12px physical; fixed by drawing `_drawUI`/`_drawBossIntro`/`_drawAnnouncements` + the end-screen canvas stats in CSS-pixel units via a dpr scale, world-space floating text scales its font by dpr; gated with an emulated-iPhone gold-chip span probe) | Same-class sweep: ALL screen-space canvas drawers enumerated and fixed in one unit — canvas constant sizes are physical-size claims only at DPR 1 | M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -836,4 +838,37 @@ backlog aging.
 - LESSON (Q1 process): "persist the surface, don't add a shortcut" — the safer
   repeat-purchase pattern keeps ONE commit path and re-uses the existing confirm render,
   instead of adding a parallel quick-buy route that would need its own guards.
+```
+
+### v2.19.31 (Sept 27, 2026) — B23 town-slot removal + B24 DPR-correct canvas UI
+```
+- Two user-phone findings in one unit (v2.19.31, battery 554→556):
+  B23 — the town-map companion slots (3×52px circles, absolute bottom-center) were a
+  DEAD status display (no click handlers anywhere; the :active highlight was a false
+  affordance) AND they overdraw the Auto-Clear Farming card on mobile. Removed
+  entirely (markup, townContent cache+method, town.js pass-throughs, town CSS);
+  status lives in the Systems panel, assignment in the loadout screen. The long-dead
+  #town-companions CSS block (orphaned by an old rename to -center) swept in the
+  same unit — B14 rules applied (whole-block bounds verified, battery after).
+  B24 — "combat menu items are tiny": the canvas backing store is devicePixelRatio-
+  scaled (resizeCanvas), but every screen-space draw used RAW backing pixels with
+  fixed constants — on a DPR-3 phone the 36px weapon slots measured 12px physical,
+  14px fonts ≈4.7px. Desktop DPR-1 never exposed it, and DOM touch-target gates
+  cannot see canvas pixels. Fixed by drawing _drawUI/_drawBossIntro/
+  _drawAnnouncements (rendering.js) and the end-screen stats (ui/game.js) in
+  CSS-pixel units via a dpr scale — every existing constant was already a good CSS
+  size, so zero tuning; world-space floating text scales its FONT by dpr instead
+  (positions stay world-space, full-canvas dim rects stay raw).
+- Gated: visual_probe gained an emulated-iPhone cell — a real startGame run on the
+  DPR-3 page measures the HUD gold chip's pixel span (fixed 96css geometry, gold
+  stroke, nothing gold beside it): ≈96css proves CSS-unit drawing, the defect read
+  ≈32css. Battery 554→556, strict green, release:check green.
+- LESSON: an HP-bar ruler failed (measured 142css at hp=100%) — on a 390px screen
+  the centered level badge OVERDRAWS the HP bar's right end; overlapping HUD
+  elements confound any single-element pixel ruler. Pick a ruler with isolated
+  color and no neighbors (gold chip), and when a measurement contradicts the
+  model, screenshot before concluding the fix is wrong.
+- LESSON: canvas constant sizes are physical-size claims ONLY at DPR 1 — any
+  screen-space canvas UI must divide the backing store by dpr (or scale the
+  context) and treat its constants as CSS px; codified as a §12.8 standard.
 ```

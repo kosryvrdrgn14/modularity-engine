@@ -1,3 +1,7 @@
+// B24 (v2.19.31): screen-space canvas UI draws in CSS-pixel units. The
+// backing store is devicePixelRatio-scaled (game.js resizeCanvas), so a raw
+// draw on a DPR-3 phone rendered the HUD at 1/3 physical size.
+const UI_DPR = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
 class Renderer {
   constructor(canvas, camera) {
     this.canvas = canvas;
@@ -274,8 +278,10 @@ class Renderer {
     if (this._announcements.length === 0 && !this._dimOverlay) return;
     
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    ctx.save(); // B24: announce in CSS-pixel units
+    ctx.scale(UI_DPR, UI_DPR);
+    const w = this.canvas.width / UI_DPR;
+    const h = this.canvas.height / UI_DPR;
     
     // Dim overlay
     if (this._dimOverlay) {
@@ -317,13 +323,16 @@ class Renderer {
       ctx.fillText(a.text, w / 2, h / 2);
       ctx.restore();
     }
+    ctx.restore(); // B24
   }
 
   _drawBossIntro(overlay) {
     if (!overlay) return;
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    ctx.save(); // B24: intro overlay in CSS-pixel units
+    ctx.scale(UI_DPR, UI_DPR);
+    const w = this.canvas.width / UI_DPR;
+    const h = this.canvas.height / UI_DPR;
     const progress = overlay.elapsed / overlay.totalDuration;
     
     // Dark overlay
@@ -375,14 +384,17 @@ class Renderer {
       ctx.fillText('Tap or press Space to skip', w / 2, h - 60);
     }
     
-    ctx.restore();
+    ctx.restore(); // intro's own
+    ctx.restore(); // B24
   }
 
   _drawUI(player) {
     if (!player) return;
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    ctx.save(); // B24: HUD in CSS-pixel units (see UI_DPR note at file head)
+    ctx.scale(UI_DPR, UI_DPR);
+    const w = this.canvas.width / UI_DPR;
+    const h = this.canvas.height / UI_DPR;
 
     // HP Bar
     const hpPercent = player.hp / player.maxHp;
@@ -553,6 +565,7 @@ class Renderer {
         ctx.fillText(cn.icon, x + slotSize / 2, slotY + 22);
       }
     }
+    ctx.restore(); // B24
   }
 }
 
@@ -635,7 +648,7 @@ class FloatingTextSystem {
       const alpha = Math.max(0, 1 - t.age / t.maxAge);
       ctx.globalAlpha = alpha;
       ctx.fillStyle = t.color;
-      ctx.font = `bold ${t.fontSize}px monospace`;
+      ctx.font = `bold ${t.fontSize * UI_DPR}px monospace`; // B24: world-space text scales with the backing store
       ctx.textAlign = 'center';
       ctx.fillText(t.text, t.x, t.y);
     }
