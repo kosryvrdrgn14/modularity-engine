@@ -533,7 +533,12 @@
       color: #FFD700;
       font-size: 0.85rem;
       font-weight: 600;
-      white-space: nowrap;
+      /* B29 (v2.19.36): the v2.19.26 fade-out restoration kept the desktop-era
+         nowrap — a long time-event line ("The stranger leaves to scout…")
+         rendered past the viewport edge on phones (user screenshot). The
+         container's max-width 90vw holds; the toast itself must wrap.
+         Desktop text fits either way, so fine-pointer rendering is unchanged. */
+      white-space: normal;
       opacity: 0;
       transform: translateY(-8px);
       transition: opacity 0.25s ease, transform 0.25s ease;

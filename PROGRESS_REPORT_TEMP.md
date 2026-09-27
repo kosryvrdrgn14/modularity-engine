@@ -306,6 +306,27 @@ the desc line entirely (name-priority purity)? The confirm panel always has the 
 
 ## If you find a defect in manual testing
 
+## v2.19.36 — B29+B30 (user screenshots, same run)
+
+**Toast text out of bounds (B29).** The time-event toast ("The stranger leaves to
+scout…") kept a desktop-era `white-space: nowrap`, so on a phone it rendered past the
+right screen edge. Now it wraps inside the 90vw container. Desktop is unchanged.
+
+**Joystick overlapping the weapon/companion display (B30).** Both the joystick zone and
+the canvas weapon rail claim the bottom-left corner; the canvas lost (drew underneath).
+On touch devices the rail now sits to the RIGHT of the joystick zone (136/160px by
+viewport width, recomputed live on orientation flip) — no center move needed, nothing
+crosses the play area, and your right thumb keeps the full pad. Desktop keeps the
+original x=10 position, pinned pixel-identical.
+
+**On your "checks for UI overlap" idea:** agreed and partially in place — the new
+gates pin toast containment and rail-vs-zone separation on the emulated phone. A full
+generic overlap checker (every HUD region vs every overlay) is bigger; B22's
+matrix-coverage audit is the natural home for it.
+
+**Re-test asks:** long toasts wrap on your phone; weapon/companion icons now sit right
+of the joystick pad, readable in portrait and landscape; joystick feel unchanged.
+
 House rules apply: file it in WORKFLOW §10 (ID B17+ — B15 slot-picker and B16
 golden-image-declined are taken) with "why/effort/priority". The slot-picker catch proves
 the value: any dialog/screen not yet in the battery matrix is ungoverned — report it and

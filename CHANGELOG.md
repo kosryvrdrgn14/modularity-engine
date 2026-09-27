@@ -2,6 +2,31 @@
 
 ---
 
+## v2.19.36 — B29+B30: toast wrap defense + HUD rail clears the joystick
+**Date:** September 27, 2026
+**Status:** ✅ Complete (visual_probe 37→43; battery 578 strict green; release:check green)
+
+### Two more phone-viewport defects (user screenshots, same run)
+- **B29 — time-event toast clipped off-screen:** the toast block restored in v2.19.26
+  kept its desktop-era `white-space: nowrap`, so the long quest line ("The stranger
+  leaves to scout — temporarily unavailable.") rendered past the right viewport edge on
+  a 390px phone. Fix: `white-space: normal` on `.town-toast` — the container's
+  max-width 90vw now actually holds. Desktop rendering unchanged (its strings fit).
+- **B30 — weapon/companion rail under the joystick zone:** the canvas slot rail
+  (x=10, bottom-left) drew directly beneath the B18 DOM joystick zone (152px/128px) on
+  touch devices — both rendered, one unreadable. Fix: coarse-pointer-only
+  `slotOffsetX` (160px wide viewports, 136px narrow) computed per frame via
+  matchMedia, so the rail re-offsets live across portrait↔landscape. Fine pointers
+  keep offset 0 — desktop pixel-identical (pinned).
+
+### Gates (visual_probe 37→43; battery 572→578)
+- Desktop: toast bounds + wrap-property pins; weapon-rail x=10 pixel pin (gold-stroke
+  scan on a cleared world — measured pixels have exactly one plausible author).
+- Emulated iPhone: 390px toast containment (old CSS fails this cell), rail-vs-zone
+  separation in portrait (≥140css) and landscape (≥160css, live re-offset verified).
+
+---
+
 ## v2.19.35 — B28: 100% boss trophy (deterministic headless boss tracking)
 **Date:** September 27, 2026
 **Status:** ✅ Complete (visual_probe 34→37; battery 572 strict green; release:check green)

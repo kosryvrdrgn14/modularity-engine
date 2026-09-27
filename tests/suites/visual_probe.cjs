@@ -155,6 +155,34 @@ const check = (name, pass, extra) => {
       dockButtons: document.querySelectorAll('#town-dock *').length,
       goldText: (document.getElementById('town-gold')?.textContent || '').trim().length,
     }));
+
+    // ── 2b. B29 (v2.19.36): long toasts must WRAP, not clip ──
+    // Desktop pin: bounds hold and the wrap property is live (desktop text
+    // fits under both nowrap and normal, so this is a regression pin).
+    {
+      const toastRects = await page.evaluate(() => {
+        const g = window.game;
+        g.townScreen.content.showToast('The stranger leaves to scout — temporarily unavailable.', 'time', '⏳');
+        return new Promise((resolve) => setTimeout(() => {
+          const el = document.querySelector('#town-toast-container .town-toast');
+          const r = el ? el.getBoundingClientRect() : null;
+          resolve({ w: r ? Math.round(r.width) : -1,
+            right: r ? Math.round(r.right) : -1,
+            vw: window.innerWidth,
+            ws: el ? getComputedStyle(el).whiteSpace : 'none' });
+        }, 350));
+      });
+      check('[B29] long toast stays inside the viewport (bounds pin)',
+        toastRects.w > 0 && toastRects.right <= toastRects.vw,
+        JSON.stringify(toastRects));
+      check('[B29] toast wraps long text (white-space: normal)',
+        toastRects.ws === 'normal', `white-space=${toastRects.ws}`);
+      await page.evaluate(() => {
+        const c = document.getElementById('town-toast-container');
+        if (c) c.innerHTML = '';
+      });
+    }
+
     check('town screenshot captured', fs.existsSync(townShot) && fs.statSync(townShot).size > 5000, '');
     check('town screen visible with dock + gold chip rendered',
       townDom.visible && townDom.dockButtons > 0 && townDom.goldText > 0, JSON.stringify(townDom));
@@ -175,6 +203,43 @@ const check = (name, pass, extra) => {
     check('combat canvas non-uniform (rendered content present; blank-cleared = 0.0)',
       combatSd > 3, `stdev=${combatSd.toFixed(1)}`);
     check('combat HUD timer draws text pixels (BUG-027 probe)', timerPx > 30, `whitePixels=${timerPx}`);
+
+    // ── B30 (v2.19.36): desktop slot rail is pixel-identical ──
+    // Force the w1 stroke gold (the renderer reads _weaponLevels directly)
+    // so the rail's left edge is measurable: the desktop x=10 anchor must
+    // not move (fine pointer ⇒ slotOffsetX stays 0).
+    {
+      const railX = await page.evaluate(() => new Promise((resolve) => {
+        const g = window.game;
+        const prev = g.renderer._weaponLevels ? g.renderer._weaponLevels.w1_projectile : undefined;
+        g.renderer._weaponLevels = Object.assign({}, g.renderer._weaponLevels, { w1_projectile: 3 });
+        // Deterministic ruler: the world must be empty of gold-coincident
+        // pixels (coins/gems would false-positive the scan band), so clear
+        // entities and let two clean frames render before measuring.
+        g.entityManager.clearAll();
+        setTimeout(() => {
+          const c = document.getElementById('game-canvas');
+          const h = c.height; // DPR 1 desktop: css px == device px
+          const ctx = c.getContext('2d');
+          let minX = -1;
+          for (const dy of [-2, -1, 0, 1, 2]) { // band around the slot top stroke (h-60)
+            const y = h - 60 + dy;
+            if (y < 0 || y >= h) continue;
+            const row = ctx.getImageData(0, y, 320, 1).data;
+            for (let x = 0; x < 320; x++) {
+              const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
+              if (r > 170 && gg > 130 && b < 110) { if (minX < 0 || x < minX) minX = x; break; }
+            }
+          }
+          if (prev === undefined) delete g.renderer._weaponLevels.w1_projectile;
+          else g.renderer._weaponLevels.w1_projectile = prev;
+          resolve(minX);
+        }, 120);
+      }));
+      check('[B30/desktop] weapon-slot rail stays anchored at x=10 (pixel-identical)',
+        railX >= 5 && railX <= 55, `goldMinX=${railX}`);
+    }
+
 
     // ── 3b. B24 (v2.19.31): HUD scale on a REAL device-emulated page ──
     // The canvas backing store is devicePixelRatio-scaled; before B24 the HUD
@@ -219,6 +284,25 @@ const check = (name, pass, extra) => {
           hud.spanCss >= 88 && hud.spanCss <= 104,
           `goldSpan=${hud.spanCss.toFixed(1)}css (raw-pixel defect would read ≈32css)`);
         check('[B24/emulated] no page errors during emulated combat render', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
+
+        // ── B29 (v2.19.36): the red-proving cell — on a 390px phone the old
+        // nowrap pushed this exact line past the right viewport edge. ──
+        const toastM = await mPage.evaluate(() => new Promise((resolve) => {
+          const g = window.game;
+          g.townScreen.content.showToast('The stranger leaves to scout — temporarily unavailable.', 'time', '⏳');
+          setTimeout(() => {
+            const el = document.querySelector('#town-toast-container .town-toast');
+            const r = el ? el.getBoundingClientRect() : null;
+            resolve({ right: r ? Math.round(r.right) : -1, vw: window.innerWidth });
+          }, 350);
+        }));
+        check('[B29/emulated] long toast wraps inside a 390px viewport',
+          toastM.right > 0 && toastM.right <= toastM.vw, JSON.stringify(toastM));
+        await mPage.evaluate(() => {
+          const c = document.getElementById('town-toast-container');
+          if (c) c.innerHTML = '';
+        });
+
 
         // ── B27 (v2.19.34): NATURAL boss spawn via the real spawn tick ──
         // Every prior boss probe rode the skipToBoss DEBUG entry, which never
@@ -300,6 +384,59 @@ const check = (name, pass, extra) => {
           JSON.stringify(trophy));
         check('[B28] victory wiring untouched after the stubbed kill (restore verified)',
           trophy.victoryLive === true, `victoryLive=${trophy.victoryLive}`);
+
+        // ── B30 (v2.19.36): slot rail clears the joystick zone ──
+        // User screenshot: the canvas rail (x=10) rendered under the DOM
+        // joystick zone on phones. Coarse pages offset the rail right of the
+        // zone (136/160 by width); desktop stays pixel-identical (pinned in
+        // the desktop cell above). Gold w1 stroke = deterministic ruler.
+        {
+          await mPage.evaluate(() => {
+            const g = window.game;
+            g.renderer._weaponLevels = Object.assign({}, g.renderer._weaponLevels, { w1_projectile: 3 });
+          });
+          await mPage.waitForTimeout(80);
+          const railRow = () => mPage.evaluate(() => new Promise((resolve) => {
+            const g = window.game;
+            // Same determinism rule as the desktop cell: clear the world so
+            // only HUD gold can enter the scan band, then measure.
+            g.entityManager.clearAll();
+            setTimeout(() => {
+              const c = document.getElementById('game-canvas');
+              const dpr = window.devicePixelRatio || 1;
+              const hDev = c.height;
+              const ctx = c.getContext('2d');
+              let minX = -1;
+              const yC = Math.round((hDev / dpr - 60) * dpr); // slot top stroke row
+              for (const dy of [-2, -1, 0, 1, 2]) {
+                const y = yC + dy;
+                if (y < 0 || y >= hDev) continue;
+                const row = ctx.getImageData(0, y, c.width, 1).data;
+                for (let x = 0; x < row.length / 4; x++) {
+                  const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
+                  if (r > 170 && gg > 130 && b < 110) { const cx = x / dpr; if (minX < 0 || cx < minX) minX = cx; break; }
+                }
+              }
+              resolve(minX);
+            }, 120);
+          }));
+          const zoneRight = () => mPage.evaluate(() => {
+            const z = document.getElementById('touch-controls');
+            const r = z ? z.getBoundingClientRect() : null;
+            return r ? Math.round(r.right) : -1;
+          });
+          const portraitX = await railRow();
+          const zoneP = await zoneRight();
+          check('[B30/emulated portrait] weapon-slot rail clears the joystick zone (≥140css)',
+            portraitX >= 140, `goldMinX=${portraitX.toFixed(1)}css, zoneRight=${zoneP}`);
+          await mPage.setViewportSize({ width: 844, height: 390 });
+          await mPage.waitForTimeout(150);
+          const landscapeX = await railRow();
+          const zoneL = await zoneRight();
+          check('[B30/emulated landscape] rail re-offsets beside the wider zone (≥160css)',
+            landscapeX >= 160, `goldMinX=${landscapeX.toFixed(1)}css, zoneRight=${zoneL}`);
+        }
+
       } finally {
         await mCtx.close();
       }

@@ -233,6 +233,8 @@ backlog aging.
 | B26 | ~~End-of-combat screen: small text + out-of-bounds cards~~ **DONE v2.19.33** (user screenshot: #end-actions two-card row ~512px overflowed a 390px phone — the B15/B17 clip class on its next surface: wrap defense + coarse-portrait one-column stack; canvas end screen got a compact bottom-anchored layout for narrow/touch viewports with wrapped kill-breakdown, and keyboard-hint lines suppressed on touch (fine-pointer affordance); desktop branch pinned identical to v2.19.31; gated with 4 visual_probe checks incl. hint-strip pixel evidence both modalities) | Clip-class sweep now spans DOM + canvas; remaining fixed-centered rows belong in B22's periodic audit, not screenshot-driven discovery | S–M | — |
 | B27 | ~~Boss still absent on device after B25~~ **DONE v2.19.34** (user re-test: warning + boss_spawn message but no boss, persisting across refresh+resume; headless was green → the battery had NEVER tested the natural spawn tick — every boss probe rode the skipToBoss DEBUG entry; hardened: `_spawnBoss` returns the entity + fails LOUD, the tick latches `bossSpawned` only when a boss actually exists (failed spawn retries next frame), B25 resume respawn verifies existence over the flag, skipToBoss reports real result; gated with a natural-tick probe on the emulated page, 566→569) | Fail-loud + self-heal over more guessing; device failure not reproducible headless — remaining device case now names its own root cause in console | S–M | — |
 | B28 | ~~100% boss trophy on death~~ **DONE v2.19.35** (user instrumentation call for headless boss tracking: boss death spawns a `boss_trophy` star pickup tagged with the boss id + emits `bossTrophyDropped` AT DROP TIME — post-victory collection is unobservable (gameOver stops the loop), so drop time is the deterministic signal; the star itself is a cosmetic marker on the normal inert pickup path; gated with a real-pipeline kill probe asserting drop event + marker collectibility + victory-wiring integrity, 569→572) | Instrument at the moment the FACT is established (boss died), not when a player interaction would confirm it — the world stops between those moments | S | — |
+| B29 | ~~Time-event toast runs past the viewport on phones~~ **DONE v2.19.36** (user screenshot: "The stranger leaves to scout — temporarily unavailable" rendered past the right edge — the toast kept its desktop-era \`white-space: nowrap\` from the v2.19.26 restoration, so the container's max-width 90vw could never hold a long line; fix is one declaration — \`white-space: normal\` — desktop text fits either way so fine-pointer rendering is unchanged; gated with desktop bounds+wrap pins and a red-proving emulated 390px cell) | A nowrap + centered + max-width combo is the same clip family as B15/B17/B26, just text-side; "fits on desktop" is not a property of the text, it's a property of the text at desktop width | S | — |
+| B30 | ~~Weapon/companion HUD rail renders under the joystick zone~~ **DONE v2.19.36** (user screenshot: the canvas slot rail at x=10 sits directly beneath the B18 DOM joystick zone (152px wide; 128px small portrait phones) — DOM-over-canvas, both drawn, one unreadable; fix is coarse-pointer-only: the rail offsets right of the zone (160px wide viewports, 136px narrow) and re-computes per _drawUI call so it tracks viewport changes; desktop (fine pointer) keeps offset 0 — pixel-identical, pinned by a gold-stroke scan at x=10; emulated portrait/landscape cells pin the rail ≥140/≥160css, clear of the zone) | When a DOM control and canvas HUD claim the same corner, one of them must move — pick the cheaper mover (a constant in the draw call, not the joystick's gesture geometry); user's "maybe move to center" instinct was right about the cause, wrong about the direction — right-of-zone keeps the rail in thumb-reachable periphery without crossing the play area | M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -974,6 +976,35 @@ backlog aging.
   will name its own root cause.
 ```
 
+### v2.19.36 (Sept 27, 2026) — B29+B30: toast wrap + slot-rail/joystick separation
+```
+- Two user screenshots from the same run: (1) the "stranger leaves to scout" time-event
+  toast ran past the right viewport edge; (2) the weapon/companion canvas rail rendered
+  directly under the B18 joystick zone. Both are the same root shape as B15/B17/B26:
+  desktop-authored geometry meeting a phone viewport — one text-side, one canvas-side.
+- B29: one CSS declaration. The toast's nowrap dates to the v2.19.26 restoration (it
+  restored the block verbatim, including a property that only ever "worked" because
+  desktop strings happened to fit). Container max-width 90vw cannot hold a nowrap line
+  wider than the viewport — the toast itself must wrap. Desktop output is unchanged.
+- B30: the interesting one. DOM (#touch-controls, z-index 5, pointer-events auto when
+  live) and canvas HUD both draw bottom-left; the canvas rail at x=10 was INVISIBLE
+  UNDER the joystick (user saw "overlapping UI"). Options considered: move the joystick
+  (gesture geometry the user just tuned across 4 test sessions — no), shrink the zone
+  (cuts the thumb's play space — no), move the rail (a constant in the draw call — yes).
+  Chosen: coarse-pointer-only slotOffsetX (160px viewports ≥560w, 136px below), read
+  via matchMedia inside _drawUI so it tracks orientation flips live. Desktop offset 0,
+  pixel-identical — pinned by a measurement cell so "identical" stays a checked fact.
+- Probe determinism lesson (second time this file taught it): a pixel scan of the live
+  canvas is only honest if the world can't put other gold into the scan band — first
+  desktop run read goldMinX=-1 (single-row scan below the 1px stroke) and gold pickups
+  anywhere on the rail row would false-positive it. Fix: clearAll() before measuring +
+  a ±2px band around the known stroke row + forced w1 level so the stroke is gold.
+  Measured pixels must have exactly one plausible author.
+- Gated (visual_probe 37→43): desktop toast bounds + white-space pin; emulated 390px
+  toast containment (the red-proving cell — old CSS fails it); desktop rail x=10 pin;
+  emulated portrait (≥140css) + landscape (≥160css, re-offsets live) rail separation.
+  Battery 572→578 strict green.
+```
 ### v2.19.35 (Sept 27, 2026) — B28: 100% boss trophy (deterministic death artifact)
 ```
 - User instrumentation call: "add a 100% drop boss trophy on death for bosses so we can

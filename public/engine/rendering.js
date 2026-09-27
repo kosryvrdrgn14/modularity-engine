@@ -396,6 +396,15 @@ class Renderer {
     const w = this.canvas.width / UI_DPR;
     const h = this.canvas.height / UI_DPR;
 
+    // B30 (v2.19.36): left-rail slot offset. The DOM joystick zone owns the
+    // bottom-left corner on coarse-pointer touch devices (152px wide, or
+    // 128px on small portrait phones — see #touch-controls CSS), and the
+    // canvas weapon/companion rail at x=10 rendered UNDER it (user
+    // screenshot). Fine pointers (desktop) keep offset 0 — pixel-identical.
+    const COARSE = typeof window !== 'undefined' && window.matchMedia &&
+      window.matchMedia('(pointer: coarse)').matches;
+    const slotOffsetX = COARSE ? (window.innerWidth >= 560 ? 160 : 136) : 0;
+
     // HP Bar
     const hpPercent = player.hp / player.maxHp;
     ctx.fillStyle = '#333';
@@ -498,7 +507,7 @@ class Renderer {
       const slotSize = 36;
       const slotGap = 4;
       const slotY = h - 60;
-      const slotX = 10;
+      const slotX = 10 + slotOffsetX; // B30: clears the joystick zone on touch
       const weaponNames = {
         w1_projectile: { icon: '\u{1f3f9}', name: 'Proj', color: '#FFD700' },
         w2_orbit: { icon: '\u{1f504}', name: 'Orb', color: '#4FC3F7' },
@@ -535,7 +544,7 @@ class Renderer {
       const slotSize = 36;
       const slotGap = 4;
       const slotY = h - 60 - 40;
-      const slotX = 10;
+      const slotX = 10 + slotOffsetX; // B30: clears the joystick zone on touch
       const companionIcons = {
         dog: { icon: '\u{1f415}', color: '#E8A44A' },
         healer: { icon: '\u{1f49a}', color: '#4CAF50' },
