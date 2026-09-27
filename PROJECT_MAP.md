@@ -197,7 +197,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `PickupSystem`, `LevelingSystem`, `TelegraphSystem`, `preloadAssets` (cross-file helper — declared in tools/game_globals.cjs)
 - Calls: `DataManager.leveling`
-- Emits: `pickup`, `levelUp`, `damage`
+- Emits: `pickup`, `levelUp`, `damage`, `bossTrophyDropped` (B28 v2.19.35 — fires at boss-death drop time, tagged with the boss id; the marker pickup itself is inert and rides the normal collection path)
 - Listens: `pickup`, `magnetActivate`, `death`
 - Note: listener-less `playSound`/`telegraph*` emitters deleted v2.19.2 (§5.5 resolved)
 - GuardedBy: trace (pickups/leveling)

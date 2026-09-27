@@ -232,6 +232,7 @@ backlog aging.
 | B25 | ~~Resume after boss spawn: warning text, no boss~~ **DONE v2.19.32** (user report from repeated resumes: the journal restores `bossSpawned: true` but entities are never journaled (§21.3C) and the spawn tick is gated on `!bossSpawned` — resumed runs continued boss-less forever; fix: resume RE-SPAWNS the boss after setState('playing') (intro on the normal skippable path, journal milestone re-flushes via the existing bossSpawn listener) and the resumed clock clamps to leave ≥30s of run (user's fairness call: no full-HP-boss-with-10s resumes); gated with a planted-journal scenario in the trace, 115→121) | User also asked the design question — semantics decided WITH the user, not guessed: boss is part of the run, so it comes back fresh | S–M | — |
 | B26 | ~~End-of-combat screen: small text + out-of-bounds cards~~ **DONE v2.19.33** (user screenshot: #end-actions two-card row ~512px overflowed a 390px phone — the B15/B17 clip class on its next surface: wrap defense + coarse-portrait one-column stack; canvas end screen got a compact bottom-anchored layout for narrow/touch viewports with wrapped kill-breakdown, and keyboard-hint lines suppressed on touch (fine-pointer affordance); desktop branch pinned identical to v2.19.31; gated with 4 visual_probe checks incl. hint-strip pixel evidence both modalities) | Clip-class sweep now spans DOM + canvas; remaining fixed-centered rows belong in B22's periodic audit, not screenshot-driven discovery | S–M | — |
 | B27 | ~~Boss still absent on device after B25~~ **DONE v2.19.34** (user re-test: warning + boss_spawn message but no boss, persisting across refresh+resume; headless was green → the battery had NEVER tested the natural spawn tick — every boss probe rode the skipToBoss DEBUG entry; hardened: `_spawnBoss` returns the entity + fails LOUD, the tick latches `bossSpawned` only when a boss actually exists (failed spawn retries next frame), B25 resume respawn verifies existence over the flag, skipToBoss reports real result; gated with a natural-tick probe on the emulated page, 566→569) | Fail-loud + self-heal over more guessing; device failure not reproducible headless — remaining device case now names its own root cause in console | S–M | — |
+| B28 | ~~100% boss trophy on death~~ **DONE v2.19.35** (user instrumentation call for headless boss tracking: boss death spawns a `boss_trophy` star pickup tagged with the boss id + emits `bossTrophyDropped` AT DROP TIME — post-victory collection is unobservable (gameOver stops the loop), so drop time is the deterministic signal; the star itself is a cosmetic marker on the normal inert pickup path; gated with a real-pipeline kill probe asserting drop event + marker collectibility + victory-wiring integrity, 569→572) | Instrument at the moment the FACT is established (boss died), not when a player interaction would confirm it — the world stops between those moments | S | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -971,4 +972,32 @@ backlog aging.
   fail-loud instrumentation turns any remaining device case into a readable console
   error ([BOSS]/[DEBUG] lines) instead of a silent boss-less run — next device report
   will name its own root cause.
+```
+
+### v2.19.35 (Sept 27, 2026) — B28: 100% boss trophy (deterministic death artifact)
+```
+- User instrumentation call: "add a 100% drop boss trophy on death for bosses so we can
+  easily track it headless" — turns the boss-less-run class into a deterministic,
+  assertable artifact. Battery 566→572.
+- Mechanics: boss death spawns a star pickup {id: 'boss_trophy', bossId} (drop-before-
+  powerup-table so nothing below can suppress it) AND emits 'bossTrophyDropped' AT DROP
+  TIME. Drop time is the headless signal because post-victory collection is impossible
+  by design: bossDeath -> triggerGameOver -> _handleGameOver pauses the loop, so a
+  pickup waiting to be walked over can never fire its collection event. The star itself
+  walks the normal inert pickup path (unknown ids are ignored by reward listeners).
+- First cut was wrong and the probe caught it: I wired the tracking event to
+  COLLECTION, then watched collected:0 while the trophy sat uncollected — victory had
+  stopped the world before the player could reach it. The probe also exposed that
+  _handleGameOver runs UNCONDITIONALLY after the triggerGameOver guard (stubbing the
+  guard alone still pauses the loop). Both facts now pinned by checks.
+- Probe: kill the boss through the REAL damage pipeline (overkill via _handleDamage),
+  stub triggerGameOver + _handleGameOver during the window (restored + restore
+  verified), assert: drop event fires once with the boss id, the marker pickup exists
+  and is collectible through the normal path (reward listeners untouched), victory
+  wiring intact. 34→37 checks.
+- LESSON: "instrument for the world as it is" — the trophy's tracking value came from
+  firing at the moment the FACT is established (boss died), not the moment a player
+  interaction would confirm it (collection), because the world stops between those
+  moments. Same principle as the journal milestone flush: record at the boundary,
+  not after it.
 ```

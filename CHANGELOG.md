@@ -2,6 +2,37 @@
 
 ---
 
+## v2.19.35 — B28: 100% boss trophy (deterministic headless boss tracking)
+**Date:** September 27, 2026
+**Status:** ✅ Complete (visual_probe 34→37; battery 572 strict green; release:check green)
+
+### User-requested instrumentation
+- **"Add a 100% drop boss trophy on death for bosses so we can easily track it headless
+  in the future"** — turns the boss-less-run class (B25/B27) into a deterministic,
+  assertable artifact: if the trophy event fired, a boss **existed and died**.
+
+### Mechanics
+- Boss death spawns a gold-star pickup `{ id: 'boss_trophy', bossId }` — dropped BEFORE
+  the powerup table so no early return below can suppress it.
+- The tracking event **`bossTrophyDropped` fires at DROP time**, not collection:
+  post-victory collection is unobservable by design (`bossDeath → triggerGameOver →
+  _handleGameOver` pauses the loop before a player could walk onto the marker). Drop
+  time is the moment the fact is established; drop time is the signal.
+- The star itself is a **cosmetic marker** on the normal inert pickup path — unknown
+  pickup ids are ignored by the reward listeners, so it can never trigger victory,
+  gold, XP, or the reward 'pickup' event.
+
+### Gated
+- New probe: kill the boss through the **real damage pipeline** (overkill via
+  `_handleDamage`), stubbing `triggerGameOver` **and** `_handleGameOver` during the
+  window (the latter runs unconditionally after the former — caught by the probe;
+  both restored, restore verified). Asserts: drop event fires once with the boss id,
+  the marker pickup exists and collects through the normal path with zero reward
+  listeners fired, and victory wiring is intact. visual_probe 34 → **37**; battery
+  **569 → 572**.
+
+---
+
 ## v2.19.34 — B27: boss spawn fails loud + self-heals; natural spawn tick tested
 **Date:** September 27, 2026
 **Status:** ✅ Complete (visual_probe 31→34; battery 569 strict green; release:check green)

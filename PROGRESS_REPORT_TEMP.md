@@ -193,6 +193,29 @@ name the exact cause. Either way, tell me what you see.
 
 ---
 
+## SHIPPED (v2.19.35 — B28, your boss-trophy instrumentation)
+
+Your instrumentation call is in: **every boss death now drops a gold trophy star
+(100%)**. It's a pure marker — picking it up does nothing (no rewards, no victory side
+effects) — and the moment it DROPS, the game fires a `bossTrophyDropped` event tagged
+with the boss id. That drop-time event is the headless proof: **trophy event fired = a
+boss existed and died.** No more boss-less runs hiding from the tests.
+
+One design subtlety your request surfaced: the tracking fires at DROP time, not when
+you collect the star — because on victory the run ends before you could walk to it, so
+collection would be unobservable. The star is still there as a visible flourish.
+
+**Gated:** the probe kills the boss through the real damage pipeline and asserts the
+drop event + marker behavior; it also caught that the victory teardown runs
+unconditionally after the guard (now pinned by a check). Battery 569 → **572**.
+**Version: v2.19.34 → v2.19.35, release:check green.**
+
+**Re-test asks now stacked up:** boss appearance at 4:00 (v2.19.34 + this — the gold
+star should appear where the boss dies), joystick feel, Buy Again flow, end-screen
+layout, boss resume.
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap

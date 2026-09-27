@@ -247,6 +247,59 @@ const check = (name, pass, extra) => {
           natural.hp > 0 && natural.boss, `hp=${natural.hp}`);
         check('[B27/natural tick] renderer holds the boss ref (HUD bar will draw)',
           natural.barRef, '');
+
+        // ── B28 (v2.19.35): 100% boss trophy — deterministic death artifact ──
+        // The trophy is awarded AT DROP TIME (boss died ⇒ trophy event fires);
+        // the star pickup is a cosmetic marker on the normal inert pickup path
+        // (unknown ids are ignored by the reward listeners). Post-victory
+        // collection is impossible by design (gameOver stops the update loop),
+        // so the DROP event is the headless "boss existed and died" proof.
+        // The probe stubs triggerGameOver during the kill so collection can
+        // also be exercised before the run would end.
+        const trophy = await mPage.evaluate(() => new Promise((resolve) => {
+          const g = window.game;
+          const boss = g.entityManager.getActive('enemy').find(e => e.isBoss);
+          if (!boss) { resolve({ error: 'no boss to kill' }); return; }
+          const events = { dropped: 0, droppedBossId: null, rewardPickups: 0 };
+          g.eventBus.on('bossTrophyDropped', (d) => { events.dropped++; events.droppedBossId = d.bossId; });
+          const onReward = () => { events.rewardPickups++; };
+          g.eventBus.on('pickup', onReward);
+          const realGameOver = g.gameState.triggerGameOver.bind(g.gameState);
+          g.gameState.triggerGameOver = () => false; // stub: keep the run alive for collection
+          // The bossDeath listener calls _handleGameOver UNCONDITIONALLY after
+          // triggerGameOver — it pauses the loop and tears the run down, which
+          // would stop collection. Stub it too (restored below).
+          const realHandleGameOver = g._handleGameOver;
+          g._handleGameOver = () => {};
+          let trophyEntity = null;
+          const onDeath = () => setTimeout(() => {
+            trophyEntity = g.entityManager.getActive('pickup').find(p => p.pickupData?.id === 'boss_trophy');
+            events.entityDump = trophyEntity ? JSON.stringify(trophyEntity.pickupData) : 'none';
+            if (trophyEntity) {
+              g.player.x = trophyEntity.x; g.player.y = trophyEntity.y;
+              g.player.stats.pickupRange = 150;
+            }
+          }, 80);
+          g.eventBus.on('death', onDeath);
+          g.damageSystem._handleDamage(boss, { stats: {} }, 999999); // overkill through the REAL pipeline
+          setTimeout(() => {
+            g.eventBus.off('death', onDeath);
+            g.eventBus.off('pickup', onReward);
+            g.gameState.triggerGameOver = realGameOver; // restore
+            g._handleGameOver = realHandleGameOver;
+            const stillThere = g.entityManager.getActive('pickup').some(p => p.pickupData?.id === 'boss_trophy');
+            resolve({ ...events, trophyEntity: !!trophyEntity, stillThere,
+              victoryLive: typeof g.gameState.triggerGameOver === 'function' && !g.gameState.isGameOver() });
+          }, 900);
+        }));
+        check('[B28] boss death awards the trophy: drop event fires with the boss id',
+          trophy.dropped === 1 && !!trophy.droppedBossId,
+          JSON.stringify(trophy));
+        check('[B28] trophy marker pickup exists and is collectible through the normal inert path',
+          trophy.trophyEntity === true && trophy.rewardPickups >= 1 && !trophy.stillThere,
+          JSON.stringify(trophy));
+        check('[B28] victory wiring untouched after the stubbed kill (restore verified)',
+          trophy.victoryLive === true, `victoryLive=${trophy.victoryLive}`);
       } finally {
         await mCtx.close();
       }

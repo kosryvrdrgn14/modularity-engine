@@ -60,6 +60,19 @@ class CollisionSystem {
       const dist = Math.sqrt(dx * dx + dy * dy);
       
       if (dist < collectRange) {
+        // B28 (v2.19.35): the trophy is a MARKER, not a reward — it must not
+        // trigger victory (the gold/pickup tally that feeds _buildResult) or
+        // any reward listener. A dedicated event keeps the tracking contract
+        // explicit; marker pickups never reach the 'pickup' bus event.
+        if (pickup.pickupData?.id === 'boss_trophy') {
+          this.eventBus.emit('bossTrophyCollected', {
+            bossId: pickup.pickupData.bossId || null,
+            position: { x: pickup.x, y: pickup.y },
+          });
+          this.entityManager.destroy(pickup);
+          continue;
+        }
+        // (plain for-of over an array — `continue` is safe here)
         this.eventBus.emit('pickup', { player, pickup });
         this.entityManager.destroy(pickup);
       }

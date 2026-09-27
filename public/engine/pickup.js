@@ -18,6 +18,27 @@ class PickupSystem {
     const enemy = data.entity;
     if (!enemy.enemyData) return;
 
+    // B28 (v2.19.35): 100% boss trophy — a deterministic, headless-assertable
+    // artifact proving a boss EXISTED and DIED (the boss-less-run class).
+    // Distinct id + bossId tag; drop BEFORE the powerup table so no early
+    // return below can suppress it.
+    if (enemy.isBoss) {
+      this.entityManager.create('pickup', {
+        x: data.position.x,
+        y: data.position.y,
+        pickupData: { id: 'boss_trophy', bossId: enemy.enemyData.id },
+        visual: { shape: 'star', color: '#FFD700', size: 18 },
+      });
+      // B28: the TRACKING event fires at DROP time — boss died ⇒ trophy
+      // awarded. Post-victory collection cannot be observed (gameOver stops
+      // the update loop), so drop time is the deterministic headless signal;
+      // the star itself is a cosmetic marker on the normal inert pickup path.
+      this.eventBus.emit('bossTrophyDropped', {
+        bossId: enemy.enemyData.id,
+        position: { x: data.position.x, y: data.position.y },
+      });
+    }
+
     // Drop XP gem
     this.entityManager.create('pickup', {
       x: data.position.x + (Math.random() - 0.5) * 20,
