@@ -2,6 +2,40 @@
 
 ---
 
+## v2.19.33 — B26: end-of-combat screen mobile pass (bounds + readability)
+**Date:** September 27, 2026
+**Status:** ✅ Complete (visual_probe 27→31; battery 566 strict green; release:check green)
+
+### User-reported (screenshot)
+- **"The text looks small and there are out of bound elements"** on the end-of-combat
+  screen — two distinct defects on one surface:
+  1. **Out-of-bounds cards:** `#end-actions` is the **B15/B17 clip class on its next
+     surface** — two ~220px min-width widget cards centered as a row (~512px) overflowed
+     a 390px phone (Retry was half off-screen; Town fully clipped).
+  2. **Small text:** the canvas end screen is center-anchored at desktop sizes — on a
+     phone the 16px stats/12px kill-breakdown read poorly and the breakdown one-liner
+     clipped at 4 enemy types.
+
+### Fixes
+1. **Action bar (DOM):** wrap defense + `max-width: 100%` on cards; coarse-pointer
+   **portrait** stacks to ONE full-width column (same family as the v2.19.28 picker
+   stacking); landscape wraps within the viewport.
+2. **Canvas end screen:** narrow/touch viewports get a **compact bottom-anchored
+   layout** — bigger stats (20px), the kill breakdown **wrapped** via `measureText` to
+   the viewport, stars drawn last, everything ending above the action bar. **Keyboard
+   hint lines are a fine-pointer affordance** and are suppressed on touch (the big
+   Retry/Town buttons + tap-anywhere dismissal are the real affordances there).
+   **Desktop branch is byte-identical to v2.19.31** (pinned in-source: do not retune).
+
+### Gated
+- `visual_probe` +4 checks (27 → 31; battery 562 → **566**): desktop hint strip renders
+  (pixel evidence the keyboard affordance survives), emulated **portrait** and
+  **landscape** end-action bars fit their viewports, and the emulated coarse-pointer
+  hint strip stays dark (touch = buttons, not hint text). The B15/B17/B26 clip class
+  is now gated across both DOM and canvas.
+
+---
+
 ## v2.19.32 — B25: resume restores the boss (and a fair fight window)
 **Date:** September 27, 2026
 **Status:** ✅ Complete (trace 115→121; battery 562 strict green; release:check green)

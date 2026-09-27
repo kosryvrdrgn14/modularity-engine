@@ -230,6 +230,7 @@ backlog aging.
 | B23 | ~~Town-screen companion slots~~ **DONE v2.19.31** (user screenshot: slots were a dead status display — no click handlers, the :active highlight was a false affordance — AND they collided with the Auto-Clear Farming card on mobile; removed the map slots entirely; status lives in the Systems panel, assignment in the loadout screen; the dead `#town-companions` CSS block swept in the same unit) | Same-unit dead-CSS sweep; town screen re-gated | S | — |
 | B24 | ~~Canvas HUD is physically tiny on phones~~ **DONE v2.19.31** (user report "combat menu items are tiny": canvas backing store is devicePixelRatio-scaled but screen-space draws used raw backing pixels — on DPR-3 the 36px weapon slots measured 12px physical; fixed by drawing `_drawUI`/`_drawBossIntro`/`_drawAnnouncements` + the end-screen canvas stats in CSS-pixel units via a dpr scale, world-space floating text scales its font by dpr; gated with an emulated-iPhone gold-chip span probe) | Same-class sweep: ALL screen-space canvas drawers enumerated and fixed in one unit — canvas constant sizes are physical-size claims only at DPR 1 | M | — |
 | B25 | ~~Resume after boss spawn: warning text, no boss~~ **DONE v2.19.32** (user report from repeated resumes: the journal restores `bossSpawned: true` but entities are never journaled (§21.3C) and the spawn tick is gated on `!bossSpawned` — resumed runs continued boss-less forever; fix: resume RE-SPAWNS the boss after setState('playing') (intro on the normal skippable path, journal milestone re-flushes via the existing bossSpawn listener) and the resumed clock clamps to leave ≥30s of run (user's fairness call: no full-HP-boss-with-10s resumes); gated with a planted-journal scenario in the trace, 115→121) | User also asked the design question — semantics decided WITH the user, not guessed: boss is part of the run, so it comes back fresh | S–M | — |
+| B26 | ~~End-of-combat screen: small text + out-of-bounds cards~~ **DONE v2.19.33** (user screenshot: #end-actions two-card row ~512px overflowed a 390px phone — the B15/B17 clip class on its next surface: wrap defense + coarse-portrait one-column stack; canvas end screen got a compact bottom-anchored layout for narrow/touch viewports with wrapped kill-breakdown, and keyboard-hint lines suppressed on touch (fine-pointer affordance); desktop branch pinned identical to v2.19.31; gated with 4 visual_probe checks incl. hint-strip pixel evidence both modalities) | Clip-class sweep now spans DOM + canvas; remaining fixed-centered rows belong in B22's periodic audit, not screenshot-driven discovery | S–M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -907,4 +908,33 @@ backlog aging.
   an EARLIER restore step already did the thing — the bossSpawned flag was set by the
   pre-existing restore block, so the respawn guard must not test it. The battery caught
   it in one run (count=0), which is exactly what the net is for.
+```
+
+### v2.19.33 (Sept 27, 2026) — B26: end-of-combat screen mobile pass
+```
+- User screenshot: "the text looks small and there are out of bound elements" on the
+  end screen. Two distinct defects in one surface (v2.19.33, battery 562→566):
+  (1) #end-actions is the B15/B17 clip class on its NEXT surface — two ~220px min-width
+  cards centered as a row (~512px) overflowed a 390px phone. Same fix family: wrap
+  defense + max-width:100% everywhere, and coarse-pointer PORTRAIT stacks to ONE full-
+  width column (same rule as the v2.19.28 picker stacking).
+  (2) The canvas end screen was center-anchored at desktop sizes: on a phone the stats
+  block ran toward the action bar and the 12px kill-breakdown one-liner clipped. New
+  COMPACT layout for narrow/touch viewports: bottom-anchored column that ends above the
+  action bar, 20px stats, the breakdown WRAPPED via measureText to the viewport, stars
+  drawn last. Keyboard-hint lines ("Press any key" / "[R] fight again") are a
+  FINE-POINTER affordance — suppressed on touch (the big Retry/Town buttons + any-key
+  dismissal are the real affordances). Desktop layout branch is byte-identical to
+  v2.19.31 (pinned by a comment: do not retune).
+- Gated: visual_probe gained 4 checks — desktop hint strip renders (pixel evidence),
+  emulated portrait/landscape end-action bar fits the viewport, emulated coarse hint
+  strip stays dark. 27→31; battery 562→566; release:check green.
+- LESSON: "same bug, next surface" now spans DOM AND canvas — the clip-class sweep has
+  covered slot-picker (B15), level-up (B17), end-action bar (B26); the remaining
+  fixed-centered rows should be swept proactively, not by screenshot (B22's periodic
+  matrix/coverage audit is the vehicle).
+- LESSON: affordance parity is input-modality work — keyboard hint text is not
+  "information", it is an affordance for one modality; showing it on touch is noise
+  that crowds the layout. Same rule as B17's stacking: key the layout to the INPUT,
+  not the breakpoint.
 ```

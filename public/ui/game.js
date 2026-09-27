@@ -142,6 +142,18 @@ class UIManager {
     const w = this.canvas.width / dpr;
     const h = this.canvas.height / dpr;
 
+    // B26 (v2.19.33): the end screen is a BLOCK of centered text — on a
+    // narrow phone the desktop-authored center-anchored stack runs out of
+    // screen (B15/B17 class, canvas sibling) and the small stats read poorly
+    // in a hand. Narrow/touch viewports get a compact BOTTOM-anchored layout
+    // (title, stars, stats — leaving room for the DOM action bar above the
+    // joystick zone); wide fine-pointer (desktop) stays pixel-identical to
+    // v2.19.31. Touch drops the keyboard-hint lines: the big Retry/Town
+    // buttons + any-key dismissal are the real affordances there.
+    const coarse = typeof window !== 'undefined' && window.matchMedia &&
+      window.matchMedia('(pointer: coarse)').matches;
+    const narrow = w < 500;
+
     // Overlay
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(0, 0, w, h);
@@ -149,7 +161,7 @@ class UIManager {
     // Title
     const titles = { victory: 'VICTORY', survived: 'SURVIVED', defeat: 'DEFEATED' };
     const colors = { victory: '#FFD700', survived: '#FFF', defeat: '#EF4444' };
-    
+
     ctx.fillStyle = colors[this.endScreen.result] || '#FFF';
     ctx.font = 'bold 48px monospace';
     ctx.textAlign = 'center';
@@ -157,71 +169,138 @@ class UIManager {
 
     // Stats
     if (this.endScreen.stats) {
-      ctx.font = '16px monospace';
-      ctx.fillStyle = '#CCC';
       const stats = this.endScreen.stats;
-      ctx.fillText(`Time: ${stats.time || '0:00'}`, w / 2, h / 2 + 10);
-      ctx.fillText(`Level: ${stats.level || 1}`, w / 2, h / 2 + 40);
-      ctx.fillText(`Kills: ${stats.kills || 0}`, w / 2, h / 2 + 70);
+      const compact = narrow || coarse;
+      const titleSize = compact ? 20 : 16;
+      ctx.font = titleSize + 'px monospace';
+      ctx.fillStyle = '#CCC';
+      if (compact) {
+        // Bottom-anchored column: title/stars near the middle, stats read
+        // downward, everything ends above the DOM action bar (bottom ~150px).
+        let y = h * 0.52;
+        ctx.fillText(`Time: ${stats.time || '0:00'}`, w / 2, y); y += 30;
+        ctx.fillText(`Level: ${stats.level || 1}`, w / 2, y); y += 30;
+        ctx.fillText(`Kills: ${stats.kills || 0}`, w / 2, y); y += 34;
 
-      // BUG-029: per-monster-type kill breakdown — testing/verification aid
-      // for type-specific features (quests, drops). Ids come from the death
-      // events' enemyType (the monster definition id in enemies.json).
-      const killsByType = stats.kills_by_type || {};
-      const typeKeys = Object.keys(killsByType).filter(k => killsByType[k] > 0);
-      if (typeKeys.length > 0) {
-        ctx.font = '12px monospace';
-        ctx.fillStyle = '#9E9E9E';
-        ctx.fillText(typeKeys.map(k => `${k}: ${killsByType[k]}`).join('  \u00b7  '), w / 2, h / 2 + 90);
-      }
-      ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, h / 2 + 108);
-
-      // Display stars
-      if (stats.stars) {
-        const starCount = stats.stars.three ? 3 : stats.stars.two ? 2 : stats.stars.one ? 1 : 0;
-        const starY = h / 2 + 140;
-        const starSize = 24;
-        const starSpacing = 40;
-        const startX = w / 2 - (starCount * starSpacing) / 2;
-
-        for (let i = 0; i < 3; i++) {
-          const sx = w / 2 - (3 * starSpacing) / 2 + i * starSpacing + starSpacing / 2;
-          const filled = i < starCount;
-
-          // Star shape
-          ctx.save();
-          ctx.translate(sx, starY);
-          ctx.beginPath();
-          for (let j = 0; j < 5; j++) {
-            const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2;
-            const r = filled ? starSize / 2 : starSize / 2 - 2;
-            ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        // BUG-029 breakdown — wrapped to the viewport (the desktop one-liner
+        // ran off-screen on 390px with 4 enemy types).
+        const killsByType = stats.kills_by_type || {};
+        const typeKeys = Object.keys(killsByType).filter(k => killsByType[k] > 0);
+        if (typeKeys.length > 0) {
+          ctx.font = '14px monospace';
+          ctx.fillStyle = '#9E9E9E';
+          const parts = typeKeys.map(k => `${k}: ${killsByType[k]}`);
+          const maxPx = w - 24;
+          let line = '';
+          for (const p of parts) {
+            const next = line ? line + ' \u00b7 ' + p : p;
+            if (ctx.measureText(next).width > maxPx && line) { ctx.fillText(line, w / 2, y); y += 20; line = p; }
+            else line = next;
           }
-          ctx.closePath();
-          ctx.fillStyle = filled ? '#FFD700' : '#333';
-          ctx.fill();
-          ctx.strokeStyle = filled ? '#FFA500' : '#555';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.restore();
+          if (line) { ctx.fillText(line, w / 2, y); y += 22; }
         }
+        ctx.font = titleSize + 'px monospace';
+        ctx.fillStyle = '#CCC';
+        ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, y); y += 30;
 
-        // Star label
-        const labels = { 0: '', 1: '★ Completed', 2: '★★ Mastered', 3: '★★★ MASTERY!' };
-        ctx.fillStyle = starCount === 3 ? '#FFD700' : starCount === 2 ? '#4FC3F7' : '#CCC';
-        ctx.font = starCount === 3 ? 'bold 18px monospace' : '14px monospace';
-        ctx.fillText(labels[starCount] || '', w / 2, starY + starSize + 10);
+        // Stars
+        if (stats.stars) {
+          const starCount = stats.stars.three ? 3 : stats.stars.two ? 2 : stats.stars.one ? 1 : 0;
+          const starY = y + 26;
+          const starSize = 26;
+          const starSpacing = 44;
+          for (let i = 0; i < 3; i++) {
+            const sx = w / 2 - starSpacing + i * starSpacing;
+            const filled = i < starCount;
+            ctx.save();
+            ctx.translate(sx, starY);
+            ctx.beginPath();
+            for (let j = 0; j < 5; j++) {
+              const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2;
+              const r = filled ? starSize / 2 : starSize / 2 - 2;
+              ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            ctx.fillStyle = filled ? '#FFD700' : '#333';
+            ctx.fill();
+            ctx.strokeStyle = filled ? '#FFA500' : '#555';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+          }
+          const labels = { 0: '', 1: '★ Completed', 2: '★★ Mastered', 3: '★★★ MASTERY!' };
+          ctx.fillStyle = starCount === 3 ? '#FFD700' : starCount === 2 ? '#4FC3F7' : '#CCC';
+          ctx.font = 'bold 15px monospace';
+          ctx.fillText(labels[starCount] || '', w / 2, starY + starSize + 2);
+        }
+      } else {
+        // Desktop layout — unchanged since v2.19.31 (do not retune).
+        ctx.fillText(`Time: ${stats.time || '0:00'}`, w / 2, h / 2 + 10);
+        ctx.fillText(`Level: ${stats.level || 1}`, w / 2, h / 2 + 40);
+        ctx.fillText(`Kills: ${stats.kills || 0}`, w / 2, h / 2 + 70);
+
+        // BUG-029: per-monster-type kill breakdown — testing/verification aid
+        // for type-specific features (quests, drops). Ids come from the death
+        // events' enemyType (the monster definition id in enemies.json).
+        const killsByType = stats.kills_by_type || {};
+        const typeKeys = Object.keys(killsByType).filter(k => killsByType[k] > 0);
+        if (typeKeys.length > 0) {
+          ctx.font = '12px monospace';
+          ctx.fillStyle = '#9E9E9E';
+          ctx.fillText(typeKeys.map(k => `${k}: ${killsByType[k]}`).join('  \u00b7  '), w / 2, h / 2 + 90);
+        }
+        ctx.fillText(`Gold: ${stats.gold || 0}`, w / 2, h / 2 + 108);
+
+        // Display stars
+        if (stats.stars) {
+          const starCount = stats.stars.three ? 3 : stats.stars.two ? 2 : stats.stars.one ? 1 : 0;
+          const starY = h / 2 + 140;
+          const starSize = 24;
+          const starSpacing = 40;
+
+          for (let i = 0; i < 3; i++) {
+            const sx = w / 2 - (3 * starSpacing) / 2 + i * starSpacing + starSpacing / 2;
+            const filled = i < starCount;
+
+            // Star shape
+            ctx.save();
+            ctx.translate(sx, starY);
+            ctx.beginPath();
+            for (let j = 0; j < 5; j++) {
+              const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2;
+              const r = filled ? starSize / 2 : starSize / 2 - 2;
+              ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            ctx.fillStyle = filled ? '#FFD700' : '#333';
+            ctx.fill();
+            ctx.strokeStyle = filled ? '#FFA500' : '#555';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // Star label
+          const labels = { 0: '', 1: '★ Completed', 2: '★★ Mastered', 3: '★★★ MASTERY!' };
+          ctx.fillStyle = starCount === 3 ? '#FFD700' : starCount === 2 ? '#4FC3F7' : '#CCC';
+          ctx.font = starCount === 3 ? 'bold 18px monospace' : '14px monospace';
+          ctx.fillText(labels[starCount] || '', w / 2, starY + starSize + 10);
+        }
       }
     }
 
     // v1.9.9 (BUG-023 resolution 2): the end screen waits for the player —
     // no auto-return, no accidental restart. Any key/click → town; R → again.
-    ctx.fillStyle = '#AAA';
-    ctx.font = '14px monospace';
-    ctx.fillText('Press any key to continue', w / 2, h / 2 + 186);
-    ctx.fillStyle = '#666';
-    ctx.font = '12px monospace';
-    ctx.fillText('[R] fight again', w / 2, h / 2 + 208);
+    // B26: the keyboard hints are a FINE-POINTER affordance only — touch
+    // users have the big Retry/Town buttons and tap-anywhere dismissal.
+    if (!coarse) {
+      ctx.fillStyle = '#AAA';
+      ctx.font = '14px monospace';
+      ctx.fillText('Press any key to continue', w / 2, h / 2 + 186);
+      ctx.fillStyle = '#666';
+      ctx.font = '12px monospace';
+      ctx.fillText('[R] fight again', w / 2, h / 2 + 208);
+    }
     ctx.restore(); // B24
   }
 }

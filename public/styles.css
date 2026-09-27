@@ -1267,6 +1267,16 @@
       pointer-events: auto;
     }
     #end-actions.active { display: flex; }
+
+    /* B26 (v2.19.33): the B15/B17 clip class, next surface — the two action
+       cards (~220px min each + gap) overflow a 390px phone when centered as
+       a row. Wrap defense everywhere; portrait touch stacks to ONE column
+       spanning the safe width (same family as the v2.19.28 picker stacking). */
+    #end-actions { max-width: calc(100vw - 24px); flex-wrap: wrap; }
+    @media (pointer: coarse) and (orientation: portrait) {
+      #end-actions { flex-direction: column; align-items: stretch; width: calc(100vw - 24px); }
+      #end-actions .widget-card { min-width: 0; width: 100%; }
+    }
     #levelup-title {
       color: #3B82F6;
       font-size: 28px;
@@ -1796,7 +1806,7 @@
    original display/visibility rules — never re-declare display here (the audit caught
    exactly that cascade bug: force-shown buried cards). */
 #pause-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }
-#end-actions .widget-card { min-width: 220px; text-align: center; }
+#end-actions .widget-card { min-width: 220px; max-width: 100%; text-align: center; }
 /* ── §10 screen-3 (v2.15.0): town HUD chips as widget cards ── */
 /* The chips ARE .widget-cards now; #town-chips replaces .town-hdr-meta's
    layout slot. Scoped theming mirrors the original .res-chip look exactly. */

@@ -137,6 +137,30 @@ preview mid-fight, reopen, resume — the boss should be waiting, with a fair cl
 
 ---
 
+## SHIPPED (v2.19.33 — B26, your end-screen screenshot)
+
+Both defects from your screenshot fixed:
+
+1. **Out-of-bounds buttons** — the Retry / Return-to-Town bar is the same clip family
+   as the slot-picker and level-up cards (two ~250px cards centered on a 390px screen).
+   Now: they stack as full-width buttons in phone portrait and wrap safely in landscape.
+2. **Small text** — the canvas stats block was desktop-authored and center-anchored.
+   Phones now get a compact layout: bigger stats (20px), the per-monster kill breakdown
+   WRAPPED to the screen instead of running off the edge, stars below — all ending above
+   the buttons. The "Press any key / [R] fight again" hint lines are hidden on touch
+   (they're keyboard instructions; your buttons are right there).
+   **Desktop is untouched** — pinned pixel-identical.
+
+**Gated:** visual_probe 27 → 31 checks (bounds pinned in BOTH orientations on the
+emulated phone + hint-strip pixel evidence in both modalities). Battery 562 → **566**.
+**Version: v2.19.33, release:check green.**
+
+**Re-test ask:** finish a run on your phone — buttons fully on-screen and stackable,
+stats readable at arm's length, breakdown wrapped, no keyboard hints. Desktop run
+should look exactly as before.
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap

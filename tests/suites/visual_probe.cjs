@@ -185,9 +185,8 @@ const check = (name, pass, extra) => {
     // Also sweeps the SAME class: floating damage text must scale its font by
     // dpr (world-space), and the emulated run must not error.
     {
-      const { newMobilePage } = harness;
       const mErrors = [];
-      const { context: mCtx, page: mPage } = await newMobilePage(browser, { errors: mErrors });
+      const { context: mCtx, page: mPage } = await harness.newMobilePage(browser, { errors: mErrors });
       try {
         const hud = await mPage.evaluate(async () => {
           const g = window.game;
@@ -319,7 +318,78 @@ const check = (name, pass, extra) => {
     }));
     check('end screen renders with action row', end.shown && end.actions, JSON.stringify(end));
     await page.screenshot({ path: path.join(outDir, '07_end.png') });
+    // B26 (v2.19.33): the keyboard-hint lines are a FINE-POINTER affordance —
+    // present on desktop (pixel evidence in the hint strip), absent on touch.
+    const hintPx = await page.evaluate(() => {
+      const canvas = document.getElementById('game-canvas');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const h = canvas.height / dpr, w = canvas.width / dpr;
+      const y0 = Math.round((h / 2 + 170) * dpr), y1 = Math.round((h / 2 + 215) * dpr);
+      const x0 = Math.round((w / 2 - 200) * dpr), x1 = Math.round((w / 2 + 200) * dpr);
+      const img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+      let n = 0;
+      for (let i = 0; i < img.length; i += 4) {
+        const lum = 0.299 * img[i] + 0.587 * img[i + 1] + 0.114 * img[i + 2];
+        if (lum > 90) n++;
+      }
+      return n;
+    });
+    check('end screen desktop: keyboard hint lines render (fine-pointer affordance)', hintPx > 40, `hintPixels=${hintPx}`);
     await page.evaluate(() => window.game.uiManager.hideEndScreen());
+
+    // ── 4d-b. B26 emulated end-screen cell: bounds + touch affordances ──
+    // The end-action bar was the B15/B17 clip class on its NEXT surface (two
+    // ~220px cards centered as a row ≈512px on a 390px phone). Gate: the bar
+    // must fit the viewport in BOTH orientations, and the coarse pointer must
+    // suppress the keyboard hints (pixel strip stays dark).
+    {
+      const { context: eCtx, page: ePage } = await harness.newMobilePage(browser, { errors });
+      try {
+        await ePage.evaluate(() => {
+          const g = window.game;
+          g.uiManager.showEndScreen('survived', g._getStats());
+          g.uiManager._renderEndScreen();
+        });
+        await ePage.waitForTimeout(250);
+        const portrait = await ePage.evaluate(() => {
+          const bar = document.getElementById('end-actions');
+          const r = bar.getBoundingClientRect();
+          const canvas = document.getElementById('game-canvas');
+          const ctx = canvas.getContext('2d');
+          const dpr = window.devicePixelRatio || 1;
+          const h = canvas.height / dpr, w = canvas.width / dpr;
+          const y0 = Math.round((h / 2 + 170) * dpr), y1 = Math.round((h / 2 + 215) * dpr);
+          const x0 = Math.round((w / 2 - 200) * dpr), x1 = Math.round((w / 2 + 200) * dpr);
+          const img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+          let n = 0;
+          for (let i = 0; i < img.length; i += 4) {
+            const lum = 0.299 * img[i] + 0.587 * img[i + 1] + 0.114 * img[i + 2];
+            if (lum > 90) n++;
+          }
+          return { x: r.x, right: r.right, vw: window.innerWidth, hintPx: n,
+            coarse: window.matchMedia('(pointer: coarse)').matches };
+        });
+        check(`[B26/emulated portrait] end-action bar fits the viewport (no out-of-bounds cards)`,
+          portrait.x >= -1 && portrait.right <= portrait.vw + 1,
+          `x=${Math.round(portrait.x)} right=${Math.round(portrait.right)} vw=${portrait.vw}`);
+        check('[B26/emulated] coarse pointer suppresses keyboard hints (strip dark)',
+          portrait.coarse === true && portrait.hintPx < 10,
+          `coarse=${portrait.coarse} hintPixels=${portrait.hintPx}`);
+        await ePage.setViewportSize({ width: 844, height: 390 });
+        await ePage.waitForTimeout(250);
+        const landscape = await ePage.evaluate(() => {
+          const r = document.getElementById('end-actions').getBoundingClientRect();
+          return { x: r.x, right: r.right, vw: window.innerWidth };
+        });
+        check('[B26/emulated landscape] end-action bar still fits (wraps, no clip)',
+          landscape.x >= -1 && landscape.right <= landscape.vw + 1,
+          `x=${Math.round(landscape.x)} right=${Math.round(landscape.right)} vw=${landscape.vw}`);
+        await ePage.evaluate(() => window.game.uiManager.hideEndScreen());
+      } finally {
+        await eCtx.close();
+      }
+    }
 
     // ── 4e. Shop overlay (single-homed Grand Bazaar on content/shop.json) ──
     await page.evaluate(() => {
