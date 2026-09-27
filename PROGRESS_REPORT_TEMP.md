@@ -6,6 +6,29 @@
 
 ---
 
+## ADDENDUM (v2.19.28 — the level-up cards screenshot you sent)
+
+**Same defect class as B15, next screen — fixed, gated, shipped green.** The level-up
+cards were a nowrap flex row of three fixed-width cards inside the centered
+`#levelup-overlay`: identical clipping to the slot picker on narrow phones.
+- **Fix:** `#levelup-cards` → auto-fit centered grid (3-across desktop, ONE centered
+column on phones in portrait; guarded wrap row in landscape — full vertical stacking
+was the preference you confirmed on B15).
+- **Gated:** `levelup` is now a battery screen, driven through the REAL runtime path
+(`g.uiManager.showLevelUp([...])` → `#levelup-overlay`) — desktop gates + emulated
+iPhone cell + orientation flip. Same portrait-stacking rule applied to BOTH grids
+(slot-picker and level-up) so the class can't regress independently.
+- **Battery:** 525 → **539 checks** (15 suites, strict green) · **Version: v2.19.28**,
+release:check green. Backlog B1–B17 all closed (B16 = golden-image diffing, declined).
+- **Elder Rowan at the graveyard entrance = BY DESIGN:** `npcs.json` `old_man`
+`locationRules` relocates him there while `mq_02_clearing` is active (Step 2 of the
+condition-system reference); he also has a post-graveyard dialogue set on the
+`graveyard_cleared` flag. Not a bug.
+- **In flight:** your combat-touch report is being planned as **B18 (virtual joystick)**
+— plan-first per house rules; implementation starts on your go-ahead.
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap
