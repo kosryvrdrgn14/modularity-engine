@@ -599,6 +599,17 @@ class Game {
         this.levelingSystem.level = jr.level || 1;
         this.levelingSystem.xp = 0;
         this.gameTime = jr.gameTime || 0;
+        // B25 (v2.19.32): no unwinnable resumes. A journal flushed late in the
+        // run could restore a clock with <30s left — a fresh full-HP boss (see
+        // below) plus a 10s window is a guaranteed defeat on a 3★ attempt.
+        // Rewinding the clock is invisible to the player (kills/gold/level are
+        // journaled totals, not derived from gameTime) and strictly better
+        // than resuming into a loss. §21.3C: enemies/pickups are not journaled.
+        const resumeFloor = Math.max(0, (this._activeRunDuration || 300) - 30);
+        if (this.gameTime > resumeFloor) {
+          this.gameTime = resumeFloor;
+          console.log('[AUTOSAVE] B25: resume clock clamped to', resumeFloor, 's (>=30s of run remains)');
+        }
         this._runKillCount = jr.kills || 0;
         // BUG-029: per-type kill breakdown survives resume too.
         this._killsByType = { ...(jr.killsByType || {}) };
@@ -661,6 +672,25 @@ class Game {
     document.body.classList.add('combat-live'); // B18: reveal the touch joystick (coarse pointers only, via CSS)
     this.gameLoop.paused = false;
     this.gameLoop.start();
+
+    // B25 (v2.19.32): a resumed run whose journal says the boss already
+    // spawned MUST get its boss back — entities are deliberately not
+    // journaled (§21.3C), and the spawn tick is gated on !bossSpawned, so
+    // without this the run continued boss-less forever while the pre-boss
+    // warnings could still replay (the "boss warning, no boss" report).
+    // Runs AFTER setState('playing'): 'bossIntro' is only reachable from
+    // 'playing' in the transition table, and AFTER start() so the intro
+    // overlay ticks on the normal, skippable path. _spawnBoss needs the
+    // player (position anchor) and emits 'bossSpawn', which re-arms the
+    // intro and re-flushes the journal milestone — self-consistent. NOTE: the
+    // flag is ALREADY true here (the restore block above set it — that is the
+    // pre-B25 behavior that suppressed the spawn tick), so the condition
+    // deliberately does NOT test it.
+    if (resumedJournal && resumedJournal.bossSpawned && this.spawnSystem) {
+      console.warn('[AUTOSAVE] B25: resumed past boss spawn — respawning boss');
+      this.spawnSystem.bossSpawned = true;
+      this.spawnSystem._spawnBoss();
+    }
   }
 
   update(dt) {

@@ -112,6 +112,31 @@ dial now, not a bug.
 
 ---
 
+## SHIPPED (v2.19.32 — B25, the boss-warning-no-boss resume bug)
+
+**Your report was exactly right, and so was your design instinct.** What was happening:
+the save journal marks "boss spawned" as a milestone, and resume restored that FLAG —
+but enemies are deliberately never saved, so nothing re-created the boss. The flag then
+also blocked the natural spawn tick. Result: boss-less run forever, with the warning
+text able to replay. Resuming a dozen times would never have produced a boss.
+
+**New semantics (as you called them):**
+1. **The boss is already there.** Resume after the boss spawn re-spawns the boss (fresh
+   HP — pre-crash damage was never saved; the intro cutscene replays and stays skippable).
+2. **No unwinnable resumes.** If the journal would hand you <30s of run, the clock rewinds
+   to leave a full 30s boss window (invisible — kills/gold/level come from the journal,
+   not the clock). No more full-HP boss with 10 seconds left.
+3. Resume before the boss spawn: unchanged (the boss shows up naturally at 4:00).
+
+**Gated:** the regression trace plants a 4:50 boss-journal and asserts the whole contract
+(clock ≈4:30, boss entity exists, intro skippable, warnings don't replay). Trace 115 → 121,
+battery 556 → **562**. **Version: v2.19.32, release:check green.**
+
+**Re-test ask:** get a run past 4:00 (or use Debug: B key to force the boss), quit the
+preview mid-fight, reopen, resume — the boss should be waiting, with a fair clock.
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap

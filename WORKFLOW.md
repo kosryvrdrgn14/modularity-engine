@@ -229,6 +229,7 @@ backlog aging.
 | B22 | Matrix-coverage periodic audit (Claude triage, from the progress report's closing line): treat "is every screen/dialog actually registered in the battery matrix" as its own periodic check, SEPARATE from gate strictness — the slot-picker was missed because it was invisible to the gates, not because the gates were weak | P3, run alongside the §9 orphan-and-doc-hygiene schedule | S | — |
 | B23 | ~~Town-screen companion slots~~ **DONE v2.19.31** (user screenshot: slots were a dead status display — no click handlers, the :active highlight was a false affordance — AND they collided with the Auto-Clear Farming card on mobile; removed the map slots entirely; status lives in the Systems panel, assignment in the loadout screen; the dead `#town-companions` CSS block swept in the same unit) | Same-unit dead-CSS sweep; town screen re-gated | S | — |
 | B24 | ~~Canvas HUD is physically tiny on phones~~ **DONE v2.19.31** (user report "combat menu items are tiny": canvas backing store is devicePixelRatio-scaled but screen-space draws used raw backing pixels — on DPR-3 the 36px weapon slots measured 12px physical; fixed by drawing `_drawUI`/`_drawBossIntro`/`_drawAnnouncements` + the end-screen canvas stats in CSS-pixel units via a dpr scale, world-space floating text scales its font by dpr; gated with an emulated-iPhone gold-chip span probe) | Same-class sweep: ALL screen-space canvas drawers enumerated and fixed in one unit — canvas constant sizes are physical-size claims only at DPR 1 | M | — |
+| B25 | ~~Resume after boss spawn: warning text, no boss~~ **DONE v2.19.32** (user report from repeated resumes: the journal restores `bossSpawned: true` but entities are never journaled (§21.3C) and the spawn tick is gated on `!bossSpawned` — resumed runs continued boss-less forever; fix: resume RE-SPAWNS the boss after setState('playing') (intro on the normal skippable path, journal milestone re-flushes via the existing bossSpawn listener) and the resumed clock clamps to leave ≥30s of run (user's fairness call: no full-HP-boss-with-10s resumes); gated with a planted-journal scenario in the trace, 115→121) | User also asked the design question — semantics decided WITH the user, not guessed: boss is part of the run, so it comes back fresh | S–M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -871,4 +872,39 @@ backlog aging.
 - LESSON: canvas constant sizes are physical-size claims ONLY at DPR 1 — any
   screen-space canvas UI must divide the backing store by dpr (or scale the
   context) and treat its constants as CSS px; codified as a §12.8 standard.
+```
+
+### v2.19.32 (Sept 27, 2026) — B25: resume restores the BOSS, not just the flag
+```
+- User report: "resumed combat several times and the boss warning text appears and no
+  boss" — plus the design question "shouldn't the boss already be there, but not full-HP
+  with 10-20s left?" Both answered in one unit (v2.19.32, trace 115→121).
+- Root cause chain: bossSpawn is a journal milestone (correct), the resume restore set
+  spawnSystem.bossSpawned = true (correct for suppressing the spawn tick), but NOTHING
+  re-created the boss entity — entities are deliberately not journaled (§21.3C). The
+  spawn tick is gated on !bossSpawned, so the run continued boss-less forever while the
+  pre-boss warnings (230/235/240) could replay across a heartbeat crash gap. The flag
+  restore both under-fires (no boss) and over-fires (blocks the natural late spawn that
+  would have handled a bossSpawned:false resume past 4:00).
+- Fix: (1) resume RE-SPAWNS the boss after setState('playing') + gameLoop.start() —
+  after 'playing' because 'bossIntro' is only reachable FROM 'playing' in the transition
+  table, and after start() so the intro ticks on the normal skippable path; _spawnBoss
+  emits 'bossSpawn', re-arming the intro and re-flushing the journal milestone through
+  the EXISTING listener (no new bookkeeping). (2) The resumed clock clamps to
+  duration - 30 — kills/gold/level are journaled totals, so the rewind is invisible and
+  strictly better than resuming into a guaranteed defeat (the user's fairness call,
+  decided WITH the user before implementation).
+- Gated: trace scenario plants slot-2 journal {gameTime:290, bossSpawned:true,
+  announcementTimes pre-marked}, boots with slot 1 active, switches, resumes, and
+  asserts: banner armed, clock clamped to ≈270, boss entity in pool + renderer ref,
+  intro legal-then-skippable to playing, warnings NOT replayed, milestone re-flushed.
+- LESSON (test-planting): the pagehide lifecycle save writes the LIVE store into the
+  ACTIVE slot's key — plant into a non-active slot AND point the in-memory active slot
+  elsewhere first (switchToSlot(1) before planting), or the reload clobbers the plant.
+  Took two debug rounds to see; the first trace scenario only worked because slot 1
+  happened to be active.
+- LESSON (restore order): a guard written as "if the thing wasn't done" is wrong when
+  an EARLIER restore step already did the thing — the bossSpawned flag was set by the
+  pre-existing restore block, so the respawn guard must not test it. The battery caught
+  it in one run (count=0), which is exactly what the net is for.
 ```

@@ -1007,6 +1007,89 @@ function report(name, pass, detail) {
   report('§23: end-screen Town button dismisses to town', s23.endTown === 'town');
   report('§23: end-screen Retry button restarts the fight', s23.endRetry === 'playing');
 
+  // ── B25 (v2.19.32): resume with bossSpawned:true — the boss must come
+  //    back, with a fair fight window. Journal plants gameTime 290 on a
+  //    300s standard stage (boss @ 4:00, pre-boss warnings 230/235/240
+  //    pre-marked as the real journal would have them). Expected on resume:
+  //    clock clamped to 270 (>=30s remains), boss entity re-spawned, intro
+  //    armed on the normal path, warnings NOT replayed, journal milestone
+  //    re-flushed. ──
+  await page.evaluate(() => {
+    const g = window.game;
+    g.gameState.transition('title', { allowRestart: true });
+    g.titleMenu.show();
+    // CRITICAL ORDER: the trace left slot 2 as the ACTIVE slot. The pagehide
+    // lifecycle save writes the live store into the ACTIVE slot's key, so it
+    // must be pointing at slot 1 BEFORE we plant slot 2's journal — otherwise
+    // the reload clobbers the plant (the original ghost-run defect shape).
+    g.switchToSlot(1);
+    g.gameManager.clearRunJournal();
+    g.gameManager.save();
+    const gm = window.game.gameManager;
+    const store = gm._createDefault();
+    store.session = {
+      run_in_progress: true,
+      run_data: {
+        stage_id: 'stage_graveyard', tier: 'standard',
+        gameTime: 290, kills: 50, gold: 100, level: 12,
+        weaponLevels: { w1_projectile: 5 }, bossSpawned: true,
+        announcementTimes: ['230', '235', '240'], savedAt: 1700000001000,
+      },
+    };
+    localStorage.setItem('me_save_slot2', JSON.stringify(store));
+    // CRITICAL: the active slot is STILL 2 at this point (switched earlier in
+    // the trace) — a reload fires the pagehide lifecycle save, which would
+    // clobber the planted journal with the live (journal-cleared) store, the
+    // same shape as the original ghost-run defect. Point the active-slot key
+    // at slot 1 BEFORE reloading so the boot performs no journal write into
+    // slot 2 and the banner is detected at boot, then switch to slot 2 after.
+    localStorage.setItem('me_active_slot', '1');
+  });
+  await page.reload();
+  await page.waitForTimeout(1200);
+  await page.evaluate(() => { window.game.switchToSlot(2); });
+  await page.waitForTimeout(150);
+  const b25Banner = await page.evaluate(() =>
+    document.getElementById('resume-banner').classList.contains('active'));
+  await page.click('#resume-accept');
+  await page.waitForTimeout(600); // intro is live (3.5s) — renderer state is synchronous
+  const b25 = await page.evaluate(() => {
+    const g = window.game;
+    const bossCount = g.entityManager.getCount('enemy') + g.entityManager.getCount('boss');
+    return {
+      banner: document.getElementById('resume-banner').classList.contains('active'),
+      state: g.gameState.state,
+      gameTime: g.gameTime,
+      bossCount,
+      rendererBoss: !!(g.renderer.bossEntity && g.renderer.bossEntity.isBoss),
+      journalBoss: g.gameManager.store.session.run_data.bossSpawned === true,
+      annMarked: Object.keys(g._announcementTriggered || {}).length,
+      annLive: (g.renderer._announcements || []).length,
+    };
+  });
+  // Dismiss the intro (Space is the documented skip) and confirm the fight.
+  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' })));
+  await page.waitForTimeout(250);
+  const b25After = await page.evaluate(() => window.game.gameState.state);
+  report('B25: resume banner armed for the boss-spawned journal', b25Banner === true);
+  report('B25: resumed clock clamped to leave a fair window (290 → ≈270, >=30s remains)',
+    b25.gameTime >= 268 && b25.gameTime <= 272, `gameTime=${b25.gameTime.toFixed(1)}`);
+  report('B25: boss entity re-spawned on resume (pool + renderer ref)',
+    b25.bossCount >= 1 && b25.rendererBoss, `count=${b25.bossCount} renderer=${b25.rendererBoss}`);
+  report('B25: boss intro armed on the normal skippable path then dismisses to playing',
+    (b25.state === 'bossIntro' || b25.state === 'playing') && b25After === 'playing',
+    `during=${b25.state} after=${b25After}`);
+  report('B25: pre-boss warnings do NOT replay after resume (journal pre-mark)',
+    b25.annMarked >= 3 && b25.annLive === 0, `marked=${b25.annMarked} live=${b25.annLive}`);
+  report('B25: journal milestone re-flushed after the respawn', b25.journalBoss === true);
+  // Cleanup: leave a clean store for any later readers.
+  await page.evaluate(() => {
+    const g = window.game;
+    g.gameState.transition('town', { allowRestart: true });
+    g.gameManager.clearRunJournal();
+    g.gameManager.save();
+  });
+
   // ── Global error net ──
   // Excluded: the §5.6 setTownLevel(99) probe's deliberate fail-closed console
   // error (same whitelist discipline as the suites' deliberate rejections).

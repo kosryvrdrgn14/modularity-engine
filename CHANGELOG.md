@@ -2,6 +2,47 @@
 
 ---
 
+## v2.19.32 — B25: resume restores the boss (and a fair fight window)
+**Date:** September 27, 2026
+**Status:** ✅ Complete (trace 115→121; battery 562 strict green; release:check green)
+
+### User-reported
+- **"Resumed combat several times and the boss warning text appears — and no boss.**
+  What actually happens if I resume after the boss is supposed to spawn? Shouldn't the
+  boss already be there — but not full-HP with like 10–20 seconds left? The player
+  couldn't kill it."
+
+### Root cause
+- The run journal records `bossSpawned: true` as a crash-recovery milestone (correct),
+  and the resume restore sets the flag (correct for suppressing the spawn tick) — but
+  **entities are deliberately not journaled** (§21.3C), so nothing ever re-created the
+  boss. With the spawn tick gated on `!bossSpawned`, a resumed run continued **boss-less
+  forever** while the pre-boss warnings (3:50/3:55/4:00) could replay across a heartbeat
+  crash gap. The flag restore both under-fired (no boss) and over-fired (blocking the
+  natural late spawn that handles a `bossSpawned:false` resume past 4:00).
+
+### Fix (semantics decided with the user)
+1. **The boss comes back.** A resumed run whose journal says `bossSpawned` re-spawns the
+   boss after the run state is live — the intro cutscene replays on the normal, skippable
+   path (reads as a deliberate re-entry), and the existing `bossSpawn` listener re-flushes
+   the journal milestone. No new bookkeeping.
+2. **No unwinnable resumes.** The resumed clock clamps to leave **≥30 seconds** of run
+   remaining (`duration − 30`). Kills/gold/level are journaled totals, so the rewind is
+   invisible — and strictly better than a guaranteed-defeat 3★ attempt. Crash at 4:50 →
+   resume at 4:30 with the boss up and a fightable window.
+3. `bossSpawned: false` resumes are unchanged (the spawn tick handles them naturally).
+
+### Gated
+- New trace scenario: planted slot-2 journal (`gameTime: 290, bossSpawned: true`, warnings
+  pre-marked) → boot with slot 1 active → switch → resume → asserts banner armed, clock
+  clamped to ≈270, boss entity in pool + renderer ref, intro legal and skippable to
+  playing, warnings NOT replayed, milestone re-flushed. Trace 115 → **121**; battery
+  **556 → 562**. Test-planting lesson: the pagehide lifecycle save writes the live store
+  into the ACTIVE slot's key — plant into a non-active slot and repoint the in-memory
+  slot first, or the reload clobbers the plant (two debug rounds; lessons §11).
+
+---
+
 ## v2.19.31 — B23: town companion-slot removal + B24: DPR-correct canvas HUD
 **Date:** September 27, 2026
 **Status:** ✅ Complete (visual_probe 25→27; battery 556 strict green; release:check green)

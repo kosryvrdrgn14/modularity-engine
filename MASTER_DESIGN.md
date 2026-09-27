@@ -1029,6 +1029,11 @@ Estimated size: ~120 lines total, zero combat-loop allocation, no UI changes in 
 - **No motion in combat:** zero canvas/UI work, zero DOM touches during combat saves.
 - **Crash window math:** worst-case loss today = entire run; after = ≤30s of run progress + all
   completed-objective/quest/flag state (those save instantly on event).
+- **Resume semantics (B25, v2.19.32):** the boss is part of the run, not the world —
+  entities are never journaled (§21.3C), so a journal with `bossSpawned: true` RE-SPAWNS
+  the boss on resume (fresh HP, intro replays on the normal skippable path, journal
+  milestone re-flushes), and the resumed clock is clamped to leave ≥30s of run remaining —
+  no full-HP-boss-with-10s unwinnable resumes.
 
 ### 21.6 Open Questions (decide at build time)
 
