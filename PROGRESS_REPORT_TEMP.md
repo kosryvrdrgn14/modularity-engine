@@ -161,6 +161,38 @@ should look exactly as before.
 
 ---
 
+## SHIPPED (v2.19.34 — B27, the boss still didn't appear)
+
+Honest status: I could **not reproduce** your failure headless — the trace was green,
+which exposed something worse: the battery had **never tested the natural boss spawn**.
+Every boss test rode the debug skip entry (`skipToBoss`), which calls the spawn function
+directly and skips the tick that decides whether the boss "counts" as spawned. Your
+device was exercising a path no test had ever touched.
+
+What I changed — fail loud + self-heal, instead of guessing again:
+1. The spawn function now **returns whether a boss actually exists** (and screams in the
+   console if not, naming the data it saw).
+2. The spawn tick only marks "boss spawned" when a boss entity REALLY exists — a failed
+   spawn **retries every frame** instead of being suppressed forever by the flag (that
+   permanent suppression was the boss-less-run mechanism).
+3. The resume respawn verifies existence over the flag; a failed respawn un-latches and
+   retries.
+4. Verified NOT the cause: pool caps, spawn distances, cross-file boss references, and
+   data shapes on the real fetched JSONs. (Side find: the Gravekeeper has no intro
+   cutscene in data at all — on a real spawn he just walks in; no "message" beyond the
+   warnings.)
+
+**Gated:** a new probe drives the real spawn tick on the emulated phone and pins: boss
+entity exists, is a boss, full HP from the definition, HUD bar reference armed.
+Battery 566 → **569**. **Version: v2.19.34, release:check green.**
+
+**Re-test ask (and this time the game will talk to us):** run past 4:00 again. If the
+boss appears — done. If not, open the browser console (⋮ → Developer tools in the
+preview, or eruda if available) and look for a line starting with **[BOSS]** — it will
+name the exact cause. Either way, tell me what you see.
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap

@@ -268,10 +268,13 @@ window.skipToBoss = () => {
   }
   const ss = game.spawnSystem;
   if (ss) {
-    ss.bossSpawned = true;
-    ss.gameTime = (game._bossSpawnTime || 240) + 5;
-    ss._spawnBoss();
-    console.log('[DEBUG] Boss spawned at', ss.gameTime, 's');
+    const b = ss._spawnBoss(); // B27: report existence — a silent null is the boss-less-run bug
+    if (b) {
+      ss.bossSpawned = true;
+      console.log('[DEBUG] Boss spawned (entity', b.id, ')');
+    } else {
+      console.error('[DEBUG] Boss spawn FAILED — see [BOSS] error above');
+    }
   } else {
     console.log('[DEBUG] spawnSystem not found');
   }

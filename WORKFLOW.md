@@ -231,6 +231,7 @@ backlog aging.
 | B24 | ~~Canvas HUD is physically tiny on phones~~ **DONE v2.19.31** (user report "combat menu items are tiny": canvas backing store is devicePixelRatio-scaled but screen-space draws used raw backing pixels — on DPR-3 the 36px weapon slots measured 12px physical; fixed by drawing `_drawUI`/`_drawBossIntro`/`_drawAnnouncements` + the end-screen canvas stats in CSS-pixel units via a dpr scale, world-space floating text scales its font by dpr; gated with an emulated-iPhone gold-chip span probe) | Same-class sweep: ALL screen-space canvas drawers enumerated and fixed in one unit — canvas constant sizes are physical-size claims only at DPR 1 | M | — |
 | B25 | ~~Resume after boss spawn: warning text, no boss~~ **DONE v2.19.32** (user report from repeated resumes: the journal restores `bossSpawned: true` but entities are never journaled (§21.3C) and the spawn tick is gated on `!bossSpawned` — resumed runs continued boss-less forever; fix: resume RE-SPAWNS the boss after setState('playing') (intro on the normal skippable path, journal milestone re-flushes via the existing bossSpawn listener) and the resumed clock clamps to leave ≥30s of run (user's fairness call: no full-HP-boss-with-10s resumes); gated with a planted-journal scenario in the trace, 115→121) | User also asked the design question — semantics decided WITH the user, not guessed: boss is part of the run, so it comes back fresh | S–M | — |
 | B26 | ~~End-of-combat screen: small text + out-of-bounds cards~~ **DONE v2.19.33** (user screenshot: #end-actions two-card row ~512px overflowed a 390px phone — the B15/B17 clip class on its next surface: wrap defense + coarse-portrait one-column stack; canvas end screen got a compact bottom-anchored layout for narrow/touch viewports with wrapped kill-breakdown, and keyboard-hint lines suppressed on touch (fine-pointer affordance); desktop branch pinned identical to v2.19.31; gated with 4 visual_probe checks incl. hint-strip pixel evidence both modalities) | Clip-class sweep now spans DOM + canvas; remaining fixed-centered rows belong in B22's periodic audit, not screenshot-driven discovery | S–M | — |
+| B27 | ~~Boss still absent on device after B25~~ **DONE v2.19.34** (user re-test: warning + boss_spawn message but no boss, persisting across refresh+resume; headless was green → the battery had NEVER tested the natural spawn tick — every boss probe rode the skipToBoss DEBUG entry; hardened: `_spawnBoss` returns the entity + fails LOUD, the tick latches `bossSpawned` only when a boss actually exists (failed spawn retries next frame), B25 resume respawn verifies existence over the flag, skipToBoss reports real result; gated with a natural-tick probe on the emulated page, 566→569) | Fail-loud + self-heal over more guessing; device failure not reproducible headless — remaining device case now names its own root cause in console | S–M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -937,4 +938,37 @@ backlog aging.
   "information", it is an affordance for one modality; showing it on touch is noise
   that crowds the layout. Same rule as B17's stacking: key the layout to the INPUT,
   not the breakpoint.
+```
+
+### v2.19.34 (Sept 27, 2026) — B27: boss spawn fails loud + self-heals; natural tick finally tested
+```
+- User re-test: boss STILL absent after the B25 resume fix — warning fired, "message"
+  (the boss_spawn announcement) played, no boss, and it persisted across refresh+resume
+  past 4:22. Headless trace was green, which forced the honest conclusion: the battery
+  had NEVER tested the natural spawn tick — every boss probe rode the skipToBoss DEBUG
+  entry (game2.html), which calls _spawnBoss directly and bypasses the tick's latch.
+- Hardening shipped (v2.19.34, battery 566→569):
+  1. _spawnBoss now RETURNS the entity (null on its two guarded early-returns, with a
+     console.error naming the data shape) instead of silent undefined.
+  2. The spawn tick latches bossSpawned = true ONLY when a boss entity actually exists;
+     a failed spawn retries next frame (rate-limited error log). One transient failure
+     used to mean permanently boss-less — the flag suppressed the tick forever.
+  3. B25's resume respawn verifies the return: a failed respawn un-latches and lets
+     the tick retry instead of trusting the journal flag over existence.
+  4. skipToBoss debug path reports the real result (never latches on null).
+- Gated: visual_probe B27 cell drives the REAL spawn tick on the emulated page (clock
+  set one tick before boss time; poll until boss exists): entity exists + isBoss +
+  flag latched + HP matches the def + renderer holds the ref (bar will draw). 31→34;
+  battery 566→569; release:check green.
+- INVESTIGATION NOTES (not the cause, verified): enemy pool has no cap (create always
+  returns); boss spawn distance (500px) matches normal enemies (400-600); bossConfig
+  cross-references resolve on the REAL fetched JSON (enemyId -> boss_gravekeeper with
+  stats + fallback type:'boss' exists); enemies/stages roots are arrays and consumers
+  use .find consistently. The known real divergence: gravekeeper has NO intro in data
+  (both sources) — the trace's intro assertion passed via its ||'playing' branch, and a
+  real spawn has no cutscene; the boss walks in. B27's renderer-ref + existence checks
+  pin the actual contract. The device failure was NOT reproduced headless; the
+  fail-loud instrumentation turns any remaining device case into a readable console
+  error ([BOSS]/[DEBUG] lines) instead of a silent boss-less run — next device report
+  will name its own root cause.
 ```

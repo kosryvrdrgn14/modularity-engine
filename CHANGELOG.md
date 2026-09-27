@@ -2,6 +2,46 @@
 
 ---
 
+## v2.19.34 — B27: boss spawn fails loud + self-heals; natural spawn tick tested
+**Date:** September 27, 2026
+**Status:** ✅ Complete (visual_probe 31→34; battery 569 strict green; release:check green)
+
+### User-reported (B25 re-test)
+- **"The boss still didn't appear. We got the message after the initial warning, but no
+  actual boss enemy. It didn't reappear after refreshing and resuming past 4:22."**
+- Investigation: headless trace was green, which exposed the real coverage hole — the
+  battery had **never tested the natural spawn tick**; every boss probe rode the
+  `skipToBoss` DEBUG entry (game2.html), which calls `_spawnBoss` directly and bypasses
+  the tick's latch logic. The device failure was not reproducible headless.
+
+### Hardening (fail-loud + self-healing)
+1. **`_spawnBoss` returns the entity** (null on its guarded early-returns, with a
+   `console.error` naming the data shape) instead of silent `undefined`.
+2. **The spawn tick latches `bossSpawned` only when a boss entity actually exists** —
+   a failed spawn retries next frame (rate-limited error log). Previously one transient
+   failure latched the flag and suppressed the tick **forever** (the boss-less-run
+   mechanism).
+3. **B25's resume respawn verifies existence over the flag**: a failed respawn
+   un-latches and lets the tick retry.
+4. **`skipToBoss` reports the real result** and never latches on null.
+
+### Investigation notes (verified NOT the cause)
+Enemy pool is uncapped (`create` always returns); boss spawn distance (500px) matches
+normal enemies (400–600px); `bossConfig.enemyId → boss_gravekeeper` resolves on the real
+fetched JSON with the `type:'boss'` fallback present; both JSON roots are arrays and all
+consumers use `.find` consistently. Known real divergence found: the Gravekeeper has NO
+`intro` in data (both sources) — a real spawn has no cutscene; the boss walks in (the
+trace's intro assertion passed via its `|| 'playing'` branch). The remaining device
+failure will now print a readable `[BOSS]` console error naming its own cause.
+
+### Gated
+- `visual_probe` B27 cell drives the **real spawn tick** on the emulated page (clock one
+  tick before boss time, poll until boss exists): entity exists + `isBoss` + flag
+  latched + HP matches the definition + renderer holds the ref (bar draws). 31 → **34**;
+  battery 566 → **569**.
+
+---
+
 ## v2.19.33 — B26: end-of-combat screen mobile pass (bounds + readability)
 **Date:** September 27, 2026
 **Status:** ✅ Complete (visual_probe 27→31; battery 566 strict green; release:check green)

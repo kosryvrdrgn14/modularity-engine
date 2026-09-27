@@ -159,8 +159,17 @@ class SpawnSystem {
     // Boss spawn — read from stage data (default 240s / 4:00)
     const bossTime = this._bossSpawnTime || 240;
     if (!this.bossSpawned && this.gameTime >= bossTime) {
-      this._spawnBoss();
-      this.bossSpawned = true;
+      // B27 (v2.19.34): latch the milestone ONLY when a boss entity actually
+      // exists. _spawnBoss has guarded early-returns (missing def), and the
+      // old unconditional latch made one transient failure permanently
+      // boss-less — the flag suppresses this tick forever. Retry next frame.
+      const boss = this._spawnBoss();
+      if (boss) {
+        this.bossSpawned = true;
+      } else if (this.gameTime - (this._bossSpawnWarnedAt || -9) > 1) {
+        this._bossSpawnWarnedAt = this.gameTime;
+        console.error('[BOSS] spawn failed at', Math.floor(this.gameTime), 's — will retry');
+      }
     }
   }
 
@@ -238,7 +247,12 @@ class SpawnSystem {
     if (!boss) {
       boss = this.dataManager.enemies.find(e => e.type === 'boss');
     }
-    if (!boss) return;
+    if (!boss) {
+      // B27: fail LOUD — this return used to be silent while the caller
+      // latched bossSpawned anyway (the boss-less-run report).
+      console.error('[BOSS] no boss definition found — enemies data:', Array.isArray(this.dataManager.enemies) ? this.dataManager.enemies.length + ' defs' : typeof this.dataManager.enemies);
+      return null;
+    }
     
     const angle = Math.random() * Math.PI * 2;
     const dist = 500;
@@ -259,6 +273,7 @@ class SpawnSystem {
     });
     
     this.eventBus.emit('bossSpawn', { boss, entity });
+    return entity; // B27: callers verify existence before latching state
   }
 
 

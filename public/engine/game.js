@@ -689,7 +689,13 @@ class Game {
     if (resumedJournal && resumedJournal.bossSpawned && this.spawnSystem) {
       console.warn('[AUTOSAVE] B25: resumed past boss spawn — respawning boss');
       this.spawnSystem.bossSpawned = true;
-      this.spawnSystem._spawnBoss();
+      const boss = this.spawnSystem._spawnBoss();
+      // B27: never trust the flag over existence — a failed respawn must NOT
+      // leave a boss-less run latched (self-heal via the spawn tick retry).
+      if (!boss) {
+        this.spawnSystem.bossSpawned = false;
+        console.error('[AUTOSAVE] B27: boss respawn failed — spawn tick will retry');
+      }
     }
   }
 

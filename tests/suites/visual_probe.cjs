@@ -219,6 +219,34 @@ const check = (name, pass, extra) => {
           hud.spanCss >= 88 && hud.spanCss <= 104,
           `goldSpan=${hud.spanCss.toFixed(1)}css (raw-pixel defect would read ≈32css)`);
         check('[B24/emulated] no page errors during emulated combat render', mErrors.length === 0, mErrors.slice(0, 2).join(' | '));
+
+        // ── B27 (v2.19.34): NATURAL boss spawn via the real spawn tick ──
+        // Every prior boss probe rode the skipToBoss DEBUG entry, which never
+        // exercised the tick's latch/unlock path — the user's boss-less run
+        // shipped invisible to the battery. Drive the clock to just before
+        // the boss time and let the REAL tick spawn it.
+        const natural = await mPage.evaluate(() => new Promise((resolve) => {
+          const g = window.game;
+          const ss = g.spawnSystem;
+          ss.gameTime = (g._bossSpawnTime || 240) - 0.5; // one tick from due
+          const t0 = Date.now();
+          const iv = setInterval(() => {
+            const boss = g.entityManager.getActive('enemy').find(e => e.isBoss);
+            if (boss || Date.now() - t0 > 3000) {
+              clearInterval(iv);
+              resolve({ boss: !!boss, flagged: ss.bossSpawned, count: g.entityManager.getCount('enemy'),
+                hp: boss ? boss.hp : 0, isBoss: boss ? !!boss.isBoss : false,
+                barRef: !!(g.renderer.bossEntity && g.renderer.bossEntity.isBoss) });
+            }
+          }, 100);
+        }));
+        check('[B27/natural tick] boss entity EXISTS after crossing the spawn time (not just the flag)',
+          natural.boss && natural.isBoss && natural.flagged,
+          JSON.stringify(natural));
+        check('[B27/natural tick] boss HP matches the real definition (latched once, full HP)',
+          natural.hp > 0 && natural.boss, `hp=${natural.hp}`);
+        check('[B27/natural tick] renderer holds the boss ref (HUD bar will draw)',
+          natural.barRef, '');
       } finally {
         await mCtx.close();
       }
