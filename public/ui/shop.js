@@ -298,13 +298,17 @@ class ShopSystem {
   /** B12 (v2.19.24): purchase confirmation panel — opened by a card tap.
    *  Full (unwrapped) description, qty stepper clamped [1, affordable], live
    *  total. Commit goes through buy(item, qty); Cancel/scrim-tap spends
-   *  nothing. One confirm at a time; close() tears it down with the shop. */
+   *  nothing. B19 (v2.19.30): after a commit the panel PERSISTS as a
+   *  repeat-buy surface (qty reset to 1, totals re-read post-purchase gold,
+   *  button relabeled "Buy Again") — a fresh card tap restores first-purchase
+   *  semantics. One confirm at a time; close() tears it down with the shop. */
   _openPurchaseConfirm(item) {
     const gold = this.gameManager.get_currency() || 0;
     // The open path is only reachable for affordable cards (v1.3 suppression),
     // so maxQty >= 1 here — the floor is defensive, not load-bearing.
     this._confirmItem = item;
     this._confirmQty = 1;
+    this._confirmJustBought = false; // B19: a fresh card tap is a FIRST purchase
     this._renderPurchaseConfirm();
     this.audioManager?.playMenuSound('select');
   }
@@ -318,6 +322,9 @@ class ShopSystem {
     this._confirmQty = qty;
     const total = qty * item.cost;
     const canBuy = qty >= 1 && total <= gold;
+    // B19: while the panel is in its post-commit repeat-buy state, the commit
+    // button reads "Buy Again" (same id, same single commit path).
+    const repeat = !!this._confirmJustBought;
 
     let host = document.getElementById('shop-purchase-confirm');
     if (!host) {
@@ -342,7 +349,7 @@ class ShopSystem {
       '<div class="spc-total" id="spc-total">💰 ' + total.toLocaleString() + (qty > 1 ? ' <span class=\"spc-unit\\">(' + item.cost + ' each)</span>' : '') + '</div>' +
       '<div class="spc-actions">' +
       '<button class="spc-cancel" id="spc-cancel">Cancel</button>' +
-      '<button class="spc-buy" id="spc-buy"' + (canBuy ? '' : ' disabled') + '>Buy</button>' +
+      '<button class="spc-buy" id="spc-buy"' + (canBuy ? '' : ' disabled') + '>' + (repeat ? 'Buy Again' : 'Buy') + '</button>' +
       '</div>' +
       '</div>';
 
@@ -359,14 +366,22 @@ class ShopSystem {
     };
     if (buyBtn) buyBtn.onclick = canBuy ? () => {
       const q = this._confirmQty;
+      const itemRef = item;
       this._closePurchaseConfirm();
-      this.buy(item, q); // ONE commit path — the only way gold moves
+      this.buy(itemRef, q); // ONE commit path — the only way gold moves
+      // B19: re-open IN PLACE as a repeat-buy surface — qty reset to 1, the
+      // re-render re-reads POST-purchase gold, button reads "Buy Again".
+      this._confirmJustBought = true;
+      this._confirmItem = itemRef;
+      this._confirmQty = 1;
+      this._renderPurchaseConfirm();
     } : null;
   }
 
   _closePurchaseConfirm() {
     this._confirmItem = null;
     this._confirmQty = 0;
+    this._confirmJustBought = false; // B19: a closed panel is never a repeat-buy surface
     document.getElementById('shop-purchase-confirm')?.remove();
   }
 

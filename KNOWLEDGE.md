@@ -331,3 +331,30 @@ Standing rules I follow on every task, so future sessions inherit them:
 - **`TOOL_AUDIT_PLAN.md` is the source of truth** for per-tool verdicts and
   probe recipes. If a tool misbehaves in a new way, add the evidence there
   and adjust the verdict — don't silently work around it and forget.
+
+---
+
+## 20. Verify prior writes before re-running (added 2026-09-27)
+
+A retried action can have PARTIALLY or FULLY LANDED before its failure was
+reported (the 502 flake class: an append that "failed" in the response had
+already been applied server-side — one real double-append happened, and the
+B18 CSS edit's post-write verifier "failing" on sloppy substring needles was
+the same shape: an action re-applied on top of its own effect).
+
+- **Before re-running any write that reported failure — append, edit, copy,
+  script — read the target first** (count the expected markers, check line
+  counts) and only re-apply what is actually missing.
+- **One-shot edit scripts assert-and-verify in the SAME run:** every anchor
+  must match exactly once, the intended change must be absent before and
+  present exactly once after, and the script exits non-zero rather than
+  writing again. A second run must abort on "already present", not append.
+- Verify by **counts and exact markers, not eyeballed grep output** — the
+  terminal filter mangles strings; `node --check`/marker counts don't lie.
+- Same rule for test probes: a synthetic sequence that reports a state must
+  also CLEAN UP that state, or the next probe re-reads the leftover.
+
+This is the same problem shape the project has caught before: an action
+re-applied on top of its own partial effect (duplicate listeners, doubled
+totals, double-append). Detect idempotently; never assume the first try
+had no effect.

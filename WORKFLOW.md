@@ -223,6 +223,10 @@ backlog aging.
 | B16 | ~~Golden-image diffing~~ **DECLINED (v2.19.23 decision):** visual_probe + the layout/occlusion/emulation gates cover the regression classes golden diffs would; the artifact-maintenance churn outweighs the marginal catch | Re-evaluate only if a visual regression class escapes the current net | — | — |
 | B17 | ~~Level-up cards on mobile~~ **DONE v2.19.28** (user-reported: same B15 centered-row clip class — auto-fit grid + gated in the matrix via uiManager.showLevelUp; PLUS coarse-pointer portrait stacking for both card pickers per user expectation — full vertical on phones, guarded wrapping row in landscape) | Class-aware sweep of B15's siblings; Elder Rowan zone move reported same session confirmed BY DESIGN (npcs.json locationRules, mq_02_clearing) | S | — |
 | B18 | ~~Combat touch controls~~ **DONE v2.19.29** (user report "touch controls don't work too well" — root cause: there WERE none, only canvas tap-to-move; added the usual left-thumb virtual joystick: static `#touch-controls` overlay, Pointer Events + setPointerCapture, floating origin, 12% dead zone, analog vector into `InputManager.getMovement()` at highest precedence (`_movePlayer` unchanged); revealed ONLY on coarse pointers during combat (`body.combat-live`), refused while paused/overlays, zeroed on every teardown/town path via `_resetJoystick()`; gated in the layout audit's new combat-touch section — desktop negative control, emulated reveal, synthetic-drag movement proof, pause refusal, pointerup zeroing; 539→548 checks) | Combat is canvas-drawn — the stick is its only DOM surface, so it got a dedicated section instead of a SCREENS row | M | — |
+| B19 | ~~Buy Again in the purchase confirm~~ **DONE v2.19.30** (Claude triage Q1, option (b): after a commit the panel PERSISTS as a repeat-buy surface — qty resets to 1, totals re-read POST-purchase gold, button relabeled "Buy Again"; same `#spc-buy` id = same single commit path; fresh card tap restores first-purchase semantics; settings quick-buy toggle deliberately NOT built until (b) proves insufficient per Claude) | Power users buying N potions no longer reconfirm from scratch; safety net kept for the first tap | S | — |
+| B20 | Toast duration scaling (Claude triage Q4): scale duration to message length so longer reward/warning toasts stay readable — keep 3.5s as the short-toast default; formula undecided, flag BEFORE more toast types land | P3, next time a toast type is added | S | — |
+| B21 | Inventory item detail sheet (Claude triage Q5 — NOT a fresh decision): a tracked GAP against the already-designed inventory spec (tap → detail sheet with use/route/gift/discard); stays backlogged until inventory work resumes | The spec already answers the design question | M | — |
+| B22 | Matrix-coverage periodic audit (Claude triage, from the progress report's closing line): treat "is every screen/dialog actually registered in the battery matrix" as its own periodic check, SEPARATE from gate strictness — the slot-picker was missed because it was invisible to the gates, not because the gates were weak | P3, run alongside the §9 orphan-and-doc-hygiene schedule | S | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
 
@@ -806,4 +810,30 @@ backlog aging.
 - LESSON: input-modality surfaces need their own gated section keyed to the device
   (coarse pointer + combat state), not the screen matrix — the matrix governs layout
   overlays; a persistent input overlay crosses all of them.
+```
+
+### v2.19.30 (Sept 27, 2026) — B19: Buy Again (Claude triage Q1) + triage decisions recorded
+```
+- Claude's review of PROGRESS_REPORT_TEMP triaged Q1–Q6: Q1 = option (b) DONE as B19;
+  Q2 (tab wrap), Q3 (44px chips), Q6 (one-line desc) = KEEP AS-IS with reasons recorded;
+  Q4 → B20 (toast length scaling, P3), Q5 → B21 (inventory detail sheet = a tracked GAP
+  against the existing spec, not a new decision), plus B22 (matrix-coverage periodic
+  audit — "is every screen registered" checked separately from gate strictness).
+- B19 mechanics: the commit handler commits through the UNCHANGED single path
+  (_closePurchaseConfirm → buy(item, qty)) then re-opens the SAME panel in a repeat-buy
+  state (_confirmJustBought): qty reset to 1, re-render re-reads post-purchase gold,
+  button relabels "Buy Again". Fresh card tap (_openPurchaseConfirm) clears the flag —
+  first-purchase semantics restored. Every exit path (✕/Cancel/scrim/shop close) resets
+  the flag via _closePurchaseConfirm, which close() already called.
+- Broke-case safety came FREE from the existing re-render: after spending down, the
+  repeat panel re-computes canBuy from real gold and disables the commit (disabled-with-
+  reason §12.5). No new branch was added to the commit path.
+- Gated: step6 gained 3f/3g/3h probe stages + 6 checks (panel persists, Buy Again label
+  + qty reset, post-purchase total, second transaction with stack merge 3+1=4, fresh-tap
+  semantics, cancel-still-safe). The obsolete "confirm closes after commit" check was
+  REWRITTEN to pin the new contract — an intended contract change updates the pin in the
+  same unit, it does not leave a red check lying around. 18→24; battery 548→554.
+- LESSON (Q1 process): "persist the surface, don't add a shortcut" — the safer
+  repeat-purchase pattern keeps ONE commit path and re-uses the existing confirm render,
+  instead of adding a parallel quick-buy route that would need its own guards.
 ```

@@ -107,6 +107,29 @@ const check = (name, pass, extra) => {
       const buyWorked = goldAfterBuy === goldBeforeBuy - 150 && !!boughtEntry && boughtEntry.count === 3;
       const confirmClosedAfterBuy = !document.getElementById('shop-purchase-confirm');
 
+      // 3f) B19 (v2.19.30): commit PERSISTS the panel as a repeat-buy surface —
+      // qty resets to 1, button relabels "Buy Again", totals re-read the
+      // POST-purchase gold (no reopen, no reconfirm from scratch).
+      const panelAfterBuy = document.getElementById('shop-purchase-confirm');
+      const repeatPersisted = !!panelAfterBuy;
+      const labelAfterBuy = panelAfterBuy?.querySelector('#spc-buy')?.textContent?.trim() || '';
+      const qtyAfterBuy = parseInt(document.getElementById('spc-qty')?.textContent || '0', 10);
+      const totalAfterBuy = document.getElementById('spc-total')?.textContent || '';
+      // 3g) B19: Buy Again commits a SECOND transaction (qty 1) through the same
+      // single commit path — stack merge proves the purchase landed (3+1=4).
+      const goldBeforeAgain = gold();
+      document.getElementById('spc-buy')?.click();
+      const goldAfterAgain = gold();
+      const againSpent = goldBeforeAgain - goldAfterAgain;
+      const countAfterAgain = gm.getInventoryItems().find((i) => i.id === 'health_potion')?.count || 0;
+      // 3h) B19: a FRESH card tap restores FIRST-purchase semantics ("Buy", no
+      // repeat state); cancel on it still spends nothing.
+      itemCards()[0]?.click();
+      const freshLabel = document.getElementById('spc-buy')?.textContent?.trim() || '';
+      const freshQty = parseInt(document.getElementById('spc-qty')?.textContent || '0', 10);
+      document.querySelector('#shop-purchase-confirm')?.click();
+      const freshCancelSpentNothing = gold() === goldAfterAgain;
+
       // 4) THE ROUND-TRIP (former pilot bug) + def-swap skin evidence
       const toInventory = () => chips()[4]?.click();
       const toCombat = () => chips()[0]?.click();
@@ -134,6 +157,8 @@ const check = (name, pass, extra) => {
         buyBtnStartExists: !!buyBtnStart, totalAt1, qtyAfterPlus, totalAfterPlus,
         qtyAfterMinus, minusDisabledAt1, confirmClosedOnScrim, cancelSpentNothing,
         buyWorked, confirmClosedAfterBuy,
+        repeatPersisted, labelAfterBuy, qtyAfterBuy, totalAfterBuy,
+        againSpent, countAfterAgain, freshLabel, freshQty, freshCancelSpentNothing,
         roundTrip,
         counts: { inv1, combat1, inv2, combat2 },
         skinInInventory, noSkinInCombat, resetSelected,
@@ -161,7 +186,21 @@ const check = (name, pass, extra) => {
     check('B12 negctl: scrim tap closes panel and spends NOTHING', probe.confirmClosedOnScrim && probe.cancelSpentNothing);
     check('B12: Buy commits ONE transaction qty×cost, stack count=qty', probe.buyWorked,
       `gold ${probe.goldBeforeTap}→${probe.goldAfterBuy}, inv count ${JSON.stringify(probe.buyWorked ? 3 : null)}`);
-    check('B12: confirm closes after commit', probe.confirmClosedAfterBuy);
+    check('B12→B19: commit does NOT close the panel — it persists as the repeat-buy surface',
+      probe.repeatPersisted && probe.labelAfterBuy === 'Buy Again');
+    check('B19: commit persists the panel as a repeat-buy surface', probe.repeatPersisted);
+    check('B19: repeat surface relabels "Buy Again" and resets qty to 1',
+      probe.labelAfterBuy === 'Buy Again' && probe.qtyAfterBuy === 1,
+      `label=${JSON.stringify(probe.labelAfterBuy)} qty=${probe.qtyAfterBuy}`);
+    check('B19: repeat totals re-read post-purchase gold (total = 1×cost)',
+      probe.totalAfterBuy.includes('50'), probe.totalAfterBuy);
+    check('B19: Buy Again commits a second transaction (same path, stack merges 3+1)',
+      probe.againSpent === 50 && probe.countAfterAgain === 4,
+      `spent=${probe.againSpent} stack=${probe.countAfterAgain}`);
+    check('B19: fresh card tap restores first-purchase semantics (Buy, qty 1)',
+      probe.freshLabel === 'Buy' && probe.freshQty === 1,
+      `label=${JSON.stringify(probe.freshLabel)} qty=${probe.freshQty}`);
+    check('B19: cancel on the fresh panel still spends NOTHING', probe.freshCancelSpentNothing);
     check('tab round-trip ×2 renders cards EVERY time (former pilot pool bug dead)',
       probe.roundTrip, JSON.stringify(probe.counts));
     check('def-swap: bazaar_cloth skin present in inventory, absent in combat',

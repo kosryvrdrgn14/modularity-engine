@@ -56,6 +56,36 @@ synthetic-drag proof that the player actually moves and a paused-refusal pin.
 
 ---
 
+## CLAUDE'S TRIAGE — PROCESSED (v2.19.30)
+
+All six open questions answered and actioned:
+
+| Q | Decision | Where it landed |
+|---|---|---|
+| Q1 purchase confirm | **Buy Again inside the panel** (option b) — implemented | **B19, shipped v2.19.30**: after a buy, the panel stays open as a "Buy Again" surface (qty reset, live post-purchase total); fresh tap = first-purchase "Buy" again; quick-buy toggle deliberately deferred |
+| Q2 tab wrap vs scroll | **Keep wrap** — scroll can hide tabs (hidden-content trap) | Recorded; revisit only on real-device cramping |
+| Q3 44px chips | **Keep 44px** — standard minimum touch target | Recorded; "slightly chunkier" is the right trade |
+| Q4 toast timing | Keep 3.5s default; **scale duration to message length** | **Backlog B20** (P3, before more toast types land) |
+| Q5 inventory tap | **A spec GAP, not a new decision** — the inventory spec already designs the detail sheet | **Backlog B21** (tied to that spec; resumes with inventory work) |
+| Q6 desc ellipsis | **Keep the one-line description** — discovery friction otherwise | Recorded; confirm panel still carries full text |
+
+Plus two process adoptions: **B22** — "is every screen registered in the battery matrix"
+gets checked periodically, separate from gate strictness (Claude called the closing line
+the sharpest insight of the session); and **KNOWLEDGE.md §20 — verify prior writes before
+re-running** (the 502 double-append lesson, generalized).
+
+**B19 verification:** step6 18 → 24 checks — panel persists, "Buy Again" label + qty
+reset, post-purchase total, second transaction through the same commit path (stack merges
+3+1=4), fresh-tap semantics, cancel still spends nothing. **Battery 548 → 554; v2.19.30,
+release:check green.** No settings toggle was built (per Claude's "don't speculate"
+rule — only if (b) proves insufficient after real use).
+
+**New manual-test item for you:** buy a few potions in a row — the panel should stay up,
+relabel to "Buy Again", and keep the total honest after each purchase. Spend yourself
+down to nearly broke and confirm the button disables instead of letting you overspend.
+
+---
+
 ## MID-TEST FIX (v2.19.27 — the slot-picker screenshot you sent)
 
 **Confirmed real bug, root-caused, fixed, gated:** the save-slot picker was a nowrap

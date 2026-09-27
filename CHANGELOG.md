@@ -2,6 +2,47 @@
 
 ---
 
+## v2.19.30 — B19: Buy Again (Claude triage Q1) + triage decisions recorded
+**Date:** September 27, 2026
+**Status:** ✅ Complete (step6 18→24; battery 554 strict green; release:check green)
+
+### Claude review triage (PROGRESS_REPORT_TEMP Q1–Q6)
+1. **Q1 purchase-confirm friction → option (b), implemented as B19.** The settings
+   quick-buy toggle (c) is deliberately NOT built — only if (b) proves insufficient
+   after real use.
+2. **Q2 tab wrap: KEEP.** Horizontal scroll risks an undiscoverable tab — exactly the
+   hidden-content trap the project designs against. Revisit only on real-device cramping.
+3. **Q3 44px chips: KEEP.** Standard minimum touch target; "slightly chunkier" is the
+   correct trade for tappability.
+4. **Q4 toast timing → B20 (P3):** keep the 3.5s short-toast default, scale duration to
+   message length before more toast types land.
+5. **Q5 inventory tap → B21:** a tracked GAP against the already-designed inventory
+   spec (tap → detail sheet with use/route/gift/discard), not a fresh decision; backlogged
+   until inventory work resumes.
+6. **Q6 one-line description: KEEP.** Icon+name alone forces a panel-open just to identify
+   an item — friction where browsing hurts most; the confirm panel already carries full text.
+7. **Process call-outs adopted:** "is every screen registered in the battery matrix" becomes
+   its own periodic check (**B22**, separate from gate strictness); the 502 double-append
+   lesson landed as **KNOWLEDGE.md §20 — verify prior writes before re-running**.
+
+### B19 — Buy Again (purchase-confirm persistence)
+- After a commit, the panel **persists** as a repeat-buy surface: qty resets to 1, the
+  re-render re-reads POST-purchase gold (live total correct immediately), and the commit
+  button relabels **"Buy Again"**. Same `#spc-buy` id = the same single commit path — no
+  parallel quick-buy route to guard.
+- A fresh card tap restores first-purchase semantics ("Buy"); every exit path (✕/Cancel/
+  scrim/shop close) leaves repeat state. Broke-case safety is inherited from the re-render:
+  after spending down, "Buy Again" disables itself (disabled-with-reason, §12.5).
+
+### Gated
+- `step6_shop_tabs` gained three probe stages + 6 checks: panel persists, "Buy Again" label
+  + qty reset, post-purchase total, second transaction through the same path (stack merges
+  3+1=4), fresh-tap semantics, cancel-still-spends-nothing. The obsolete "confirm closes
+  after commit" check was REWRITTEN to pin the new contract. 18 → **24** checks; battery
+  **548 → 554**.
+
+---
+
 ## v2.19.29 — B18: combat virtual joystick (touch devices only)
 **Date:** September 27, 2026
 **Status:** ✅ Complete (layout audit 95→104; battery 548 strict green; release:check green)
