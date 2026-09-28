@@ -1,8 +1,8 @@
 // ============================================================
-// INVESTIGATION PROBE (not a suite) — B31 verification, one-off.
-// node tests/probe_lag.cjs
-// Asserts the B31 behaviors headlessly (desktop page is fine — none of these
-// depend on mobile emulation):
+// VERIFICATION PROBE (standalone, not in run_all).
+//   node tests/probe_lag.cjs         → B31: pickup lifecycle + audio gate
+//   node tests/probe_lag.cjs --wipe  → B32: screen_wipe drop actually wipes
+// B31 mode asserts:
 //   1. Pickup despawn: 60s of natural play → zero pickups older than the
 //      lifespan (non-trophy).
 //   2. Planted pickup: age forced past lifespan → destroyed by the sweep;
@@ -11,9 +11,17 @@
 //   4. Suspended-context gate: play() with a suspended stub context schedules
 //      zero nodes and retries resume exactly once per play() call.
 //   5. Running-context play(): nodes scheduled (audio path still works).
+// B32 mode asserts (real collection path, no bus shortcuts):
+//   W1. Collecting screen_wipe kills every active non-boss enemy through the
+//       real 'death' event (kill counter increments).
+//   W2. Bosses are not cheesed: take bossDamage × (1 − bossResistance); a
+//       killing blow routes through canonical death + bossDeath (victory).
+//   W3. Trophy drop (B28) fires at boss-drop time on the wipe kill path.
+//   W4. Renderer feedback armed (rings/cleanup arrays) and cleaned on exit.
 // Prints PASS/FAIL lines; exit 1 on any failure.
 // ============================================================
 const path = require('path');
+const wipeMode = process.argv.includes('--wipe');
 
 (async () => {
   const { bootGame } = require(path.join(__dirname, 'lib', 'harness.cjs'));
@@ -25,6 +33,80 @@ const path = require('path');
   };
 
   try {
+    if (wipeMode) {
+      // ════════ B32: screen_wipe actually wipes ════════
+      const w = await page.evaluate(async () => {
+        const g = window.game;
+        g.titleMenu.hide();
+        g.gameManager.set('session.selected_stage_id', 'stage_graveyard');
+        g.gameManager.set('session.current_stage_tier', 'standard');
+        g.startGame();
+        await new Promise(r => setTimeout(r, 900));
+        const em = g.entityManager;
+        const out = {};
+        const origSpawn = g.spawnSystem.update;
+        g.spawnSystem.update = () => {}; // isolate from natural spawns
+        try {
+          // W1 — real collection path: 5 zombies + a wipe pickup on the player
+          for (let i = 0; i < 5; i++) {
+            em.create('enemy', {
+              x: 100 + i * 10, y: 100, hp: 10, damage: 1, speed: 0, size: 10,
+              enemyData: g.dataManager.enemies.find(e => e.id === 'zombie'),
+              visual: { shape: 'circle', color: '#5A7' },
+            });
+          }
+          const killsBefore = g._runKillCount || 0;
+          em.create('pickup', { x: g.player.x, y: g.player.y,
+            pickupData: { id: 'screen_wipe' }, visual: { shape: 'star', color: '#00E676', size: 16 } });
+          g.gameLoop.updateFn(1 / 60); // one real frame: collect + wipe
+          out.enemiesLeft = em.getActive('enemy').length;
+          out.killDelta = (g._runKillCount || 0) - killsBefore;
+          out.ringsArmed = g.renderer.wipeEffects.length > 0;
+          out.cleanupArmed = g.renderer.cleanupEffects.length > 0;
+          out.countedText = g.floatingTextSystem.texts.some(t => t.text.startsWith('SCREEN WIPE!'));
+
+          // W2/W3 — boss takes resistanced damage; killing blow → canonical victory
+          const bossDef = g.dataManager.enemies.find(e => e.id === 'boss_gravekeeper');
+          const boss = em.create('enemy', {
+            x: g.player.x + 40, y: g.player.y, hp: 30, damage: 5, speed: 0, size: 24,
+            enemyData: bossDef, isBoss: true, visual: { shape: 'circle', color: '#4A0000' },
+          });
+          boss.maxHp = 30;
+          let trophyDrop = 0;
+          g.eventBus.on('bossTrophyDropped', () => trophyDrop++);
+          em.create('pickup', { x: g.player.x, y: g.player.y,
+            pickupData: { id: 'screen_wipe' }, visual: { shape: 'star', color: '#00E676', size: 16 } });
+          g.gameLoop.updateFn(1 / 60);
+          out.bossHp = Math.round(boss.hp); // 30 − 40 → dead
+          // victory signal: endResult is set by triggerGameOver regardless of
+          // whether the state machine has already advanced gameOver → endScreen
+          out.victory = (g.gameState.state === 'gameOver' || g.gameState.state === 'endScreen')
+            && g.gameState.endResult === 'victory';
+          out.trophyDropped = trophyDrop;
+
+          // W4 — the stale-effect risk is the RESTART funnel (Buy Again):
+          // plant fresh effects (age 0 — they cannot have expired naturally)
+          // and verify startGame() clears them before the next fight.
+          g.renderer.addWipeEffect(100, 100, 3);
+          g.renderer.addCleanupEffect(100, 100, '#fff');
+          g.gameManager.set('session.selected_stage_id', 'stage_graveyard');
+          g.startGame();
+          out.ringsCleared = g.renderer.wipeEffects.length === 0;
+          out.cleanupCleared = g.renderer.cleanupEffects.length === 0;
+        } finally {
+          g.spawnSystem.update = origSpawn;
+        }
+        return out;
+      });
+      check(`W1: real-path collection wipes every non-boss enemy (left=${w.enemiesLeft})`, w.enemiesLeft === 0, `left=${w.enemiesLeft}`);
+      check('W1: wipe kills ride the real death event → kill counter +5', w.killDelta === 5, `delta=${w.killDelta}`);
+      check('W1: renderer feedback armed (rings + cleanup dots)', w.ringsArmed && w.cleanupArmed, `rings=${w.ringsArmed} dots=${w.cleanupArmed}`);
+      check('W1: single counted announcement (SCREEN WIPE! ×N)', w.countedText === true);
+      check('W2: boss takes resistanced damage, not the wipe (200 × 0.2 = 40)', w.bossHp <= -10, `hp=${w.bossHp}`);
+      check('W2: boss killing blow routes to canonical victory (gameOver)', w.victory === true);
+      check('W3: bossTrophyDropped fires on the wipe-kill path (B28 intact)', w.trophyDropped === 1, `drops=${w.trophyDropped}`);
+      check('W4: run exit clears the wipe feedback arrays', w.ringsCleared && w.cleanupCleared, `rings=${w.ringsCleared} dots=${w.cleanupCleared}`);
+    } else {
     // ── 1. Natural-play despawn hygiene ──
     const nat = await page.evaluate(async () => {
       const g = window.game;
@@ -136,11 +218,13 @@ const path = require('path');
     check('suspended context: play() retries resume each call (2 calls → ≥1 resume attempts)', audio.resumed >= 1, `attempts=${audio.resumed}`);
     check('running context: play() schedules nodes (audio path intact)', audio.runningScheduled >= 1, `scheduled=${audio.runningScheduled}`);
 
+    } // end mode branch
+
     // ── page errors (pageerror-captured by harness; bus-error net excluded) ──
     const realErrors = errors.filter(e => !e.includes('[UPDATE ERROR]') && !e.includes('setTownLevel rejected'));
-    check('no page/console errors during B31 probe', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));
+    check('no page/console errors during the probe', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));
 
-    console.log(`\nB31 PROBE: ${pass} passed, ${fail} failed`);
+    console.log(`\n${wipeMode ? 'B32 WIPE' : 'B31'} PROBE: ${pass} passed, ${fail} failed`);
     await browser.close();
     process.exit(fail === 0 ? 0 : 1);
   } catch (e) {

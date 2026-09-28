@@ -2,6 +2,43 @@
 
 ---
 
+## v2.19.38 — B32: screen_wipe drop actually screen-wipes
+**Date:** September 28, 2026
+**Status:** ✅ Complete (B32 wipe probe 9/9; B31 probe 9/9; battery 578 strict green)
+
+### The bug
+The screen_wipe power-up drop (skeletons/casters/brutes, 2% + gacha ramp) was purely
+cosmetic: collecting it showed "SCREEN WIPE!" and killed nothing. No consumer of the
+pickup id existed anywhere — pickups.json fully specified the behavior that was never
+wired (killsAllEnemies: true; bosses take bossDamage 200 modulated by bossResistance
+0.8).
+
+### B32 fix (routed through the real kill flow, data-driven)
+- PickupSystem listens on 'pickup' → _executeScreenWipe() (pickup.js): every active
+  non-boss enemy dies DIRECTLY (no armor/iFrames lottery — a wipe means wipe) but via
+  the REAL 'death' event, so kill counters, quest objectives, drops, and audio all
+  fire exactly as a normal kill. Bosses are NOT cheesed: they take
+  round(bossDamage × (1 − bossResistance)) = 40 — enough to finish a nearly-dead
+  boss, never to skip the fight; a killing blow routes through the canonical
+  death + bossDeath flow (victory + B28 trophy all intact).
+- Renderer feedback (rendering.js + game.js listener): two expanding screen-space
+  rings from the player (converted CSS px → world at draw time; camera stores
+  top-left world coords), a world-space dissolving dot per culled enemy (color from
+  the enemy visual, capped at 80), and one counted announcement
+  "SCREEN WIPE! ×N" — the old uncounted FloatingText push is retired so collection
+  never renders two overlapping texts. startGame() clears the transient arrays so
+  Buy Again never carries stale effects into the next fight.
+
+### Gates
+- tests/probe_lag.cjs --wipe (9 checks): real CollisionSystem collection wipes all
+  non-boss enemies; kill counter +N via the real death event; rings/dots armed;
+  single counted announcement; boss takes 40 and a killing blow reaches
+  endResult 'victory'; bossTrophyDropped fires on the wipe path; startGame clears
+  the feedback arrays. B31 mode re-run green after the edits (one flaked run of the
+  natural-hygiene check during battery contention; clean on rerun).
+
+---
+
 ## v2.19.37 — B31: pickup lifecycle + suspended-audio guard (mobile lag 2:40+)
 **Date:** September 28, 2026
 **Status:** ✅ Complete (B31 probe 9/9; battery 578 strict green)

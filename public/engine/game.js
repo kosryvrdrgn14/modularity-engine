@@ -42,6 +42,23 @@ class Game {
     // the renderer API (the 'floatingText' bus event had no listener).
     this.companionSystem.floatingTextSystem = this.floatingTextSystem;
 
+    // B32 (v2.19.38): screen-wipe feedback — the pickup routed through the
+    // real death flow already feeds counters/quests/drops/audio; this is the
+    // visual-only half of the contract (rings + per-culled-enemy dots + text).
+    this.eventBus.on('screenWipe', (data) => {
+      this.renderer.addWipeEffect(data.x, data.y, data.killed || 0);
+      if (data.killed > 0) {
+        this.floatingTextSystem.spawn({
+          x: data.x, y: data.y - 30,
+          text: `SCREEN WIPE! ×${data.killed}`,
+          color: '#00E676', fontSize: 16, duration: 1.1, vy: -50,
+        });
+      }
+      for (const p of data.positions || []) {
+        this.renderer.addCleanupEffect(p.x, p.y, p.color);
+      }
+    });
+
     // Game loop
     this.gameLoop = new GameLoop(
       (dt) => this.update(dt),
@@ -502,6 +519,11 @@ class Game {
     this.gameState.reset();
     this.renderer.bossEntity = null;
     this.telegraphSystem.clearAll();
+    // B32: screen-wipe feedback arrays are transient by maxAge, but a run
+    // exit must not leave stale world-space effects behind (same policy as
+    // the telegraph clear above).
+    this.renderer.wipeEffects.length = 0;
+    this.renderer.cleanupEffects.length = 0;
     // POT-011: the wallet is NEVER zeroed at fight start (the old
     // town.resources.gold = 0 wiped banked gold, including farming income).
     // Per-run earnings live in this._runGoldEarned (reset below).

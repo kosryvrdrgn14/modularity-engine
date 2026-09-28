@@ -23,6 +23,65 @@ class PickupSystem {
   init() {
     this.eventBus.on('death', (data) => this._onEnemyDeath(data));
     this.eventBus.on('magnetActivate', (data) => this._onMagnetActivate(data));
+    // B32 (v2.19.38): screen_wipe was cosmetic — FloatingText showed
+    // 'SCREEN WIPE!' and nothing died. Collection now routes here.
+    this.eventBus.on('pickup', (data) => this._onPickup(data));
+  }
+
+  _onPickup(data) {
+    if (data.pickup?.pickupData?.id === 'screen_wipe') this._executeScreenWipe(data.player);
+  }
+
+  /** B32 (v2.19.38): the screen_wipe drop actually wipes.
+   *  Data-driven contract from pickups.json (screen_wipe):
+   *  - killsAllEnemies: every active non-boss enemy dies — DIRECTLY (no
+   *    armor/iFrames lottery; the pickup says "wipe" and means it), but via
+   *    the REAL 'death' event so kill counters, quest objectives, drops,
+   *    and audio all fire exactly as a normal kill.
+   *  - Bosses are NOT cheesed: they take bossDamage scaled by
+   *    bossResistance (200 × (1 − 0.8) = 40 effective) — enough to finish
+   *    a nearly-dead boss, never to skip the fight. If that lands the
+   *    killing blow, the canonical death+bossDeath flow (incl. victory)
+   *    runs from here.
+   *  Emits 'screenWipe' (x/y/killed/bossDamage) for the renderer rings. */
+  _executeScreenWipe(player) {
+    const def = (this.dataManager.pickups || []).find(p => p.id === 'screen_wipe') || {};
+    const enemies = this.entityManager.getActive('enemy');
+    const origin = player ? { x: player.x, y: player.y } : { x: 0, y: 0 };
+    let killed = 0;
+    let bossDamage = 0;
+    const positions = [];
+    for (const enemy of enemies) {
+      if (!enemy.active) continue;
+      if (enemy.isBoss) {
+        const dmg = Math.round((def.bossDamage || 200) * (1 - (def.bossResistance ?? 0.8)));
+        bossDamage = dmg;
+        enemy.hp -= dmg;
+        if (enemy.hp <= 0) {
+          enemy.active = false;
+          this.eventBus.emit('death', {
+            entity: enemy, killer: player || null, type: enemy.type,
+            enemyType: enemy.enemyData?.id || null,
+            position: { x: enemy.x, y: enemy.y },
+          });
+          this.eventBus.emit('bossDeath', { boss: enemy, killer: player || null });
+        }
+        continue;
+      }
+      enemy.active = false;
+      killed++;
+      if (positions.length < 80) {
+        positions.push({ x: enemy.x, y: enemy.y, color: enemy.visual?.color });
+      }
+      this.eventBus.emit('death', {
+        entity: enemy, killer: player || null, type: enemy.type,
+        enemyType: enemy.enemyData?.id || null,
+        position: { x: enemy.x, y: enemy.y },
+      });
+    }
+    this.eventBus.emit('screenWipe', {
+      x: origin.x, y: origin.y, killed, bossDamage, positions,
+    });
   }
 
   _onEnemyDeath(data) {

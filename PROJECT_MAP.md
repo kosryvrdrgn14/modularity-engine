@@ -198,9 +198,10 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `PickupSystem`, `LevelingSystem`, `TelegraphSystem`, `preloadAssets` (cross-file helper — declared in tools/game_globals.cjs)
 - Calls: `DataManager.leveling`
-- Emits: `pickup`, `levelUp`, `damage`, `bossTrophyDropped` (B28 v2.19.35 — fires at boss-death drop time, tagged with the boss id; the marker pickup itself is inert and rides the normal collection path)
+- Emits: `pickup`, `levelUp`, `damage`, `bossTrophyDropped` (B28 v2.19.35 — fires at boss-death drop time, tagged with the boss id; the marker pickup itself is inert and rides the normal collection path), `screenWipe` (B32 v2.19.38 — `{x, y, killed, bossDamage, positions}` at collection; positions carries up to 80 world coords + enemy colors for the renderer cleanup dots)
 - Listens: `pickup`, `magnetActivate`, `death`
 - Note (B31 v2.19.37): `_sweepExpired()` — non-trophy pickups expire at 45s (last-10s blink via iFrames) and actives cap at 500 oldest-first; `boss_trophy` is exempt from both (B28 marker). Sweeps run on a 1s accumulator inside update().
+- Note (B32 v2.19.38): `_executeScreenWipe()` — screen_wipe collection kills all active non-boss enemies DIRECTLY but via the real death event (counters/quests/drops/audio unchanged); bosses take `bossDamage × (1 − bossResistance)` from pickups.json (40 effective) with killing blows flowing through canonical death + bossDeath. `boss_trophy` never wiped (it is not an enemy).
 - Note: listener-less `playSound`/`telegraph*` emitters deleted v2.19.2 (§5.5 resolved)
 - GuardedBy: trace (pickups/leveling)
 
@@ -280,6 +281,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `AudioManager`, `TitleBGM`
 - Listens: `weaponFire`, `projectileHit`, `areaPulse`, `contactDamage`, `damage`, `pickup`, `levelUp`, `weaponLevelUp`, `weaponUnlock`, `death`, `bossSpawn`, `bossDeath`, `bossCharge`, `magnetActivate`, `restart`, `selectUpgrade`, `stateChange`
+- Note (B32 v2.19.38): wipe feedback — `addWipeEffect(x, y, killed)` (two screen-space rings, CSS px → world at draw time) + `addCleanupEffect(x, y, color)` (world-space dissolving dot, capped 80); arrays cleared by startGame(). Consumes the `screenWipe` payload via the game.js listener.
 - Note (B31 v2.19.37): suspended-context guard — play() schedules nothing unless ctx.state === "running" (one promise-deduped _resumeContext() attempt per not-running call); game.js retries resume on visibilitychange/focus/pointerdown. Scheduled-on-suspended nodes never end (onended never fires) and accumulate unbounded — probe evidence 285,619 AudioHandlers → renderer crash.
 - GuardedBy: trace (audio smoke)
 

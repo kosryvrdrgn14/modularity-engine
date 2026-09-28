@@ -6,6 +6,21 @@
 
 ---
 
+## ADDENDUM (v2.19.38 — "fix the screen wipe drop so it actually screen wipes")
+
+You were right — it was pure theater: a "SCREEN WIPE!" float text with zero code
+behind it. pickups.json had specified the whole behavior (kills all enemies; bosses
+take 200 damage resisted at 0.8) that was never wired. Now it does what the name
+says: every normal enemy on the field dies through the REAL kill flow (counters,
+quests, drops, audio all fire exactly like a normal kill), the boss takes a resisted
+40 — enough to finish a nearly-dead boss, never to skip the fight — and you get two
+expanding green rings, a dissolving marker per culled enemy, and "SCREEN WIPE! ×N".
+Same-session flag: the "WEAPON UP!" pickup has the identical cosmetic-only bug and
+needs a design decision (which weapon upgrades?) before I wire it. Gates:
+node tests/probe_lag.cjs --wipe (9/9) + full battery green.
+
+---
+
 ## ADDENDUM (v2.19.37 — the "lag 2:40+, worse post-boss" report → B31)
 
 Investigated with a headless 200× replay + CDP metrics instead of guessing. Verdict:

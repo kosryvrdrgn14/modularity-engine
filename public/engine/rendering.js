@@ -16,6 +16,24 @@ class Renderer {
     this.imageCache = null;
     this.coneEffects = [];
     this.chainLightningEffects = [];
+    // B32 (v2.19.38): screen-wipe feedback layers
+    this.wipeEffects = [];      // screen-space CSS-px centers; expanding rings
+    this.cleanupEffects = [];   // world-space; per-culled-enemy dissolving dot
+  }
+
+  /** B32: called by Game on 'screenWipe'. Centers are SCREEN-space CSS px so
+   *  the rings always cover the visible viewport on any DPR; converted to
+   *  world coords at draw time (camera is world-space here). */
+  addWipeEffect(x, y, killed) {
+    this.wipeEffects.push({ x, y, killed, age: 0, maxAge: 0.9, delay: 0 });
+    this.wipeEffects.push({ x, y, killed, age: 0, maxAge: 0.9, delay: 0.15 });
+  }
+
+  /** B32: one dissolving marker per wiped enemy (world-space, cheap). */
+  addCleanupEffect(x, y, color) {
+    if (this.cleanupEffects.length < 80) {
+      this.cleanupEffects.push({ x, y, color: color || '#666', age: 0, maxAge: 0.45 });
+    }
   }
 
   addPulseEffect(x, y, radius, color) {
@@ -116,6 +134,55 @@ class Renderer {
     }
   }
 
+  _updateAndDrawCleanup(dt) {
+    if (this.cleanupEffects.length === 0) return;
+    const ctx = this.ctx;
+    for (let i = this.cleanupEffects.length - 1; i >= 0; i--) {
+      const c = this.cleanupEffects[i];
+      c.age += dt || 1/60;
+      if (c.age >= c.maxAge) { this.cleanupEffects.splice(i, 1); continue; }
+      const progress = c.age / c.maxAge;
+      ctx.save();
+      ctx.globalAlpha = 0.7 * (1 - progress);
+      ctx.strokeStyle = c.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 3 + 10 * progress, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  _updateAndDrawWipe(dt) {
+    if (this.wipeEffects.length === 0) return;
+    const ctx = this.ctx;
+    for (const w of this.wipeEffects) {
+      if (w.delay > 0) { w.delay -= dt || 1/60; continue; }
+      w.age += dt || 1/60;
+    }
+    for (let i = this.wipeEffects.length - 1; i >= 0; i--) {
+      const w = this.wipeEffects[i];
+      if (w.age <= 0 || w.age >= w.maxAge) { this.wipeEffects.splice(i, 1); continue; }
+      const progress = w.age / w.maxAge;
+      const r = Math.max(w.x, this.canvas.width / UI_DPR - w.x, w.y, this.canvas.height / UI_DPR - w.y);
+      // screen-space CSS px → world units (the world layer draws unscaled)
+      const wx = this.camera.x + w.x * UI_DPR;
+      const wy = this.camera.y + w.y * UI_DPR;
+      const worldR = r * progress * UI_DPR;
+      ctx.save();
+      ctx.globalAlpha = 0.45 * (1 - progress);
+      ctx.strokeStyle = '#00E676';
+      ctx.lineWidth = 6 * (1 - progress) + 1.5;
+      ctx.beginPath();
+      ctx.arc(wx, wy, worldR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.12 * (1 - progress);
+      ctx.fillStyle = '#00E676';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   clear() {
     this.ctx.fillStyle = '#1A1A2E';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -142,6 +209,9 @@ class Renderer {
     this._updateAndDrawPulses(1/60);
     this._updateAndDrawCones(1/60);
     this._updateAndDrawChainLightnings(1/60);
+    // B32: screen-wipe layers — cleanup flicker in world space, rings after
+    this._updateAndDrawCleanup(1/60);
+    this._updateAndDrawWipe(1/60);
 
     this.ctx.restore();
 
@@ -611,7 +681,9 @@ class FloatingTextSystem {
     if (pd.id === 'exp_small') { text = `+${pd.value} XP`; color = '#4FC3F7'; }
     else if (pd.id === 'gold_coin') { text = `+${pd.value} G`; color = '#FFD700'; }
     else if (pd.id === 'pickup_weapon_level_up') { text = 'WEAPON UP!'; color = '#FF9100'; }
-    else if (pd.id === 'screen_wipe') { text = 'SCREEN WIPE!'; color = '#00E676'; }
+    // B32: screen_wipe text is spawned by the Game 'screenWipe' listener with
+    // a kill count ("SCREEN WIPE! ×N") — the uncounted push here is retired
+    // so collection doesn't render two overlapping announcements.
     else if (pd.id === 'magnet') { text = 'MAGNET!'; color = '#FF4081'; }
     if (text) {
       this.texts.push({
