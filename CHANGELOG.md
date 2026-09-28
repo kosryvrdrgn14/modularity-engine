@@ -2,6 +2,37 @@
 
 ---
 
+## v2.19.41 — FIX: B34 upgrade show drew inside the camera transform (device report)
+**Date:** September 28, 2026
+**Status:** ✅ Complete (B34 probe 13/13 incl. new W8 pixel gates; battery 581 strict green)
+
+### Device report: "no arrows on upgrade, no pickup effect visible"
+Root cause (A/B pixel diff on a frozen frame): the three B34 draw calls sat INSIDE
+the camera transform (anchored onto the B32 wipe block, which legitimately lives in
+world space) — CSS-px screen coordinates were translated by the camera offset, so
+orbs/arrows/bursts rendered displaced (off-screen on real devices) while every
+logic-level probe assert (array lengths ≥ 1) stayed green. Fix: the three calls now
+draw AFTER ctx.restore() (where the v2.19.40 comment already claimed they were).
+
+### Two more catches the investigation surfaced
+- **The green ▲ glyph is not renderable everywhere:** headless Chromium's monospace
+  font stack paints NOTHING for U+25B2 (and device fallbacks vary). Replaced with a
+  filled triangle PATH — identical geometry everywhere, pixel-testable, no font
+  dependency.
+- **Vacuous gold test:** the W8 ring gate initially "passed" on the slot's own 1px
+  gold stroke. Now scans a band 3px ABOVE the slot top (only the 2.5px pulse ring
+  reaches there) with a blend-tolerant gold filter (pulse gold over the dark field
+  blends to ~119,102,27 — the strict filter missed it).
+
+### Probe lesson (banked)
+Array-length asserts prove state, never pixels: "slotFlashes.length ≥ 1" passed the
+whole time the show was drawing off-screen. Screen-space layers now have pixel
+gates pinned to slot geometry (probe --wup W8: ring = gold-blend band above the
+slot; arrow = green pixels in the band above; flash age parked at a blink-ON phase
+and the dedupe gate cleared so the gate exercises the real draw, not test residue).
+
+---
+
 ## v2.19.40 — B34: weapon-upgrade orbs (roll, flight, flash, chime)
 **Date:** September 28, 2026
 **Status:** ✅ Complete (B34 probe 11/11; battery 581 strict green)

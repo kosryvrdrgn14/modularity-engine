@@ -350,10 +350,19 @@ class Renderer {
         ctx.globalAlpha = al;
         // flash: blink 6 Hz for the first 0.45s of each arrow's life
         if (a < 0.45 && Math.floor(a * 12) % 2 === 0) continue;
+        // v2.19.41 FIX: filled triangle PATH, not a font glyph — the ▲ codepoint
+        // is missing from some font stacks (headless Chromium's monospace paints
+        // NOTHING, and device fallbacks vary); a path renders identically
+        // everywhere and is pixel-testable.
         ctx.fillStyle = '#00E676';
-        ctx.font = 'bold 15px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('\u25B2', x + g.slotSize / 2, g.weaponRowY - 6 - rise);
+        const ax = x + g.slotSize / 2;
+        const ay = g.weaponRowY - 6 - rise;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay - 7);
+        ctx.lineTo(ax + 6, ay + 3);
+        ctx.lineTo(ax - 6, ay + 3);
+        ctx.closePath();
+        ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
@@ -387,15 +396,22 @@ class Renderer {
     this._updateAndDrawCones(1/60);
     this._updateAndDrawChainLightnings(1/60);
     // B32: screen-wipe layers — cleanup flicker in world space, rings after
+    // (the wipe converts its screen-space capture to world coords at draw
+    // time, so it MUST stay inside the camera transform)
     this._updateAndDrawCleanup(1/60);
     this._updateAndDrawWipe(1/60);
-    // B34: upgrade orbs fly in SCREEN space (targets are HUD slots), so they
-    // draw AFTER the camera restore, before the HUD itself.
+
+    this.ctx.restore();
+
+    // B34 (v2.19.41 FIX): upgrade orbs/bursts/flashes are SCREEN-space (targets
+    // are HUD slots) — they draw AFTER the camera restore. They previously sat
+    // inside the camera transform here: CSS-px coordinates got translated by
+    // the camera offset, rendering the whole show displaced/off-screen in real
+    // runs while the probe's array-length asserts stayed green. Pixel gates
+    // now pin these to the slot geometry (probe --wup W8).
     this._updateAndDrawUpgradeOrbs(1/60);
     this._updateAndDrawBursts(1/60);
     this._updateAndDrawSlotFlashes(1/60);
-
-    this.ctx.restore();
 
     // Draw UI overlay (not affected by camera)
     this._drawUI(player);

@@ -137,6 +137,84 @@ const wupMode = process.argv.includes('--wup');
           g.audioManager.ctx = realCtx;
           g.audioManager._playNote = origNote;
           out.chimeNotes = notes;
+
+          // W8 — PIXEL GATE (v2.19.41): frozen-frame render pins the show to
+          // the slot geometry. Catches layer-placement regressions (the
+          // v2.19.40 defect: B34 draws sat inside the camera transform, so
+          // the whole show rendered displaced while array asserts passed).
+          g.weaponSystem.weaponLevels.w1_projectile = 3;
+          g.weaponSystem.weaponLevels.w2_orbit = 2;
+          g.weaponSystem.weaponLevels.weapon_area_pulse = 1;
+          g._activeWeapons = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+          g.gameLoop.stop();
+          g.entityManager.clearAll();
+          g.telegraphSystem.clearAll();
+          g.renderer.slotFlashes.length = 0;
+          g.renderer.upgradeBursts.length = 0;
+          g.renderer.upgradeOrbs.length = 0;
+          g.renderer._flashGate = {}; // W4's flash armed the 0.3s dedupe — clear it or W8's add is swallowed
+          g.renderer.addSlotFlash('w1_projectile');
+          // park the flash at a blink-ON phase (blink skips even floor(a*12)
+          // phases in the first 0.45s — age 0.25 = odd = arrow visible)
+          if (g.renderer.slotFlashes[0]) g.renderer.slotFlashes[0].age = 0.25;
+          g.renderer.render([], g.player); // one clean frame: HUD + B34 layers
+          {
+            const c = document.getElementById('game-canvas');
+            const dpr = window.devicePixelRatio || 1;
+            const hCss = c.height / dpr;
+            const wCss = c.width / dpr;
+            const gridX = Math.round((wCss - 116) / 2);
+            const ctx = c.getContext('2d');
+            // gold pulse ring around slot 0 (gridX..gridX+36, row h-100..h-64):
+            // gold stroke rgba(255,215,0,a) — count gold pixels on the row 2px
+            // above the slot top (ring sits at -1.5)
+            const goldBand = (cssY) => {
+              const y = Math.round(cssY * dpr);
+              const row = ctx.getImageData(0, y, c.width, 1).data;
+              let n = 0;
+              for (let x = 0; x < row.length / 4; x++) {
+                const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
+                // blend-tolerant: ring gold OVER the dark field blends to
+                // ~(96..119, 83..104, 27..32) at pulse alpha ~0.54
+                if (r >= 90 && gg >= 75 && b <= 70 && r - b >= 40) n++;
+              }
+              return n;
+            };
+            // RING ONLY: the slot's own 1px gold stroke occupies h−100±1, the
+            // 2.5px pulse ring sits at h−101.5±1.25 — scanning 3px above the
+            // slot top sees ONLY the ring (the stroke test alone was vacuous:
+            // pure-gold slot strokes match any gold filter)
+            let ringMax = 0;
+            for (let dy = -4; dy <= 4; dy++) {
+              const n = goldBand(hCss - 100 - 3 + dy);
+              if (n > ringMax) ringMax = n;
+            }
+            // green arrow row: ▲ at weaponRowY − 6 (rise 0 at flash start),
+            // #00E676 — scan 30px band above the slot
+            const greenBand = (cssY) => {
+              const y = Math.round(cssY * dpr);
+              if (y < 0 || y >= c.height) return 0;
+              const row = ctx.getImageData(0, y, c.width, 1).data;
+              let n = 0;
+              for (let x = 0; x < row.length / 4; x++) {
+                const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
+                if (r < 120 && gg > 170 && b > 90 && b < 190) n++;
+              }
+              return n;
+            };
+            let greenMax = 0;
+            for (let dy = 0; dy < 30; dy++) {
+              const n = greenBand(hCss - 100 - 6 - dy);
+              if (n > greenMax) greenMax = n;
+            }
+            out.pixelRingMax = ringMax;
+            out.pixelArrowMax = greenMax;
+            out.gridX = gridX;
+          }
+          // restore live state + loop
+          delete g.weaponSystem.weaponLevels.w1_projectile;
+          if (g.gameLoop.paused) g.gameLoop.paused = false;
+          if (!g.gameLoop.running) g.gameLoop.start();
         } finally {
           g.spawnSystem.update = origSpawn;
         }
@@ -155,6 +233,10 @@ const wupMode = process.argv.includes('--wup');
       check('W5: same-slot flash dedupes to one arrow', w.dedupe === true);
       check('W6: restart clears in-flight orbs; fresh run starts at Lv1', w.flushedClear && w.freshLoadout === true);
       check('W7: weapon_up_hit plays the chime (2 notes)', w.chimeNotes >= 2, `notes=${w.chimeNotes}`);
+      check(`W8: PIXEL — slot flash ring renders AT the slot (gold px=${w.pixelRingMax}, gridX=${w.gridX})`,
+        w.pixelRingMax >= 8, `goldMax=${w.pixelRingMax}`);
+      check(`W8: PIXEL — green arrow renders above the slot (green px=${w.pixelArrowMax})`,
+        w.pixelArrowMax >= 3, `greenMax=${w.pixelArrowMax}`);
     } else if (wipeMode) {
       // ════════ B32: screen_wipe actually wipes ════════
       const w = await page.evaluate(async () => {

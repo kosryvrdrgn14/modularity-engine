@@ -6,6 +6,22 @@
 
 ---
 
+## ADDENDUM (v2.19.41 — you were right: the show wasn't there)
+
+Your device report caught a real bug the battery missed: the orb/arrow/burst layer
+was drawing inside the camera transform, so in a live run everything rendered
+displaced (off-screen on your phone) while all the state-level probes stayed green.
+Fixed — draws now happen on the screen-space layer, exactly at the B33 slot
+geometry, and the probe gained PIXEL gates that would have caught it on day one
+(gold ring band above the slot, green triangle band, frozen-frame protocol). Bonus
+catch from the same investigation: the ▲ arrow glyph painted nothing on some font
+stacks (headless Chromium included) — it is now a drawn triangle path, identical
+everywhere. Please re-test the pickup: you should see the orb fly, the burst, the
+gold pulse, and the blinking green arrows. If anything is still off, a screenshot
+tells me more than a paragraph.
+
+---
+
 ## ADDENDUM (v2.19.40 — the weapon-up orb show)
 
 Your spec, shipped: 75% one upgrade, 20% two, 5% three — each one 95% lowest-level /
