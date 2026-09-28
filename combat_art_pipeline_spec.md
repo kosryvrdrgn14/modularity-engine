@@ -57,7 +57,7 @@ future art-scale tuning), snapped to clean sizes:
 
 | Tier | Assets | Drawn Ø (px) | **File size** |
 |---|---|---|---|
-| **HERO** | player | **40** (2× current 20 — recommended, hitbox unchanged) | **128 × 128** |
+| **HERO** | player | **20 / 32 / 40** (scale ladder, §3.1) | **32 × 32 base** (ladder to 64/128, §3.1) |
 | **M** | zombie, skeleton, ghost, caster | 20–26 | **128 × 128** |
 | **S** | bat, rat | 14–16 | **96 × 96** |
 | **L** | brute, companions (13) | 28–32 | **128 × 128** |
@@ -69,6 +69,39 @@ future art-scale tuning), snapped to clean sizes:
 Weapon **effects** recommendation: keep cones/pulses/waves **procedural for now**
 (they are already juicy, data-colored, and scale with weapon level); convert only
 the discrete projectile sprites (32×32) first. Revisit after the character pass.
+
+### §3.1 Hero scale ladder — base 32×32, scalable to 64/128 (HoloCure baseline, not locked)
+
+**Baseline reference: HoloCure** — small native pixel sprites, chibi proportions,
+strong dark outline, crisp-upscaled on a colorful field, character small on screen
+with big readability. NOT locked: every choice below is a knob, not a commitment.
+
+**Two generation workflows** (both stay available; pick per style after testing):
+- **Pixel-native (true HoloCure model):** author the hero AT 32×32 real pixels.
+  The file never grows — the ladder is a DRAW-TIME decision. Upscale with
+  nearest-neighbor (`imageSmoothingEnabled = false`): drawn 32 = crisp ×2, drawn
+  40 = crisp ×1.25 (uneven but workable), drawn 64 = crisp ×4. Generating
+  "larger" pixel art is unnecessary; 32 native pixels scale cleanly forever.
+- **Master-downscale (smooth/painted styles):** generate ONE 128×128 master,
+  derive 64 and 32 by downscale (with smoothing ON). The ladder is a FILE-size
+  decision. (Downscaling smooth art to 32 gives mush; that's why this workflow
+  pairs with smoothing enabled and the higher tiers.)
+
+**The three drawn sizes (world px, hitbox 20×20 unchanged at every step):**
+| Step | Drawn Ø | Feel |
+|---|---|---|
+| BASE | **20** | exactly today's footprint — zero visual-geometry delta |
+| MID | **32** | HoloCure-like presence (pixel-native crisp ×2) |
+| HIGH | **40** | chunky hero, most screen presence |
+
+**Implementation contract (makes the ladder free):**
+- Drawn Ø = `2 × stats.size × (visual.artScale || HERO_SCALE)` — a global
+  `HERO_SCALE` knob (1.0 / 1.6 / 2.0) plus optional per-entity
+  `visual.artScale` override. Enemy tiers get the same knob later.
+- One smoothing flag per draw batch: `false` = crisp pixels (pixel-native art),
+  `true` = smooth (master-downscale art). Decided per style, applied globally,
+  one line to flip during art exploration.
+- File swap 32→64→128 requires ZERO code changes under either workflow.
 
 Style guidelines for generation testing:
 - Top-down / three-quarter RPG view, single subject centered, readable at drawn
@@ -137,6 +170,10 @@ One still PNG per entity; motion is code (canvas transforms, time-based):
    judge frame-to-frame consistency honestly; this is the go/no-go for sheets.
 4. **Transparency + no baked shadow + no baked ground.**
 5. **Downscale readability:** each file at its drawn Ø (§3) on the #1A1A2E field.
+6. **Hero ladder test:** the same character generated (a) as native 32×32 pixel
+   art and (b) as a 128×128 master — compare crisp-upscale vs downscale at
+   drawn 20/32/40 on the dark field, smoothing off vs on. This decides the
+   workflow (and is the core HoloCure-baseline vs smoother-styles question).
 
 ## §9 Execution plan after sign-off
 
@@ -151,7 +188,11 @@ One still PNG per entity; motion is code (canvas transforms, time-based):
 
 ## §10 Decisions needed from the owner
 
-1. Player drawn at **40px** (2× current) for presence — yes/no? *(recommended yes)*
-2. Art direction: gothic graveyard per §3 palette — or do you have reference images?
-3. B35a scope (3 entities first) — ok?
-4. Animation: Option A first + sheets for player/bosses if tools pass §8.3 — or full Option B commitment now?
+1. Hero style direction: **pixel-native 32×32 (HoloCure baseline, crisp
+   upscale)** vs master-downscale smooth — run test §8.6 and pick. *(Ladder
+   works either way; this is a style choice, not a pipeline choice.)*
+2. Hero drawn size to START at: **20 (today's footprint) / 32 (HoloCure feel,
+   recommended) / 40** — one knob, changeable anytime without regenerating art.
+3. Art direction: gothic graveyard per §3 palette — or do you have reference images?
+4. B35a scope (3 entities first) — ok?
+5. Animation: Option A first + sheets for player/bosses if tools pass §8.3 — or full Option B commitment now?
