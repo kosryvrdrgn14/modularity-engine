@@ -321,6 +321,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Listens: `resources:changed`
 - Dynamic-create: [shop-purchase-confirm, spc-close, spc-minus, spc-plus, spc-cancel, spc-buy] (v2.19.24 B12 — the purchase-confirm panel is built at runtime inside #shop-overlay: scrim host + close/stepper/cancel/buy controls; v2.19.30 B19 — the SAME panel persists post-commit as a repeat-buy surface, button relabeled "Buy Again", totals re-read post-purchase gold; every close path — ✕/Cancel/scrim/close() — exits repeat state)
 - Content: `shop.json` (v2.19.7 — the stocked catalog via `DataManager.shop`; POT-006)
+- Note: B36 (v2.19.42) — second exit: #shop-done-bar/#shop-done (static markup in game2.html, PINNED bottom of the overlay — the Freebuff preview toolbar covers the header X on phones) + document-level ESC (progressive: an open #shop-purchase-confirm eats the first press); dispose() removes the listener
 - Store: writes inventory/gold **through progression APIs** (POT-012 clean — no direct branch writes)
 - DOM: `shop-overlay`, `shop-items` (widget pool host — no innerHTML wipes; farming/sandbox modes still wipe here, kept bespoke per §3.2), `shop-gold`, `shop-tabs` (pool host), `shop-close`, `sb-launch`, `sb-difficulty`, `sb-diff-val`, `sb-show-dps`
 - Dynamic-create: [sb-launch, sb-difficulty, sb-diff-val, sb-show-dps, shop-empty-notice] (farming/sandbox mode UI built in renderers — F2 gate)

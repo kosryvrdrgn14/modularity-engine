@@ -82,6 +82,28 @@ class ShopSystem {
         if (e.target === this._overlay) this.close();
       });
     }
+    // B36 (v2.19.42): a second exit that platform chrome cannot cover. The
+    // Freebuff preview toolbar (refresh / "Open in new tab") sits exactly on
+    // the header X (user screenshot, Android) and the scrim is fully covered
+    // by the full-viewport shop, so the only exits were unreachable. The Done
+    // bar is PINNED to the overlay bottom (flex column, after the scroll
+    // area) — always visible, always tappable. ESC mirrors it on desktop.
+    const doneBtn = document.getElementById('shop-done');
+    if (doneBtn) {
+      doneBtn.addEventListener('click', () => this.close());
+    }
+    this._escHandler = (e) => {
+      if (!this._overlay || !this._overlay.classList.contains('active')) return;
+      if (e.key !== 'Escape') return;
+      // Progressive: an open purchase-confirm eats the first ESC (its own
+      // buttons/scrim stay primary), the second ESC closes the shop.
+      if (document.getElementById('shop-purchase-confirm')) {
+        this._closePurchaseConfirm();
+        return;
+      }
+      this.close();
+    };
+    document.addEventListener('keydown', this._escHandler);
 
     // Tab switching (v2.18.0: chips are pooled widget cards — the declared
     // widget:shopTab event routes here; selected moves via data, not classes)
@@ -190,6 +212,15 @@ class ShopSystem {
     // Reset tabs (v2.18.0: chips are pooled widget cards — rebind moves selection)
     this._renderTabs();
     this.currentTab = 'combat';
+  }
+
+  /** B36: teardown for the document-level ESC listener (constructor-installed;
+   *  idempotent — safe to call even if the handler was never attached). */
+  dispose() {
+    if (this._escHandler) {
+      document.removeEventListener('keydown', this._escHandler);
+      this._escHandler = null;
+    }
   }
 
   // --- Shop Rendering ---

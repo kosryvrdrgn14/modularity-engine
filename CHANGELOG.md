@@ -2,6 +2,39 @@
 
 ---
 
+## v2.19.42 — B36: shop Done bar + ESC (a second exit platform chrome cannot cover)
+**Date:** September 28, 2026
+**Status:** Complete (visual_probe 46→50; battery 585 strict green)
+
+### Device report: the shop X is unreachable on the Freebuff preview
+The Freebuff preview toolbar (refresh / open-in-new-tab) sits exactly on the shop
+header X (user screenshot, Android), and the scrim-tap exit is gone because the
+shop is a full-viewport overlay — every exit was covered by platform chrome.
+
+### B36 fixes
+- **Pinned Done bar:** #shop-done-bar / #shop-done — a gold Done button pinned to
+  the overlay BOTTOM (flex sibling AFTER the scroll area, safe-area padded) where
+  no platform chrome can ever reach. Always visible regardless of catalog length
+  or scroll position; 44px+ touch target.
+- **ESC (desktop):** mirrors the Done bar; progressive — an open purchase-confirm
+  eats the first ESC (its buttons stay primary), the second closes the shop.
+  Constructor-installed once; shopSystem.dispose() tears the listener down.
+- **Designed scroll surface:** the layout-audit dead-band gate correctly flagged
+  the empty tail of a sparse catalog (the new bottom block made it measurable —
+  175px). #shop-items got a faint gold-tinted vertical gradient: the audit own
+  paints-own-area model (background-image, the same carve-out as the town map)
+  honors it as intentional space.
+
+### Gates (visual_probe 46→50; battery 585)
+- [B36] pinned Done bar present below the scroll area (placement, not just presence)
+- [B36] Done click closes the shop; [B36] ESC closes the shop
+- [B36] ESC is progressive (confirm panel first, shop second) — driven through the
+  real _openPurchaseConfirm path with temporary probe gold (earlier probe flows
+  drain the wallet below the cheapest item; the affordability contract is met
+  honestly)
+
+---
+
 ## v2.19.41 — FIX: B34 upgrade show drew inside the camera transform (device report)
 **Date:** September 28, 2026
 **Status:** ✅ Complete (B34 probe 13/13 incl. new W8 pixel gates; battery 581 strict green)

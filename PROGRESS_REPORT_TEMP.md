@@ -6,6 +6,17 @@
 
 ---
 
+## ADDENDUM (v2.19.42 — shop exit that the preview toolbar cannot eat)
+
+Shipped: a gold Done button PINNED to the bottom of the shop overlay (the Freebuff
+chrome only ever docks at the top, so this exit is structurally unreachable by it),
+plus ESC on desktop. If the purchase-confirm popup is open, ESC closes that first —
+second press closes the shop. The empty tail under a short catalog now has a faint
+designed surface so the screen does not read as cut off. Re-test whenever — the
+Done button should be visible no matter how far you have scrolled.
+
+---
+
 ## ADDENDUM (v2.19.41 — you were right: the show wasn't there)
 
 Your device report caught a real bug the battery missed: the orb/arrow/burst layer

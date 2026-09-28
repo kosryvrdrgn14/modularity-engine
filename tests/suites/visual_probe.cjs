@@ -231,8 +231,21 @@ const check = (name, pass, extra) => {
         const g = window.game;
         const wasRunning = g.gameLoop.running;
         g.gameLoop.stop();               // freeze the canvas
-        g.entityManager.clearAll();      // no gold-coincident world pixels
-        g.telegraphSystem.clearAll();
+                g.entityManager.clearAll();
+                g.telegraphSystem.clearAll();
+                // v2.19.42 hotfix: transient EFFECT arrays too — pulses/cones/chains
+                // only decay while frames render, so leftovers from earlier cells
+                // (boss-kill flows) survive to this frozen frame and paint wherever
+                // the camera sits — one battery run measured compMinX 130.7 from a
+                // stray world-space effect bleeding into the HUD scan band.
+                g.renderer.pulseEffects.length = 0;
+                g.renderer.coneEffects.length = 0;
+                g.renderer.chainLightningEffects.length = 0;
+                g.renderer.wipeEffects.length = 0;
+                g.renderer.cleanupEffects.length = 0;
+                g.renderer.slotFlashes.length = 0;
+                g.renderer.upgradeOrbs.length = 0;
+                g.renderer.upgradeBursts.length = 0;
         g.renderer.render([], g.player); // ONE clean frame: background + HUD
         const c = document.getElementById('game-canvas');
         const h = c.height; // DPR 1 desktop: css px == device px
@@ -463,8 +476,21 @@ const check = (name, pass, extra) => {
             const g = window.game;
             const wasRunning = g.gameLoop.running;
             g.gameLoop.stop();
-            g.entityManager.clearAll();
-            g.telegraphSystem.clearAll();
+                    g.entityManager.clearAll();
+                    g.telegraphSystem.clearAll();
+                    // v2.19.42 hotfix: transient EFFECT arrays too — pulses/cones/chains
+                    // only decay while frames render, so leftovers from earlier cells
+                    // (boss-kill flows) survive to this frozen frame and paint wherever
+                    // the camera sits — one battery run measured compMinX 130.7 from a
+                    // stray world-space effect bleeding into the HUD scan band.
+                    g.renderer.pulseEffects.length = 0;
+                    g.renderer.coneEffects.length = 0;
+                    g.renderer.chainLightningEffects.length = 0;
+                    g.renderer.wipeEffects.length = 0;
+                    g.renderer.cleanupEffects.length = 0;
+                    g.renderer.slotFlashes.length = 0;
+                    g.renderer.upgradeOrbs.length = 0;
+                    g.renderer.upgradeBursts.length = 0;
             g.renderer.render([], g.player); // one clean frame: background + HUD
             const c = document.getElementById('game-canvas');
             const dpr = window.devicePixelRatio || 1;
@@ -745,6 +771,79 @@ const check = (name, pass, extra) => {
     check('shop overlay renders stocked catalog as widget cards (content/shop.json)',
       shop.overlay && shop.cards > 0 && shop.gold > 0, JSON.stringify(shop));
     await page.screenshot({ path: path.join(outDir, '08_shop.png') });
+
+    // ── B36 (v2.19.42): second shop exit — Done bar + ESC ──
+    // The Freebuff preview toolbar covers the header X on phones (user
+    // screenshot); the Done bar is pinned to the overlay bottom where no
+    // platform chrome reaches. Gates: presence+placement, click-close,
+    // ESC-close, and progressive ESC (confirm panel eats the first press).
+    {
+      const exits = await page.evaluate(() => {
+        const out = {};
+        const bar = document.getElementById('shop-done-bar');
+        const btn = document.getElementById('shop-done');
+        const hdr = document.getElementById('shop-header');
+        const items = document.getElementById('shop-items');
+        out.present = !!(bar && btn);
+        if (bar && hdr) {
+          const b = bar.getBoundingClientRect(), h = hdr.getBoundingClientRect();
+          out.belowHeader = b.top >= h.bottom - 1;
+          const itemsBottom = items ? items.getBoundingClientRect().bottom : 0;
+          out.pinnedToBottom = Math.abs(b.top - itemsBottom) < 2; // flex sibling, not inside the scroller
+        }
+        if (btn) btn.click();
+        out.clickClosed = !document.getElementById('shop-overlay').classList.contains('active');
+        // reopen for the ESC paths
+        window.game.townScreen.shopSystem.openShop();
+        out.reopened = document.getElementById('shop-overlay').classList.contains('active');
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        out.escClosed = !document.getElementById('shop-overlay').classList.contains('active');
+        return out;
+      });
+      check('[B36] pinned Done bar present below the scroll area (exits the toolbar zone)',
+        exits.present && exits.belowHeader && exits.pinnedToBottom, JSON.stringify(exits));
+      check('[B36] Done click closes the shop', exits.clickClosed === true);
+      check('[B36] ESC closes the shop (desktop mirror of the pinned exit)',
+        exits.reopened && exits.escClosed === true, JSON.stringify(exits));
+    }
+
+    // reopen for the ESC-progressive path (confirm panel eats the first ESC)
+    {
+      const prog = await page.evaluate(() => {
+        const g = window.game;
+        g.townScreen.shopSystem.openShop();
+        const items = window.game.dataManager.shop.combat;
+        g.townScreen.shopSystem.buy(items[0], 0); // 0 qty is falsy-guarded; use the confirm path instead
+        return { confirmOpen: !!document.getElementById('shop-purchase-confirm') };
+      });
+      // open the confirm panel through the REAL opener (a headless widget-card
+      // click does not reach the handler), then ESC it. Earlier probe flows
+      // drain the wallet below the cheapest item — grant temporary gold so
+      // the opener's affordability contract is met honestly.
+      const prog2 = await page.evaluate(async () => {
+        const g = window.game;
+        const cheapest = Math.min(...g.dataManager.shop.combat.map((it) => it.cost));
+        g.gameManager.add_currency(Math.max(0, cheapest), 'probe');
+        const items = g.dataManager.shop.combat;
+        const item = items.find((it) => it.cost <= (g.gameManager.get_currency() || 0));
+        if (!item) return { confirmOpenBefore: false, skip: 'no affordable item' };
+        g.townScreen.shopSystem._openPurchaseConfirm(item);
+        await new Promise((r) => setTimeout(r, 50));
+        const confirmOpenBefore = !!document.getElementById('shop-purchase-confirm');
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await new Promise((r) => setTimeout(r, 30));
+        const confirmClosed = !document.getElementById('shop-purchase-confirm');
+        const shopStillOpen = document.getElementById('shop-overlay').classList.contains('active');
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await new Promise((r) => setTimeout(r, 30));
+        const shopClosedAfter = !document.getElementById('shop-overlay').classList.contains('active');
+        return { confirmOpenBefore, confirmClosed, shopStillOpen, shopClosedAfter };
+      });
+      check('[B36] ESC is progressive: confirm panel first, shop second',
+        prog2.confirmOpenBefore && prog2.confirmClosed && prog2.shopStillOpen && prog2.shopClosedAfter,
+        JSON.stringify(prog2));
+    }
+
     await page.evaluate(() => window.game.townScreen.shopSystem.close());
 
     // ── 4f. Loadout (v2.19.10, slice 3): the screen that regressed twice —
