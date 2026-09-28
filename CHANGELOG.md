@@ -2,6 +2,35 @@
 
 ---
 
+## v2.19.39 — B33: fixed centered 3×2 weapon/companion slot grid
+**Date:** September 28, 2026
+**Status:** ✅ Complete (visual_probe 43→46; battery 581 strict green)
+
+### The change (user-directed combat-UX foundation)
+- Weapon and companion slots render as a FIXED centered 3-wide grid on x (3×36px
+  slots + 2×4px gaps = 116px): weapon row at h−100, companion row DIRECTLY
+  underneath at h−60. Loadouts with fewer than 3 entries get dim empty placeholder
+  slots — positions are stable per-weapon/per-companion (w1/w2/w3, companions 1/2/3),
+  the anchor the upcoming weapon/companion LINKING and the weapon-up feedback flash
+  will target.
+- Replaces B30's slotOffsetX: a centered grid inherently clears the joystick base on
+  every real phone size (390px portrait → grid left 137 vs base right 116; ≥481px →
+  ≥182 vs 144; landscape ≥640 → ≥262 vs 144). The coarse-pointer offset branch and
+  its special-casing are gone; desktop and mobile now share one geometry rule.
+
+### Gates (visual_probe 43→46; battery 578→581)
+- Desktop: slot-0 left edge = computed gridX, center = gridX+18 (gold filter matches
+  ONLY slot 0 — w3's stroke is orange, w2 lv0 is gray); companion row measured as a
+  non-background span (dog/healer strokes fail the gold filter) spanning the 116px
+  grid, centered on x.
+- Emulated iPhone: portrait slot 0 clear of the joystick zone AND at gridX;
+  companion row underneath, centered; landscape re-centers and clears. All cells use
+  a frozen-frame protocol (stop loop → clear world → render exactly one frame → scan
+  synchronously) after the live-rAF variant proved racy: with the player gone,
+  _drawUI early-returns and the next live frame wipes the canvas mid-scan.
+
+---
+
 ## v2.19.38 — B32: screen_wipe drop actually screen-wipes
 **Date:** September 28, 2026
 **Status:** ✅ Complete (B32 wipe probe 9/9; B31 probe 9/9; battery 578 strict green)

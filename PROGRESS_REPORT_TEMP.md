@@ -6,6 +6,20 @@
 
 ---
 
+## ADDENDUM (v2.19.39 — the centered 3×2 slot grid, foundation for linking + feedback)
+
+Done as directed: weapon slots w1/w2/w3 now sit centered on screen-x with companions
+1/2/3 directly underneath — fixed addresses (empty positions get dim placeholders),
+which is exactly what we need before wiring weapon↔companion linking and the weapon-
+upgrade feedback flash. The old left-rail (and its B30 joystick-offset special case)
+is gone: centering clears the joystick on every phone size by construction, one
+geometry rule for desktop and mobile. Battery 581 strict green (visual_probe grew
+43→46 with the new frozen-frame pixel gates). Next up per your plan: the weapon-up
+rule + its feedback (which weapon upgrades and how the grid announces it), then the
+broader visual-feedback pass.
+
+---
+
 ## ADDENDUM (v2.19.38 — "fix the screen wipe drop so it actually screen wipes")
 
 You were right — it was pure theater: a "SCREEN WIPE!" float text with zero code

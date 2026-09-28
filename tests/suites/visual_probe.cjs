@@ -204,42 +204,108 @@ const check = (name, pass, extra) => {
       combatSd > 3, `stdev=${combatSd.toFixed(1)}`);
     check('combat HUD timer draws text pixels (BUG-027 probe)', timerPx > 30, `whitePixels=${timerPx}`);
 
-    // ── B30 (v2.19.36): desktop slot rail is pixel-identical ──
-    // Force the w1 stroke gold (the renderer reads _weaponLevels directly)
-    // so the rail's left edge is measurable: the desktop x=10 anchor must
-    // not move (fine pointer ⇒ slotOffsetX stays 0).
+    // ── B33 (v2.19.39): desktop slot grid is fixed-centered 3×2 ──
+    // The B30 left-rail anchor is GONE: weapon row at h−100, companion row at
+    // h−60, three 36px slots centered on x (116px grid). Deterministic frozen-
+    // frame ruler: inject a known loadout through the LIVE sources (game.js
+    // re-derives the renderer fields from them every frame), let live frames
+    // render it, then STOP the loop, clear the world, and render exactly ONE
+    // frame with the (detached) player object — scanning after a live clearAll
+    // would race the rAF loop (the next frame wipes the canvas because
+    // _drawUI early-returns without a player).
     {
-      const railX = await page.evaluate(() => new Promise((resolve) => {
+      const prevs = await page.evaluate(() => {
         const g = window.game;
-        const prev = g.renderer._weaponLevels ? g.renderer._weaponLevels.w1_projectile : undefined;
-        g.renderer._weaponLevels = Object.assign({}, g.renderer._weaponLevels, { w1_projectile: 3 });
-        // Deterministic ruler: the world must be empty of gold-coincident
-        // pixels (coins/gems would false-positive the scan band), so clear
-        // entities and let two clean frames render before measuring.
-        g.entityManager.clearAll();
-        setTimeout(() => {
-          const c = document.getElementById('game-canvas');
-          const h = c.height; // DPR 1 desktop: css px == device px
-          const ctx = c.getContext('2d');
-          let minX = -1;
-          for (const dy of [-2, -1, 0, 1, 2]) { // band around the slot top stroke (h-60)
-            const y = h - 60 + dy;
+        const prevW = g.weaponSystem.weaponLevels.w1_projectile;
+        const prevW3 = g.weaponSystem.weaponLevels.weapon_area_pulse;
+        const prevIds = (g._activeWeapons || []).slice();
+        const prevComp = (g.companionSystem.companions || []).slice();
+        g.weaponSystem.weaponLevels.w1_projectile = 3;      // gold stroke + Lv text
+        g.weaponSystem.weaponLevels.weapon_area_pulse = 3;  // orange stroke (#FF9100 passes the gold filter)
+        g._activeWeapons = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+        g.companionSystem.companions = [{ id: 'dog' }, { id: 'healer' }, { id: 'archer' }];
+        return { prevW, prevW3, prevIds, prevComp };
+      });
+      await page.waitForTimeout(120); // live frames render the injected state
+      const geo = await page.evaluate((prevs) => {
+        const g = window.game;
+        const wasRunning = g.gameLoop.running;
+        g.gameLoop.stop();               // freeze the canvas
+        g.entityManager.clearAll();      // no gold-coincident world pixels
+        g.telegraphSystem.clearAll();
+        g.renderer.render([], g.player); // ONE clean frame: background + HUD
+        const c = document.getElementById('game-canvas');
+        const h = c.height; // DPR 1 desktop: css px == device px
+        const w = c.width;
+        const ctx = c.getContext('2d');
+        const goldRow = (cssRow) => {
+          let minX = -1, maxX = -1;
+          for (const dy of [-2, -1, 0, 1, 2]) {
+            const y = cssRow + dy;
             if (y < 0 || y >= h) continue;
-            const row = ctx.getImageData(0, y, 320, 1).data;
-            for (let x = 0; x < 320; x++) {
+            const row = ctx.getImageData(0, y, w, 1).data;
+            for (let x = 0; x < w; x++) {
               const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
-              if (r > 170 && gg > 130 && b < 110) { if (minX < 0 || x < minX) minX = x; break; }
+              if (r > 170 && gg > 130 && b < 110) {
+                if (minX < 0 || x < minX) minX = x;
+                if (x > maxX) maxX = x;
+              }
             }
           }
-          if (prev === undefined) delete g.renderer._weaponLevels.w1_projectile;
-          else g.renderer._weaponLevels.w1_projectile = prev;
-          resolve(minX);
-        }, 120);
-      }));
-      check('[B30/desktop] weapon-slot rail stays anchored at x=10 (pixel-identical)',
-        railX >= 5 && railX <= 55, `goldMinX=${railX}`);
+          return { minX, maxX };
+        };
+        // companion row: any non-background pixel (strokes are dim blends)
+        const anyRow = (cssRow) => {
+          let minX = -1, maxX = -1;
+          for (const dy of [-2, -1, 0, 1, 2]) {
+            const y = cssRow + dy;
+            if (y < 0 || y >= h) continue;
+            const row = ctx.getImageData(0, y, w, 1).data;
+            for (let x = 0; x < w; x++) {
+              const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
+              // tolerance bg test: canvas clear (26,26,46), grid stroke
+              // (22,33,62), and their antialiased blend (~24,29,54) all count
+              // as background; slot fills/strokes/icons do not
+              const isBg = Math.max(Math.abs(r - 26), Math.abs(gg - 26), Math.abs(b - 46)) <= 9
+                || Math.max(Math.abs(r - 22), Math.abs(gg - 33), Math.abs(b - 62)) <= 9;
+              if (!isBg) {
+                if (minX < 0 || x < minX) minX = x;
+                if (x > maxX) maxX = x;
+              }
+            }
+          }
+          return { minX, maxX };
+        };
+        const geo = { weap: goldRow(h - 100), comp: anyRow(h - 60), w };
+        // restore live sources + loop (renderer fields re-derive next frame)
+        if (prevs.prevW === undefined) delete g.weaponSystem.weaponLevels.w1_projectile;
+        else g.weaponSystem.weaponLevels.w1_projectile = prevs.prevW;
+        if (prevs.prevW3 === undefined) delete g.weaponSystem.weaponLevels.weapon_area_pulse;
+        else g.weaponSystem.weaponLevels.weapon_area_pulse = prevs.prevW3;
+        g._activeWeapons = prevs.prevIds;
+        g.companionSystem.companions = prevs.prevComp;
+        if (wasRunning) g.gameLoop.start();
+        return geo;
+      }, prevs);
+      // The gold filter legitimately matches ONLY slot 0 (w3's stroke is
+      // orange — g=111 fails gg>130; w2 lv0 is gray). So assert slot-0
+      // geometry: left edge at gridX, center at gridX + 18.
+      const gridX = Math.round((geo.w - 116) / 2); // 3×36 + 2×4 = 116
+      const wCenter = geo.weap.minX >= 0 ? (geo.weap.minX + geo.weap.maxX) / 2 : -1;
+      check('[B33/desktop] weapon row slot 0 at gridX, centered on slot grid (h−100 row)',
+        geo.weap.minX >= 0 && Math.abs(geo.weap.minX - gridX) <= 6 && Math.abs(wCenter - (gridX + 18)) <= 6,
+        `goldMinX=${geo.weap.minX} slotCenter=${wCenter.toFixed(0)} expected=${gridX + 18}`);
+      check('[B33/desktop] weapon row left edge at computed gridX',
+        Math.abs(geo.weap.minX - gridX) <= 6, `minX=${geo.weap.minX} gridX=${gridX}`);
+      // Companion strokes (dog/healer dimmed blends) fail the gold filter —
+      // measure the companion row as a NON-BACKGROUND span instead: in a
+      // cleared world the only non-bg pixels on that row are the 3 slots.
+      const compCenter = geo.comp.minX >= 0 ? (geo.comp.minX + geo.comp.maxX) / 2 : -1;
+      check('[B33/desktop] companion row spans the 116px grid, directly underneath',
+        geo.comp.minX >= 0 && Math.abs(geo.comp.minX - gridX) <= 6
+          && Math.abs(geo.comp.maxX - (gridX + 115)) <= 6 && Math.abs(compCenter - geo.w / 2) <= 8,
+        `compMinX=${geo.comp.minX} compMaxX=${geo.comp.maxX} center=${compCenter.toFixed(0)} expected≈${Math.round(geo.w / 2)}`);
     }
-
 
     // ── 3b. B24 (v2.19.31): HUD scale on a REAL device-emulated page ──
     // The canvas backing store is devicePixelRatio-scaled; before B24 the HUD
@@ -385,58 +451,112 @@ const check = (name, pass, extra) => {
         check('[B28] victory wiring untouched after the stubbed kill (restore verified)',
           trophy.victoryLive === true, `victoryLive=${trophy.victoryLive}`);
 
-        // ── B30 (v2.19.36): slot rail clears the joystick zone ──
-        // User screenshot: the canvas rail (x=10) rendered under the DOM
-        // joystick zone on phones. Coarse pages offset the rail right of the
-        // zone (136/160 by width); desktop stays pixel-identical (pinned in
-        // the desktop cell above). Gold w1 stroke = deterministic ruler.
+        // ── B33 (v2.19.39): centered slot grid clears the joystick zone ──
+        // B30's left-rail offset is GONE: the grid is fixed-centered, which
+        // inherently clears the joystick base on every real phone size
+        // (390px portrait → grid left 137 vs base right 116; landscape → 364
+        // vs 144). Frozen-frame ruler: inject the loadout through the LIVE
+        // sources, render ONE frame per orientation with the loop stopped,
+        // and scan synchronously — no post-clear rAF races.
         {
-          await mPage.evaluate(() => {
+          const goldRows = () => mPage.evaluate(() => {
             const g = window.game;
-            g.renderer._weaponLevels = Object.assign({}, g.renderer._weaponLevels, { w1_projectile: 3 });
-          });
-          await mPage.waitForTimeout(80);
-          const railRow = () => mPage.evaluate(() => new Promise((resolve) => {
-            const g = window.game;
-            // Same determinism rule as the desktop cell: clear the world so
-            // only HUD gold can enter the scan band, then measure.
+            const wasRunning = g.gameLoop.running;
+            g.gameLoop.stop();
             g.entityManager.clearAll();
-            setTimeout(() => {
-              const c = document.getElementById('game-canvas');
-              const dpr = window.devicePixelRatio || 1;
-              const hDev = c.height;
-              const ctx = c.getContext('2d');
-              let minX = -1;
-              const yC = Math.round((hDev / dpr - 60) * dpr); // slot top stroke row
+            g.telegraphSystem.clearAll();
+            g.renderer.render([], g.player); // one clean frame: background + HUD
+            const c = document.getElementById('game-canvas');
+            const dpr = window.devicePixelRatio || 1;
+            const hDev = c.height;
+            const wCss = c.width / dpr;
+            const ctx = c.getContext('2d');
+            const goldRow = (cssRow) => {
+              let minX = -1, maxX = -1;
+              const yC = Math.round(cssRow * dpr);
               for (const dy of [-2, -1, 0, 1, 2]) {
-                const y = yC + dy;
+                const y = yC + dy * dpr;
                 if (y < 0 || y >= hDev) continue;
                 const row = ctx.getImageData(0, y, c.width, 1).data;
                 for (let x = 0; x < row.length / 4; x++) {
                   const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
-                  if (r > 170 && gg > 130 && b < 110) { const cx = x / dpr; if (minX < 0 || cx < minX) minX = cx; break; }
+                  if (r > 170 && gg > 130 && b < 110) {
+                    const cx = x / dpr;
+                    if (minX < 0 || cx < minX) minX = cx;
+                    if (cx > maxX) maxX = cx;
+                  }
                 }
               }
-              resolve(minX);
-            }, 120);
-          }));
+              return { minX, maxX };
+            };
+            // companion row: non-background span (strokes fail the gold filter)
+            const anyRow = (cssRow) => {
+              let minX = -1, maxX = -1;
+              const yC2 = Math.round(cssRow * dpr);
+              for (const dy of [-2, -1, 0, 1, 2]) {
+                const y = yC2 + dy * dpr;
+                if (y < 0 || y >= hDev) continue;
+                const row = ctx.getImageData(0, y, c.width, 1).data;
+                for (let x = 0; x < row.length / 4; x++) {
+                  const r = row[x * 4], gg = row[x * 4 + 1], b = row[x * 4 + 2];
+                  const isBg = Math.max(Math.abs(r - 26), Math.abs(gg - 26), Math.abs(b - 46)) <= 9
+                    || Math.max(Math.abs(r - 22), Math.abs(gg - 33), Math.abs(b - 62)) <= 9;
+                  if (!isBg) {
+                    const cx = x / dpr;
+                    if (minX < 0 || cx < minX) minX = cx;
+                    if (cx > maxX) maxX = cx;
+                  }
+                }
+              }
+              return { minX, maxX };
+            };
+            const hCss = hDev / dpr;
+            const rows = { weap: goldRow(hCss - 100), comp: anyRow(hCss - 60), w: wCss };
+            if (wasRunning) g.gameLoop.start();
+            return rows;
+          });
+          await mPage.evaluate(() => {
+            const g = window.game;
+            // Live sources — the renderer fields are re-derived every frame.
+            g.weaponSystem.weaponLevels.w1_projectile = 3;
+            g.weaponSystem.weaponLevels.weapon_area_pulse = 3;
+            g._activeWeapons = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+            g.companionSystem.companions = [{ id: 'dog' }, { id: 'healer' }, { id: 'archer' }];
+          });
+          await mPage.waitForTimeout(120); // live frames carry the injected state
           const zoneRight = () => mPage.evaluate(() => {
             const z = document.getElementById('touch-controls');
             const r = z ? z.getBoundingClientRect() : null;
             return r ? Math.round(r.right) : -1;
           });
-          const portraitX = await railRow();
+          const p = await goldRows();
           const zoneP = await zoneRight();
-          check('[B30/emulated portrait] weapon-slot rail clears the joystick zone (≥140css)',
-            portraitX >= 140, `goldMinX=${portraitX.toFixed(1)}css, zoneRight=${zoneP}`);
+          const pGridX = (p.w - 116) / 2;
+          check('[B33/emulated portrait] weapon row slot 0 clear of the joystick zone',
+            p.weap.minX >= Math.max(zoneP + 4, pGridX - 6),
+            `goldMinX=${p.weap.minX.toFixed(1)}css zoneRight=${zoneP} gridX=${pGridX.toFixed(1)}`);
+          const pCompCenter = p.comp.minX >= 0 ? (p.comp.minX + p.comp.maxX) / 2 : -1;
+          check('[B33/emulated portrait] companion row spans the grid underneath, centered',
+            p.comp.minX >= 0 && Math.abs(p.comp.minX - pGridX) <= 6
+              && Math.abs(pCompCenter - p.w / 2) <= 8,
+            `compMinX=${p.comp.minX.toFixed(1)} compMaxX=${p.comp.maxX.toFixed(1)} center=${pCompCenter.toFixed(1)} expected≈${Math.round(p.w / 2)}`);
           await mPage.setViewportSize({ width: 844, height: 390 });
           await mPage.waitForTimeout(150);
-          const landscapeX = await railRow();
+          const l = await goldRows();
           const zoneL = await zoneRight();
-          check('[B30/emulated landscape] rail re-offsets beside the wider zone (≥160css)',
-            landscapeX >= 160, `goldMinX=${landscapeX.toFixed(1)}css, zoneRight=${zoneL}`);
+          const lGridX = (l.w - 116) / 2;
+          check('[B33/emulated landscape] grid re-centers (slot 0 at new gridX) and clears the zone',
+            l.weap.minX >= Math.max(zoneL + 4, lGridX - 6) && Math.abs(l.weap.minX - lGridX) <= 6,
+            `goldMinX=${l.weap.minX.toFixed(1)}css zoneRight=${zoneL} gridX=${lGridX.toFixed(1)}`);
+          // restore the live sources (last, so both orientations measured injected state)
+          await mPage.evaluate(() => {
+            const g = window.game;
+            delete g.weaponSystem.weaponLevels.w1_projectile;
+            delete g.weaponSystem.weaponLevels.weapon_area_pulse;
+            g._activeWeapons = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+            g.companionSystem.companions = [];
+          });
         }
-
       } finally {
         await mCtx.close();
       }

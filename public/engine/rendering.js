@@ -466,14 +466,23 @@ class Renderer {
     const w = this.canvas.width / UI_DPR;
     const h = this.canvas.height / UI_DPR;
 
-    // B30 (v2.19.36): left-rail slot offset. The DOM joystick zone owns the
-    // bottom-left corner on coarse-pointer touch devices (152px wide, or
-    // 128px on small portrait phones — see #touch-controls CSS), and the
-    // canvas weapon/companion rail at x=10 rendered UNDER it (user
-    // screenshot). Fine pointers (desktop) keep offset 0 — pixel-identical.
+    // B33 (v2.19.39): fixed centered 3×2 slot grid. The weapon row and the
+    // companion row render as THREE fixed slots each, centered on x, with
+    // empty placeholders when the loadout has fewer — stable positions the
+    // upcoming weapon/companion linking + upgrade feedback can anchor to.
+    // This replaces B30's slotOffsetX: a centered 116px grid inherently
+    // clears the joystick base on every real phone size (390px portrait →
+    // grid left 137 vs base right 116; ≥481px wide → ≥182 vs 144; landscape
+    // ≥640 → ≥262), so the coarse-pointer offset branch is gone.
     const COARSE = typeof window !== 'undefined' && window.matchMedia &&
-      window.matchMedia('(pointer: coarse)').matches;
-    const slotOffsetX = COARSE ? (window.innerWidth >= 560 ? 160 : 136) : 0;
+      window.matchMedia('(pointer: coarse)').matches; // retained for future input-shaping only
+    void COARSE;
+    const slotSize = 36;
+    const slotGap = 4;
+    const gridW = 3 * slotSize + 2 * slotGap; // 116
+    const gridX = Math.round((w - gridW) / 2);
+    const weaponRowY = h - 100;
+    const companionRowY = h - 60; // directly underneath the weapon row
 
     // HP Bar
     const hpPercent = player.hp / player.maxHp;
@@ -572,12 +581,9 @@ class Renderer {
       ctx.textAlign = 'center';
     }
 
-    // Weapon Slots (bottom-left, above EXP bar)
-    if (this._activeWeaponIds && this._activeWeaponIds.length > 0) {
-      const slotSize = 36;
-      const slotGap = 4;
-      const slotY = h - 60;
-      const slotX = 10 + slotOffsetX; // B30: clears the joystick zone on touch
+    // Weapon Slots — fixed 3-wide row, centered (B33)
+    if (true) {
+      const slotY = weaponRowY;
       const weaponNames = {
         w1_projectile: { icon: '\u{1f3f9}', name: 'Proj', color: '#FFD700' },
         w2_orbit: { icon: '\u{1f504}', name: 'Orb', color: '#4FC3F7' },
@@ -588,11 +594,24 @@ class Renderer {
         w7_sword: { icon: '\u2694\ufe0f', name: 'Sword', color: '#5C6BC0' },
         w8_claymore: { icon: '\u{1fa93}', name: 'Clay', color: '#8D6E63' },
       };
-      for (let i = 0; i < this._activeWeaponIds.length && i < 3; i++) {
-        const wid = this._activeWeaponIds[i];
+      for (let i = 0; i < 3; i++) {
+        const wid = this._activeWeaponIds ? this._activeWeaponIds[i] : undefined;
+        const x = gridX + i * (slotSize + slotGap);
+        if (!wid) {
+          // B33: empty placeholder — dim outline box, reserved position
+          ctx.fillStyle = 'rgba(0,0,0,0.25)';
+          ctx.fillRect(x, slotY, slotSize, slotSize);
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x, slotY, slotSize, slotSize);
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+          ctx.font = '12px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('\u00b7', x + slotSize / 2, slotY + slotSize / 2 + 4);
+          continue;
+        }
         const wn = weaponNames[wid] || { icon: '?', name: wid.slice(0, 4), color: '#666' };
         const level = (this._weaponLevels && this._weaponLevels[wid]) || 0;
-        const x = slotX + i * (slotSize + slotGap);
         ctx.fillStyle = level > 0 ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)';
         ctx.fillRect(x, slotY, slotSize, slotSize);
         ctx.strokeStyle = level > 0 ? wn.color : '#333';
@@ -609,12 +628,9 @@ class Renderer {
       }
     }
 
-    // Companion Slots (below weapon slots)
-    if (this._activeCompanionIds && this._activeCompanionIds.length > 0) {
-      const slotSize = 36;
-      const slotGap = 4;
-      const slotY = h - 60 - 40;
-      const slotX = 10 + slotOffsetX; // B30: clears the joystick zone on touch
+    // Companion Slots — fixed 3-wide row, DIRECTLY underneath the weapons (B33)
+    if (true) {
+      const slotY = companionRowY;
       const companionIcons = {
         dog: { icon: '\u{1f415}', color: '#E8A44A' },
         healer: { icon: '\u{1f49a}', color: '#4CAF50' },
@@ -630,10 +646,22 @@ class Renderer {
         frog: { icon: '\u{1f438}', color: '#66BB6A' },
         bat_companion: { icon: '\u{1f987}', color: '#5C6BC0' },
       };
-      for (let i = 0; i < this._activeCompanionIds.length && i < 3; i++) {
-        const cid = this._activeCompanionIds[i];
+      for (let i = 0; i < 3; i++) {
+        const cid = this._activeCompanionIds ? this._activeCompanionIds[i] : undefined;
+        const x = gridX + i * (slotSize + slotGap);
+        if (!cid) {
+          ctx.fillStyle = 'rgba(0,0,0,0.25)';
+          ctx.fillRect(x, slotY, slotSize, slotSize);
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x, slotY, slotSize, slotSize);
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+          ctx.font = '12px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('\u00b7', x + slotSize / 2, slotY + slotSize / 2 + 4);
+          continue;
+        }
         const cn = companionIcons[cid] || { icon: '\u{1f43e}', color: '#666' };
-        const x = slotX + i * (slotSize + slotGap);
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(x, slotY, slotSize, slotSize);
         ctx.strokeStyle = cn.color;

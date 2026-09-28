@@ -211,6 +211,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `Renderer`, `FloatingTextSystem`
 - Listens: `damage`, `pickup`
 - Note: B24 (v2.19.31) — screen-space UI (`_drawUI`, `_drawBossIntro`, `_drawAnnouncements`) draws in CSS-pixel units via the module `UI_DPR` scale (backing store is devicePixelRatio-scaled); world-space floating text scales its FONT by dpr (positions stay world-space). New screen-space canvas draws MUST follow the same contract (spec §12.8)
+- Note: B33 (v2.19.39) — `_drawUI` renders a fixed centered 3×2 slot grid (weapon row h−100, companion row h−60; 3×36px + 2×4px gaps = 116px, gridX = round((w−116)/2)); empty positions get dim placeholders. Replaces the B30 slotOffsetX rail (centering inherently clears the joystick zone on every phone size). Stable slot addresses are the anchor for upcoming weapon↔companion linking and the weapon-up feedback flash
 - GuardedBy: trace, visual_probe (B24 emulated HUD-scale cell)
 
 ### systems/companion.js
