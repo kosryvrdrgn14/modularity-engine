@@ -6,6 +6,22 @@
 
 ---
 
+## ADDENDUM (v2.19.40 — the weapon-up orb show)
+
+Your spec, shipped: 75% one upgrade, 20% two, 5% three — each one 95% lowest-level /
+5% highest-not-maxed (Lv7 and never-unlocked weapons are never targeted — pickups
+upgrade, they don't unlock). On pickup you'll see one gold orb per upgrade fly from
+screen center to its weapon slot with an accelerating arc and a sparkle trail; on
+landing: particle burst, gold frame pulse, the level applies, a soft E5→A5 chime,
+and two green arrows blink-and-float above the slot. The arrows fire for EVERY
+upgrade source (level-up picks, boss drops too), not just this pickup. One design
+call I made: the level lands when the orb lands (~0.55s after pickup) so what you
+see changing is what actually changes — say the word if you want it instant.
+Restart/Buy Again clears mid-flight orbs (fresh runs start fresh — levels never
+carried over anyway). Gates: node tests/probe_lag.cjs --wup (11/11) + full battery.
+
+---
+
 ## ADDENDUM (v2.19.39 — the centered 3×2 slot grid, foundation for linking + feedback)
 
 Done as directed: weapon slots w1/w2/w3 now sit centered on screen-x with companions

@@ -2,6 +2,7 @@
 // VERIFICATION PROBE (standalone, not in run_all).
 //   node tests/probe_lag.cjs         → B31: pickup lifecycle + audio gate
 //   node tests/probe_lag.cjs --wipe  → B32: screen_wipe drop actually wipes
+//   node tests/probe_lag.cjs --wup   → B34: weapon-upgrade orb show
 // B31 mode asserts:
 //   1. Pickup despawn: 60s of natural play → zero pickups older than the
 //      lifespan (non-trophy).
@@ -22,6 +23,7 @@
 // ============================================================
 const path = require('path');
 const wipeMode = process.argv.includes('--wipe');
+const wupMode = process.argv.includes('--wup');
 
 (async () => {
   const { bootGame } = require(path.join(__dirname, 'lib', 'harness.cjs'));
@@ -33,7 +35,127 @@ const wipeMode = process.argv.includes('--wipe');
   };
 
   try {
-    if (wipeMode) {
+    if (wupMode) {
+      // ════════ B34: weapon-upgrade orbs ════════
+      const w = await page.evaluate(async () => {
+        const g = window.game;
+        g.titleMenu.hide();
+        g.gameManager.set('session.selected_stage_id', 'stage_graveyard');
+        g.gameManager.set('session.current_stage_tier', 'standard');
+        g.startGame();
+        await new Promise(r => setTimeout(r, 900));
+        const out = {};
+        const origSpawn = g.spawnSystem.update;
+        g.spawnSystem.update = () => {};
+        try {
+          // W1 — instance-count distribution 75/20/5
+          const counts = [0, 0, 0];
+          for (let i = 0; i < 4000; i++) counts[g._rollUpgradeInstanceCount() - 1]++;
+          out.dist = counts.map(c => +(c / 4000).toFixed(3));
+
+          // W2 — target distribution: 95% lowest / 5% highest-non-maxed, tie-break first
+          g.weaponSystem.weaponLevels.w1_projectile = 1;
+          g.weaponSystem.weaponLevels.w2_orbit = 2;
+          g.weaponSystem.weaponLevels.weapon_area_pulse = 1;
+          g._activeWeapons = ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
+          const picks = { w1_projectile: 0, w2_orbit: 0, weapon_area_pulse: 0 };
+          for (let i = 0; i < 3000; i++) picks[g._pickUpgradeTarget()]++;
+          // w3 has level 0 → ineligible. Mix: 95% lowest + 5% highest — both
+          // between w1(1) and w2(2); tie-break takes the FIRST lowest/highest,
+          // so w1 gets the 95% share and w2 the 5% jackpot share.
+          out.picks = { w1: picks.w1_projectile / 3000, w2: picks.w2_orbit / 3000, w3: picks.weapon_area_pulse / 3000 };
+
+          // W3 — maxed/zero exclusion: w1 maxed (7), w3 lv0 (never unlocked),
+          // w2 mid → ONLY w2 eligible across all rolls
+          g.weaponSystem.weaponLevels.w1_projectile = 7;
+          g.weaponSystem.weaponLevels.w2_orbit = 3;
+          g.weaponSystem.weaponLevels.weapon_area_pulse = 0;
+          let allW2 = true;
+          for (let i = 0; i < 1000; i++) if (g._pickUpgradeTarget() !== 'w2_orbit') allW2 = false;
+          out.maxedExcluded = allW2;
+
+          // W4 — orb flight end-to-end (deterministic single orb)
+          g.weaponSystem.weaponLevels.w1_projectile = 1;
+          g.weaponSystem.weaponLevels.w2_orbit = 2;
+          g.weaponSystem.weaponLevels.weapon_area_pulse = 1;
+          g.renderer.upgradeOrbs.length = 0;
+          g.renderer.slotFlashes.length = 0;
+          g.renderer.upgradeBursts.length = 0;
+          g.renderer.launchUpgradeOrb('w1_projectile');
+          out.orbLaunched = g.renderer.upgradeOrbs.length === 1;
+          out.target = g.renderer.upgradeOrbs[0] ? g.renderer.upgradeOrbs[0].weaponId : null;
+          for (let i = 0; i < 40; i++) g.renderer._updateAndDrawUpgradeOrbs(1 / 60); // 0.667s > T=0.55
+          out.orbLanded = g.renderer.upgradeOrbs.length === 0;
+          out.levelApplied = (g.weaponSystem.weaponLevels.w1_projectile || 0) === 2;
+          out.flashArmed = g.renderer.slotFlashes.length >= 1;
+          out.burstArmed = g.renderer.upgradeBursts.length >= 1;
+          // counted announcement + orb count come from _applyWeaponLevelUp
+          g.weaponSystem.weaponLevels.w1_projectile = 1;
+          g.weaponSystem.weaponLevels.w2_orbit = 2;
+          g.weaponSystem.weaponLevels.weapon_area_pulse = 1;
+          g.floatingTextSystem.texts.length = 0;
+          g.renderer.upgradeOrbs.length = 0;
+          g._applyWeaponLevelUp();
+          out.countedText = g.floatingTextSystem.texts.some(t => t.text.startsWith('WEAPON UP!'));
+          out.wupInstances = g.renderer.upgradeOrbs.length; // 1–3 orbs
+          out.countedText = g.floatingTextSystem.texts.some(t => t.text.startsWith('WEAPON UP!'));
+
+          // W5 — arrow dedupe: two addSlotFlash same-slot same-frame → 1 flash
+          const before = g.renderer.slotFlashes.length;
+          g.renderer.addSlotFlash('w2_orbit');
+          g.renderer.addSlotFlash('w2_orbit');
+          out.dedupe = g.renderer.slotFlashes.length === before + 1;
+
+          // W6 — restart teardown: in-flight orbs are cleared WITHOUT applying
+          // (startGame resets weaponLevels and re-unlocks at Lv1 — mid-run
+          // upgrade levels never persist across runs; applying into the dying
+          // system would be a phantom). Fresh run = fresh loadout.
+          g.weaponSystem.weaponLevels.w1_projectile = 4;
+          g.weaponSystem.weaponLevels.w2_orbit = 2;
+          g.renderer.launchUpgradeOrb('w2_orbit'); // would-be w2@3, never applied
+          g.gameManager.set('session.selected_stage_id', 'stage_graveyard');
+          g.startGame();
+          await new Promise(r => setTimeout(r, 200));
+          out.flushedClear = g.renderer.upgradeOrbs.length === 0 && g.renderer.slotFlashes.length === 0;
+          out.freshLoadout = (g.weaponSystem.weaponLevels.w1_projectile || 0) === 1;
+
+          // W7 — audio: weapon_up_hit routes to the chime synth. play() gates
+          // on ctx.state === 'running' (B31), so run it through a running stub.
+          let notes = 0;
+          const realCtx = g.audioManager.ctx;
+          const origNote = g.audioManager._playNote.bind(g.audioManager);
+          g.audioManager._playNote = (...a) => { notes++; return origNote(...a); };
+          g.audioManager.ctx = {
+            state: 'running', currentTime: 0, destination: {}, sampleRate: 44100,
+            createOscillator: () => ({ type: '', frequency: { value: 0 }, connect() {}, start() {}, stop() {}, disconnect() {} }),
+            createGain: () => ({ gain: { setValueAtTime() {}, linearRampToValueAtTime() {} }, connect() {}, disconnect() {} }),
+            createBuffer: () => ({}),
+            createBufferSource: () => ({ connect() {}, start() {}, stop() {}, disconnect() {} }),
+            createBiquadFilter: () => ({ connect() {}, disconnect() {} }),
+          };
+          g.audioManager.play('weapon_up_hit');
+          g.audioManager.ctx = realCtx;
+          g.audioManager._playNote = origNote;
+          out.chimeNotes = notes;
+        } finally {
+          g.spawnSystem.update = origSpawn;
+        }
+        return out;
+      });
+      check(`W1: instance roll ≈ 75/20/5 (got ${w.dist.join('/')})`,
+        Math.abs(w.dist[0] - 0.75) < 0.04 && Math.abs(w.dist[1] - 0.20) < 0.04 && Math.abs(w.dist[2] - 0.05) < 0.03);
+      check(`W2: target mix ≈ 95% lowest (w1) / 5% highest (w2), w3 ineligible`,
+        Math.abs(w.picks.w1 - 0.95) < 0.05 && Math.abs(w.picks.w2 - 0.05) < 0.04 && w.picks.w3 <= 0.02,
+        JSON.stringify(w.picks));
+      check('W3: maxed (Lv7) weapons excluded from targeting', w.maxedExcluded === true);
+      check('W4: upgrade orb launches toward its slot', w.orbLaunched === true && w.target === 'w1_projectile', `target=${w.target}`);
+      check('W4: orb lands ~0.55s and the LEVEL APPLIES on impact (1→2)', w.orbLanded && w.levelApplied === true, `landed=${w.orbLanded} lvl=${w.levelApplied}`);
+      check('W4: impact arms flash + burst', w.flashArmed && w.burstArmed === true);
+      check('W4: pickup rolls 1–3 orbs and announces the count', w.countedText === true && w.wupInstances >= 1 && w.wupInstances <= 3, `orbs=${w.wupInstances}`);
+      check('W5: same-slot flash dedupes to one arrow', w.dedupe === true);
+      check('W6: restart clears in-flight orbs; fresh run starts at Lv1', w.flushedClear && w.freshLoadout === true);
+      check('W7: weapon_up_hit plays the chime (2 notes)', w.chimeNotes >= 2, `notes=${w.chimeNotes}`);
+    } else if (wipeMode) {
       // ════════ B32: screen_wipe actually wipes ════════
       const w = await page.evaluate(async () => {
         const g = window.game;
@@ -224,7 +346,7 @@ const wipeMode = process.argv.includes('--wipe');
     const realErrors = errors.filter(e => !e.includes('[UPDATE ERROR]') && !e.includes('setTownLevel rejected'));
     check('no page/console errors during the probe', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));
 
-    console.log(`\n${wipeMode ? 'B32 WIPE' : 'B31'} PROBE: ${pass} passed, ${fail} failed`);
+    console.log(`\n${wupMode ? 'B34 WUP' : wipeMode ? 'B32 WIPE' : 'B31'} PROBE: ${pass} passed, ${fail} failed`);
     await browser.close();
     process.exit(fail === 0 ? 0 : 1);
   } catch (e) {

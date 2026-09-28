@@ -42,6 +42,19 @@ class Game {
     // the renderer API (the 'floatingText' bus event had no listener).
     this.companionSystem.floatingTextSystem = this.floatingTextSystem;
 
+    // B34: the gameplay half of an upgrade orb — apply the level when it
+    // LANDS, so Lv text, flash, burst, and chime change on the same frame.
+    this.renderer.onUpgradeOrbImpact = (weaponId) => {
+      this.weaponSystem.levelUp(weaponId); // emits weaponLevelUp → chime
+    };
+
+    // B34: slot flash + floating arrow for ANY upgrade source (level-up picks,
+    // orb impacts, boss drops). The orb impact re-emits weaponLevelUp, and
+    // addSlotFlash dedupes same-slot requests within 0.3s — one arrow per hit.
+    this.eventBus.on('weaponLevelUp', (data) => {
+      this.renderer.addSlotFlash(data.weaponId);
+    });
+
     // B32 (v2.19.38): screen-wipe feedback — the pickup routed through the
     // real death flow already feeds counters/quests/drops/audio; this is the
     // visual-only half of the contract (rings + per-culled-enemy dots + text).
@@ -524,6 +537,13 @@ class Game {
     // the telegraph clear above).
     this.renderer.wipeEffects.length = 0;
     this.renderer.cleanupEffects.length = 0;
+    // B34: in-flight upgrade orbs die with the run — startGame() resets
+    // weaponLevels and re-unlocks the loadout at Lv1 (mid-run upgrade levels
+    // never persist across runs), so applying into the dying system would be
+    // a phantom. Just clear the transient feedback arrays.
+    this.renderer.upgradeOrbs.length = 0;
+    this.renderer.slotFlashes.length = 0;
+    this.renderer.upgradeBursts.length = 0;
     // POT-011: the wallet is NEVER zeroed at fight start (the old
     // town.resources.gold = 0 wiped banked gold, including farming income).
     // Per-run earnings live in this._runGoldEarned (reset below).
@@ -919,20 +939,63 @@ class Game {
     this.canvas.addEventListener('click', this._introClickHandler, { once: false });
   }
 
-  _applyWeaponLevelUp() {
+  /** B34 (v2.19.40): roll the upgrade instance count for one pickup —
+   *  75% → 1 upgrade, 20% → 2, 5% → 3. */
+  _rollUpgradeInstanceCount() {
+    const r = Math.random();
+    if (r < 0.75) return 1;
+    if (r < 0.95) return 2;
+    return 3;
+  }
+
+  /** B34: pick ONE upgrade target. 95% → the LOWEST-level active weapon,
+   *  5% → the HIGHEST-level weapon that is not maxed (7). Only already-
+   *  unlocked weapons (level > 0) are eligible — pickups upgrade, never
+   *  unlock (unlock remains the loadout/level-up screen's job). */
+  _pickUpgradeTarget() {
     const weaponIds = this._activeWeapons || ['w1_projectile', 'w2_orbit', 'weapon_area_pulse'];
-    // Find the lowest-level active weapon (prioritize upgrading what's unlocked)
-    let bestWeapon = null;
-    let bestLevel = Infinity;
-    for (const wid of weaponIds) {
-      const level = this.weaponSystem.weaponLevels[wid] || 0;
-      if (level > 0 && level < bestLevel) {
-        bestLevel = level;
-        bestWeapon = wid;
+    const eligible = weaponIds.filter((wid) => {
+      const lvl = this.weaponSystem.weaponLevels[wid] || 0;
+      return lvl > 0 && lvl < 7;
+    });
+    if (eligible.length === 0) return null;
+    if (Math.random() < 0.05) {
+      // jackpot: highest non-maxed
+      let best = null, bestLvl = -1;
+      for (const wid of eligible) {
+        const lvl = this.weaponSystem.weaponLevels[wid] || 0;
+        if (lvl > bestLvl) { bestLvl = lvl; best = wid; }
       }
+      return best;
     }
-    if (bestWeapon) {
-      this.weaponSystem.levelUp(bestWeapon);
+    // default: lowest level
+    let low = null, lowLvl = Infinity;
+    for (const wid of eligible) {
+      const lvl = this.weaponSystem.weaponLevels[wid] || 0;
+      if (lvl < lowLvl) { lowLvl = lvl; low = wid; }
+    }
+    return low;
+  }
+
+  _applyWeaponLevelUp() {
+    // B34 (v2.19.40): the pickup is now a show. Roll 1–3 upgrade instances
+    // (75/20/5), pick each target (95% lowest, 5% highest non-maxed), and
+    // launch one orb per instance toward its slot. The LEVEL ITSELF applies
+    // when the orb lands (renderer.onUpgradeOrbImpact → weaponSystem.levelUp
+    // → weaponLevelUp → chime + slot flash), so what the player sees is what
+    // changes. No eligible target → no orb (and no feedback for nothing).
+    const instances = this._rollUpgradeInstanceCount();
+    for (let i = 0; i < instances; i++) {
+      const target = this._pickUpgradeTarget();
+      if (target) this.renderer.launchUpgradeOrb(target);
+    }
+    if (instances > 0) {
+      this.floatingTextSystem.spawn({
+        x: this.player ? this.player.x : 0,
+        y: this.player ? this.player.y - 30 : 0,
+        text: instances > 1 ? `WEAPON UP! ×${instances}` : 'WEAPON UP!',
+        color: '#FF9100', fontSize: 14, duration: 1.0, vy: -45,
+      });
     }
   }
 

@@ -19,6 +19,56 @@ class Renderer {
     // B32 (v2.19.38): screen-wipe feedback layers
     this.wipeEffects = [];      // screen-space CSS-px centers; expanding rings
     this.cleanupEffects = [];   // world-space; per-culled-enemy dissolving dot
+    // B34 (v2.19.40): weapon-upgrade feedback
+    this.upgradeOrbs = [];      // flying upgrade orbs (screen-space CSS px)
+    this.slotFlashes = [];      // gold pulse + floating green arrow per upgrade
+    this.upgradeBursts = [];    // particle burst at orb impact
+    // Set by game.js: (weaponId) => weaponSystem.levelUp(weaponId) — the
+    // gameplay mutation lands on the IMPACT frame, so Lv text, flash, burst
+    // and chime all change together.
+    this.onUpgradeOrbImpact = null;
+  }
+
+  /** B33/B34: the slot grid geometry, in ONE place — _drawUI, orb targeting
+   *  and tests all derive from this. Grid = 3×36px slots + 2×4px gaps
+   *  (116px), centered on x; weapon row h−100, companion row h−60. */
+  _slotGeom() {
+    const w = this.canvas.width / UI_DPR;
+    const h = this.canvas.height / UI_DPR;
+    const slotSize = 36;
+    const slotGap = 4;
+    const gridW = 3 * slotSize + 2 * slotGap;
+    const gridX = Math.round((w - gridW) / 2);
+    return { w, h, slotSize, slotGap, gridW, gridX, weaponRowY: h - 100, companionRowY: h - 60 };
+  }
+
+  /** B34: screen-space CSS center of a weapon id's grid slot (null if the
+   *  weapon is not in the active three). Used for orb targeting. */
+  slotCenterFor(weaponId) {
+    const idx = (this._activeWeaponIds || []).indexOf(weaponId);
+    if (idx < 0 || idx > 2) return null;
+    const g = this._slotGeom();
+    return { x: g.gridX + idx * (g.slotSize + g.slotGap) + g.slotSize / 2, y: g.weaponRowY + g.slotSize / 2 };
+  }
+
+  /** B34: launch an upgrade orb toward `weaponId`'s slot. Origin ≈ screen
+   *  center (the camera follows the player). Flight ~0.55s: horizontal
+   *  ease-in (slow start → accelerating into the slot) plus a parabolic arc
+   *  bump; sparkle trail; impact = flash + burst + onUpgradeOrbImpact. */
+  launchUpgradeOrb(weaponId) {
+    const target = this.slotCenterFor(weaponId);
+    if (!target) return;
+    const g = this._slotGeom();
+    const x0 = g.w / 2;
+    const y0 = g.h * 0.45;
+    this.upgradeOrbs.push({
+      weaponId,
+      x0, y0, x: x0, y: y0,
+      t: 0, T: 0.55,
+      dx: target.x - x0, dy: target.y - y0,
+      arc: 26 + Math.random() * 10,
+      trail: [],
+    });
   }
 
   /** B32: called by Game on 'screenWipe'. Centers are SCREEN-space CSS px so
@@ -183,6 +233,133 @@ class Renderer {
     }
   }
 
+  /** B34: gold pulse + floating green up-arrow on the slot that just got
+   *  upgraded (any source — the game bus handler calls this on weaponLevelUp). */
+  addSlotFlash(weaponId) {
+    const idx = (this._activeWeaponIds || []).indexOf(weaponId);
+    if (idx < 0 || idx > 2) return;
+    // B34 dedupe: orb impact calls this directly AND the weaponLevelUp bus
+    // handler calls it again on the same frame — one arrow per hit.
+    if (!this._flashGate) this._flashGate = {};
+    const now = performance.now();
+    if (this._flashGate[weaponId] && now - this._flashGate[weaponId] < 300) return;
+    this._flashGate[weaponId] = now;
+    this.slotFlashes.push({ weaponId, idx, age: 0, maxAge: 0.9, arrows: [0, 0.22] });
+  }
+
+  _updateAndDrawUpgradeOrbs(dt) {
+    if (this.upgradeOrbs.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.scale(UI_DPR, UI_DPR); // B34: CSS-px screen space (B24 contract)
+    for (let i = this.upgradeOrbs.length - 1; i >= 0; i--) {
+      const o = this.upgradeOrbs[i];
+      o.t += dt || 1/60;
+      const p = Math.min(1, o.t / o.T);
+      const ease = p * p; // ease-in: slow start → acceleration into the slot
+      const cx = o.x0 + o.dx * ease;
+      const cy = o.y0 + o.dy * ease - o.arc * 4 * p * (1 - p); // parabolic bump
+      o.trail.push({ x: cx, y: cy, a: 1 });
+      if (o.trail.length > 14) o.trail.shift();
+      for (const s of o.trail) {
+        s.a -= (dt || 1/60) * 2.6;
+        if (s.a <= 0) continue;
+        ctx.globalAlpha = s.a * 0.8;
+        ctx.fillStyle = Math.random() < 0.5 ? '#FFD700' : '#FFF8DC';
+        ctx.beginPath();
+        ctx.arc(s.x + (Math.random() - 0.5) * 5, s.y + (Math.random() - 0.5) * 5, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#FFF8DC';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      o.x = cx; o.y = cy;
+      if (p >= 1) {
+        // Impact: burst + flash + the gameplay mutation, all this frame
+        this.upgradeBursts.push({ x: o.x, y: o.y, age: 0, maxAge: 0.45, parts: this._makeBurstParts(o.x, o.y) });
+        this.addSlotFlash(o.weaponId);
+        if (this.onUpgradeOrbImpact) this.onUpgradeOrbImpact(o.weaponId);
+        this.upgradeOrbs.splice(i, 1);
+      }
+    }
+    ctx.restore();
+  }
+
+  _makeBurstParts(x, y) {
+    const parts = [];
+    for (let k = 0; k < 14; k++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 60 + Math.random() * 100;
+      parts.push({ vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 1.5 + Math.random() * 1.5, col: Math.random() < 0.6 ? '#FFD700' : '#FFF8DC' });
+    }
+    return parts;
+  }
+
+  _updateAndDrawBursts(dt) {
+    if (this.upgradeBursts.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.scale(UI_DPR, UI_DPR); // B34: CSS-px screen space (B24 contract)
+    for (let i = this.upgradeBursts.length - 1; i >= 0; i--) {
+      const b = this.upgradeBursts[i];
+      b.age += dt || 1/60;
+      if (b.age >= b.maxAge) { this.upgradeBursts.splice(i, 1); continue; }
+      const k = 1 - b.age / b.maxAge;
+      for (const pt of b.parts) {
+        const px = b.x + pt.vx * b.age;
+        const py = b.y + pt.vy * b.age;
+        ctx.globalAlpha = Math.max(0, k);
+        ctx.fillStyle = pt.col;
+        ctx.beginPath();
+        ctx.arc(px, py, pt.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  _updateAndDrawSlotFlashes(dt) {
+    if (this.slotFlashes.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.scale(UI_DPR, UI_DPR); // B34: CSS-px screen space (B24 contract)
+    const g = this._slotGeom();
+    for (let i = this.slotFlashes.length - 1; i >= 0; i--) {
+      const f = this.slotFlashes[i];
+      f.age += dt || 1/60;
+      if (f.age >= f.maxAge) { this.slotFlashes.splice(i, 1); continue; }
+      const x = g.gridX + f.idx * (g.slotSize + g.slotGap);
+      // Gold pulse on the slot frame
+      const pulse = 0.55 * (1 - f.age / f.maxAge);
+      ctx.strokeStyle = `rgba(255, 215, 0, ${pulse.toFixed(3)})`;
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(x - 1.5, g.weaponRowY - 1.5, g.slotSize + 3, g.slotSize + 3);
+      // Floating green up-arrows: 0.9s life, spawn two, float up ~14px, vanish
+      for (const delay of f.arrows) {
+        const a = f.age - delay;
+        if (a < 0) continue;
+        const al = a < 0.15 ? a / 0.15 : Math.max(0, 1 - (a - 0.15) / 0.55);
+        if (al <= 0) continue;
+        const rise = a * 16;
+        ctx.globalAlpha = al;
+        // flash: blink 6 Hz for the first 0.45s of each arrow's life
+        if (a < 0.45 && Math.floor(a * 12) % 2 === 0) continue;
+        ctx.fillStyle = '#00E676';
+        ctx.font = 'bold 15px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('\u25B2', x + g.slotSize / 2, g.weaponRowY - 6 - rise);
+        ctx.globalAlpha = 1;
+      }
+    }
+    ctx.restore();
+  }
+
   clear() {
     this.ctx.fillStyle = '#1A1A2E';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -212,6 +389,11 @@ class Renderer {
     // B32: screen-wipe layers — cleanup flicker in world space, rings after
     this._updateAndDrawCleanup(1/60);
     this._updateAndDrawWipe(1/60);
+    // B34: upgrade orbs fly in SCREEN space (targets are HUD slots), so they
+    // draw AFTER the camera restore, before the HUD itself.
+    this._updateAndDrawUpgradeOrbs(1/60);
+    this._updateAndDrawBursts(1/60);
+    this._updateAndDrawSlotFlashes(1/60);
 
     this.ctx.restore();
 
@@ -581,7 +763,8 @@ class Renderer {
       ctx.textAlign = 'center';
     }
 
-    // Weapon Slots — fixed 3-wide row, centered (B33)
+    // Weapon Slots — fixed 3-wide row, centered (B33); geometry from the
+    // shared _slotGeom() so orb targeting and tests can never drift (B34)
     if (true) {
       const slotY = weaponRowY;
       const weaponNames = {
@@ -708,7 +891,9 @@ class FloatingTextSystem {
     let text = '', color = '#FFF';
     if (pd.id === 'exp_small') { text = `+${pd.value} XP`; color = '#4FC3F7'; }
     else if (pd.id === 'gold_coin') { text = `+${pd.value} G`; color = '#FFD700'; }
-    else if (pd.id === 'pickup_weapon_level_up') { text = 'WEAPON UP!'; color = '#FF9100'; }
+    // B34: weapon-up text is spawned by game.js with the rolled instance
+    // count ("WEAPON UP! ×N") — the uncounted push here is retired so
+    // collection doesn't render two announcements.
     // B32: screen_wipe text is spawned by the Game 'screenWipe' listener with
     // a kill count ("SCREEN WIPE! ×N") — the uncounted push here is retired
     // so collection doesn't render two overlapping announcements.

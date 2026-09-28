@@ -2,6 +2,54 @@
 
 ---
 
+## v2.19.40 — B34: weapon-upgrade orbs (roll, flight, flash, chime)
+**Date:** September 28, 2026
+**Status:** ✅ Complete (B34 probe 11/11; battery 581 strict green)
+
+### The redesign (user spec)
+The WEAPON UP pickup went from instant+silent to a show, on top of the B33 grid:
+- **Roll:** 75% → 1 upgrade instance, 20% → 2, 5% → 3 (one orb per instance).
+- **Targeting per instance:** 95% the LOWEST-level active weapon, 5% the HIGHEST
+  non-maxed (jackpot). Lv7 weapons are never targeted; Lv0 weapons are never
+  targeted (pickups upgrade, never unlock — unlocking stays the loadout/level-up
+  screen's job).
+- **Flight:** one gold orb per instance flies from screen-center (~45% height) to
+  its weapon slot with horizontal ease-in (slow start → acceleration) plus a
+  parabolic arc bump (~26–36px), leaving a 14-point sparkle trail (gold/cream,
+  fading).
+- **Impact:** a 14-particle radial burst at the slot center, a gold frame pulse,
+  and the LEVEL ITSELF applies on the impact frame — then the weaponLevelUp event
+  fires, so Lv text, flash, burst, and chime all change together.
+- **Flash (any source):** weaponLevelUp also arms a slot flash — two floating
+  green ▲ above the slot (blinking 6Hz for the first 0.45s, floating up ~14px,
+  fading out over 0.9s). Level-up picks, orb impacts, boss drops all light it.
+  Same-slot requests dedupe within 0.3s (orb impact + bus re-emit = one arrow).
+- **Chime:** weaponLevelUp audio rewired from the generic powerup_collect to a
+  soft ascending two-note sparkle (E5→A5 sine, UI channel, quiet — it can fire
+  3× in quick succession). The uncounted "WEAPON UP!" text push retired; game.js
+  announces the rolled count ("WEAPON UP!" / "WEAPON UP! ×N").
+
+### Contract notes
+- The upgrade applies on IMPACT (~0.55s), not collection — the user was told; the
+  visual and the state change are the same instant.
+- Restart/Buy Again clears in-flight orbs WITHOUT applying: startGame() resets
+  weaponLevels and re-unlocks the loadout at Lv1 (mid-run upgrade levels never
+  persist across runs), so applying into the dying system would be a phantom.
+- All B34 screen-space draws (orbs/bursts/flashes) follow the B24 contract:
+  CSS-pixel units via ctx.scale(UI_DPR, UI_DPR) wrappers.
+- Renderer._slotGeom() is now the single source of grid geometry — _drawUI, orb
+  targeting, and tests derive from it (B33's inline math retired).
+
+### Gates
+- tests/probe_lag.cjs --wup (11 checks): 75/20/5 instance distribution (4000
+  rolls, ±4pp), 95/5 target mix with w3 ineligible (3000 rolls), maxed/Lv0
+  exclusion, orb launch→impact→level-applied (1→2), flash+burst armed, counted
+  ×N announcement + 1–3 orbs per pickup, same-slot flash dedupe, restart
+  teardown (arrays clear, fresh run at Lv1), chime routes 2 notes through a
+  running stub context. B31 + B32 modes re-run green; battery 581 strict green.
+
+---
+
 ## v2.19.39 — B33: fixed centered 3×2 weapon/companion slot grid
 **Date:** September 28, 2026
 **Status:** ✅ Complete (visual_probe 43→46; battery 581 strict green)

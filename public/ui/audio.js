@@ -162,7 +162,10 @@ class AudioManager {
     });
     bus.on('projectileHit', () => this.play('weapon_hit'));
     bus.on('areaPulse', () => this.play('w3_pulse'));
-    bus.on('weaponLevelUp', () => this.play('powerup_collect'));
+    // B34 (v2.19.40): weaponLevelUp now fires at ORB IMPACT time (game.js
+    // defers the levelUp emission), so this is the impact chime — one sound
+    // per upgrade instance, shared by orb hits and level-up picks.
+    bus.on('weaponLevelUp', () => this.play('weapon_up_hit'));
     bus.on('weaponUnlock', (data) => {
       this.play('weapon_unlock');
       // Start W2 hum if orbit weapon unlocked
@@ -285,6 +288,8 @@ class AudioManager {
       case 'w3_pulse': this._synthW3Pulse(vol); break;
       case 'weapon_hit': this._synthWeaponHit(vol); break;
       case 'weapon_unlock': this._synthWeaponUnlock(vol, channel); break;
+      // B34: upgrade-impact chime — soft ascending two-note sparkle
+      case 'weapon_up_hit': this._synthWeaponUpHit(vol, channel); break;
 
       // ENEMY KILLS
       case 'zombie_kill': this._synthEnemyKill(vol, 'zombie'); break;
@@ -464,6 +469,15 @@ class AudioManager {
   }
 
   // --- WEAPON SOUNDS ---
+
+  /** B34 (v2.19.40): weapon-upgrade impact chime. Soft ascending two-note
+   *  sparkle (E5 → A5 sine, short, quiet, UI channel) — pleasant, not
+   *  piercing: this can fire up to 3× in quick succession (multi-proc). */
+  _synthWeaponUpHit(vol, channel) {
+    const t = this.ctx.currentTime;
+    this._playNote(659.25, vol * 0.16, t, 0.10, 'sine', channel || 'ui');        // E5
+    this._playNote(880.00, vol * 0.14, t + 0.07, 0.14, 'sine', channel || 'ui'); // A5
+  }
 
   _synthW1Fire(vol) {
     // Short square blip, pitch scales with damage

@@ -212,6 +212,8 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Listens: `damage`, `pickup`
 - Note: B24 (v2.19.31) — screen-space UI (`_drawUI`, `_drawBossIntro`, `_drawAnnouncements`) draws in CSS-pixel units via the module `UI_DPR` scale (backing store is devicePixelRatio-scaled); world-space floating text scales its FONT by dpr (positions stay world-space). New screen-space canvas draws MUST follow the same contract (spec §12.8)
 - Note: B33 (v2.19.39) — `_drawUI` renders a fixed centered 3×2 slot grid (weapon row h−100, companion row h−60; 3×36px + 2×4px gaps = 116px, gridX = round((w−116)/2)); empty positions get dim placeholders. Replaces the B30 slotOffsetX rail (centering inherently clears the joystick zone on every phone size). Stable slot addresses are the anchor for upcoming weapon↔companion linking and the weapon-up feedback flash
+- Note: B32 (v2.19.38) — wipe feedback — `addWipeEffect(x, y, killed)` (two screen-space rings, CSS px → world at draw time) + `addCleanupEffect(x, y, color)` (world-space dissolving dot, capped 80); arrays cleared by startGame(). Consumes the `screenWipe` payload via the game.js listener (note moved here from ui/audio.js v2.19.40 — it described Renderer methods)
+- Note: B34 (v2.19.40) — upgrade-orb show: `_slotGeom()` is the single source of B33 grid geometry (used by _drawUI AND orb targeting AND tests); `slotCenterFor(weaponId)`, `launchUpgradeOrb(weaponId)` (ease-in + parabolic arc, sparkle trail), `addSlotFlash(weaponId)` (gold pulse + floating green ▲ ×2, 0.3s same-slot dedupe), `upgradeBursts`; `onUpgradeOrbImpact` callback (set by game.js) applies the level ON THE IMPACT FRAME; all three B34 draw fns are CSS-px via UI_DPR scale wrappers (B24 contract)
 - GuardedBy: trace, visual_probe (B24 emulated HUD-scale cell)
 
 ### systems/companion.js
@@ -282,7 +284,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `AudioManager`, `TitleBGM`
 - Listens: `weaponFire`, `projectileHit`, `areaPulse`, `contactDamage`, `damage`, `pickup`, `levelUp`, `weaponLevelUp`, `weaponUnlock`, `death`, `bossSpawn`, `bossDeath`, `bossCharge`, `magnetActivate`, `restart`, `selectUpgrade`, `stateChange`
-- Note (B32 v2.19.38): wipe feedback — `addWipeEffect(x, y, killed)` (two screen-space rings, CSS px → world at draw time) + `addCleanupEffect(x, y, color)` (world-space dissolving dot, capped 80); arrays cleared by startGame(). Consumes the `screenWipe` payload via the game.js listener.
+- Note (B34 v2.19.40): `weaponLevelUp` → `weapon_up_hit` chime (soft ascending E5→A5 two-note sparkle, UI channel — can fire 3× per multi-proc pickup; replaced the generic powerup_collect)
 - Note (B31 v2.19.37): suspended-context guard — play() schedules nothing unless ctx.state === "running" (one promise-deduped _resumeContext() attempt per not-running call); game.js retries resume on visibilitychange/focus/pointerdown. Scheduled-on-suspended nodes never end (onended never fires) and accumulate unbounded — probe evidence 285,619 AudioHandlers → renderer crash.
 - GuardedBy: trace (audio smoke)
 
@@ -369,6 +371,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `Game`, `game` (window), `this.timeService` (public instance surface: game.timeService), `__QUEST_DEBUG__` (debug flag, read by quest/npcSystem)
 - Listens (hub — most connections end here): `damage`, `death`, `pickup`, `levelUp`, `weaponLevelUp`, `bossSpawn`, `bossDeath`, `bossIntro`, `bossCharge`, `arcaneShot`, `chainLightning`, `coneAttack`, `companionSpawn`, `companionGrowl`, `companionLootCollect`, `contactDamage`, `areaPulse`, `pause`, `restart`, `selectUpgrade`, `pauseMenuAction`, `endScreenDismiss`, `skipToBoss`, `quest:objective_progress`, `save:runInterrupted` (self)
 - Emits: `bossIntro`, `bossIntroComplete`, `bossCharge`, `magnetActivate`, `pause`, `pickup`, `weaponUnlock`, `save:runInterrupted`
+- Note: B34 (v2.19.40) — weapon-up pickup targeting: `_rollUpgradeInstanceCount` (75/20/5), `_pickUpgradeTarget` (95% lowest / 5% highest non-maxed; Lv7 never targeted, Lv0 never targeted — pickups upgrade, never unlock), `_applyWeaponLevelUp` = roll + launchUpgradeOrb per instance + counted "WEAPON UP! ×N" text; `renderer.onUpgradeOrbImpact` applies the level at impact (weaponLevelUp → chime + flash); startGame clears in-flight orbs WITHOUT applying (levels reset on restart by design)
 - Store: writes `persistent.combat` (run state/autosave); town level via typed `setTownLevel` (§5.6 closed v2.19.2)
 - DOM: `game-canvas`, `loading-screen`, `loading-fill`, `loading-status`, `settings-screen`, `settings-back`, `music-slider`, `music-val`, `sfx-slider`, `sfx-val`, `resume-banner`, `resume-accept`, `resume-discard`, `reset-progress`
 - GuardedBy: trace (full boot→combat→end cycle)
