@@ -6,6 +6,27 @@
 
 ---
 
+## ADDENDUM (v2.19.37 — the "lag 2:40+, worse post-boss" report → B31)
+
+Investigated with a headless 200× replay + CDP metrics instead of guessing. Verdict:
+your instinct was right (drops + enemies), tracking data is cleared (30s-cadence
+~2KB flush, sub-ms), and the boss-worsening pointed at a third thing the screenshot
+could not show — the 4:00 boss audio fanfare landing on a suspended audio context
+(backgrounding the phone to take screenshots can suspend it), which accumulates
+audio nodes unbounded (probe: 285,619 handlers by t=100 → crash-class jank). The
+pickup field was the other real cost (never despawns; ~2–2.5× tick cost at
+isolation; the 500-cap in the code was dead).
+
+Fixes shipped (gameplay-neutral): pickups expire at 45s (blink-warned last 10s) and
+cap at 500 actives oldest-first — boss trophy exempt; audio refuses to schedule on a
+non-running context, with resume retries on every unlock signal (visible/focus/
+touch). No drop tables, waves, or rewards touched — pacing stays yours to tune.
+Your "new drops merge into existing ones with a color shift" idea is recorded in the
+B31 backlog row as a design option — say the word if you want it next. Verify any
+time with: node tests/probe_lag.cjs (9/9 green).
+
+---
+
 ## ADDENDUM (v2.19.28 — the level-up cards screenshot you sent)
 
 **Same defect class as B15, next screen — fixed, gated, shipped green.** The level-up

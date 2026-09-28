@@ -181,6 +181,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Defines: `EntityManager`, `SpawnSystem`, `MovementSystem`, `distBetween`, `isInCone` (cross-file helper functions — declared in tools/game_globals.cjs)
 - Calls: `DataManager.enemies`, `DataManager.stages`
 - Emits: `bossSpawn`
+- Note (B31 v2.19.37): create() does NOT consult pools/poolLimits — entities are plain push objects; the pickup bound is enforced by PickupSystem._sweepExpired (age expiry + oldest-first cap at poolLimits.pickup=500). Do not convert to object pooling without a perf-driven reason (entity counts are not the dominant cost; per-frame full-array scans are).
 - GuardedBy: trace (spawning)
 
 ### engine/combat.js
@@ -199,6 +200,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Calls: `DataManager.leveling`
 - Emits: `pickup`, `levelUp`, `damage`, `bossTrophyDropped` (B28 v2.19.35 — fires at boss-death drop time, tagged with the boss id; the marker pickup itself is inert and rides the normal collection path)
 - Listens: `pickup`, `magnetActivate`, `death`
+- Note (B31 v2.19.37): `_sweepExpired()` — non-trophy pickups expire at 45s (last-10s blink via iFrames) and actives cap at 500 oldest-first; `boss_trophy` is exempt from both (B28 marker). Sweeps run on a 1s accumulator inside update().
 - Note: listener-less `playSound`/`telegraph*` emitters deleted v2.19.2 (§5.5 resolved)
 - GuardedBy: trace (pickups/leveling)
 
@@ -278,6 +280,7 @@ a symbol defined in a later tier at top level** (function-body use is fine; cons
 - Status: NORMATIVE
 - Defines: `AudioManager`, `TitleBGM`
 - Listens: `weaponFire`, `projectileHit`, `areaPulse`, `contactDamage`, `damage`, `pickup`, `levelUp`, `weaponLevelUp`, `weaponUnlock`, `death`, `bossSpawn`, `bossDeath`, `bossCharge`, `magnetActivate`, `restart`, `selectUpgrade`, `stateChange`
+- Note (B31 v2.19.37): suspended-context guard — play() schedules nothing unless ctx.state === "running" (one promise-deduped _resumeContext() attempt per not-running call); game.js retries resume on visibilitychange/focus/pointerdown. Scheduled-on-suspended nodes never end (onended never fires) and accumulate unbounded — probe evidence 285,619 AudioHandlers → renderer crash.
 - GuardedBy: trace (audio smoke)
 
 ### ui/game.js

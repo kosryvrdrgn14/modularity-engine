@@ -2,6 +2,47 @@
 
 ---
 
+## v2.19.37 — B31: pickup lifecycle + suspended-audio guard (mobile lag 2:40+)
+**Date:** September 28, 2026
+**Status:** ✅ Complete (B31 probe 9/9; battery 578 strict green)
+
+### User report: lag around 2:40–2:60, worse when the boss spawns (6GB Android)
+Headless replay of a full run (tests/probe_lag.cjs, DPR-3 emulated page, 200× speed)
+plus CDP metrics split the report into real causes and cleared suspects:
+- **Cleared — tracking/journal:** 30s-cadence ~2KB flush, sub-ms; instrumented update
+  p95 0.10ms even at 240–270s. Nothing game-side happens at 2:40 (next beat ≈ 3:00).
+- **Real — pickups never despawn:** the v0.2.0-era limitation was never fixed; ~8 drops
+  per kill scattered field-wide, each paying collision + render work every frame
+  forever. Isolation at 200 ticks: ~2–2.5× per-tick cost from 35–40 pickups. The
+  declared poolLimits.pickup (500) was dead code — create() never consulted the pools.
+- **Real — audio-node accumulation on a suspended context:** WebAudio nodes scheduled
+  on a suspended context never start or end (onended never fires). Probe: AudioHandlers
+  68 → 285,619 by t=100s → renderer crash. "Worse when the boss spawns" is the 4:00
+  fanfare burst (boss_spawn + duck + charge synths in one frame) landing on a context
+  suspended by backgrounding (screenshots, calls, lock screen).
+- Wave escalation (maxEnemies 100→120→180 across 2:00–3:30) is the third contributor;
+  content tuning deliberately NOT changed (owner's call).
+
+### B31 fixes (gameplay-neutral)
+- **Pickup lifecycle (pickup.js):** _sweepExpired() — non-trophy pickups expire at 45s
+  (blink-warning via iFrames for the last 10s) and actives cap at 500 oldest-first,
+  making poolLimits.pickup real. boss_trophy (B28) is exempt from both — the victory
+  marker must outlive any wave.
+- **Suspended-audio guard (audio.js + game.js):** play() refuses to schedule unless the
+  context is running (one promise-deduped _resumeContext() attempt per not-running
+  call); game.js retries resume on visibilitychange/focus/pointerdown — the
+  fresh-gesture unlock signals a phone actually provides. No new bus events.
+
+### Gates
+- tests/probe_lag.cjs (standalone, 9 checks): natural-60s run leaves zero stale
+  pickups; pre-expired pickup destroyed; 520 planted → ≤500 actives with the oldest
+  culled; trophy survives both rules; suspended play() schedules ZERO nodes and
+  retries resume; running play() still schedules; no page errors. Promoting into
+  run_all as a suite (count bump) is a noted follow-up.
+- Full battery: 578 checks / 15 suites strict green (incl. perf_budget 10/10).
+
+---
+
 ## v2.19.36 — B29+B30: toast wrap defense + HUD rail clears the joystick
 **Date:** September 27, 2026
 **Status:** ✅ Complete (visual_probe 37→43; battery 578 strict green; release:check green)

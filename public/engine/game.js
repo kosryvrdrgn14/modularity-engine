@@ -52,6 +52,19 @@ class Game {
     this.player = null;
     this._sessionDamageTaken = 0;
     this._sessionPickupsCollected = 0;
+
+    // B31 (v2.19.37): audio-context unlock net. A context that went
+    // suspended mid-run (backgrounding to take a screenshot, a call, lock
+    // screen) needs a fresh gesture to come back; without one it stays dead
+    // for the rest of the run. Resume retries on every visible/focus/touch
+    // unlock signal; play()'s own gate skips scheduling until the context is
+    // actually running, so a dead context can never accumulate nodes (probe
+    // evidence: 285k AudioHandlers → renderer crash, see audio.js B31 note).
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') this.audioManager.resume();
+    });
+    window.addEventListener('focus', () => this.audioManager.resume());
+    window.addEventListener('pointerdown', () => this.audioManager.resume(), { passive: true });
   }
 
   resizeCanvas() {

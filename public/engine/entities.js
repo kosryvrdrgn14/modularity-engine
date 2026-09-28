@@ -9,6 +9,14 @@ class EntityManager {
       orb: [],
       companion: [],
     };
+    // B31 (v2.19.37) note: create() does NOT consult these pools/limits —
+    // entities are plain push objects and pooling was never wired. The
+    // pickup limit is enforced for real by PickupSystem._sweepExpired()
+    // (age expiry + oldest-first cap); enemy/projectile counts are bounded
+    // by wave maxEnemies / despawn timers instead. Kept as documentation of
+    // intended bounds — do not “optimize” into object pooling without a
+    // perf-driven reason (§10 B31 evidence: entity counts are not the
+    // dominant cost; per-frame full-array scans are).
     this.poolLimits = {
       enemy: 200,
       projectile: 500,

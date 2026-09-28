@@ -233,6 +233,7 @@ backlog aging.
 | B26 | ~~End-of-combat screen: small text + out-of-bounds cards~~ **DONE v2.19.33** (user screenshot: #end-actions two-card row ~512px overflowed a 390px phone — the B15/B17 clip class on its next surface: wrap defense + coarse-portrait one-column stack; canvas end screen got a compact bottom-anchored layout for narrow/touch viewports with wrapped kill-breakdown, and keyboard-hint lines suppressed on touch (fine-pointer affordance); desktop branch pinned identical to v2.19.31; gated with 4 visual_probe checks incl. hint-strip pixel evidence both modalities) | Clip-class sweep now spans DOM + canvas; remaining fixed-centered rows belong in B22's periodic audit, not screenshot-driven discovery | S–M | — |
 | B27 | ~~Boss still absent on device after B25~~ **DONE v2.19.34** (user re-test: warning + boss_spawn message but no boss, persisting across refresh+resume; headless was green → the battery had NEVER tested the natural spawn tick — every boss probe rode the skipToBoss DEBUG entry; hardened: `_spawnBoss` returns the entity + fails LOUD, the tick latches `bossSpawned` only when a boss actually exists (failed spawn retries next frame), B25 resume respawn verifies existence over the flag, skipToBoss reports real result; gated with a natural-tick probe on the emulated page, 566→569) | Fail-loud + self-heal over more guessing; device failure not reproducible headless — remaining device case now names its own root cause in console | S–M | — |
 | B28 | ~~100% boss trophy on death~~ **DONE v2.19.35** (user instrumentation call for headless boss tracking: boss death spawns a `boss_trophy` star pickup tagged with the boss id + emits `bossTrophyDropped` AT DROP TIME — post-victory collection is unobservable (gameOver stops the loop), so drop time is the deterministic signal; the star itself is a cosmetic marker on the normal inert pickup path; gated with a real-pipeline kill probe asserting drop event + marker collectibility + victory-wiring integrity, 569→572) | Instrument at the moment the FACT is established (boss died), not when a player interaction would confirm it — the world stops between those moments | S | — |
+| B31 | ~~Mobile lag at 2:40–2:60, worse when the boss spawns (6GB Android)~~ **DONE v2.19.37** (headless 200× replay + CDP metrics split the report: pickups never despawned — the v0.2.0-era limitation was never fixed, ~8 drops/kill scattered field-wide cost ~2–2.5× tick cost at 200-tick isolation, and poolLimits.pickup was dead code create() never consulted — plus audio-node accumulation on a suspended context (68 → 285,619 AudioHandlers by t=100s → renderer crash; the 4:00 boss fanfare burst is what "makes it worse" — it lands on a context a phone backgrounding suspended); journal/autosave CLEARED (30s cadence, ~2KB, sub-ms, update p95 0.10ms at 240–270s); wave ramp 100→120→180 is the third contributor, content tuning deliberately untouched — owner decides pacing separately; fixes: PickupSystem._sweepExpired 45s expiry with blink warning + oldest-first 500-actives cap (B28 trophy exempt from both), play() refuses to schedule unless the ctx is running, unlock-signal resume retries on visible/focus/pointerdown) | "worse when the boss spawns" was the best clue in the report — a per-entity cost cannot step-change at one instant, but a one-frame fanfare burst landing on a dead audio context can; the screenshot coin field was the other half speaking; the user follow-up design idea (new drops merge into existing stacks with a color shift) recorded for a future row — not built this release | M | tests/probe_lag.cjs (9 checks, standalone — battery promotion noted in §11) |
 | B29 | ~~Time-event toast runs past the viewport on phones~~ **DONE v2.19.36** (user screenshot: "The stranger leaves to scout — temporarily unavailable" rendered past the right edge — the toast kept its desktop-era \`white-space: nowrap\` from the v2.19.26 restoration, so the container's max-width 90vw could never hold a long line; fix is one declaration — \`white-space: normal\` — desktop text fits either way so fine-pointer rendering is unchanged; gated with desktop bounds+wrap pins and a red-proving emulated 390px cell) | A nowrap + centered + max-width combo is the same clip family as B15/B17/B26, just text-side; "fits on desktop" is not a property of the text, it's a property of the text at desktop width | S | — |
 | B30 | ~~Weapon/companion HUD rail renders under the joystick zone~~ **DONE v2.19.36** (user screenshot: the canvas slot rail at x=10 sits directly beneath the B18 DOM joystick zone (152px wide; 128px small portrait phones) — DOM-over-canvas, both drawn, one unreadable; fix is coarse-pointer-only: the rail offsets right of the zone (160px wide viewports, 136px narrow) and re-computes per _drawUI call so it tracks viewport changes; desktop (fine pointer) keeps offset 0 — pixel-identical, pinned by a gold-stroke scan at x=10; emulated portrait/landscape cells pin the rail ≥140/≥160css, clear of the zone) | When a DOM control and canvas HUD claim the same corner, one of them must move — pick the cheaper mover (a constant in the draw call, not the joystick's gesture geometry); user's "maybe move to center" instinct was right about the cause, wrong about the direction — right-of-zone keeps the rail in thumb-reachable periphery without crossing the play area | M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
@@ -976,6 +977,34 @@ backlog aging.
   will name its own root cause.
 ```
 
+### v2.19.37 (Sept 28, 2026) — B31: pickup lifecycle + suspended-audio guard
+```
+- User asked: "lag around 2:40–2:60, worse when the boss spawns — tracking data or
+  item drops and enemies?" (6GB Android; screenshot = field covered in scattered
+  coins/gems far from the player). Answered with a 200×-speed headless replay plus
+  CDP metrics, not vibes — and the replay alone was NOT enough: desktop JS cost at
+  260s is 0.1ms p95, so only the AudioHandlers metric exposed the real crash class
+  (JS heap stays flat at 10MB while the audio graph kills the render process).
+- The "worse at 4:00" signature only makes sense as a one-frame burst (fanfare + duck
+  + charge synths) landing on a context that phone backgrounding suspended. A
+  per-entity cost cannot step-change at an instant; a burst on a dead context can.
+- B31 is deliberately gameplay-neutral: coins/gems expire at 45s (blink-warned) and
+  the 500-actives cap replaces the oldest — the same pickups the player would never
+  walk back for. No drop tables, wave data, or boss rewards touched. The B28 trophy
+  is exempt from both rules (the marker must survive).
+- The dead poolLimits were silently misleading for the whole project — create() never
+  consulted them. Documented in entities.js rather than "fixed" into real object
+  pooling: the evidence says entity counts are not the dominant cost; per-frame
+  full-array scans are (future optimization territory, not this release).
+- phone:lock lesson (caught by the bus-registry discipline): wrote a bus listener for
+  an event that does not exist in this codebase — invented from memory of a different
+  project. PROJECT_MAP check found no emitter anywhere; removed. The DOM unlock
+  signals (visibilitychange/focus/pointerdown) are the real gesture net. Comments now
+  name only real signals.
+- probe_lag.cjs ships standalone (9 checks, ~40s): NOT in run_all. Promoting it as a
+  suite (with the TOOLING_MAP/TESTING_PLAN count bumps that implies) is a conscious
+  follow-up, not an oversight — noted here so the next session knows it exists.
+```
 ### v2.19.36 (Sept 27, 2026) — B29+B30: toast wrap + slot-rail/joystick separation
 ```
 - Two user screenshots from the same run: (1) the "stranger leaves to scout" time-event

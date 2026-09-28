@@ -35,6 +35,18 @@ class AudioManager {
     this._magnetHumNode = null;
     this._magnetHumGain = null;
     this._magnetTimer = 0;
+
+    // B31 (v2.19.37): suspended-context node-accumulation guard.
+    // WebAudio nodes scheduled on a SUSPENDED context never start and never
+    // end — onended never fires, so synthesis buffers pile up unbounded.
+    // Headless probe evidence (tests/probe_lag.cjs, 2026-09-28): a run with a
+    // never-resumed context grew AudioHandlers 68 → 285,619 by t=100s and
+    // CRASHED the render process (mobile lag "worse when the boss spawns"
+    // = the 4:00 boss fanfare burst landing on a context that went
+    // suspended when the phone backgrounded). play() used to attempt a
+    // resume and then schedule anyway; now a not-running context gates the
+    // schedule until the resume promise resolves (see _resumeContext()).
+    this._ctxResumePending = false;
   }
 
   // ─────────────────────────────────────────────
@@ -94,9 +106,21 @@ class AudioManager {
   }
 
   resume() {
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
+    this._resumeContext();
+  }
+
+  /** B31: single chokepoint for context resume. Fires at most one resume
+   *  attempt at a time (the promise is cached in _ctxResumePending) and
+   *  re-checks state on resolution — a resume can still fail (no user
+   *  gesture yet); the next play() call retries. Never schedules around
+   *  it: callers that went through play() simply skip until 'running'. */
+  _resumeContext() {
+    if (!this.ctx || this._ctxResumePending) return;
+    if (this.ctx.state === 'running') return;
+    this._ctxResumePending = true;
+    this.ctx.resume().catch(() => {}).finally(() => {
+      this._ctxResumePending = false;
+    });
   }
 
   setPlayer(player) {
@@ -237,7 +261,13 @@ class AudioManager {
 
   play(soundId, opts) {
     if (!this.ctx || !this.initialized) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    // B31: a suspended context accumulates every scheduled node forever
+    // (nothing ever ends). Attempt resume; until it lands, skip scheduling
+    // entirely — silence for a few ms beats a 285k-node pile-up.
+    if (this.ctx.state !== 'running') {
+      this._resumeContext();
+      return;
+    }
     opts = opts || {};
     const priority = opts.priority || 9;
     const channel = opts.channel || 'sfx';

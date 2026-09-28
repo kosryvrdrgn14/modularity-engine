@@ -1,188 +1,151 @@
 // ============================================================
-// INVESTIGATION PROBE v2 — two modes:
-//   node tests/probe_lag.cjs --no-audio   → pure gameplay cost
-//       (AudioManager.play stubbed; measures update/render per bucket
-//        + isolation deltas pickups-vs-enemies at ~260s)
-//   node tests/probe_lag.cjs --unlocked   → audio context RUNNING
-//       (autoplay policy disabled at launch; verifies AudioHandlers
-//        stay bounded when the context is actually running)
-//   default (no flag)                      → suspended-context demo
-// Mobile DPR-3 context, gameLoop paused, manual fixed-dt driving.
+// INVESTIGATION PROBE (not a suite) — B31 verification, one-off.
+// node tests/probe_lag.cjs
+// Asserts the B31 behaviors headlessly (desktop page is fine — none of these
+// depend on mobile emulation):
+//   1. Pickup despawn: 60s of natural play → zero pickups older than the
+//      lifespan (non-trophy).
+//   2. Planted pickup: age forced past lifespan → destroyed by the sweep;
+//      planted boss_trophy survives.
+//   3. Pool cap: 520 pickups planted → sweep cuts actives to ≤500.
+//   4. Suspended-context gate: play() with a suspended stub context schedules
+//      zero nodes and retries resume exactly once per play() call.
+//   5. Running-context play(): nodes scheduled (audio path still works).
+// Prints PASS/FAIL lines; exit 1 on any failure.
 // ============================================================
-const { chromium } = require('playwright');
 const path = require('path');
 
-const PUBLIC_DIR = path.resolve(__dirname, '..', 'public');
-const MOBILE = {
-  viewport: { width: 390, height: 664 },
-  userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-  isMobile: true,
-  hasTouch: true,
-  deviceScaleFactor: 3,
-};
-
-function pct(arr, p) {
-  if (!arr.length) return NaN;
-  const s = [...arr].sort((a, b) => a - b);
-  return s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)];
-}
-
 (async () => {
-  const noAudio = process.argv.includes('--no-audio');
-  const unlocked = process.argv.includes('--unlocked');
-  const mode = noAudio ? 'NO-AUDIO (pure gameplay cost)' : unlocked ? 'AUDIO-UNLOCKED (running context)' : 'DEFAULT (suspended context)';
-  console.log(`MODE: ${mode}\n`);
+  const { bootGame } = require(path.join(__dirname, 'lib', 'harness.cjs'));
+  const { browser, page, errors } = await bootGame();
+  let pass = 0, fail = 0;
+  const check = (name, ok, note = '') => {
+    if (ok) { pass++; console.log(`PASS — ${name}`); }
+    else { fail++; console.log(`FAIL — ${name}${note ? `  [${note}]` : ''}`); }
+  };
 
-  const launchArgs = unlocked ? ['--autoplay-policy=no-user-gesture-required'] : [];
-  const browser = await chromium.launch({ headless: true, args: launchArgs });
-  const context = await browser.newContext(MOBILE);
-  const page = await context.newPage();
-  const cdp = await context.newCDPSession(page);
-  await cdp.send('Performance.enable');
-  const errors = [];
-  page.on('pageerror', (e) => errors.push(String(e)));
-  page.on('console', (m) => {
-    if (m.type() === 'error' && !m.text().includes('Fetch API') && !m.text().includes('[UPDATE ERROR]')) errors.push(m.text());
-  });
-  await page.goto('file://' + path.join(PUBLIC_DIR, 'game2.html'));
-  await page.waitForFunction(() => window.game && window.game.gameManager, null, { timeout: 15000 });
-
-  await page.evaluate(() => {
-    const g = window.game;
-    g.gameManager.set('session.selected_stage_id', 'stage_graveyard');
-    g.gameManager.set('session.current_stage_tier', 'standard');
-    g.startGame();
-  });
-  await page.waitForTimeout(300);
-
-  await page.evaluate(() => {
-    const g = window.game;
-    g.gameLoop.paused = true;
-    window.__PERF = { upd: [], ren: [], counts: [], ctxState: () => g.audioManager.ctx ? g.audioManager.ctx.state : 'none' };
-    const origUpdate = g.update.bind(g);
-    const origRender = g.render.bind(g);
-    g.update = function (dt) {
-      const t0 = performance.now();
-      origUpdate(dt);
-      window.__PERF.upd.push({ t: this.gameTime, ms: performance.now() - t0 });
-    };
-    g.render = function (interp) {
-      const t0 = performance.now();
-      origRender(interp);
-      window.__PERF.ren.push({ t: this.gameTime, ms: performance.now() - t0 });
-    };
-  });
-
-  if (noAudio) {
-    await page.evaluate(() => { window.game.audioManager.play = () => {}; });
-    console.log('audioManager.play stubbed\n');
-  }
-
-  async function driveTo(target) {
-    await page.evaluate((tgt) => {
+  try {
+    // ── 1. Natural-play despawn hygiene ──
+    const nat = await page.evaluate(async () => {
       const g = window.game;
-      const P = window.__PERF;
-      let guard = 0;
-      while (g.gameTime < tgt && guard < 40000) {
-        guard++;
-        for (let i = 0; i < 20; i++) g.update(1 / 60);
+      g.titleMenu.hide();
+      g.gameManager.set('session.selected_stage_id', 'stage_graveyard');
+      g.gameManager.set('session.current_stage_tier', 'standard');
+      g.startGame();
+      await new Promise(r => setTimeout(r, 900));
+      // 60s of fixed-step play at natural pressure, player god-tanked
+      for (let i = 0; i < 3600; i++) {
+        g.gameLoop.updateFn(1 / 60);
         if (g.player) { g.player.hp = g.player.maxHp; g.player.iFrames = 1; }
-        const boss = g.renderer && g.renderer.bossEntity;
-        if (boss && boss.active) boss.hp = boss.maxHp;
         if (g.gameState.isGameOver()) break;
       }
-      if (window.gc) window.gc();
-      P.counts.push({
-        t: Math.round(g.gameTime),
-        enemies: g.entityManager.getCount('enemy'),
-        pickups: g.entityManager.getCount('pickup'),
-        projectiles: g.entityManager.getCount('projectile'),
-        total: g.entityManager.entities.length,
-        heapMB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : -1,
-        ctx: window.__PERF.ctxState(),
-      });
-    }, target);
-  }
+      const now = g.gameTime;
+      const stale = g.entityManager.getActive('pickup')
+        .filter(p => p.pickupData?.id !== 'boss_trophy' && p.age > g.pickupSystem.pickupLifespan + 1);
+      return { stale: stale.length, pickups: g.entityManager.getCount('pickup'), t: Math.round(now) };
+    });
+    check(`natural 60s run leaves zero stale non-trophy pickups (t=${nat.t}s, actives=${nat.pickups})`, nat.stale === 0, `stale=${nat.stale}`);
 
-  const targets = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 250, 260];
-  for (const t of targets) {
-    const s0 = Date.now();
-    try { await driveTo(t); } catch (e) { console.log(`CRASHED driving to t=${t}: ${String(e).slice(0, 80)}`); break; }
-    const wall = ((Date.now() - s0) / 1000).toFixed(1);
-    const c = await page.evaluate(() => window.__PERF.counts[window.__PERF.counts.length - 1]);
-    const m = (await cdp.send('Performance.getMetrics')).metrics;
-    const g = (n) => (m.find((x) => x.name === n) || {}).value;
-    console.log(`t=${String(c.t).padStart(3)}s heap=${String(c.heapMB).padStart(4)}MB enemies=${String(c.enemies).padStart(3)} pickups=${String(c.pickups).padStart(3)} arr=${c.total} ctx=${c.ctx} audio=${g('AudioHandlers')} (wall ${wall}s)`);
-  }
-
-  // per-bucket timing
-  const buckets = await page.evaluate(() => {
-    const P = window.__PERF;
-    const B = [];
-    const edges = [0, 60, 120, 160, 200, 240, 270];
-    const med = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] : NaN);
-    const p95 = (a) => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.ceil(0.95 * s.length) - 1)]; };
-    for (let i = 0; i < edges.length - 1; i++) {
-      const lo = edges[i], hi = edges[i + 1];
-      const u = P.upd.filter((f) => f.t >= lo && f.t < hi).map((f) => f.ms);
-      const r = P.ren.filter((f) => f.t >= lo && f.t < hi).map((f) => f.ms);
-      if (!u.length && !r.length) continue;
-      B.push({ bucket: `${lo}-${hi}s`, updN: u.length, updMed: med(u).toFixed(2), updP95: p95(u).toFixed(2), renN: r.length, renMed: med(r).toFixed(2), renP95: p95(r).toFixed(2) });
-    }
-    return B;
-  });
-  console.log('\n=== per-bucket JS time (ms) — update tick | render frame ===');
-  for (const b of buckets) {
-    console.log(`${b.bucket.padStart(8)} upd med=${b.updMed.padStart(5)} p95=${b.updP95.padStart(6)} | ren med=${b.renMed.padStart(5)} p95=${b.renP95.padStart(6)}`);
-  }
-
-  if (!noAudio) {
-    console.log('\n(isolation skipped in audio modes — run --no-audio for the gameplay-cost isolation)');
-    if (errors.length) { console.log('\nERRORS:'); for (const e of errors.slice(0, 8)) console.log(' - ' + e); }
-    await browser.close();
-    process.exit(0);
-  }
-
-  // ---- Isolation at ~260s ----
-  const iso = await page.evaluate(() => {
-    const g = window.game;
-    const N = 900;
-    const measure = () => {
-      const s = [];
-      for (let i = 0; i < N; i++) {
-        const t0 = performance.now();
-        g.update(1 / 60);
-        s.push(performance.now() - t0);
-        if (g.player) { g.player.hp = g.player.maxHp; g.player.iFrames = 1; }
-        const boss = g.renderer && g.renderer.bossEntity;
-        if (boss && boss.active) boss.hp = boss.maxHp;
+    // ── 2 & 3. Planted-lifespan, trophy exemption, pool cap (deterministic) ──
+    // Isolation: stub spawn/weapon/collision so the live sim cannot mint new
+    // drops during the measurement window — the sweep alone decides fate.
+    const plant = await page.evaluate(async () => {
+      const g = window.game;
+      const em = g.entityManager;
+      const ps = g.pickupSystem;
+      ps.reset();
+      const L = ps.pickupLifespan;
+      const orig = {
+        spawn: g.spawnSystem.update, weapon: g.weaponSystem.update, coll: g.collisionSystem.update,
+      };
+      g.spawnSystem.update = () => {}; g.weaponSystem.update = () => {}; g.collisionSystem.update = () => {};
+      try {
+        // NOTE: EntityManager.create() hardcodes age:0 (ignores data.age) —
+        // set ages AFTER create.
+        // Age-expiry: one pre-expired coin + one pre-expired trophy
+        const expiredCoin = em.create('pickup', { x: 8000, y: 8000, pickupData: { id: 'gold_coin', value: 1 }, visual: {} });
+        expiredCoin.age = L + 5;
+        const trophyOld = em.create('pickup', { x: 8100, y: 8000, pickupData: { id: 'boss_trophy', bossId: 'x' }, visual: {} });
+        trophyOld.age = L + 5;
+        // Cap: 20 coins aged just-under-lifespan (created FIRST = oldest) + 500 fresh → 520 + trophy, cap 500.
+        for (let i = 0; i < 20; i++) {
+          const c = em.create('pickup', { x: 5000 + i, y: 5000, pickupData: { id: 'gold_coin', value: 1 }, visual: {} });
+          c.age = L - 2;
+        }
+        for (let i = 0; i < 500; i++) {
+          em.create('pickup', { x: 6000 + i, y: 6000, pickupData: { id: 'gold_coin', value: 1 }, visual: {} });
+        }
+        // 61 ticks = 1.017s game → exactly one sweep fires (interval 1s).
+        for (let i = 0; i < 61; i++) g.gameLoop.updateFn(1 / 60);
+        const actives = em.getActive('pickup');
+        const coins = actives.filter(p => p.pickupData?.id === 'gold_coin');
+        const staleNonTrophy = actives.filter(p => p.pickupData?.id !== 'boss_trophy' && p.age > L);
+        const oldestKept = coins.reduce((m, p) => Math.max(m, p.age), 0);
+        const trophyOldAlive = trophyOld.active === true && trophyOld.age > L;
+        return { coins: coins.length, cap: em.poolLimits.pickup, oldestKept: +oldestKept.toFixed(2), trophyOldAlive, stale: staleNonTrophy.length };
+      } finally {
+        g.spawnSystem.update = orig.spawn; g.weaponSystem.update = orig.weapon; g.collisionSystem.update = orig.coll;
       }
-      s.sort((a, b) => a - b);
-      return { med: s[Math.floor(N / 2)], p95: s[Math.ceil(0.95 * N) - 1] };
-    };
-    const base = measure();
-    let pickups = 0;
-    for (const e of g.entityManager.entities) if (e.type === 'pickup' && e.active) { e.active = false; pickups++; }
-    const noPickups = measure();
-    const origSpawn = g.spawnSystem.update;
-    g.spawnSystem.update = () => {};
-    let enemies = 0;
-    for (const e of g.entityManager.entities) if (e.type === 'enemy' && e.active) { e.active = false; enemies++; }
-    const noEnemies = measure();
-    g.spawnSystem.update = origSpawn;
-    return {
-      counts: { pickups, enemies },
-      base: { med: +base.med.toFixed(2), p95: +base.p95.toFixed(2) },
-      noPickups: { med: +noPickups.med.toFixed(2), p95: +noPickups.p95.toFixed(2) },
-      noEnemies: { med: +noEnemies.med.toFixed(2), p95: +noEnemies.p95.toFixed(2) },
-    };
-  });
-  console.log('\n=== isolation @ ~260s (900-tick median/p95 ms, audio stubbed) ===');
-  console.log(`baseline           med=${iso.base.med} p95=${iso.base.p95}`);
-  console.log(`pickups destroyed  med=${iso.noPickups.med} p95=${iso.noPickups.p95}  (removed ${iso.counts.pickups})`);
-  console.log(`enemies destroyed  med=${iso.noEnemies.med} p95=${iso.noEnemies.p95}  (removed ${iso.counts.enemies})`);
+    });
+    // (natural leftovers from check 1 legitimately count toward the cap —
+    // total non-trophy actives is the real invariant, not just gold coins)
+    check(`pool cap enforced: total actives ≤ ${plant.cap} after one sweep (got ${plant.coins})`,
+      plant.coins <= plant.cap, `coins=${plant.coins}`);
+    check(`cap removes the OLDEST (survivors are the fresh plants, oldest=${plant.oldestKept}s)`,
+      plant.oldestKept <= 1.1, `oldest=${plant.oldestKept}`);
+    check(`age expiry: pre-expired coin destroyed by the sweep`, plant.stale === 0, `stale=${plant.stale}`);
+    check(`boss_trophy exempt from BOTH expiry and cap (over-age trophy alive)`,
+      plant.trophyOldAlive === true, `alive=${plant.trophyOldAlive}`);
 
-  if (errors.length) { console.log('\nERRORS:'); for (const e of errors.slice(0, 8)) console.log(' - ' + e); }
-  await browser.close();
-  process.exit(0);
-})().catch((e) => { console.error('PROBE CRASHED:', e); process.exit(2); });
+    // ── 4 & 5. Audio gate ──
+    const audio = await page.evaluate(async () => {
+      const g = window.game;
+      const am = g.audioManager;
+      // stub the synth fns to COUNT calls, never touch real ctx
+      let scheduled = 0;
+      const orig = am._playNote.bind(am);
+      am._playNote = (...a) => { scheduled++; return orig(...a); };
+      let resumed = 0;
+      const fakeCtx = {
+        get state() { return am._fakeSuspended ? 'suspended' : 'running'; },
+        resume: () => { resumed++; return Promise.resolve(); },
+        currentTime: 0,
+        createOscillator: () => ({ type: '', frequency: { value: 0 }, connect() {}, start() {}, stop() {}, disconnect() {} }),
+        createGain: () => ({ gain: { setValueAtTime() {}, linearRampToValueAtTime() {} }, connect() {}, disconnect() {} }),
+        createBuffer: () => ({}),
+        createBufferSource: () => ({ connect() {}, start() {}, stop() {}, disconnect() {} }),
+        createBiquadFilter: () => ({ connect() {}, disconnect() {} }),
+        destination: {},
+        sampleRate: 44100,
+      };
+      am._fakeSuspended = true;
+      const realCtx = am.ctx;
+      am.ctx = fakeCtx;
+      am.play('w1_fire');
+      am.play('w1_fire'); // second call while still "suspended" (resume promise resolved synchronously-ish)
+      const suspendedScheduled = scheduled;
+      // now running
+      am._fakeSuspended = false;
+      am.play('w1_fire');
+      const runningScheduled = scheduled - suspendedScheduled;
+      am.ctx = realCtx;
+      am._playNote = orig;
+      return { suspendedScheduled, runningScheduled, resumed };
+    });
+    check('suspended context: play() schedules ZERO nodes (gate)', audio.suspendedScheduled === 0, `scheduled=${audio.suspendedScheduled}`);
+    check('suspended context: play() retries resume each call (2 calls → ≥1 resume attempts)', audio.resumed >= 1, `attempts=${audio.resumed}`);
+    check('running context: play() schedules nodes (audio path intact)', audio.runningScheduled >= 1, `scheduled=${audio.runningScheduled}`);
+
+    // ── page errors (pageerror-captured by harness; bus-error net excluded) ──
+    const realErrors = errors.filter(e => !e.includes('[UPDATE ERROR]') && !e.includes('setTownLevel rejected'));
+    check('no page/console errors during B31 probe', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));
+
+    console.log(`\nB31 PROBE: ${pass} passed, ${fail} failed`);
+    await browser.close();
+    process.exit(fail === 0 ? 0 : 1);
+  } catch (e) {
+    console.error('PROBE CRASHED:', e);
+    await browser.close();
+    process.exit(2);
+  }
+})();

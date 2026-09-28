@@ -5,6 +5,17 @@ class PickupSystem {
     this.eventBus = eventBus;
     this.magnetActive = false;
     this.magnetTimer = 0;
+    // B31 (v2.19.37): pickup lifecycle. Pickups NEVER despawned before this
+    // — a 5-minute run scattered ~500+ coins/gems across the field, each one
+    // costing collision + render work every frame forever (user-reported
+    // mobile lag at 2:40+). seeLifespan: XP gems/coins collected near where
+    // they dropped get picked up long before expiry; drops left behind (the
+    // screenshot field of coins) expire. boss_trophy EXEMPT: it is the B28
+    // victory marker and must survive until the player walks over it.
+    this.pickupLifespan = 45;      // seconds a dropped pickup stays collectible
+    this.despawnCheckInterval = 1; // sweep cadence (per-entity age check is O(n) either way)
+    this._despawnAccum = 0;
+    this._despawnWarnAt = 10;      // last-seconds blink via iFrames (renderer blinks iFrames > 0)
   }
 
   setGameManager(gm) { this._gameManager = gm; }
@@ -124,6 +135,14 @@ class PickupSystem {
   }
 
   update(dt) {
+    // B31: despawn sweep first — cheap (age bump + occasional filter) and it
+    // must also shrink the field the magnet is about to iterate.
+    this._despawnAccum += dt;
+    if (this._despawnAccum >= this.despawnCheckInterval) {
+      this._despawnAccum = 0;
+      this._sweepExpired();
+    }
+
     if (!this.magnetActive) return;
 
     this.magnetTimer -= dt;
@@ -150,9 +169,49 @@ class PickupSystem {
     }
   }
 
+  /** B31: expire stale drops and enforce the (previously dead) pool cap.
+   *  Two rules:
+   *  1. Age-based — non-trophy pickups older than pickupLifespan are
+   *     destroyed; the final _despawnWarnAt seconds blink (iFrames drives the
+   *     renderer's blink) so expiry reads as intentional, not a glitch.
+   *  2. Cap-based — EntityManager.poolLimits.pickup (500) was declared but
+   *     NEVER enforced (create() ignores the pools entirely). Enforce it here
+   *     by replacing the OLDEST collectible pickups, so worst-case active
+   *     pickups is bounded at 500 no matter how dense the wave.
+   *  boss_trophy is exempt from BOTH (B28 marker must outlive any wave). */
+  _sweepExpired() {
+    const pickups = this.entityManager.getActive('pickup');
+    if (pickups.length === 0) return;
+
+    // Rule 1: age expiry (skip the trophy; blink near the end of life)
+    for (const pickup of pickups) {
+      if (pickup.pickupData?.id === 'boss_trophy') continue;
+      const remaining = this.pickupLifespan - pickup.age;
+      if (remaining <= 0) {
+        this.entityManager.destroy(pickup);
+      } else if (remaining <= this._despawnWarnAt && pickup.iFrames <= 0) {
+        pickup.iFrames = 0.5; // refresh the blink each sweep until expiry
+      }
+    }
+
+    // Rule 2: oldest-first cap (getActive returns array order = creation order)
+    const limit = this.entityManager.poolLimits.pickup || 500;
+    const over = pickups.length - limit;
+    if (over > 0) {
+      let removed = 0;
+      for (const pickup of pickups) {
+        if (removed >= over) break;
+        if (!pickup.active || pickup.pickupData?.id === 'boss_trophy') continue;
+        this.entityManager.destroy(pickup);
+        removed++;
+      }
+    }
+  }
+
   reset() {
     this.magnetActive = false;
     this.magnetTimer = 0;
+    this._despawnAccum = 0;
   }
 }
 
