@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ============================================================
 // patch_apply.cjs — JSON-driven atomic find/replace tool
-// (TOOLING_MAP §2; adopted v2.19.43)
+// (TOOLING_MAP §2; adopted v2.19.43; origin-schema merge 2026-09-29)
 //
 // Replaces the throwaway _bNN_*.cjs pattern: scripts that embedded
 // docs prose as escaped JS strings kept failing to parse when the
@@ -12,19 +12,24 @@
 // (their earlier OK lines lie); this tool counts every anchor BEFORE
 // writing anything.
 //
+// PROVENANCE: this tool originates from Claude's feedback (2026-09-29):
+// "recurring _bNN_*.cjs failures are structural — use a JSON patch tool";
+// its original source arrived AFTER v2.19.43 had shipped from the written
+// contract (same session). Merged, not replaced: the origin's exact
+// mechanics are all here (top-level-array + count alias, atomic batch,
+// exact-count matching, split/join literal replacement, sequential
+// same-file folding); the project build adds --dry exit-code guarantees,
+// mixed-EOL refusal, at-least counts ("> N"), count-0 assertions with a
+// no-op-write guard, empty-replace deletion, field validation, and
+// verbose per-entry reporting.
 // Usage:
 //   node tools/patch_apply.cjs patch.json            # apply
 //   node tools/patch_apply.cjs patch.json --dry      # verify only
 //
-// Patch schema:
-// {
-//   "patches": [
-//     { "file": "WORKFLOW.md",
-//       "find": "### v2.19.42 (Sept 28, 2026) — B36: shop Done bar + ESC\n",
-//       "replace": "### v2.19.43 (...)\n<new block>\n### v2.19.42 (Sept 28, 2026) — B36: shop Done bar + ESC\n",
-//       "expectedCount": 1 }
-//   ]
-// }
+// Patch schema — BOTH accepted (v2.19.43 merge):
+//   A) project form: { "patches": [ {file, find, replace, expectedCount?} ] }
+//   B) origin form (Claude's original): [ {file, find, replace, count?} ]
+//      — a top-level array; "count" is an alias for "expectedCount".
 //
 // Rules:
 //   1. Every `find` must match EXACTLY expectedCount times (default 1)
@@ -81,11 +86,14 @@ try {
   process.exit(1);
 }
 
-const entries = Array.isArray(spec && spec.patches) ? spec.patches : null;
+const entries = Array.isArray(spec)
+  ? spec // origin form: top-level array (count alias)
+  : (spec && Array.isArray(spec.patches) ? spec.patches : null);
 if (!entries || entries.length === 0) {
-  console.error('patch JSON must be {"patches":[{file,find,replace,expectedCount?}...]} with at least one entry');
+  console.error('patch JSON must be {"patches":[{file,find,replace,expectedCount?}...]} OR a top-level array [{file,find,replace,count?}...] with at least one entry');
   process.exit(1);
 }
+const countOf = (e) => (e.expectedCount !== undefined ? e.expectedCount : e.count);
 
 // ── EOL helpers ──────────────────────────────────────────────
 // Dominant EOL per file: all newlines CRLF → CRLF; all LF → LF;
@@ -125,7 +133,7 @@ for (let n = 0; n < entries.length; n++) {
     continue;
   }
   if (typeof e.replace !== 'string') { failures.push(`${label}: missing "replace"`); continue; }
-  const isAssertion = e.expectedCount === 0;
+  const isAssertion = countOf(e) === 0;
   if (e.replace !== '' && !isAssertion && e.replace.indexOf(e.find) === -1) {
     warnings.push(`${label}: "replace" does not contain "find" — applied as a plain modification (if this was meant as an anchored INSERT, restate the anchor in replace)`);
   }
@@ -166,12 +174,14 @@ for (const [key, group] of byFile) {
     const replace = toFileEol(e.replace, eol);
     const count = countContiguous(current, find);
 
-    let expect = typeof e.expectedCount === 'number' ? e.expectedCount : 1;
+    let expect = countOf(e);
+    if (expect === undefined) expect = 1;
     let atLeast = false;
-    if (typeof e.expectedCount === 'string' && e.expectedCount.trim().startsWith('>')) {
+    if (typeof expect === 'string' && expect.trim().startsWith('>')) {
       atLeast = true;
-      expect = Number(e.expectedCount.trim().slice(1));
-      if (!Number.isFinite(expect)) { failures2.push(`${group.label} [entry ${n}]: bad expectedCount "${e.expectedCount}"`); continue; }
+      const raw = expect;
+      expect = Number(expect.trim().slice(1));
+      if (!Number.isFinite(expect)) { failures2.push(`${group.label} [entry ${n}]: bad expectedCount "${raw}"`); continue; }
     }
     const matches = atLeast ? count >= expect : count === expect;
 

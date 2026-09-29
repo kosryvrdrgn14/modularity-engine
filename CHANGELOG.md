@@ -20,6 +20,10 @@
   without `--dry` to apply. Validated with 10 fixture scenarios (dry-green, atomic no-write,
   CRLF byte-identity, multi-count, same-file double entry, literal `$&`, deletion,
   assertion, mixed-EOL refusal, empty-find RED) before landing.
+- **Origin source merged:** Claude's original `patch_apply.cjs` (top-level-array patch
+  schema with a `count` key) arrived after this entry shipped from the written contract;
+  the tool now accepts BOTH schemas (`count` = `expectedCount` alias) with the origin's
+  mechanics fully covered, and 6 additional origin-schema scenarios re-validated green.
 - Tooling only — no gameplay code; battery unaffected. Recorded in TOOLING_MAP §2 and
   WORKFLOW §11 (house rule).
 

@@ -1002,6 +1002,12 @@ backlog aging.
   miss; CRLF byte-identity on the edited line; expectedCount 2; same-file double entry;
   literal $&; empty-replace deletion; count-0 assertion with a no-op-write guard; mixed-EOL
   refusal; empty-find RED.
+- Origin source merged post-ship: Claude's original patch_apply.cjs (top-level-array
+  patch schema with a `count` key) arrived after v2.19.43 had shipped from the written
+  contract. Merged, not replaced — the tool now accepts BOTH schemas (count =
+  expectedCount alias) so patches authored by either session apply cleanly, and every
+  origin mechanic (atomic batch, exact count, split/join literal replacement, same-file
+  sequential fold) was already covered. 6 origin-schema scenarios re-validated green.
 - HOUSE RULE: prose-heavy or multi-doc edits go through patch_apply, --dry first. Throwaway
   scripts remain acceptable only for pure-code inserts with no prose payload. Standard
   recorded in TOOLING_MAP §2.
