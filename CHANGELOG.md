@@ -2,6 +2,29 @@
 
 ---
 
+## v2.19.43 — tooling: JSON patch-apply standard (apostrophe-proof doc edits)
+**Date:** September 29, 2026
+**Status:** Complete (tools/patch_apply.cjs; 10/10 validation scenarios; no game code touched)
+
+### What Changed
+- **Adopted `tools/patch_apply.cjs` as the standard for prose-heavy find/replace edits.**
+  Find/replace pairs live in a JSON patch file — apostrophes and backticks are ordinary
+  characters, so the escaped-prose SyntaxError class (≥3 incidents last session) is
+  structurally gone.
+- **Safety contract:** every anchor must match its expectedCount (default 1; a string like
+  > 1 means at-least; 0 asserts absent) or NOTHING is written (atomic batch); same-file
+  entries fold sequentially over evolving text; each file's CRLF/LF style is detected and
+  preserved (mixed-EOL targets are refused, not guessed); replacement text is applied
+  literally (split/join — `$&` stays literal).
+- **Workflow:** `node tools/patch_apply.cjs patch.json --dry` to verify every anchor, then
+  without `--dry` to apply. Validated with 10 fixture scenarios (dry-green, atomic no-write,
+  CRLF byte-identity, multi-count, same-file double entry, literal `$&`, deletion,
+  assertion, mixed-EOL refusal, empty-find RED) before landing.
+- Tooling only — no gameplay code; battery unaffected. Recorded in TOOLING_MAP §2 and
+  WORKFLOW §11 (house rule).
+
+---
+
 ## v2.19.42 — B36: shop Done bar + ESC (a second exit platform chrome cannot cover)
 **Date:** September 28, 2026
 **Status:** Complete (visual_probe 46→50; battery 585 strict green)

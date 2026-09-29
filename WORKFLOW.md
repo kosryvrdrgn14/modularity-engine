@@ -981,6 +981,34 @@ backlog aging.
   will name its own root cause.
 ```
 
+### v2.19.43 (Sept 29, 2026) — tooling: patch-apply adoption (retires the _bNN_ throwaway-script class)
+```
+- Claude review confirmed the recurring edit-script failures as STRUCTURAL, not typo-class:
+  throwaway _bNN_ scripts embed docs prose as escaped JS strings, and apostrophes/backticks
+  in that prose break the escaping (≥3 SyntaxErrors this session). The lesson proved itself
+  twice more while building the fix: my first fixture-generator one-liner died with the EXACT
+  same error, and this very entry was authored as a patch JSON with raw apostrophes and
+  backticks, then applied clean by the tool.
+- Adopted tools/patch_apply.cjs. Contract: find/replace pairs in a JSON patch file; every
+  find must match expectedCount exactly (default 1; a string like > 1 = at-least; 0 asserts
+  absent) or NOTHING is written — atomic batch, which also retires the old trap where an
+  anchored script aborted before its write while earlier OK lines claimed success. Same-file
+  entries fold sequentially over EVOLVING text (self-review caught that a naive per-entry
+  write let entry 2 clobber entry 1). Per-file CRLF/LF is DETECTED and newlines in the patch
+  converted; mixed-EOL files are refused, not guessed. Replacement text is applied literally
+  (split/join, never String.replace — $& and friends in prose stay literal). --dry validates
+  everything and writes nothing.
+- Validated 10/10 before landing: dry-green two-file batch; atomic no-write on a mid-batch
+  miss; CRLF byte-identity on the edited line; expectedCount 2; same-file double entry;
+  literal $&; empty-replace deletion; count-0 assertion with a no-op-write guard; mixed-EOL
+  refusal; empty-find RED.
+- HOUSE RULE: prose-heavy or multi-doc edits go through patch_apply, --dry first. Throwaway
+  scripts remain acceptable only for pure-code inserts with no prose payload. Standard
+  recorded in TOOLING_MAP §2.
+- Tree fact that reshaped the tool: styles.css measured 100% LF on disk (0 CR bytes) — the
+  styles.css-is-CRLF session memory is STALE. EOL style must be detected per file at apply
+  time, never assumed from notes; the tool does exactly that.
+```
 ### v2.19.42 (Sept 28, 2026) — B36: shop Done bar + ESC
 ```
 - Platform-reality lesson: on the Freebuff preview, the top of the viewport can be
