@@ -31,6 +31,14 @@
   copy — dockMenu wipes and rebuilds the dock at boot) + 8 dormant town elements
   (wood/stone resource chips, camp-upgrade and events panels, town header/location
   label) mapped to planned content. Inventory recorded as backlog B37; zero code changes.
+- **Tool blind spots closed (owner follow-up, same day):** css_sweep now recognizes
+  template-hole construction — the toast false-positive class is fixed in-tool and the
+  DEAD bucket is provably empty; new `tools/dom_sweep.cjs` turns the orphan audit into
+  a standing delta report (ALIVE / MANAGED / CONSTRUCTED / B37 / NEW-ORPHAN; MANAGED
+  was discovered during validation and explains the B37 town elements);
+  new `tools/patch_apply_selftest.cjs` gates the house edit tool's behavior — 13 checks
+  (atomicity, counts, EOL bytes, both schemas, folding, literal `$&`) inside
+  `npm run verify`, so parse-only is no longer the only guard.
 - Tooling only — no gameplay code; battery unaffected. Recorded in TOOLING_MAP §2 and
   WORKFLOW §11 (house rule).
 

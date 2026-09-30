@@ -237,6 +237,24 @@ for (const f of gateFiles) {
 }
 if (gateOk) ok(`${gateFiles.length} test/tool files parse`);
 
+// ── 4b. PATCH_APPLY BEHAVIOR (v2.19.43+) — the house-standard edit tool
+// gets a real regression gate, not just a syntax check. The selftest runs
+// the tool against throwaway fixtures: atomicity, count matching, CRLF
+// preservation, origin schema, folding, literal $&. A silent regression
+// here would corrupt docs edits session-wide.
+console.log('== patch_apply behavior (selftest) ==');
+try {
+  const selftest = path.join(ROOT, 'tools', 'patch_apply_selftest.cjs');
+  if (!fs.existsSync(selftest)) {
+    fail('patch_apply_selftest.cjs missing — behavior gate cannot run');
+  } else {
+    const out = execFileSync(process.execPath, [selftest], { cwd: ROOT, stdio: 'pipe', timeout: 60000 }).toString();
+    ok(out.trim().split('\n').filter((l) => l.includes('✓')).length + ' patch_apply behavior checks green (atomicity, counts, EOL, schemas)');
+  }
+} catch (e2) {
+  fail(`patch_apply selftest RED: ${(e2.stdout || e2.stderr || e2.message).toString().split('\n').filter((l) => l.includes('✗')).join(' | ') || 'exit ' + e2.status}`);
+}
+
 // ── 5. NO-UNDEF (F5) — the partyBtn gate ──
 console.log('== no-undef: game files (F5 gate) ==');
 try {
