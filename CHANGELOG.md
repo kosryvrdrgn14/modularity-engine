@@ -24,6 +24,13 @@
   schema with a `count` key) arrived after this entry shipped from the written contract;
   the tool now accepts BOTH schemas (`count` = `expectedCount` alias) with the origin's
   mechanics fully covered, and 6 additional origin-schema scenarios re-validated green.
+- **Orphan / undetected-UI sweep (owner-requested audit):** the CSS sweep's dead-candidate
+  list misfired on its first field trial — the `.toast-quest/-time/-unlock` trio is ALIVE
+  via `toast-${kind}` template construction (nothing deleted; caveat recorded). A DOM-id
+  sweep across game2.html found 9 unreferenced ids: 1 fossil (the static `#dock-shop`
+  copy — dockMenu wipes and rebuilds the dock at boot) + 8 dormant town elements
+  (wood/stone resource chips, camp-upgrade and events panels, town header/location
+  label) mapped to planned content. Inventory recorded as backlog B37; zero code changes.
 - Tooling only — no gameplay code; battery unaffected. Recorded in TOOLING_MAP §2 and
   WORKFLOW §11 (house rule).
 

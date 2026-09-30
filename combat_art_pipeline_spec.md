@@ -1,7 +1,10 @@
 # COMBAT ART PIPELINE SPEC — AI-generated art for the combat layer
 
 **Created:** September 28, 2026 (B35 planning — no code changes yet)
-**Status:** PROPOSAL — awaiting owner sign-off on dimensions + animation option
+**Status:** PROPOSAL — dimensions RESOLVED 2026-09-30 (§10.6): square delivery frames,
+shape = silhouette, normalize-step delivery (§3.0); generator = ChatGPT image models
+(owner-driven; API for batches). Still open: §10.1–§10.5 (style workflow, hero starting
+size, art direction refs, B35a scope, animation option).
 **Both animation options are specified and stay available** (Option A static+deform, Option B sprite sheets); the renderer contract in §7 supports either per-entity, so the tool-consistency question can stay open.
 
 ---
@@ -65,6 +68,24 @@ future art-scale tuning), snapped to clean sizes:
 | **BOSS** | gravekeeper, necromancer | 56–60 | **256 × 256** |
 | **ITEM** | all pickups incl. trophy | 16–36 | **64 × 64** |
 | **FX** | projectiles (w1 bolt, w5 bolt) | 8–12 | **32 × 32** |
+
+### §3.0 Generators cannot hit tier sizes — the NORMALIZE STEP delivers them (added 2026-09-30)
+
+Measured reality of image generators (GPT-image family, incl. the ChatGPT "IMG2"
+models the owner plans to use): output sizes are fixed LARGE buckets —
+1024×1024 / 1536×1024 / 1024×1536 (newer variants add 1k–4k buckets) — and
+in-bucket adherence is approximate. Tier file sizes (96–256 px) are NOT
+requestable. Therefore:
+
+- §3 file sizes are DELIVERY targets produced by a deterministic NORMALIZE STEP
+  (generate big → downscale to the tier size, alpha-preserving), never generator
+  requests. Any model at any output size feeds the same pipeline.
+- Generation prompts: ALWAYS the square bucket (1024×1024) for sprites — the
+  landscape/portrait buckets risk subject cropping; transparency + ≤80% fill per §3.
+- Verify the alpha channel is REAL transparency (model-dependent quirk); §8.4 is
+  the gate.
+- Optional pre-batch check: a script asserts every delivered file's dimensions
+  equal its tier size before a B35 batch ships.
 
 Weapon **effects** recommendation: keep cones/pulses/waves **procedural for now**
 (they are already juicy, data-colored, and scale with weapon level); convert only
@@ -174,6 +195,14 @@ One still PNG per entity; motion is code (canvas transforms, time-based):
    art and (b) as a 128×128 master — compare crisp-upscale vs downscale at
    drawn 20/32/40 on the dark field, smoothing off vs on. This decides the
    workflow (and is the core HoloCure-baseline vs smoother-styles question).
+7. **Normalize step (§3.0):** a 1024×1024 generation normalized to a tier file
+   (e.g. M 128) at its drawn Ø on the #1A1A2E field — must stay readable, and the
+   delivered file's dimensions must equal the tier size exactly.
+8. **Frame-independence (dynamic-shape resolution):** one deliberately non-square
+   source (e.g. 1536×1024) pushed through normalize proves the pipeline is
+   generator-agnostic — the runtime drawImage path accepts ANY source dimensions
+   (§2); delivery frames stay square (§3). Monster shape lives in the silhouette,
+   never the frame.
 
 ## §9 Execution plan after sign-off
 
@@ -196,3 +225,13 @@ One still PNG per entity; motion is code (canvas transforms, time-based):
 3. Art direction: gothic graveyard per §3 palette — or do you have reference images?
 4. B35a scope (3 entities first) — ok?
 5. Animation: Option A first + sheets for player/bosses if tools pass §8.3 — or full Option B commitment now?
+6. RESOLVED (2026-09-30, owner + Claude review): **frames stay square; shapes are
+   silhouettes.** "Dynamic sprite dimensions" is already true where it matters — the
+   runtime accepts any source file dimensions (§2 drawImage path) and the normalize
+   step accepts any generator output (§3.0) — while AUTHORING frames stay 1:1 for
+   anchor safety, sheet compatibility, and testability. Non-uniform presentation, if
+   ever needed, is a per-entity `artScaleX/Y` knob built when a real monster needs
+   it (YAGNI until then). Generator direction: owner-driven ChatGPT image models —
+   direct generation for style exploration; API generation for B35 batches (img2img /
+   style-reference for roster consistency; OpenAI image API native-transparent or
+   Leonardo AI, both Node-ready).
