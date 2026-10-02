@@ -2,6 +2,52 @@
 
 ---
 
+## v2.19.44 — project wiki + GitHub Page (agent-facing map of current and future state)
+**Date:** September 30, 2026
+**Status:** Complete (docs + one new tool; no game code touched — battery unchanged at 585 checks / 15 suites)
+
+### What Changed
+- **New `docs/WIKI.md` — the agent-facing project wiki.** Sixteen sections covering what the
+  project is, the two-codebase layout (`public/` game vs `src/` shell), load-order tiers T0–T5,
+  per-file ownership, content pipeline + save-store ownership, the event-bus map, the UI/widget
+  system, the full verification stack (gates, 15 suites, standalone probes, read-only sweeps),
+  the rules that bind agents, the lesson bank, seven how-to recipes, the roadmap, the open
+  decisions awaiting the owner, an agent FAQ and a doc glossary. Written to be usable by an agent
+  that **cannot clone the repo**, and refreshed from on-disk truth (36 scripts, 17 content JSONs,
+  104 shell DOM ids, 0 new orphans, probe counts re-measured at 9 / 9 / 13).
+- **New `tools/wiki_build.cjs` — dependency-free markdown → HTML renderer.** `docs/index.html`
+  is GENERATED from the markdown (one source of truth, the same law as the embeddedData mirror),
+  with an auto-built sidebar nav and a `--check` staleness mode. `npm run docs:wiki` /
+  `docs:wiki:check`.
+- **`npm run verify` gained gate 2b — wiki mirror.** Editing `docs/WIKI.md` without rebuilding now
+  turns the fast gate red, so the published map cannot drift from its source.
+- **New root `README.md`** — short pointer for agents that *can* clone: wiki, fast gates, and where
+  the authoritative docs live.
+- **Docs ride-along:** TOOLING_MAP (tool row, npm block, doc index, field-trial log), WORKFLOW
+  (§10 backlog B38, §11 improvement log), this changelog.
+
+### Review pass (the part that mattered)
+- **Simulated agent queries against the wiki** — 15 realistic questions from both audiences
+  (with and without repo access). Six could not be answered from the first draft and were added in
+  the same pass: how to run the game outside the platform, how to drive real game state headlessly
+  (`tests/lib/harness.cjs` — `bootGame()`, `mobile: 'iphone13'`), how to add a suite (an
+  unregistered suite silently never runs), how to cut a release, the art/scale reference numbers
+  (`2 × stats.size`, 1 unit = 1 CSS px, hitboxes independent of art), and the `NORMATIVE /
+  IN-FLUX / DEPRECATED` file lifecycles.
+- **Two renderer bugs caught by reading the generated HTML, not by trusting the writer:** list
+  continuation lines were dropped (the absorption loop appended `</li>` before its own replacement
+  could match), and `**bold**` failed when it wrapped inner emphasis.
+
+### Verification
+- `npm run verify` → **GREEN** with the new wiki-mirror gate (36 files parse, 17 content JSONs,
+  36/36 map blocks, 13 patch_apply behavior checks, no-undef, 111 DOM-id references).
+- `node tests/probe_lag.cjs` 9/9 · `--wipe` 9/9 · `--wup` 13/13 (re-measured, not recalled).
+- `node tools/dom_sweep.cjs` → 0 NEW-ORPHAN.
+- **Owner action:** enable GitHub Pages with source = **`docs/`** (the repo-root `index.html` is the
+  platform shell, so a root-source Pages setup would publish the wrong site).
+
+---
+
 ## v2.19.43 — tooling: JSON patch-apply standard (apostrophe-proof doc edits)
 **Date:** September 29, 2026
 **Status:** Complete (tools/patch_apply.cjs; 10/10 validation scenarios; no game code touched)

@@ -243,6 +243,7 @@ backlog aging.
 | B30 | ~~Weapon/companion HUD rail renders under the joystick zone~~ **DONE v2.19.36** (user screenshot: the canvas slot rail at x=10 sits directly beneath the B18 DOM joystick zone (152px wide; 128px small portrait phones) — DOM-over-canvas, both drawn, one unreadable; fix is coarse-pointer-only: the rail offsets right of the zone (160px wide viewports, 136px narrow) and re-computes per _drawUI call so it tracks viewport changes; desktop (fine pointer) keeps offset 0 — pixel-identical, pinned by a gold-stroke scan at x=10; emulated portrait/landscape cells pin the rail ≥140/≥160css, clear of the zone) | When a DOM control and canvas HUD claim the same corner, one of them must move — pick the cheaper mover (a constant in the draw call, not the joystick's gesture geometry); user's "maybe move to center" instinct was right about the cause, wrong about the direction — right-of-zone keeps the rail in thumb-reachable periphery without crossing the play area | M | — |
 | B10 | ~~Perf budget/benchmark for the combat loop~~ **DONE v2.19.14** (`tests/suites/perf_budget.cjs`: per-tick CPU budgets — idle ≤1ms, stress-120 update ≤3ms/p95 ≤8ms/render ≤3ms, heap ≤64MB; ~5–15× baseline headroom; overload negative control + frozen-state restore re-check; in battery, 14 suites) | — | — |
 | B11 | ~~WCAG-based accessibility audit of the widget system~~ **DONE v2.19.15** (widget-system scope: keyboard operability + accessible state + focus visibility + widget-scoped contrast lifts; screen-by-screen contrast sweep deferred as next-step P3) | — | — |
+| B38 | Project wiki publish + freshness loop (v2.19.44): `docs/WIKI.md` (canonical, agent-facing map of current + future state) → `tools/wiki_build.cjs` → `docs/index.html` (GitHub Page). Staleness is a `verify` gate (2b) so the published map cannot drift. Remaining: owner-side one-time Pages setting (**source = `docs/`** — root-source would publish the platform shell), plus a read-through of the rendered page after the next release | Agents that cannot clone the repo need a browsable map; drift is the failure mode a generator + gate prevent | M | — (verify gate live; publish step owner-side) |
 
 ## 11. Improvement log (append; format from TOOLING_MAP §5)
 
@@ -252,6 +253,23 @@ backlog aging.
 - Section affected:
 - What happened:
 - Change made:
+
+- Date: 2026-09-30
+- Section affected: §6 docs-as-code (new: the agent-facing wiki), §10 backlog (B38)
+- What happened: owner asked for a project map + wiki covering current AND future state that is
+  agent-friendly and publishable as a GitHub Page, because not every agent can clone and read the
+  repo. Drafted `docs/WIKI.md` (16 sections: architecture map, file ownership, content/persistence,
+  event bus, UI system, verification stack, rules, lesson bank, recipes, roadmap, open decisions,
+  agent FAQ, doc glossary), then **reviewed it and simulated agent queries against it** — which found
+  six real gaps the first draft could not answer: how to run the game outside the platform, how to
+  drive the real game headlessly (the harness was undocumented), how to add a suite (run_all
+  registration is a silent-failure trap), how to cut a release, the art/scale numbers, and the file
+  lifecycle statuses. All six were answered in the same pass. A second renderer bug (bold containing
+  inner emphasis) was caught by reading the generated HTML instead of trusting the writer.
+- Change made: B38 row added; wiki + renderer landed; `verify` gained the wiki-mirror check (2b);
+  TOOLING_MAP rows + npm block + doc index updated; root README added as a pointer. Principle
+  recorded: the wiki is a SUMMARY — repo docs stay the source of truth, and a change that moves the
+  ground updates the page in the same change (the gate only catches staleness, not omissions).
 
 - Date: 2026-09-24
 - Section affected: §10 backlog (B8 row)

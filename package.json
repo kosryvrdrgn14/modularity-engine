@@ -18,7 +18,9 @@
     "release:check": "node tools/release_check.cjs",
     "verify:trace": "node tools/verify.cjs --trace",
     "widget:preview": "node tools/widget_preview.cjs",
-    "widget:audit": "node tests/suites/widget_occlusion.cjs"
+    "widget:audit": "node tests/suites/widget_occlusion.cjs",
+    "docs:wiki": "node tools/wiki_build.cjs",
+    "docs:wiki:check": "node tools/wiki_build.cjs --check"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

@@ -84,6 +84,19 @@ try {
   fail('embeddedData mirror OUT OF SYNC — run: npm run content:sync');
 }
 
+// ── 2b. WIKI MIRROR (docs ride along, v2.19.44) — the GitHub Page is generated
+// from docs/WIKI.md; a stale index.html means the published map no longer
+// matches its canonical source. Same class as the embeddedData mirror check.
+console.log('== Wiki mirror (docs/index.html vs docs/WIKI.md) ==');
+try {
+  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'wiki_build.cjs'), '--check'], {
+    cwd: ROOT, stdio: 'pipe',
+  });
+  ok('docs/index.html is current — rebuild with `npm run docs:wiki` after editing docs/WIKI.md');
+} catch (e3) {
+  fail(`docs/index.html STALE — run: npm run docs:wiki (${(e3.stderr || e3.stdout || '').toString().trim().split('\n')[0]})`);
+}
+
 // ── 3. PROJECT_MAP.md contract validation ──
 console.log('== Project map (PROJECT_MAP.md) ==');
 const MAP = path.join(ROOT, 'PROJECT_MAP.md');

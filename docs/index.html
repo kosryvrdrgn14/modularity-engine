@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Modularity Engine — Project Wiki — Modularity Engine</title>
+<meta name="description" content="Agent-facing project map and wiki for the Modularity Engine: current state, architecture, verification stack, rules, and roadmap." />
+<meta property="og:title" content="Modularity Engine — Project Wiki" />
+<meta property="og:description" content="Current + future state project map for the Modularity Engine game." />
+<style>
+  :root {
+    --bg: #14141f;          /* app shell background */
+    --bg-2: #1b1b28;        /* raised cards */
+    --bg-3: #232336;        /* table header / hover */
+    --ink: #e7e7f0;
+    --ink-dim: #a5a5bd;
+    --line: #2f2f47;
+    --gold: #e3c05a;        /* game gold accent */
+    --accent: #8ab4f8;      /* link blue */
+    --green: #6fce9b;
+    --red: #e5837f;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: var(--mono); font-size: 0.88em; background: #2a2a3f;
+         padding: 0.12em 0.36em; border-radius: 4px; color: #ffd98a; }
+  .hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #1a1a2b, #14141f); }
+  .hero-inner { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem 1.75rem; }
+  .kicker { letter-spacing: 0.16em; text-transform: uppercase; font-size: 0.72rem;
+            color: var(--gold); font-weight: 700; }
+  h1 { font-size: clamp(1.9rem, 4vw, 2.7rem); margin: 0.4rem 0 0.6rem; line-height: 1.15; }
+  .lede { color: var(--ink-dim); max-width: 68ch; margin: 0 0 1rem; }
+  .badges { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 1rem; }
+  .badge { font: 600 0.74rem/1 var(--mono); padding: 0.4rem 0.6rem; border-radius: 999px;
+           border: 1px solid var(--line); background: var(--bg-2); color: var(--ink-dim); }
+  .badge b { color: var(--gold); }
+  .cta { display: inline-block; margin-top: 1.1rem; padding: 0.55rem 1rem; border-radius: 8px;
+         background: var(--gold); color: #221f12; font-weight: 700; font-size: 0.9rem; }
+  .cta.ghost { background: transparent; color: var(--gold); border: 1px solid var(--line); margin-left: 0.5rem; }
+  .shell { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem 4rem;
+           display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 2.5rem; align-items: start; }
+  nav.sidebar { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto;
+                border-right: 1px solid var(--line); padding: 1rem 1rem 2rem 0; }
+  nav.sidebar a { display: block; color: var(--ink-dim); font-size: 0.86rem;
+                  padding: 0.22rem 0.4rem; border-radius: 5px; }
+  nav.sidebar a:hover { color: var(--ink); background: var(--bg-2); text-decoration: none; }
+  nav.sidebar a.lvl3 { padding-left: 1.2rem; font-size: 0.8rem; }
+  main { min-width: 0; padding-top: 1.5rem; }
+  h2 { font-size: 1.5rem; margin: 2.6rem 0 0.8rem; padding-top: 0.9rem;
+       border-top: 1px solid var(--line); color: var(--gold); scroll-margin-top: 1rem; }
+  h3 { font-size: 1.14rem; margin: 1.8rem 0 0.5rem; color: #f0e2b4; }
+  h4 { font-size: 1rem; margin: 1.4rem 0 0.4rem; color: var(--ink); }
+  p { margin: 0.65rem 0; }
+  ul, ol { margin: 0.5rem 0 0.8rem; padding-left: 1.35rem; }
+  li { margin: 0.28rem 0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
+  blockquote { margin: 0.9rem 0; padding: 0.7rem 1rem; border-left: 3px solid var(--gold);
+               background: var(--bg-2); border-radius: 0 8px 8px 0; color: var(--ink-dim); }
+  pre.code { background: #101019; border: 1px solid var(--line); border-radius: 10px;
+             padding: 0.9rem 1rem; overflow-x: auto; margin: 0.9rem 0; }
+  pre.code code { background: none; color: #d8e2ff; font-size: 0.82rem; line-height: 1.5; }
+  .tablewrap { overflow-x: auto; margin: 0.9rem 0; border: 1px solid var(--line);
+               border-radius: 10px; background: var(--bg-2); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.87rem; }
+  th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.7rem;
+           border-bottom: 1px solid var(--line); }
+  th { background: var(--bg-3); color: var(--gold); font-weight: 600; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: rgba(255,255,255,0.025); }
+  footer { border-top: 1px solid var(--line); color: var(--ink-dim); font-size: 0.82rem; }
+  .foot-inner { max-width: 1200px; margin: 0 auto; padding: 1.4rem 1.5rem 2.5rem; }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; gap: 0; }
+    nav.sidebar { position: static; max-height: none; border-right: 0;
+                  border-bottom: 1px solid var(--line); padding: 1rem 0; }
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="kicker">Modularity Engine</div>
+    <h1>Project Wiki &amp; Map</h1>
+    <p class="lede">The agent-facing map of this project: how it is built, what is true right now,
+      what is planned next, and the rules that keep it that way. Covers current <em>and</em> future
+      state, and is written to be useful to an agent that cannot clone the repository.</p>
+    <div class="badges">
+      <span class="badge">snapshot <b>v2.19.43</b></span>
+      <span class="badge">battery <b>585 checks / 15 suites</b></span>
+      <span class="badge">game scripts <b>36</b></span>
+      <span class="badge">content JSONs <b>17</b></span>
+      <span class="badge">fast gate <b>npm run verify</b></span>
+      <span class="badge">release gate <b>npm run release:check</b></span>
+    </div>
+    <a class="cta" href="#1-start-here">Read the map</a>
+    <a class="cta ghost" href="./WIKI.md">Markdown source (agent-friendly)</a>
+  </div>
+</header>
+<div class="shell">
+  <nav class="sidebar" aria-label="Wiki sections">
+<a class="lvl2" href="#1-start-here">1. Start here</a>
+<a class="lvl3" href="#1-1-what-the-project-is">1.1 What the project is</a>
+<a class="lvl3" href="#1-2-two-codebases-live-in-this-repo">1.2 Two codebases live in this repo</a>
+<a class="lvl3" href="#1-3-running-the-game">1.3 Running the game</a>
+<a class="lvl3" href="#1-4-how-to-use-this-page">1.4 How to use this page</a>
+<a class="lvl2" href="#2-quick-facts">2. Quick facts</a>
+<a class="lvl2" href="#3-repository-map">3. Repository map</a>
+<a class="lvl3" href="#3-1-the-shell-src-in-one-paragraph">3.1 The shell (`src/`) in one paragraph</a>
+<a class="lvl2" href="#4-runtime-architecture">4. Runtime architecture</a>
+<a class="lvl3" href="#4-1-boot-model">4.1 Boot model</a>
+<a class="lvl3" href="#4-2-runtime-flow">4.2 Runtime flow</a>
+<a class="lvl3" href="#4-3-file-ownership-one-line-per-game-file">4.3 File ownership (one line per game file)</a>
+<a class="lvl3" href="#4-4-code-conventions-and-file-lifecycle">4.4 Code conventions and file lifecycle</a>
+<a class="lvl2" href="#5-content-pipeline-persistence">5. Content pipeline &amp; persistence</a>
+<a class="lvl3" href="#5-1-content-pipeline-three-place-contract">5.1 Content pipeline (three-place contract)</a>
+<a class="lvl3" href="#5-2-save-store">5.2 Save store</a>
+<a class="lvl3" href="#5-3-numbers-worth-knowing-art-scale-feel">5.3 Numbers worth knowing (art, scale, feel)</a>
+<a class="lvl2" href="#6-event-bus-map">6. Event bus map</a>
+<a class="lvl2" href="#7-ui-system-screens">7. UI system (screens)</a>
+<a class="lvl3" href="#7-1-widget-system">7.1 Widget system</a>
+<a class="lvl3" href="#7-2-the-dom-id-contract">7.2 The DOM id contract</a>
+<a class="lvl3" href="#7-3-shop-layout-reference-example-of-an-audited-screen">7.3 Shop layout (reference example of an audited screen)</a>
+<a class="lvl2" href="#8-verification-stack">8. Verification stack</a>
+<a class="lvl3" href="#8-1-the-ladder-climb-in-order-stop-when-the-change-is-covered">8.1 The ladder (climb in order; stop when the change is covered)</a>
+<a class="lvl3" href="#8-2-what-npm-run-verify-checks-f-gates">8.2 What `npm run verify` checks (F-gates)</a>
+<a class="lvl3" href="#8-3-the-battery-15-suites-585-checks">8.3 The battery (15 suites, 585 checks)</a>
+<a class="lvl3" href="#8-4-screenshot-driven-testing">8.4 Screenshot-driven testing</a>
+<a class="lvl3" href="#8-5-driving-the-real-game-headlessly-the-harness">8.5 Driving the real game headlessly (the harness)</a>
+<a class="lvl3" href="#8-6-adding-checks-and-suites">8.6 Adding checks and suites</a>
+<a class="lvl2" href="#9-rules-that-bind-agents">9. Rules that bind agents</a>
+<a class="lvl2" href="#10-lesson-bank-hard-won-still-binding">10. Lesson bank (hard-won; still binding)</a>
+<a class="lvl2" href="#11-glossary">11. Glossary</a>
+<a class="lvl2" href="#12-how-to-recipes">12. How-to recipes</a>
+<a class="lvl3" href="#12-1-add-a-new-enemy-weapon-stage-quest-npc">12.1 Add a new enemy / weapon / stage / quest / npc</a>
+<a class="lvl3" href="#12-2-add-a-new-content-type-a-18th-json">12.2 Add a new content *type* (a 18th JSON)</a>
+<a class="lvl3" href="#12-3-build-a-new-dom-screen">12.3 Build a new DOM screen</a>
+<a class="lvl3" href="#12-4-add-a-bus-event">12.4 Add a bus event</a>
+<a class="lvl3" href="#12-5-edit-docs-safely">12.5 Edit docs safely</a>
+<a class="lvl3" href="#12-6-purge-an-unused-id-or-class">12.6 Purge an unused id or class</a>
+<a class="lvl3" href="#12-7-cut-a-release-version-changelog">12.7 Cut a release (version + changelog)</a>
+<a class="lvl2" href="#13-future-state-roadmap">13. Future state — roadmap</a>
+<a class="lvl3" href="#13-1-sequenced-now-next">13.1 Sequenced now → next</a>
+<a class="lvl3" href="#13-2-design-systems-not-yet-built-from-masterdesign-md-15-16">13.2 Design systems not yet built (from `MASTER_DESIGN.md` §15–16)</a>
+<a class="lvl3" href="#13-3-backlog-mechanics">13.3 Backlog mechanics</a>
+<a class="lvl2" href="#14-open-decisions-awaiting-the-owner">14. Open decisions (awaiting the owner)</a>
+<a class="lvl3" href="#14-1-combat-art-pipeline-combatartpipelinespec-md-10">14.1 Combat art pipeline (`combat_art_pipeline_spec.md` §10)</a>
+<a class="lvl3" href="#14-2-product-decisions">14.2 Product decisions</a>
+<a class="lvl3" href="#14-3-known-unverified-in-flight">14.3 Known unverified / in flight</a>
+<a class="lvl2" href="#15-agent-faq">15. Agent FAQ</a>
+<a class="lvl2" href="#16-glossary-of-documents-how-this-wiki-is-maintained">16. Glossary of documents + how this wiki is maintained</a>
+  </nav>
+  <main>
+<h1 id="modularity-engine-project-wiki">Modularity Engine — Project Wiki</h1>
+<p><strong>What this is:</strong> the agent-facing map of this project — how it is built, what is true right now, what is planned next, and the rules that keep it that way. It covers <strong>current state</strong> and <strong>future state</strong>, and it is written so an agent with <strong>no access to the repository</strong> can answer most questions, then work safely once it does have access.</p>
+<p><strong>Canonical source:</strong> this file (<code>docs/WIKI.md</code>). The GitHub Page at <code>docs/index.html</code> is <em>generated</em> from it by <code>npm run docs:wiki</code> (<code>tools/wiki_build.cjs</code>). Never hand-edit the HTML — edit this file and rebuild, or the two will drift.</p>
+<p><strong>Snapshot this wiki was written against:</strong> v2.19.43 (2026-09-30) · battery <strong>585 checks / 15 suites, strict green</strong> · game scripts <strong>36</strong> · content JSONs <strong>17</strong> · DOM ids in the shell <strong>104</strong>.</p>
+<p><strong>Repo of truth for specifics:</strong> <code>PROJECT_MAP.md</code> (per-file contracts, verify-enforced), <code>KNOWLEDGE.md</code> (working agreement), <code>WORKFLOW.md</code> (process + backlog), <code>TOOLING_MAP.md</code> (tool catalog), <code>TESTING_PLAN.md</code> (test architecture), <code>CHANGELOG.md</code> (history). This wiki <strong>summarises and links</strong>; it never overrides them. Where this page and a repo doc disagree, the repo doc wins — and the wiki is a bug to be fixed.</p>
+<hr />
+<h2 id="1-start-here">1. Start here</h2>
+<h3 id="1-1-what-the-project-is">1.1 What the project is</h3>
+<p><strong>Modularity Engine</strong> is a gothic-survival game with a town-hub / combat-run loop. You run timed expeditions into cursed locations (graveyard, forest, refugee camp…), fight escalating waves with weapon + companion builds, collect drops, and spend gold, materials and story progress back in town on NPCs who remember what you did.</p>
+<p>The distinguishing systems, and the reason the architecture looks the way it does:</p>
+<ul><li><strong>Canonical NPC memory log</strong> — one append-only, store-backed log is the only source of story memory. It is the input to dialogue, affection, and the roleplay-export feature. There is exactly one memory log by design (see rule <em>two logs, two purposes</em> in §10).</li><li><strong>Condition-driven content</strong> — one shared, fail-closed condition evaluator gates quests, NPC dialogue/location selection, and calendar modifiers. No feature may fork condition logic.</li><li><strong>Data-driven everything</strong> — 17 content JSONs define monsters, weapons, stages, quests, NPCs, locations, shop stock, skins, calendar, pickups, companions. Systems are content-agnostic.</li><li><strong>One test battery</strong> — 15 headless-browser suites (585 checks) plus static gates that fail the build, not just warn.</li></ul>
+<h3 id="1-2-two-codebases-live-in-this-repo">1.2 Two codebases live in this repo</h3>
+<div class="tablewrap"><table><thead><tr><th></th><th>The game</th><th>The shell</th></tr></thead><tbody>
+<tr><td>Lives in</td><td><code>public/</code></td><td><code>src/</code></td></tr>
+<tr><td>Language</td><td>plain classic-script JS (no modules, no bundler)</td><td>TypeScript + React 19 + Vite + Convex</td></tr>
+<tr><td>Boots from</td><td><code>public/game2.html</code> (script-tag concatenation over window globals)</td><td><code>src/main.tsx</code></td></tr>
+<tr><td>Served</td><td><code>/game2.html</code>, inside an <code>&lt;iframe&gt;</code></td><td>routes <code>/</code>, <code>/game</code>, <code>/auth</code>, <code>/dashboard</code></td></tr>
+<tr><td>Tests</td><td>the 15-suite battery (<code>tests/</code>)</td><td>TypeScript typecheck only</td></tr>
+</tbody></table></div>
+<p><code>src/pages/Game.tsx</code> renders <code>&lt;iframe src=&quot;/game2.html&quot;&gt;</code>. The shell handles landing page, auth and routing; <strong>almost every engineering decision lives in <code>public/</code>, <code>tests/</code> and <code>tools/</code>.</strong> If you are changing gameplay, you are in <code>public/</code>.</p>
+<h3 id="1-3-running-the-game">1.3 Running the game</h3>
+<p>The game is a <strong>static site</strong>: <code>public/game2.html</code> plus its scripts and content JSONs. There is no build step for it, and the battery boots it straight off <code>file://</code>.</p>
+<ul><li><strong>In this platform (how agents normally work):</strong> the dev server is started and managed for you. Never run <code>npm run dev</code>, never kill or restart a server — edit files and they are picked up. The route <code>/</code> (and <code>/game</code>) shows the game in an iframe.</li><li><strong>Outside the platform (plain clone):</strong> any static server over the repo root works — <code>npx serve .</code> then open <code>/game2.html</code> — or open the file directly, which also exercises the offline content-mirror path.</li><li><strong>Headlessly:</strong> see §8.5 — <code>tests/lib/harness.cjs</code> boots the real game in Chromium; that is how every suite drives real state.</li></ul>
+<h3 id="1-4-how-to-use-this-page">1.4 How to use this page</h3>
+<ul><li><strong>No repo access?</strong> Sections 2–7 give you the map; 12–14 give you the roadmap and what is genuinely undecided. Ask for file contents before writing code.</li><li><strong>Repo access?</strong> Read §9 (verification) and §10 (rules) <em>before</em> your first edit, then use §12's recipes. Re-read this page's §16 on how it is maintained.</li><li><strong>Are you an agent?</strong> Everything here is written to be acted on: exact commands, exact file ownership, and the specific failure modes this project has actually hit.</li></ul>
+<hr />
+<h2 id="2-quick-facts">2. Quick facts</h2>
+<div class="tablewrap"><table><thead><tr><th>Fact</th><th>Value</th></tr></thead><tbody>
+<tr><td>Game entry</td><td><code>public/game2.html</code> (shell + script tags; ~104 DOM ids)</td></tr>
+<tr><td>Game code</td><td>36 classic-script files under <code>public/{data,engine,systems,ui}</code></td></tr>
+<tr><td>Orchestrator</td><td><code>public/engine/game.js</code> (<code>window.game</code>; constructs everything, owns the loop)</td></tr>
+<tr><td>Content</td><td>17 JSONs in <code>public/content/</code> + schemas in <code>public/schemas/</code></td></tr>
+<tr><td>Generated data</td><td><code>public/data/embeddedData.js</code> (mirror; never hand-edit — <code>npm run content:sync</code>)</td></tr>
+<tr><td>Styles</td><td><code>public/styles.css</code> (~2.1k lines; classes swept by <code>tools/css_sweep.cjs</code>)</td></tr>
+<tr><td>Save schema</td><td><code>persistent.*</code> branches; current migration <strong>v9</strong></td></tr>
+<tr><td>Event bus</td><td><code>window.EventBus</code> in <code>public/engine/core.js</code>; ~60 events</td></tr>
+<tr><td>Fast gate</td><td><code>npm run verify</code> (~seconds: syntax, content, map, F1/F5/F2, skin assets, patch selftest)</td></tr>
+<tr><td>Full gate</td><td><code>npm run release:check</code> (verify + strict battery + CHANGELOG hygiene)</td></tr>
+<tr><td>Battery</td><td><code>npm run test:strict</code> — 585 checks / 15 suites, skips are failures</td></tr>
+<tr><td>Dev server</td><td>platform-managed; <strong>never</strong> run <code>npm run dev</code> / restart servers from a session</td></tr>
+<tr><td>Version control</td><td><strong>git CLI is blocked</strong> in agent sessions; repo admin is human-side</td></tr>
+<tr><td>Secrets</td><td>never edit <code>.env*</code>; the owner manages keys in the platform UI</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="3-repository-map">3. Repository map</h2>
+<pre class="code"><code>&lt;root&gt;/
+├── public/                 THE GAME
+│   ├── game2.html          boot shell: DOM + ordered &lt;script&gt; tags + init
+│   ├── styles.css          all game CSS
+│   ├── data/               T0 data blobs (embeddedData generated, others hand-tuned)
+│   ├── engine/             core substrate, entities, combat, pickups, rendering, orchestrator
+│   ├── systems/            calendar, companion, conditions, memory/NPCs, progression, loot, quests
+│   ├── ui/                 audio, HUD, dock, widget renderer, shop, town*, loadout
+│   ├── content/            17 content JSONs (the single content source)
+│   ├── schemas/            7 JSON schemas for content authoring/validation
+│   ├── assets/             SVG backgrounds, portraits, widget skin art
+│   └── BUGS_AND_ISSUES.md  active bug tracker
+├── tests/                  headless battery (15 suites + 121-check trace + standalone probes)
+├── tools/                  static gates, sweeps, the patch tool, content generator, previews
+├── docs/                   THIS WIKI (WIKI.md canonical → index.html generated for GitHub Pages)
+├── src/                    platform shell (React/Vite/Convex/auth/landing) — see §1.2
+├── PROJECT_MAP.md          per-file contracts + coupling indexes (verify-enforced)
+├── KNOWLEDGE.md            working agreement / rules (§1–§20)
+├── WORKFLOW.md             process: session loop, verification ladder, backlog B1–B37, lesson log
+├── TOOLING_MAP.md          tool catalog with statuses + field-trial log
+├── TESTING_PLAN.md         test architecture, 12 manual checks (M1–M12), perf gates
+├── MASTER_DESIGN.md        design intent, implementation status, §24 plan of record
+├── combat_art_pipeline_spec.md  art pipeline spec (dimensions, normalize step, B35 plan)
+├── *_spec.md               subsystem specs (npc condition, memory/export, widget, calendar, log)
+├── CHANGELOG.md            what changed, when, why
+├── archive/, gamesplit/, *.html fossils   historical; NOT part of the active codebase
+└── tools/ fossils (_bNN_*.cjs, tmp_*.cjs)  historical; superseded by patch_apply</code></pre>
+<h3 id="3-1-the-shell-src-in-one-paragraph">3.1 The shell (<code>src/</code>) in one paragraph</h3>
+<p>React 19 + Vite + Tailwind v4 + shadcn/ui + Convex/Convex Auth. Routes: <code>/</code> and <code>/game</code> render the game iframe, <code>/auth</code> is sign-in, <code>/dashboard</code> is a protected starter screen. It is <em>platform scaffolding for hosting the game with auth</em> — it contains <strong>no gameplay logic</strong>. Do not put game systems here; do not &quot;modernize&quot; the game into React.</p>
+<hr />
+<h2 id="4-runtime-architecture">4. Runtime architecture</h2>
+<h3 id="4-1-boot-model">4.1 Boot model</h3>
+<p>There is no module system in the game. <code>public/game2.html</code> lists 36 <code>&lt;script src&gt;</code> tags; each file assigns globals (<code>window.ClassName = …</code> or <code>const X = …</code>). Order is load-bearing, which is why files are tiered. The rule: <strong>a file must not reference a symbol defined in a later tier at top level</strong> (function-body references are fine — construction happens in the orchestrator).</p>
+<div class="tablewrap"><table><thead><tr><th>Tier</th><th>Files</th><th>Role</th></tr></thead><tbody>
+<tr><td><strong>T0 data</strong></td><td><code>data/embeddedData.js</code>, <code>data/assetMap.js</code>, <code>data/disasterEvents.js</code>, <code>data/farmingConfig.js</code>, <code>data/affectionTiers.js</code>, <code>data/estateTiers.js</code>, <code>data/childGrowthStages.js</code>, <code>data/sandboxDefaults.js</code>, <code>data/svgPortraits.js</code></td><td>Plain global data blobs. <code>embeddedData.js</code> is <strong>generated</strong> from <code>content/*.json</code>.</td></tr>
+<tr><td><strong>T1 early systems</strong></td><td><code>engine/titleMenu_refactored.js</code>, <code>systems/npcExport.js</code>, <code>systems/calendarTime.js</code>, <code>systems/gameLog.js</code>, <code>ui/npcExportUi.js</code></td><td>Class declarations only, no construction — safe to load before core.</td></tr>
+<tr><td><strong>T2 core</strong></td><td><code>engine/core.js</code></td><td>The substrate: <code>DataManager</code>, <code>EventBus</code>, <code>GameLoop</code>, <code>Camera</code>, <code>InputManager</code>, <code>GameState</code>. Also registers the content fetch list.</td></tr>
+<tr><td><strong>T3 simulation</strong></td><td><code>engine/entities.js</code>, <code>engine/combat.js</code>, <code>engine/pickup.js</code>, <code>engine/rendering.js</code>, <code>systems/companion.js</code>, <code>systems/conditionEngine.js</code>, <code>systems/npcSystem.js</code>, <code>systems/progression.js</code>, <code>systems/loot.js</code>, <code>systems/quest.js</code>, <code>engine/locationManager.js</code></td><td>Classes that reference T0/T2 globals only inside methods.</td></tr>
+<tr><td><strong>T4 UI</strong></td><td><code>ui/audio.js</code>, <code>ui/game.js</code>, <code>ui/dockMenu.js</code>, <code>ui/widgetRenderer.js</code>, <code>ui/shop.js</code>, <code>ui/townEngine.js</code>, <code>ui/townContent.js</code>, <code>ui/loadout.js</code>, <code>ui/town.js</code></td><td>DOM controllers; DOM lookups happen at construction, not load.</td></tr>
+<tr><td><strong>T5 orchestrator</strong></td><td><code>engine/game.js</code></td><td><code>Game</code> constructs every system, wires the bus, owns the loop, autosaves. <strong>The only file allowed to reference everything.</strong></td></tr>
+</tbody></table></div>
+<h3 id="4-2-runtime-flow">4.2 Runtime flow</h3>
+<pre class="code"><code>titleMenu (save slots / settings)
+   └── town (regions, NPCs, shop, farming, dock)          ← hub; persistent save lives here
+         └── loadout (stage → weapons → companions)
+               └── combat run (waves → boss → end screen)
+                     └── results → back to town</code></pre>
+<p>Combat runs are <em>sessions</em>: they have their own counters, their own autosave heartbeat (<code>persistent.combat</code>), and they are journaled so an interrupted run can be resumed with the boss intact. Everything outside the session (gold, inventory, quests, memory, calendar) persists through <code>systems/progression.js</code>.</p>
+<h3 id="4-3-file-ownership-one-line-per-game-file">4.3 File ownership (one line per game file)</h3>
+<div class="tablewrap"><table><thead><tr><th>File</th><th>Owns</th></tr></thead><tbody>
+<tr><td><code>engine/core.js</code></td><td>content loading + registry, event bus, game loop, camera, input (incl. touch joystick vector), game state machine</td></tr>
+<tr><td><code>engine/entities.js</code></td><td>entity manager (plain push arrays, not pools), wave spawner, movement</td></tr>
+<tr><td><code>engine/combat.js</code></td><td>weapon firing + weapon level-ups, collision, damage</td></tr>
+<tr><td><code>engine/pickup.js</code></td><td>pickup spawn/expiry/sweep, magnet, XP, level-ups, boss-trophy + screen-wipe behavior, telegraph</td></tr>
+<tr><td><code>engine/rendering.js</code></td><td>all canvas drawing + floating text; weapon/companion HUD slot grid; wipe/orb/flash effects</td></tr>
+<tr><td><code>engine/locationManager.js</code></td><td>town/world location graph navigation</td></tr>
+<tr><td><code>engine/game.js</code></td><td>orchestration: construct, wire, loop, pause/ESC, boss flow, resume banner, autosave, debug hooks</td></tr>
+<tr><td><code>engine/titleMenu_refactored.js</code></td><td>title screen, save-slot picker, settings entry, dev overlays</td></tr>
+<tr><td><code>systems/conditionEngine.js</code></td><td><strong>the</strong> condition evaluator (<code>evaluate</code>, <code>validate</code>) — fail-closed</td></tr>
+<tr><td><code>systems/npcSystem.js</code></td><td>NPC dialogue/location/mood selection + <strong>the canonical memory log</strong></td></tr>
+<tr><td><code>systems/npcExport.js</code></td><td>roleplay export (pure consumer of the memory log)</td></tr>
+<tr><td><code>systems/progression.js</code></td><td>save store, migrations (v9), and meta systems: affection, children, estate, farming, disasters, sandbox</td></tr>
+<tr><td><code>systems/quest.js</code></td><td>quest availability (via ConditionEngine), objectives, time events</td></tr>
+<tr><td><code>systems/calendarTime.js</code></td><td>day/season/festival/biome resolution; <strong>sole writer</strong> of <code>persistent.time</code></td></tr>
+<tr><td><code>systems/gameLog.js</code></td><td>session play-log console (ring buffer + capped persisted tail) — display only</td></tr>
+<tr><td><code>systems/companion.js</code></td><td>companion spawn, combat assists, loot fetch</td></tr>
+<tr><td><code>systems/loot.js</code></td><td>star/frenzy/gacha-protection luck layers</td></tr>
+<tr><td><code>ui/widgetRenderer.js</code></td><td>pooled, data-driven card renderer (skins, selection, disabled, a11y) + console inspector</td></tr>
+<tr><td><code>ui/audio.js</code></td><td>all sound; the single bus→sound subscriber</td></tr>
+<tr><td><code>ui/game.js</code></td><td>combat HUD DOM: level-up cards, pause menu, end screen</td></tr>
+<tr><td><code>ui/shop.js</code></td><td>shop + farming + sandbox modes; purchase confirm / repeat-buy</td></tr>
+<tr><td><code>ui/loadout.js</code></td><td>pre-combat loadout picker</td></tr>
+<tr><td><code>ui/dockMenu.js</code></td><td>town dock buttons (rebuilt from config at runtime)</td></tr>
+<tr><td><code>ui/townEngine.js</code></td><td>town scene: region rendering/swiping, combat entry panel</td></tr>
+<tr><td><code>ui/townContent.js</code></td><td>town HUD chips, NPC dialogue UI, town-root farming card</td></tr>
+<tr><td><code>ui/town.js</code></td><td>town shell/root controller</td></tr>
+<tr><td><code>ui/npcExportUi.js</code></td><td>favorites browser + in-game memory topic rendering</td></tr>
+<tr><td><code>data/*</code></td><td>static tuning blobs + the generated content mirror</td></tr>
+</tbody></table></div>
+<h3 id="4-4-code-conventions-and-file-lifecycle">4.4 Code conventions and file lifecycle</h3>
+<ul><li>Classic scripts, no modules/imports, no bundler step. Files declare globals (<code>window.ClassName = ClassName</code> or top-level <code>const</code>); cross-file references are plain names, which is exactly why the load-order tiers and the <code>no-undef</code> globals list exist.</li><li>2-space indent, <code>const</code>/<code>let</code> in preference to <code>var</code>, single-quoted strings, semicolons, JSDoc-ish short comments only where intent is non-obvious. Comments explain <em>why</em>, not <em>what</em>.</li><li>Every game file has a lifecycle status in <code>PROJECT_MAP.md</code>: <code>NORMATIVE</code> (load-bearing — edits are contract negotiations), <code>IN-FLUX</code> (moving; cross-check the map health log), <code>DEPRECATED</code> (superseded — don't build on it). Before building on a file, check its status.</li><li>Rendering coordinates: world space vs screen space is the single most bug-prone distinction in this codebase. See §10 before writing draw code.</li><li>Keep files focused; the project prefers extracting a system over growing a file past the point where its contract is hard to describe.</li></ul>
+<hr />
+<h2 id="5-content-pipeline-persistence">5. Content pipeline &amp; persistence</h2>
+<h3 id="5-1-content-pipeline-three-place-contract">5.1 Content pipeline (three-place contract)</h3>
+<p>A content file is real only if <strong>all three</strong> exist — miss any one and <code>npm run verify</code> fails:</p>
+<ol><li><code>public/content/&lt;name&gt;.json</code> — the data,</li><li>a row in <code>DataManager.loadAll()</code>'s fetch list in <code>public/engine/core.js</code>,</li><li>a registry entry in <code>tools/generateEmbeddedData.mjs</code> (the generator).</li></ol>
+<p>The 17 files: <code>attackAreas</code>, <code>calendar</code>, <code>characters</code>, <code>companions</code>, <code>content_gates</code>, <code>elements</code>, <code>enemies</code>, <code>leveling</code>, <code>locations</code>, <code>npcs</code>, <code>pickups</code>, <code>quests</code>, <code>shop</code>, <code>stages</code>, <code>ui_skins</code>, <code>visuals</code>, <code>weapons</code>.</p>
+<p>Then regenerate the mirror: <code>npm run content:sync</code>. <code>npm run content:check</code> byte-verifies it and also runs inside <code>verify</code>. <strong>Never hand-edit <code>public/data/embeddedData.js</code>.</strong></p>
+<p>Schemas live in <code>public/schemas/</code> (enemy, location, npc, quest, shop, stage, weapon) and are the contract for authoring; lookups are by <strong>stable id, never array index</strong>.</p>
+<h3 id="5-2-save-store">5.2 Save store</h3>
+<p>One <code>persistent</code> object, canonical shape and migrations owned by <code>systems/progression.js</code>.</p>
+<div class="tablewrap"><table><thead><tr><th>Branch</th><th>Written by</th></tr></thead><tbody>
+<tr><td><code>player</code>, <code>currency</code>, <code>skills</code>, <code>factions</code>, <code>unlocks</code>, <code>inventory</code></td><td>progression only (others call typed APIs)</td></tr>
+<tr><td><code>combat</code></td><td>progression (shape) + <code>engine/game.js</code> (run state/autosave) + <code>systems/loot.js</code> (session counters)</td></tr>
+<tr><td><code>town</code></td><td>progression only — level via typed <code>getTownLevel</code>/<code>setTownLevel</code></td></tr>
+<tr><td><code>quests</code></td><td>progression (shape) + <code>systems/quest.js</code></td></tr>
+<tr><td><code>npcs</code></td><td>progression (shape) + <code>npcSystem</code> (memory log) + <code>npcExport</code> (favorites only)</td></tr>
+<tr><td><code>time</code></td><td>progression (shape) + <code>calendarTime.js</code> (<strong>sole writer</strong>)</td></tr>
+<tr><td><code>gameLog</code></td><td>progression (shape) + <code>gameLog.js</code> (capped tail mirror)</td></tr>
+</tbody></table></div>
+<p><strong>POT-012 allowlist:</strong> there is a write-allowlist of paths. A write to an unlisted path is a silent failure <em>by design</em> — it is how split-brain bugs were killed. Adding state means adding to the allowlist deliberately. New store branches/fields join via <strong>one version bump</strong> with shape defaults.</p>
+<h3 id="5-3-numbers-worth-knowing-art-scale-feel">5.3 Numbers worth knowing (art, scale, feel)</h3>
+<ul><li>Entities are drawn at <strong><code>2 × stats.size</code></strong> (the art is twice the gameplay footprint). No camera zoom: <strong>1 world unit = 1 CSS pixel</strong>.</li><li><strong>Hitboxes are independent of art.</strong> Resizing a monster's art never changes what it hits — change <code>visual.size</code> / hitbox fields in content deliberately, not for looks.</li><li>Reference sizes: player 10 · rat 7 · bat 8 · zombie 10 · skeleton 12 · ghost 12 · caster 13 · brute 16 · ghoul 22 · bosses 28–30 · companions 14 · pickups 8–18 · projectiles 4–6.</li><li>Camera and HUD live in different spaces — see §10 (layering + DPR rules) before adding any screen-space draw.</li></ul>
+<hr />
+<h2 id="6-event-bus-map">6. Event bus map</h2>
+<p>One bus (<code>EventBus</code> in <code>engine/core.js</code>). Most cross-system wiring ends in <code>engine/game.js</code>. Canonical emitter→listener table: <code>PROJECT_MAP.md</code> §3.2. Shape:</p>
+<div class="tablewrap"><table><thead><tr><th>Event</th><th>Emitters</th><th>Listeners</th></tr></thead><tbody>
+<tr><td><code>damage</code>, <code>damageEntity</code>, <code>contactDamage</code>, <code>projectileHit</code>, <code>areaPulse</code></td><td>combat (pickup emits <code>damage</code>)</td><td>game, renderer, audio, combat self</td></tr>
+<tr><td><code>death</code></td><td>combat</td><td>pickup, quest, audio, game</td></tr>
+<tr><td><code>pickup</code></td><td>combat, pickup, game</td><td>pickup, renderer, audio, game</td></tr>
+<tr><td><code>levelUp</code> / <code>player:levelUp</code></td><td>pickup / progression</td><td>game, audio, gameLog / <em>none (engine uses <code>levelUp</code>)</em></td></tr>
+<tr><td><code>weaponLevelUp</code> / <code>weaponUnlock</code></td><td>combat / game</td><td>game, audio, gameLog / audio</td></tr>
+<tr><td><code>weaponFire</code>, <code>bossSpawn</code>, <code>bossDeath</code>, <code>bossCharge</code>, <code>bossIntro</code></td><td>combat, entities, game</td><td>audio, game</td></tr>
+<tr><td><code>arcaneShot</code>, <code>chainLightning</code>, <code>coneAttack</code></td><td>combat</td><td>game</td></tr>
+<tr><td><code>companionSpawn</code>, <code>companionDamage</code>, <code>companionGrowl</code>, <code>companionLootCollect</code></td><td>companion</td><td>game, combat</td></tr>
+<tr><td><code>magnetActivate</code></td><td>game</td><td>pickup, audio</td></tr>
+<tr><td><code>npc:talked</code>, <code>npc:dialogueChoice</code>, <code>npc:dialogueFlag</code>, <code>npc:dialogueAffection</code></td><td>townContent</td><td>npcSystem, quest</td></tr>
+<tr><td><code>quest:available/started/objective_progress/completed/flag_set/time_event</code></td><td>quest</td><td>game, npcSystem, townContent, gameLog (others reserved)</td></tr>
+<tr><td><code>time:dayAdvanced</code></td><td>calendarTime</td><td>gameLog</td></tr>
+<tr><td><code>location:navigated</code></td><td>locationManager</td><td>quest</td></tr>
+<tr><td><code>resources:changed</code></td><td>progression</td><td>shop, gameLog</td></tr>
+<tr><td><code>shopPurchase</code>, <code>shopEffect</code>, <code>startCombat</code>, <code>farmingLootCollected</code></td><td>shop</td><td>gameLog / <em>some reserved</em></td></tr>
+<tr><td><code>stateChange</code>, <code>pause</code>, <code>restart</code>, <code>selectUpgrade</code>, <code>pauseMenuAction</code>, <code>endScreenDismiss</code>, <code>skipToBoss</code></td><td>core + ui/game + game</td><td>game, audio</td></tr>
+<tr><td><code>save:reset/slotSwitched/slotWiped</code>, <code>unlock:*</code>, <code>counter:changed</code>, <code>farmingComplete</code></td><td>progression</td><td>reserved API surface (no listener yet)</td></tr>
+</tbody></table></div>
+<p>Rules: an event with no listener is <strong>not automatically dead</strong> (reserved surface is legitimate — the 2026-09 dead-event audit deleted only emitters proven unused), but adding a new event must be documented in <code>PROJECT_MAP.md</code> §3.2 in the same change.</p>
+<hr />
+<h2 id="7-ui-system-screens">7. UI system (screens)</h2>
+<h3 id="7-1-widget-system">7.1 Widget system</h3>
+<p>All list-like UI is rendered by <code>ui/widgetRenderer.js</code> from <strong>data + a card def</strong> rather than hand-built DOM. Properties available to a def: layout, size, skin, data-bound context accent, data-bound <code>selected</code>/<code>disabled</code>, click payload, <code>role=&quot;button&quot;</code> + <code>tabindex</code> + Enter/Space, and a document-event bridge. Skins are data (<code>content/ui_skins.json</code>; v2 vocabulary adds 9-slice border, texture background, corner ornament — asset paths are verify-gated).</p>
+<p>Migrated screens (7): game-log console, pause/end actions, town HUD chips, dialogue + dog choices, loadout cards + slot chips, shop tabs + stocked items, title menu strip.</p>
+<h3 id="7-2-the-dom-id-contract">7.2 The DOM id contract</h3>
+<ul><li>Any <code>getElementById('x')</code> / <code>querySelector('#x')</code> in game code must resolve to an id that exists in <code>game2.html</code>, <strong>or</strong> be listed in the owning file's <code>Dynamic-create: [...]</code> line in <code>PROJECT_MAP.md</code>. This is a verify gate (F2) — it has caught real &quot;button silently dead&quot; bugs.</li><li>Conversely, <code>tools/dom_sweep.cjs</code> sweeps the other direction: ids in the shell that nothing references. Current state: 104 ids, 0 new orphans, 9 annotated as <em>planned content</em> (B37) and 1 as a runtime-constructed fossil. Styled-in-CSS counts as intended UI, not as a consumer.</li></ul>
+<h3 id="7-3-shop-layout-reference-example-of-an-audited-screen">7.3 Shop layout (reference example of an audited screen)</h3>
+<pre class="code"><code>#shop-overlay
+├── header: gold readout · ✕ (#shop-close)
+├── tabs (widget pool)
+├── #shop-items (scroll region, widget pool)
+└── #shop-done-bar &gt; #shop-done        ← pinned bottom; ESC also closes (progressively)</code></pre>
+<p>Bottom-pinned exits exist because the <strong>preview toolbar covers top-right chrome on phones</strong> — every full-viewport overlay in this project needs an exit at the bottom of the screen.</p>
+<hr />
+<h2 id="8-verification-stack">8. Verification stack</h2>
+<h3 id="8-1-the-ladder-climb-in-order-stop-when-the-change-is-covered">8.1 The ladder (climb in order; stop when the change is covered)</h3>
+<div class="tablewrap"><table><thead><tr><th>Rung</th><th>Command</th><th>Catches</th><th>Cost</th></tr></thead><tbody>
+<tr><td>0</td><td>Read the region before editing</td><td>half-applied/malformed edits</td><td>0</td></tr>
+<tr><td>1</td><td><code>node --check &lt;file&gt;</code></td><td>syntax after multi-part edits</td><td>seconds</td></tr>
+<tr><td>2</td><td><code>npm run verify</code></td><td>load-order syntax, content JSON, mirror sync, PROJECT_MAP drift, F1 test/tool syntax, F5 no-undef, F2 DOM ids, skin assets, patch_apply behavior</td><td>seconds</td></tr>
+<tr><td>3</td><td>feature suite <code>node tests/suites/&lt;x&gt;.cjs</code></td><td>that area's contracts</td><td>~1 min</td></tr>
+<tr><td>4</td><td><code>npm run test</code> / <code>test:strict</code></td><td>cross-system regressions; strict makes skips fail</td><td>minutes</td></tr>
+<tr><td>5</td><td><code>npm run release:check</code></td><td>verify + strict battery + CHANGELOG hygiene</td><td>minutes</td></tr>
+<tr><td>6</td><td><code>npm run widget:preview</code> / <code>widget:audit</code></td><td>card-matrix regressions, occlusion, viewport parity</td><td>~1 min</td></tr>
+<tr><td>7</td><td>manual M1–M12 (<code>TESTING_PLAN.md</code> §9)</td><td>feel, audio-as-heard, aesthetics</td><td>human</td></tr>
+</tbody></table></div>
+<p>Minimum evidence after editing <code>public/</code>: <strong>rung 2</strong>. Before closing work: <strong>rung 5</strong>.</p>
+<h3 id="8-2-what-npm-run-verify-checks-f-gates">8.2 What <code>npm run verify</code> checks (F-gates)</h3>
+<div class="tablewrap"><table><thead><tr><th>Gate</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>syntax</td><td>every <code>game2.html</code> script parses <strong>in real load order</strong></td></tr>
+<tr><td>content</td><td>all 17 JSONs parse; <code>embeddedData</code> mirror byte-in-sync</td></tr>
+<tr><td>map</td><td>PROJECT_MAP coverage both ways, <code>Defines</code> symbols exist, statuses valid, <code>GuardedBy</code> suites exist, §3.1 rows real, globals rot-guard</td></tr>
+<tr><td>F1</td><td>every <code>tests/</code> + <code>tools/</code> file parses (recall-not-read net)</td></tr>
+<tr><td>F5</td><td>ESLint <code>no-undef</code> over game files (cross-file globals declared + rot-guarded against the map)</td></tr>
+<tr><td>F2</td><td>DOM ids exist or are documented <code>Dynamic-create</code></td></tr>
+<tr><td>skins</td><td><code>ui_skins.json</code> image paths resolve; skin version is v1/v2</td></tr>
+<tr><td>behavior</td><td><code>tools/patch_apply_selftest.cjs</code> — 13 behavior checks on the house edit tool</td></tr>
+<tr><td>wiki mirror</td><td><code>docs/index.html</code> matches its source <code>docs/WIKI.md</code> — run <code>npm run docs:wiki</code> after any wiki edit</td></tr>
+</tbody></table></div>
+<h3 id="8-3-the-battery-15-suites-585-checks">8.3 The battery (15 suites, 585 checks)</h3>
+<div class="tablewrap"><table><thead><tr><th>Suite</th><th>Guards</th></tr></thead><tbody>
+<tr><td><code>regression_trace</code> (121)</td><td>boot → town → combat → boss → end; save/restore; the historical trace</td></tr>
+<tr><td><code>step1_gate_engine</code></td><td>condition evaluator: typed conditions, combinators, fail-closed, quest routing</td></tr>
+<tr><td><code>step2_npc_system</code></td><td>NPC selection + canonical memory log incl. save→reload round-trip</td></tr>
+<tr><td><code>step3_widget_inventory</code></td><td>widget render contract, inventory, inspector, skin pins, a11y, contrast</td></tr>
+<tr><td><code>step4_export</code></td><td>export purity + favorites browser flow</td></tr>
+<tr><td><code>step5_loadout_widgets</code></td><td>loadout pooled cards, selection/confirm payloads</td></tr>
+<tr><td><code>step6_shop_tabs</code></td><td>shop tabs, purchase confirm, repeat-buy, one-transaction commits</td></tr>
+<tr><td><code>step7_title_menu</code></td><td>title strip, locked-as-data, keyboard parity</td></tr>
+<tr><td><code>calendar_time</code></td><td>day advance, seasons, locked modifier rule, day stamps</td></tr>
+<tr><td><code>game_log</code></td><td>log capture, ring buffer, two-logs purity</td></tr>
+<tr><td><code>widget_occlusion</code></td><td>clickability + viewport containment across 3 viewports (desktop gates; mobile promoted per screen)</td></tr>
+<tr><td><code>ui_layout_audit</code></td><td>spacing scale, dead bands, alignment, contrast, overflow, touch targets, orientation flip</td></tr>
+<tr><td><code>visual_probe</code></td><td>structural screenshots, HUD pixel regions, real-path flows, frozen-frame pixel pins</td></tr>
+<tr><td><code>perf_budget</code></td><td>per-tick CPU budgets, idle + 120-entity stress, audio-scheduling gate, pickup lifecycle</td></tr>
+<tr><td><code>save_fuzz</code></td><td>50 seeded save mutants + corrupt JSON boot survival; double-boot race</td></tr>
+</tbody></table></div>
+<p><strong>Standalone probes</strong> (not in the battery, run directly): <code>node tests/probe_lag.cjs</code> (9 checks), <code>--wipe</code> (9), <code>--wup</code> (13) — lag/audio/pickup-lifecycle, screen-wipe behavior, weapon-upgrade orb show.</p>
+<p><strong>Read-only sweeps</strong> (not gates): <code>node tools/css_sweep.cjs</code> (dead CSS candidates, with a template-built bucket so variable class names aren't misreported), <code>node tools/dom_sweep.cjs</code> (orphan DOM ids, delta-vs-baseline).</p>
+<h3 id="8-4-screenshot-driven-testing">8.4 Screenshot-driven testing</h3>
+<p>There is no golden-image diffing (declined as churn outweighed catch). Instead: structural screenshots + pixel probes on HUD regions + negative controls that prove detectors fire. When you add a detector, prove it can fail — a green test that cannot go red is not evidence.</p>
+<h3 id="8-5-driving-the-real-game-headlessly-the-harness">8.5 Driving the real game headlessly (the harness)</h3>
+<p><code>tests/lib/harness.cjs</code> is <strong>the</strong> way any agent exercises real game state:</p>
+<ul><li><code>bootGame()</code> — launches Chromium, boots <code>public/game2.html</code>, installs an error net and a console/page-error net, and returns handles for driving the game.</li><li>Storage control — <code>keepStorage</code> plus a real reload is how persistence round-trips are tested.</li><li><code>bootGame({ mobile: 'iphone13' })</code> / <code>newMobilePage(browser)</code> — <strong>real device emulation</strong> (isMobile + hasTouch + DPR 3 + mobile UA), which is what caught the DPR-scaled HUD bug.</li><li>Per-step API detectors + a PASS/FAIL runner with CI-friendly exit codes. Suites emit artifacts to <code>tests/artifacts/</code>.</li></ul>
+<p>Rule: assert through the most player-visible surface available. A counter can be checked in <code>game._runKillCount</code>, but the HUD pixel probe catches renderer regressions the counter cannot.</p>
+<h3 id="8-6-adding-checks-and-suites">8.6 Adding checks and suites</h3>
+<ol><li>New checks for an existing area go in that suite (<code>tests/suites/&lt;area&gt;.cjs</code>) — the step-gated suites are named for the plan step they guard (<code>step3_…</code> = widget/inventory), feature suites for subsystems (<code>calendar_time</code>, <code>game_log</code>, <code>perf_budget</code>, …).</li><li><strong>A new suite file must be registered in <code>tests/run_all.cjs</code>'s suite list</strong> — an unregistered suite never runs and never fails, which is worse than not existing.</li><li>Every check must be able to fail: add a negative control for any new detector.</li><li>If the area has no suite and behaviour matters, <code>npm test</code> (skip-safe) tells you which guards exist; <code>npm run test:strict</code> is the release gate.</li><li>Per-file <strong>standalone probes</strong> (heavier or opt-in scenarios) live next to the suites as <code>tests/probe_*.cjs</code> and are invoked directly with mode flags — see <code>tests/probe_lag.cjs</code> (default / <code>--wipe</code> / <code>--wup</code>). Keep them out of the default battery unless they are cheap and deterministic; record the promotion decision where the suite list documents it.</li></ol>
+<hr />
+<h2 id="9-rules-that-bind-agents">9. Rules that bind agents</h2>
+<p>Condensed from <code>KNOWLEDGE.md</code> (§1–§20) and <code>WORKFLOW.md</code>; those files remain authoritative.</p>
+<ol><li><strong>Plan first.</strong> Non-trivial task → state the plan (files, what could break, how verified) before editing. More than ~3 files or a shared system → get owner go-ahead.</li><li><strong>Never edit from recall.</strong> Read the region you are about to change (this project has been bitten by half-applied edits and stale line numbers).</li><li><strong>Never write source files with inline shell one-liners</strong> (no <code>sed -i</code>, no heredoc redirection). Use the file-edit tools. This is a house rule (§15) with incident history.</li><li><strong>Docs ride along.</strong> A change that invalidates a contract updates it <em>in the same change</em>: <code>PROJECT_MAP.md</code> (new file → new contract block, or verify goes red), <code>KNOWLEDGE.md</code> (lessons), <code>WORKFLOW.md</code> §11, <code>TOOLING_MAP.md</code>, <code>CHANGELOG.md</code> (top entry; single version header).</li><li><strong>One source of truth per data type.</strong> Don't mirror state; don't build a second condition evaluator, second memory log, or second copy of a truth.</li><li><strong>Content = JSON + registry + generated mirror</strong> (§5.1). Authoring content without all three is incomplete work.</li><li><strong>Verify prior writes after any failed or suspicious command</strong> (§20). A command that printed success before failing later lied; check on-disk state before retrying.</li><li><strong><code>npm run verify</code> after every <code>public/</code> edit; <code>release:check</code> before calling work done.</strong></li><li><strong>git CLI is blocked.</strong> Don't try to commit, push, or branch. Repo admin is human-side.</li><li><strong>Never start/stop the dev server.</strong> The platform runs it; file edits are picked up automatically. Fix code, not the server.</li><li><strong>Never edit <code>.env*</code>.</strong> The owner manages keys.</li><li><strong>Prose-heavy edits use <code>tools/patch_apply.cjs</code></strong> (§12.5) — JSON patch file, <code>--dry</code> first. Do not hand-roll escaped find/replace scripts.</li><li><strong>Archives are not code</strong> (<code>archive/</code>, <code>gamesplit/</code>, root <code>*.html</code> fossils, <code>tools/_bNN_*.cjs</code>). Don't read them into context; don't revive them.</li><li><strong>File findings in <code>public/BUGS_AND_ISSUES.md</code></strong> (the active tracker) and in <code>CHANGELOG.md</code>'s incident notes — a defect you found but did not fix is recorded, not remembered.</li></ol>
+<hr />
+<h2 id="10-lesson-bank-hard-won-still-binding">10. Lesson bank (hard-won; still binding)</h2>
+<p>Rendering &amp; camera</p>
+<ul><li>World-space effects draw <strong>inside</strong> the camera transform; screen-space effects (HUD, orbs, flashes, rings) draw <strong>after <code>ctx.restore()</code></strong>. Getting this wrong is invisible to array/state asserts and fatal on device.</li><li>Canvas screen-space UI must be authored in <strong>CSS pixels</strong> via the <code>UI_DPR</code> scale (backing store is devicePixelRatio-scaled). A &quot;36px&quot; slot on a DPR-3 phone was 12 physical px. World-space floating text scales its <em>font</em> by dpr; positions stay world-space.</li><li><strong>Array-length asserts prove state, never pixels.</strong> The weapon-upgrade show was fully &quot;green&quot; while drawing off-screen for every real player. Pixel pins (frozen frame after clearing the world) are the gate for anything visual.</li><li>Fill glyphs as <strong>paths, not font characters</strong> (▲ U+25B2 paints nothing headless).</li><li>Pixel filters need <strong>blend tolerance</strong> (gold ring: r≥90, g≥75, b≤70, r−b≥40), because grid antialiasing mixes colors; and text glyphs are not portable between environments.</li></ul>
+<p>UI &amp; devices</p>
+<ul><li>Fixed-centered rows clip on phones: every such row needs an auto-fit/stacking fallback and a layout-audit cell (slot-picker, level-up, end-screen actions all hit this same class).</li><li>When a DOM control (joystick) and canvas HUD (slot rail) claim a corner, one moves — pick the cheaper mover (a draw constant), not the gesture geometry.</li><li>Touch targets ≥44px only matter under <code>pointer: coarse</code>; desktop stays dense and that is correct.</li><li>Your new UI block can itself create a dead band — the layout audit flagged the shop's own bottom bar on the day it landed.</li></ul>
+<p>Testing &amp; tooling</p>
+<ul><li>Prove new detectors can fail (negative controls), or you are shipping theater.</li><li>After clearing the world (<code>entityManager.clearAll()</code>), a live rAF scan races the next frame — <strong>stop the loop and render exactly one frame</strong> for pixel probes.</li><li>Skipping a suite must be loud: <code>--strict</code> turns skips into failures.</li><li><code>node --check</code> on a file that parses alone ≠ the reassembled boot; verify checks real load order.</li><li>css_sweep's literal class scan cannot see <code>toast-${kind}</code>-style construction (the widget prefix exemption never covered template suffixes) — read call sites before believing the dead bucket.</li><li>dom_sweep's &quot;alive&quot; definition excludes styles.css mentions on purpose: styled-in-CSS is intended UI, and an id named only by CSS is a documentation fact, not liveness.</li><li><code>styles.css</code> is currently 100% LF; never trust memory about line endings — detect per file (which is what <code>patch_apply</code> does).</li></ul>
+<p>Platform</p>
+<ul><li>After any malformed/failed terminal call, assume the platform may be mid-502; verify on-disk state before retrying.</li><li>The Freebuff preview toolbar overlays top-right chrome in the browser preview — screenshots of the preview are not the game on a real device, and platform chrome is not a game bug.</li></ul>
+<hr />
+<h2 id="11-glossary">11. Glossary</h2>
+<div class="tablewrap"><table><thead><tr><th>Token</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><code>B&lt;n&gt;</code></td><td>backlog item in <code>WORKFLOW.md</code> §10 (B1–B37; next new item is <strong>B38</strong>)</td></tr>
+<tr><td><code>POT-&lt;n&gt;</code></td><td>data-driven-system constraint from <code>MASTER_DESIGN.md</code> (POT-006 content pipeline, POT-012 store allowlist, …)</td></tr>
+<tr><td><code>M&lt;n&gt;</code></td><td>manual check in <code>TESTING_PLAN.md</code> §9 (M1–M12)</td></tr>
+<tr><td><code>F1/F2/F5</code></td><td>static gates inside <code>npm run verify</code></td></tr>
+<tr><td><code>§&lt;n&gt;</code></td><td>section number inside the doc being cited</td></tr>
+<tr><td>tier <code>T0</code>–<code>T5</code></td><td>load-order tiers in §4.1 / <code>PROJECT_MAP.md</code> §1</td></tr>
+<tr><td><code>AGENTS</code>/<code>LLM</code> terms</td><td>&quot;battery&quot; = the full strict suite run; &quot;sweep&quot; = read-only orphan detector; &quot;gate&quot; = a check that fails the build</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="12-how-to-recipes">12. How-to recipes</h2>
+<p><em>(These are the common tasks; each ends in the gate that proves it.)</em></p>
+<h3 id="12-1-add-a-new-enemy-weapon-stage-quest-npc">12.1 Add a new enemy / weapon / stage / quest / npc</h3>
+<ol><li>Author the content JSON entry (id is stable and human-meaningful; follow <code>public/schemas/</code>).</li><li>If it references another content type, the id must exist there (conditions validate fail-closed).</li><li><code>npm run content:sync</code> (regenerates <code>embeddedData.js</code>), then <code>npm run verify</code>.</li><li>Behavior: only if the entry needs runtime behavior <em>not already supported</em> — then extend the system <strong>and its suite</strong>, not the data file.</li><li>Gate: <code>npm run verify</code> (rung 2) + the relevant feature suite; full battery if combat-facing.</li></ol>
+<h3 id="12-2-add-a-new-content-type-a-18th-json">12.2 Add a new content <em>type</em> (a 18th JSON)</h3>
+<ol><li>Create <code>public/content/&lt;name&gt;.json</code> (+ schema in <code>public/schemas/</code> if structured).</li><li>Register the fetch in <code>DataManager.loadAll()</code> (<code>engine/core.js</code>) <strong>and</strong> the generator registry (<code>tools/generateEmbeddedData.mjs</code>).</li><li><code>npm run content:sync</code>, <code>npm run verify</code>.</li><li>Add the file's row to <code>PROJECT_MAP.md</code> §3.1 and a <code>Content:</code> line on any consuming file's block.</li><li>Gate: <code>npm run verify</code> must be green or the work is not done.</li></ol>
+<h3 id="12-3-build-a-new-dom-screen">12.3 Build a new DOM screen</h3>
+<ol><li>Scaffold persistent chrome in <code>public/game2.html</code>; dynamic parts must be listed as <code>Dynamic-create: [...]</code> in the owning file's map block.</li><li>Render lists through <code>WidgetRenderer</code> (data + def) instead of bespoke DOM — see the seven migrated screens for the pattern.</li><li>Every full-viewport overlay needs a <strong>bottom-pinned exit</strong> (platform chrome owns the top).</li><li>Gate: register the screen in <code>ui_layout_audit.cjs</code>'s matrix, run <code>widget:audit</code>, and screenshot it in <code>visual_probe</code> if it's a structural screen.</li></ol>
+<h3 id="12-4-add-a-bus-event">12.4 Add a bus event</h3>
+<ol><li>Emit with the payload shape documented; add to <code>PROJECT_MAP.md</code> §3.2 in the same change.</li><li>Wire the listener in the <strong>owning</strong> system (usually <code>engine/game.js</code> for cross-system effects) — not in the emitter's file.</li><li>If it needs a new sound, wire it in <code>ui/audio.js</code> (single sound subscriber).</li><li>Gate: <code>verify</code> (§3.2 consistency) + the suite that covers the new behavior.</li></ol>
+<h3 id="12-5-edit-docs-safely">12.5 Edit docs safely</h3>
+<pre class="code"><code># 1. write the patch JSON (prose needs no escaping):
+#    {&quot;patches&quot;:[{&quot;file&quot;:&quot;WORKFLOW.md&quot;,&quot;find&quot;:&quot;...exact...&quot;,&quot;replace&quot;:&quot;...&quot;,&quot;expectedCount&quot;:1}]}
+node tools/patch_apply.cjs patch.json --dry     # validate only
+node tools/patch_apply.cjs patch.json           # apply atomically</code></pre>
+<p>All-or-nothing batches; exact <code>expectedCount</code> (default 1; <code>&quot;&gt; N&quot;</code> = at-least; <code>0</code> = assert-absent); same-file entries fold sequentially; per-file CRLF/LF preserved (mixed → refused); literal replacement (<code>$&amp;</code> safe). Its behavior is gated inside <code>verify</code> (13 checks). For very small unique edits, the file-edit tools are fine — the rule exists because hand-rolled escaped find/replace broke on prose three times in one session.</p>
+<h3 id="12-6-purge-an-unused-id-or-class">12.6 Purge an unused id or class</h3>
+<ol><li><code>node tools/dom_sweep.cjs</code> / <code>node tools/css_sweep.cjs</code> — report only.</li><li>Grep the call sites yourself before believing a &quot;dead&quot; verdict (template-built and constructed names are invisible to literal scans).</li><li>Delete <strong>and</strong> remove the map/CSS references in the same change; run the full battery — deletion is always human-reviewed and battery-verified, never automatic.</li></ol>
+<h3 id="12-7-cut-a-release-version-changelog">12.7 Cut a release (version + changelog)</h3>
+<ol><li>The <strong>only</strong> version header at the top of <code>CHANGELOG.md</code> is the current release — <code>release:check</code> enforces exactly one. Add a new one <em>above</em> the existing for unreleased work; never leave two.</li><li>Each entry: version, date, status, what changed and <strong>why</strong>, plus incident/lesson notes.</li><li>Close out the version references you touched in <code>PROJECT_MAP.md</code> / specs (they cite versions).</li><li>Run <code>npm run release:check</code> — verify + strict battery + changelog hygiene. Red means not released. <code>npm run release:check -- --no-battery</code> is the fast docs/verify-only path while iterating (the battery is still required before calling the work done).</li><li>Wiki upkeep: if the release changed the snapshot line or a gate/command, update this page and <code>npm run docs:wiki</code> — the wiki-mirror gate inside <code>verify</code> will catch you if you forget.</li></ol>
+<hr />
+<h2 id="13-future-state-roadmap">13. Future state — roadmap</h2>
+<h3 id="13-1-sequenced-now-next">13.1 Sequenced now → next</h3>
+<div class="tablewrap"><table><thead><tr><th>#</th><th>Item</th><th>State</th><th>Gate / notes</th></tr></thead><tbody>
+<tr><td>1</td><td><strong>B35 — art pipeline</strong> (§14.2)</td><td>spec folded; awaiting owner decisions 1–5</td><td><code>combat_art_pipeline_spec.md</code> §9; a/b/c gates: art renders, fallback intact when art absent, drawn-Ø pin, perf budget</td></tr>
+<tr><td>2</td><td><strong>B37 — undetected-UI wire-or-delete</strong></td><td>9 planned-content ids inventoried, not deleted</td><td>owner call; <code>dom_sweep</code> keeps them as baseline until then</td></tr>
+<tr><td>3</td><td><strong>B20</strong> toast duration scaling</td><td>formula undecided</td><td>flag before the next toast type lands</td></tr>
+<tr><td>4</td><td><strong>B21</strong> inventory item detail sheet</td><td>spec exists, paused</td><td>spec already answers the design question</td></tr>
+<tr><td>5</td><td><strong>B22</strong> matrix-coverage audit</td><td>process item</td><td>run alongside periodic orphan/doc hygiene</td></tr>
+<tr><td>6</td><td><strong>B35b/c</strong> art batches</td><td>after B35a proves the pipeline</td><td>—</td></tr>
+</tbody></table></div>
+<h3 id="13-2-design-systems-not-yet-built-from-masterdesign-md-15-16">13.2 Design systems not yet built (from <code>MASTER_DESIGN.md</code> §15–16)</h3>
+<ul><li>Skill tree (placeholder today; game playable without it)</li><li>Faction system (basic reputation only)</li><li>Marriage / children systems (design complete, not started)</li><li>Adjacency system (design complete, not started)</li><li>Multi-character scenes, particle system, web tools (design complete, not started)</li><li>Full in-game calendar UI + weather/season content (<code>time</code> condition type is registered but unimplemented); full NPC roster content</li></ul>
+<p>Open design questions carried in <code>MASTER_DESIGN.md</code> §16: frenzy-vs-clean 3★ coexistence; sub-3★-time rare-drop as a permanent perk; children's gameplay function; rare-drop pity curve shape; auto-clear slot concurrency scaling by town tier.</p>
+<h3 id="13-3-backlog-mechanics">13.3 Backlog mechanics</h3>
+<p><code>WORKFLOW.md</code> §10 is the live table (B1–B37, most closed with post-mortems). Next new item = <strong>B38</strong>; add it near the top with: item, why, effort, priority, and the gate that will prove it. A closed row keeps its rationale and lesson — the record <em>is</em> the value.</p>
+<hr />
+<h2 id="14-open-decisions-awaiting-the-owner">14. Open decisions (awaiting the owner)</h2>
+<p>Nothing below is blocked on engineering; each is a one-line answer away from unblocking work.</p>
+<h3 id="14-1-combat-art-pipeline-combatartpipelinespec-md-10">14.1 Combat art pipeline (<code>combat_art_pipeline_spec.md</code> §10)</h3>
+<ol><li><strong>Style workflow:</strong> pixel-native 32×32 hero (crisp upscale) vs smooth master-downscale — decided by running spec test §8.6, not by argument.</li><li><strong>Hero drawn size to start at:</strong> 20 (today) / 32 (recommended) / 40 — a knob; no art regeneration needed to change it later.</li><li><strong>Art direction:</strong> gothic-graveyard palette per spec, or owner reference images?</li><li><strong>B35a scope:</strong> loader + <code>visual.art</code> + player/zombie/boss_gravekeeper as stills (3 files) — ok?</li><li><strong>Animation:</strong> Option A (static + programmatic deform) first, sheets for player/bosses only if tools pass §8.3 — or commit to full Option B now?</li></ol>
+<p>Already resolved and binding: <strong>frames stay square; shape is silhouette</strong>; generators emit fixed large buckets (1024×1024 / 1536×1024 / 1024×1536) and a deterministic <strong>normalize step</strong> delivers tier sizes (requested sizes are never requested); always request square; verify real alpha. Runtime <code>drawImage</code> accepts any source dimensions. Non-uniform presentation would be a per-entity <code>artScaleX/Y</code> knob, built only if a real monster needs it.</p>
+<h3 id="14-2-product-decisions">14.2 Product decisions</h3>
+<ul><li><strong>B37 town ids</strong> — wire the planned content (camp upgrade, events panel, resource chips, companion status, header/location label) or delete the markup? The owner's current work (character stories + building history) makes several of these likely to land.</li><li><strong>Weapon-up pickup on other sources</strong> — the visual show now fires for any upgrade; whether other sources (level-up cards) should route through the same show is undecided.</li></ul>
+<h3 id="14-3-known-unverified-in-flight">14.3 Known unverified / in flight</h3>
+<ul><li>Full device pass of the weapon-upgrade orb effect (flight → burst → chime) and the shop Done bar — unit-gated, awaiting a human look on a real device.</li><li>The Freebuff preview toolbar's overlay is a <em>preview-only</em> artifact; do not &quot;fix&quot; game chrome to accommodate it beyond the bottom-exit rule already adopted.</li></ul>
+<hr />
+<h2 id="15-agent-faq">15. Agent FAQ</h2>
+<p>Short answers to the questions agents actually ask. Deeper answers are linked in each row.</p>
+<p><strong>Q: Where do I start for &quot;add a new enemy&quot;?</strong> §12.1. Content JSON → sync → verify. Code only if behavior is missing.</p>
+<p><strong>Q: Which suite guards the shop?</strong> <code>step6_shop_tabs</code> (tabs, confirm, repeat-buy) and <code>step3_widget_inventory</code> (purchase/inventory round-trip); <code>widget_occlusion</code> + <code>ui_layout_audit</code> gate its clickability/layout on 3 viewports.</p>
+<p><strong>Q: How do I edit the docs without corrupting them?</strong> §12.5 — <code>patch_apply</code> with <code>--dry</code> first.</p>
+<p><strong>Q: A new file — what breaks?</strong> <code>npm run verify</code> goes red until it has a <code>PROJECT_MAP.md</code> contract block. That's the intended forcing function, not a bug.</p>
+<p><strong>Q: An id exists in the shell but nothing happens when clicked.</strong> Check <code>dom_sweep</code> classification: CONSTRUCTED (rebuilt at runtime), MANAGED (inside a JS-managed container), or a B37 planned id. Also check the id is not merely <em>styled</em> in CSS — styling is not wiring.</p>
+<p><strong>Q: Is it safe to delete &quot;dead&quot; CSS or ids?</strong> Only after hand-verifying call sites and running the full battery — the one time this was automated wholesale, it deleted 12 live rules (§10 lesson bank).</p>
+<p><strong>Q: Why does my change pass tests but look broken on device?</strong> Most likely a world-vs-screen-space canvas layering mistake or DPR units; both are proven by pixel pins, not array asserts. §10.</p>
+<p><strong>Q: Where's the truth about who writes <code>persistent.time</code>?</strong> §5.2 and <code>PROJECT_MAP.md</code> §3.3 — the calendaring system is the sole writer; the allowlist is the enforcement.</p>
+<p><strong>Q: What is <em>not</em> implemented that sounds like it is?</strong> Skill tree, marriage, children gameplay, adjacency, web tools, full calendar UI, particle system — §13.2.</p>
+<p><strong>Q: How do I know the docs I'm reading are current?</strong> Every doc carries a version or date; <code>CHANGELOG.md</code>'s single top header is the current version; <code>verify</code> enforces the map; this wiki's §16 says how it ages.</p>
+<p><strong>Q: Can I add a shortcut npm script?</strong> Sure, and update <code>TOOLING_MAP.md</code> §2's script block in the same change (it is documentation-of-record for scripts).</p>
+<hr />
+<h2 id="16-glossary-of-documents-how-this-wiki-is-maintained">16. Glossary of documents + how this wiki is maintained</h2>
+<div class="tablewrap"><table><thead><tr><th>Doc</th><th>Owns</th></tr></thead><tbody>
+<tr><td><code>KNOWLEDGE.md</code></td><td>rules of engagement (§1–§20, lessons)</td></tr>
+<tr><td><code>WORKFLOW.md</code></td><td>process: session loop, ladder, sub-workflows, backlog §10, improvement log §11</td></tr>
+<tr><td><code>PROJECT_MAP.md</code></td><td>per-file contracts, coupling indexes, map health log (verify-enforced)</td></tr>
+<tr><td><code>TOOLING_MAP.md</code></td><td>every tool: status, how to run, limits, field-trial log</td></tr>
+<tr><td><code>TESTING_PLAN.md</code></td><td>test architecture, suites, manual list, perf gates</td></tr>
+<tr><td><code>MASTER_DESIGN.md</code></td><td>design intent + implementation status + §24 plan of record</td></tr>
+<tr><td><code>combat_art_pipeline_spec.md</code> and <code>*_spec.md</code></td><td>subsystem specs (conditions, memory/export, widgets, calendar, log)</td></tr>
+<tr><td><code>CHANGELOG.md</code></td><td>what changed, when, why (single top header, enforced)</td></tr>
+<tr><td><code>docs/WIKI.md</code></td><td><strong>this</strong> — the browsable map for humans and agents</td></tr>
+</tbody></table></div>
+<p><strong>Maintenance of this wiki:</strong></p>
+<ul><li>It is a <strong>summary</strong>, never a replacement. Sources of truth stay in the repo docs listed above.</li><li>Update it in the same change that moves the ground it describes: version snapshot in the header, command lists, gate tables, roadmap.</li><li>Numbers that drift most often: battery check/suite counts, DOM id count, content-file count. Re-derive from a battery run and <code>verify</code> output rather than from memory.</li><li>Rendered page: <code>npm run docs:wiki</code> → <code>docs/index.html</code>. Publishing: GitHub Pages with <strong>source = <code>docs/</code></strong> (the repo-root <code>index.html</code> is the platform shell, so root-source Pages would publish the wrong site). <code>.nojekyll</code> is committed so no path filtering surprises us.</li><li>Agent-facing rule: if a change makes this page wrong, fixing the page is part of the change.</li></ul>
+  </main>
+</div>
+<footer>
+  <div class="foot-inner">
+    Generated from <code>docs/WIKI.md</code> by <code>node tools/wiki_build.cjs</code> — that markdown
+    file is the source of truth; do not hand-edit this page. Built for GitHub Pages with source =
+    <code>docs/</code>.
+  </div>
+</footer>
+</body>
+</html>

@@ -50,6 +50,7 @@ named npm scripts (see standardization below) — that is what makes them agent-
 |---|---|---|
 | **Playwright headless suite** | **Built & primary safety net** — 15 suites + 121-check regression trace, all green, in version control (`tests/`) | Drives the REAL game (bootGame harness, real state transitions per KNOWLEDGE §2b): gate engine, NPC/memory log, widgets/inventory, export purity, calendar, game log, loadout + shop widget screens, occlusion/§11 viewport gates, save fuzz, visual probe (B2: 9 structural screenshots + HUD pixel regions + blank-detector control + loadout overflow pin), perf budget (B10: per-tick CPU budgets, idle + 120-enemy stress, overload negative control), §12 UI layout audit (gaps/dead-bands/alignment/contrast, overflow + half-spec-ellipsis detectors, desktop gates + REAL mobile-emulation gates per screen), plus the full historical trace. `npm test` (skip-safe) / `npm run test:strict` (skips fail) / `npm run test:trace`. Artifacts in `tests/artifacts/`. **B31 addendum (v2.19.37):** `tests/probe_lag.cjs` is a STANDALONE verification probe (9 checks — pickup lifecycle: 45s expiry/500-actives cap/trophy exemption; audio scheduling gate: suspended-context play() schedules zero nodes) run via `node tests/probe_lag.cjs`, not part of run_all — battery promotion is a tracked follow-up (WORKFLOW §11) |
 | **patch_apply.cjs** (tools/) | **Built (v2.19.43)** | THE standard for prose-heavy find/replace edits in docs and code — replaces the throwaway _bNN_*.cjs pattern (escaped strings broke on apostrophes/backticks, ≥3 incidents in one session). JSON patch file: prose needs no escaping; every find must match its expectedCount (default 1; a string like > 1 = at-least; 0 asserts absent) or NOTHING is written (atomic batch); same-file entries fold sequentially over evolving text; per-file CRLF/LF auto-detected and preserved (mixed endings → refuse); literal replacement (split/join, so $& stays literal). Usage: node tools/patch_apply.cjs patch.json [--dry] — run --dry first. BOTH patch schemas accepted: the project form {"patches":[…expectedCount]} and the origin form (top-level array, count key). BEHAVIOR-GATED: tools/patch_apply_selftest.cjs (13 checks — atomicity, counts, CRLF bytes, both schemas, same-file fold, literal $&, count-0, mixed-EOL refusal) runs inside npm run verify |
+| **tools/wiki_build.cjs** | **Built (v2.19.44)** | Renders the canonical agent wiki (`docs/WIKI.md`) into the publishable GitHub Page (`docs/index.html`): dependency-free markdown subset renderer + auto sidebar nav, `--check` mode for staleness. One source of truth — the HTML is GENERATED, never hand-edited. Its staleness is a `verify` gate (same class as the embeddedData mirror check), so editing the wiki without rebuilding turns the fast gate red | `node tools/wiki_build.cjs` (`npm run docs:wiki`) |
 | **tools/dom_sweep.cjs** | **Built (2026-09-30, from WORKFLOW §10 B37)** | READ-ONLY orphan/undetected-UI sweep in the direction the F2 gate does NOT cover (html→code): classifies every game2.html id as ALIVE (named by a runtime consumer — styles.css mentions are annotation, NOT liveness) / MANAGED (inside a JS-managed ancestor container; B37 planned-content ids annotated for wire-or-delete) / CONSTRUCTED (built at runtime — the static markup is a fossil) / NEW-ORPHAN (genuinely new dead markup; exits 1 so a runner can flag it). Future runs report DELTAS only — the B37 inventory is the allowlist baseline | `node tools/dom_sweep.cjs` |
 | **Trace harness (`tests/lib/harness.cjs`)** | Built | `bootGame()` headless browser boot with error net, storage control (`keepStorage` + reload for true persistence round-trips), per-step API detectors, PASS/FAIL runner with CI-friendly exit codes. THE canonical way any agent drives real game state. v2.19.21: real device emulation — `bootGame({ mobile: 'iphone13' })` (isMobile+hasTouch+DPR3+mobile UA) and `newMobilePage(browser)` for a second emulated page on an existing browser |
 | **CSS orphan sweep (`tools/css_sweep.cjs`)** | Built (v2.19.26, B14) | READ-ONLY manual tool: extracts every class selector from styles.css, checks runtime references, buckets dead candidates / prefix-constructed exemptions (widgetRenderer string-concat) / test-only classes. NOT a battery gate — deletion is always a human-reviewed, battery-verified step (see the B14 incident rules in its header). CAVEAT (2026-09-30 field trial): template-SUFFIX construction (`town-toast toast-${kind}` in townContent.js showToast) read as DEAD — fixed in-tool the same day: a TEMPLATE-BUILT bucket now catches zero-ref classes whose spelling starts with a literal run sitting immediately before a ${...} hole, and reports them as buildable WITH the construction site (file:line) instead of dead. The toast false-positive class is closed; grep call sites only if a bucket entry looks wrong |
@@ -73,6 +74,8 @@ npm run verify          # tools/verify.cjs — load-order syntax + content + mir
 npm run release:check   # tools/release_check.cjs — B3 release gate: verify + strict battery + CHANGELOG header hygiene (--no-battery for fast feedback)
 npm run widget:preview  # tools/widget_preview.cjs — §6.3 live-preview matrix + screenshot
 npm run widget:audit    # tests/suites/widget_occlusion.cjs — §7 occlusion audit (also in battery; §11 gates: game-log, pause, chips, dialogue, loadout, shop tabs)
+npm run docs:wiki        # tools/wiki_build.cjs — regenerate docs/index.html from docs/WIKI.md (run after ANY wiki edit; verify enforces)
+npm run docs:wiki:check  # same tool in --check mode (staleness only, no write)
 npm run verify:trace    # verify + the full headless regression trace
 npm run test            # all 12 suites (skips allowed pre-implementation)
 npm run test:strict     # all suites, skips FAIL — post-implementation gate
@@ -125,6 +128,7 @@ Not automatable, or not worth automating — named so they're deliberate steps, 
 | `calendar_time_system_spec.md` | Event-driven calendar, season resolution, locked modifier rule |
 | `game_log_system_spec.md` | Session console; the two-logs boundary |
 | `ui_convention_reference.md` | **Planned** — curated UI/UX conventions from genre peers, mapped onto the widget system |
+| `docs/WIKI.md` | **Built (v2.19.44)** — the agent-facing project wiki: architecture, verification stack, rules, lesson bank, recipes, current + future state. Canonical source for the published GitHub Page (`docs/index.html`, rendered by `tools/wiki_build.cjs`) |
 | `TOOLING_MAP.md` | This document |
 
 ---
@@ -282,3 +286,20 @@ used. Keep entries short — date, what happened, what changed as a result.
   MANAGED tier trusts a crude tag-stack parse of game2.html (malformed nesting would
   misattribute ancestors — investigate any NEW-ORPHAN alarm on a known-alive id);
   css_sweep still has no npm script (precedent: direct node invocation).
+
+---
+
+- Date: 2026-09-30
+- Tool/section affected: §2 (new row: wiki_build.cjs), §2 npm block, §4
+- What happened: Owner asked for a project map + wiki covering current AND future state that is
+  agent-friendly and publishable on a GitHub Page (because not every agent can clone the repo).
+  Decision: markdown as the single source of truth (`docs/WIKI.md`) + a dependency-free renderer
+  (`tools/wiki_build.cjs`) so the browsable page cannot drift — the same one-source-of-truth law as
+  the embeddedData mirror. `verify` gained a wiki-mirror check (2b). Two renderer bugs were found
+  and fixed by inspecting the generated HTML rather than trusting the writer: list continuation lines
+  were silently dropped (the absorption loop appended `</li>` before its own replacement could
+  match), and `**bold**` failed when it contained inner emphasis (`**Q: … *not* …**`).
+- Adjustment made: rows added as above. Standing rules: edit WIKI.md then `npm run docs:wiki`; never
+  hand-edit docs/index.html; `--check` is the staleness probe (also run inside verify). Pages config
+  note: source MUST be `docs/` — the repo-root index.html is the platform shell, so root-source
+  Pages would publish the wrong site.
